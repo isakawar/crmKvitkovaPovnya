@@ -1,0 +1,216 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Розподіл доставок між кур'єрами</h2>
+<div class="row mb-3">
+  <div class="col-md-3">
+    <input type="date" class="form-control" id="filter-date">
+  </div>
+  <div class="col-md-3">
+    <select class="form-select" id="filter-status">
+      <option value="">Всі статуси</option>
+      <option value="Очікує">Очікує</option>
+      <option value="Розподілено">Розподілено</option>
+      <option value="НП">НП</option>
+      <option value="Доставлено">Доставлено</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-secondary" id="reset-filters" type="button">Скинути фільтри</button>
+  </div>
+</div>
+<div class="row">
+  <div class="col-12">
+    <form id="assignForm">
+      <table class="table table-bordered align-middle" id="deliveries-table">
+        <thead>
+          <tr>
+            <th style="width:40px;"><input type="checkbox" id="select-all"></th>
+            <th>Місто</th>
+            <th>Адреса</th>
+            <th>Дата</th>
+            <th>Кур'єр</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in all_deliveries %}
+          <tr data-id="{{ d.id }}" data-courier_id="{{ d.courier_id }}" data-date="{{ d.delivery_date.strftime('%Y-%m-%d') }}" data-status="{{ d.status }}">
+            <td><input type="checkbox" class="delivery-checkbox"></td>
+            <td>{{ d.client.city }}</td>
+            <td>{{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}</td>
+            <td>{{ d.delivery_date.strftime('%d.%m') }}</td>
+            <td>{% if d.courier %}{{ d.courier.name }}{% else %}<span class="text-muted">Без кур'єра</span>{% endif %}</td>
+            <td><span class="badge 
+              {% if d.status == 'Очікує' %}bg-secondary
+              {% elif d.status == 'Розподілено' %}bg-primary
+              {% elif d.status == 'Доставлено' %}bg-success
+              {% elif d.status == 'НП' %}bg-danger
+              {% else %}bg-light text-dark
+              {% endif %}">
+              {{ d.status }}
+            </span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button class="btn btn-primary mt-2" id="assignCourierBtn" type="button" disabled>Призначити кур'єра</button>
+    </form>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="assignCourierModal" tabindex="-1" aria-labelledby="assignCourierModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="assignCourierForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignCourierModalLabel">Виберіть кур'єра</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <select id="courierSelect" class="form-select mb-3" required>
+            <option value="">Оберіть кур'єра</option>
+            {% for courier in couriers %}
+              <option value="{{ courier.id }}">{{ courier.name }}</option>
+            {% endfor %}
+          </select>
+          <div id="selected-addresses" class="mb-2"></div>
+          <div id="assign-error" class="alert alert-danger d-none mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-primary">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+console.log('assign_deliveries.js loaded');
+document.addEventListener('DOMContentLoaded', function() {
+  const table = document.getElementById('deliveries-table');
+  const selectAll = document.getElementById('select-all');
+  const assignBtn = document.getElementById('assignCourierBtn');
+  const filterDate = document.getElementById('filter-date');
+  const filterStatus = document.getElementById('filter-status');
+  const resetFilters = document.getElementById('reset-filters');
+
+  function getCheckboxes() {
+    return table.querySelectorAll('.delivery-checkbox');
+  }
+
+  function updateSelected() {
+    const checkboxes = getCheckboxes();
+    const selectedIds = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.closest('tr').dataset.id);
+    assignBtn.disabled = selectedIds.length === 0;
+    selectAll.checked = checkboxes.length > 0 && Array.from(checkboxes).every(cb => cb.checked);
+    console.log('Чекбоксів знайдено:', checkboxes.length, 'Вибрано:', selectedIds);
+  }
+
+  function subscribeCheckboxes() {
+    const checkboxes = getCheckboxes();
+    checkboxes.forEach(cb => {
+      cb.removeEventListener('change', updateSelected);
+      cb.addEventListener('change', updateSelected);
+    });
+  }
+
+  selectAll.addEventListener('change', function() {
+    const checkboxes = getCheckboxes();
+    checkboxes.forEach(cb => cb.checked = selectAll.checked);
+    updateSelected();
+  });
+
+  subscribeCheckboxes();
+  updateSelected();
+
+  // --- Фільтрація ---
+  function filterTable() {
+    const dateVal = filterDate.value;
+    const statusVal = filterStatus.value;
+    Array.from(table.tBodies[0].rows).forEach(row => {
+      const rowDate = row.dataset.date;
+      const rowStatus = row.dataset.status;
+      let show = true;
+      if (dateVal && rowDate !== dateVal) show = false;
+      if (statusVal && rowStatus !== statusVal) show = false;
+      row.style.display = show ? '' : 'none';
+    });
+    updateSelected();
+  }
+
+  // Встановити сьогоднішню дату за замовчуванням
+  const today = new Date().toISOString().split('T')[0];
+  filterDate.value = today;
+
+  filterDate.addEventListener('change', filterTable);
+  filterStatus.addEventListener('change', filterTable);
+
+  // Кнопка скидання фільтрів
+  resetFilters.addEventListener('click', function() {
+    filterDate.value = '';
+    filterStatus.value = '';
+    filterTable();
+  });
+
+  // --- Модалка: показ адрес ---
+  let assignModal = new bootstrap.Modal(document.getElementById('assignCourierModal'));
+  assignBtn.addEventListener('click', function() {
+    document.getElementById('courierSelect').value = '';
+    document.getElementById('assign-error').classList.add('d-none');
+    // Збираємо адреси для вибраних доставок
+    const checkboxes = getCheckboxes();
+    const selectedRows = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.closest('tr'));
+    const addresses = selectedRows.map(row => {
+      const city = row.cells[1].textContent.trim();
+      const address = row.cells[2].textContent.trim();
+      const date = row.cells[3].textContent.trim();
+      return `${city}, ${address} — ${date}`;
+    });
+    document.getElementById('selected-addresses').innerHTML = addresses.length
+      ? '<b>Ви призначаєте курʼєра на адреси:</b><ul><li>' + addresses.join('</li><li>') + '</li></ul>'
+      : '';
+    assignModal.show();
+  });
+
+  document.getElementById('assignCourierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const courierId = document.getElementById('courierSelect').value;
+    const errorDiv = document.getElementById('assign-error');
+    errorDiv.classList.add('d-none');
+    if (!courierId) {
+      errorDiv.textContent = 'Оберіть курʼєра!';
+      errorDiv.classList.remove('d-none');
+      return;
+    }
+    // ОТРИМУЄМО АКТУАЛЬНИЙ СПИСОК ВИБРАНИХ ID
+    const checkboxes = document.querySelectorAll('.delivery-checkbox');
+    const selectedIds = Array.from(checkboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.closest('tr').dataset.id);
+
+    fetch('/deliveries/assign-courier', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({delivery_ids: selectedIds, courier_id: courierId})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        errorDiv.textContent = data.error || 'Помилка при збереженні!';
+        errorDiv.classList.remove('d-none');
+      }
+    });
+  });
+});
+</script>
+{% endblock %} 
