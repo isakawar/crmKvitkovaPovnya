@@ -131,7 +131,7 @@
     </div>
     <div class="col-md-2">
         <label class="form-label">Номер будинку</label>
-        <input type="text" name="building_number" class="form-control">
+        <input type="text" name="building_number" class="form-control" required>
     </div>
     <div class="col-md-2">
         <label class="form-label">КВ/поверх</label>
@@ -147,7 +147,8 @@
     </div>
     <div class="col-md-3">
         <label class="form-label">Тип доставки</label>
-        <select name="type" class="form-select">
+        <select name="type" class="form-select" required>
+            <option value="">Оберіть тип доставки</option>
             <option value="Разова">Разова</option>
             <option value="Постійна">Постійна</option>
         </select>
@@ -179,6 +180,7 @@
     <div class="col-md-3">
         <label class="form-label">Букет</label>
         <select name="bouquet_id" class="form-select" required>
+            <option value="">Оберіть букет</option>
             {% for b in bouquets %}
                 <option value="{{ b.id }}">{{ b.bouquet_size }} ({{ b.delivery_type }}) — {{ b.price }} грн</option>
             {% endfor %}
@@ -222,6 +224,36 @@ function showOrderMessage(msg, type='success') {
   el.className = 'fade-message ' + type + ' show';
   setTimeout(() => { el.classList.remove('show'); }, 2500);
 }
+
+// AJAX submit для форми замовлення
+const orderForm = document.getElementById('orderForm');
+if (orderForm) {
+  orderForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(orderForm);
+    const phone = orderForm.querySelector('[name="phone"]').value;
+    const recipient = orderForm.querySelector('[name="recipient_phone"]');
+    if (recipient && !recipient.value) {
+      recipient.value = phone;
+    }
+    fetch('/orders/new', {
+      method: 'POST',
+      headers: {'X-Requested-With': 'XMLHttpRequest'},
+      body: formData
+    })
+    .then(async r => {
+      if (r.ok) {
+        showOrderMessage('Замовлення створено!', 'success');
+        setTimeout(() => window.location.href = '/orders', 1200);
+      } else {
+        const data = await r.json();
+        showOrderMessage(data.error || 'Помилка!', 'error');
+      }
+    })
+    .catch(() => showOrderMessage('Помилка зʼєднання!', 'error'));
+  });
+}
+
 // Плавна анімація для вибору днів
 const daysSelect = document.querySelector('select[name="preferred_days"]');
 if (daysSelect) {
@@ -230,6 +262,7 @@ if (daysSelect) {
     setTimeout(() => daysSelect.classList.remove('changed'), 400);
   });
 }
+
 // Плавна анімація для time_from/time_to
 ['time_from','time_to'].forEach(id => {
   const el = document.querySelector(`[name="${id}"]`);

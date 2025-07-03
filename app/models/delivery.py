@@ -19,6 +19,8 @@ class Delivery(db.Model):
     time_from = db.Column(db.String(8))
     time_to = db.Column(db.String(8))
     courier_id = db.Column(db.Integer, db.ForeignKey('courier.id'))
+    delivered_at = db.Column(db.DateTime)
+    status_changed_at = db.Column(db.DateTime)
     # relationships
     order = db.relationship('Order')
     client = db.relationship('Client')

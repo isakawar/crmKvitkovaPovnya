@@ -1,0 +1,81 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Звіти</h2>
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 mb-3">
+          <div class="card-body text-center">
+            <div class="fs-1 text-primary"><i class="bi bi-truck"></i></div>
+            <div class="fs-4">Всього доставок за тиждень</div>
+            <div class="fs-2 fw-bold">{{ deliveries_stats.week }}</div>
+            <div class="text-muted">за останні 7 днів</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 mb-3">
+          <div class="card-body text-center">
+            <div class="fs-1 text-success"><i class="bi bi-truck"></i></div>
+            <div class="fs-4">Всього доставок за місяць</div>
+            <div class="fs-2 fw-bold">{{ deliveries_stats.month }}</div>
+            <div class="text-muted">за останні 30 днів</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 mb-3">
+          <div class="card-body text-center">
+            <div class="fs-1 text-info"><i class="bi bi-clipboard-data"></i></div>
+            <div class="fs-4">Нових замовлень за тиждень</div>
+            <div class="fs-2 fw-bold">{{ orders_stats.week }}</div>
+            <div class="text-muted">за останні 7 днів</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card shadow-sm border-0 mb-3">
+          <div class="card-body text-center">
+            <div class="fs-1 text-info"><i class="bi bi-clipboard-data"></i></div>
+            <div class="fs-4">Нових замовлень за місяць</div>
+            <div class="fs-2 fw-bold">{{ orders_stats.month }}</div>
+            <div class="text-muted">за останні 30 днів</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 d-flex align-items-stretch">
+    <div class="card shadow-sm border-0 w-100">
+      <div class="card-body">
+        <h4 class="mb-3"><i class="bi bi-people me-2"></i>Статистика по кур'єрам</h4>
+        <div class="table-responsive">
+          <table class="table table-bordered align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Кур'єр</th>
+                <th>Доставок за тиждень</th>
+                <th>Доставок за місяць</th>
+                <th>Всього доставок</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for c in courier_stats %}
+              <tr>
+                <td>{{ c.name }}</td>
+                <td class="text-center fw-bold">{{ c.week }}</td>
+                <td class="text-center fw-bold">{{ c.month }}</td>
+                <td class="text-center">{{ c.total }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="4" class="text-center text-muted">Немає даних</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} 

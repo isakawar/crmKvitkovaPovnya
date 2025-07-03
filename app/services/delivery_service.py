@@ -44,11 +44,15 @@ def set_delivery_status(d, new_status):
     logger.info(f'Зміна статусу доставки {d.id} на {new_status}')
     prev_status = d.status
     d.status = new_status
+    d.status_changed_at = datetime.utcnow()
     # Якщо статус змінюється з 'Розподілено' на 'Доставлено' і є кур'єр
     if prev_status == 'Розподілено' and new_status == 'Доставлено' and d.courier_id:
         courier = Courier.query.get(d.courier_id)
         if courier:
             courier.deliveries_count = (courier.deliveries_count or 0) + 1
+    # Якщо статус стає 'Доставлено', фіксуємо час доставки
+    if new_status == 'Доставлено' and not d.delivered_at:
+        d.delivered_at = datetime.utcnow()
     db.session.commit()
     return d
 
