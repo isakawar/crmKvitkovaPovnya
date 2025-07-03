@@ -12,6 +12,8 @@
       <th>Телефон</th>
       <th>Коментар</th>
       <th>Часове вікно</th>
+      <th>Дата доставки</th>
+      <th>Статус</th>
     </tr>
   </thead>
   <tbody>
@@ -20,11 +22,13 @@
       <td>{{ d.id }}</td>
       <td>{{ d.client.instagram }}</td>
       <td>{{ d.client.city }}</td>
-      <td>{{ d.street }}</td>
-      <td>{{ d.building_number }}</td>
+      <td>{{ d.order.street }}</td>
+      <td>{{ d.order.building_number }}</td>
       <td>{{ d.client.phone }}</td>
       <td>{{ d.comment }}</td>
-      <td>{{ d.time_window }}</td>
+      <td>{{ d.order.time_window }}</td>
+      <td>{{ d.delivery_date }}</td>
+      <td>{{ d.status }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -28,18 +28,26 @@ def orders_list():
     cities = sorted(set(c.city for c in Client.query.all()))
     return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, cities=cities)
 
+@orders_bp.route('/orders/new', methods=['GET'])
+def order_form():
+    bouquets = Price.query.all()
+    return render_template('order_form.html', bouquets=bouquets)
+
 @orders_bp.route('/orders/new', methods=['POST'])
 def order_create():
+    print('--- ORDER CREATE ---')
+    print('Form data:', dict(request.form))
     phone = request.form['phone']
     city = request.form['city']
     instagram = request.form.get('instagram')
     client = Client.query.filter_by(phone=phone).first()
     if not client:
+        print('Creating new client')
         client = Client(phone=phone, city=city, instagram=instagram or '')
         db.session.add(client)
         db.session.commit()
     else:
-        # Оновити дані, якщо змінились
+        print('Updating existing client')
         if client.city != city:
             client.city = city
         if instagram and client.instagram != instagram:
@@ -48,8 +56,11 @@ def order_create():
     delivery_count = int(request.form.get('delivery_count', 1))
     bouquet_id = request.form.get('bouquet_id')
     bouquet = Price.query.get(bouquet_id) if bouquet_id else None
+    print('Bouquet:', bouquet)
     credits_needed = bouquet.price * delivery_count if bouquet else 0
+    print('Credits needed:', credits_needed, 'Client credits:', client.credits)
     if client.credits < credits_needed:
+        print('Not enough credits!')
         flash('Недостатньо кредитів для створення замовлення!', 'danger')
         return redirect('/orders')
     client.credits -= credits_needed
@@ -75,19 +86,26 @@ def order_create():
     )
     db.session.add(order)
     db.session.commit()
+    print('Order created:', order.id)
     # Створення доставок з датами
     preferred_days = request.form.getlist('preferred_days')
+    print('Preferred days:', preferred_days)
+    weekday_map = {'пн':0, 'вт':1, 'ср':2, 'чт':3, 'пт':4, 'сб':5, 'нд':6}
+    days = [weekday_map[d] for d in preferred_days if d in weekday_map]
+    print('Days (as int):', days)
+    if not days:
+        days = [datetime.date.today().weekday()]
+        print('No preferred days, using today:', days)
     periodicity = request.form.get('periodicity') or '1/7'
     start_date = datetime.date.today()
     created = 0
-    weekday_map = {'пн':0, 'вт':1, 'ср':2, 'чт':3, 'пт':4, 'сб':5, 'нд':6}
-    days = [weekday_map[d] for d in preferred_days if d in weekday_map]
     i = 0
     while created < delivery_count:
         d = start_date + datetime.timedelta(days=i)
         if d.weekday() in days:
             if periodicity == '1/14' and created > 0:
                 d = d + datetime.timedelta(days=7*(created))
+            print(f'Creating delivery {created+1}: date={d}, order_id={order.id}, client_id={client.id}, bouquet_id={bouquet.id if bouquet else None}')
             delivery = Delivery(
                 order_id=order.id,
                 client_id=client.id,
@@ -100,6 +118,7 @@ def order_create():
             created += 1
         i += 1
     db.session.commit()
+    print('Total deliveries created:', created)
     flash('Замовлення створено, доставки додано!', 'success')
     return redirect('/orders')
 

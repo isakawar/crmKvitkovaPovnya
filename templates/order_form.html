@@ -45,6 +45,49 @@
         <label class="form-label">Часове вікно</label>
         <input type="text" name="time_window" class="form-control">
     </div>
+    <div class="col-md-4">
+        <label class="form-label">Дні доставки</label>
+        <select name="preferred_days" class="form-select" multiple required>
+            <option value="пн">Пн</option>
+            <option value="вт">Вт</option>
+            <option value="ср">Ср</option>
+            <option value="чт">Чт</option>
+            <option value="пт">Пт</option>
+            <option value="сб">Сб</option>
+            <option value="нд">Нд</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Кількість доставок</label>
+        <input type="number" name="delivery_count" class="form-control" value="1" min="1" required>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Букет</label>
+        <select name="bouquet_id" class="form-select" required>
+            {% for b in bouquets %}
+                <option value="{{ b.id }}">{{ b.bouquet_size }} ({{ b.delivery_type }}) — {{ b.price }} грн</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Періодичність</label>
+        <select name="periodicity" class="form-select">
+            <option value="1/7">Щотижня</option>
+            <option value="1/14">Раз на 2 тижні</option>
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Час з</label>
+        <input type="time" name="time_from" class="form-control">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Час до</label>
+        <input type="time" name="time_to" class="form-control">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Телефон отримувача</label>
+        <input type="text" name="recipient_phone" class="form-control">
+    </div>
     <div class="col-md-12">
         <label class="form-label">Коментар</label>
         <textarea name="comment" class="form-control"></textarea>
