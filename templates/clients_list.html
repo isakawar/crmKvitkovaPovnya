@@ -1,0 +1,86 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Клієнти</h2>
+<div class="mb-3">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">Додати клієнта</button>
+</div>
+<table class="table table-bordered table-hover align-middle">
+    <thead>
+        <tr>
+            <th>Номер телефону</th>
+            <th>Instagram</th>
+            <th>Telegram</th>
+            <th>Кредити</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for client in clients %}
+        <tr>
+            <td>{{ client.phone }}</td>
+            <td>{{ client.instagram }}</td>
+            <td>{{ client.telegram or '' }}</td>
+            <td>{{ client.credits }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal додавання клієнта -->
+<div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="addClientForm">
+        <div class="modal-header bg-light">
+          <h5 class="modal-title" id="addClientModalLabel">Додати клієнта</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body bg-white">
+          <div class="mb-3">
+            <label class="form-label">Номер телефону</label>
+            <input type="text" name="phone" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Instagram</label>
+            <input type="text" name="instagram" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Telegram</label>
+            <input type="text" name="telegram" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Кредити</label>
+            <input type="number" name="credits" class="form-control" value="0" min="0">
+          </div>
+          <div class="alert alert-danger d-none" id="client-error"></div>
+        </div>
+        <div class="modal-footer bg-light">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-primary">Додати</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const addForm = document.getElementById('addClientForm');
+  const errorDiv = document.getElementById('client-error');
+  addForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    errorDiv.classList.add('d-none');
+    const formData = new FormData(addForm);
+    const resp = await fetch('/clients/new', {
+      method: 'POST',
+      body: formData
+    });
+    if (resp.ok) {
+      location.reload();
+    } else {
+      const data = await resp.json();
+      errorDiv.textContent = data.error || 'Помилка';
+      errorDiv.classList.remove('d-none');
+    }
+  });
+});
+</script>
+{% endblock %} 
