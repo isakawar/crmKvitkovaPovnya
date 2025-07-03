@@ -148,7 +148,15 @@
     <div class="sidebar-section">Головне</div>
     <nav class="nav flex-column mb-2">
         <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house-door"></i>Головна</a>
-        <a class="nav-link {% if '/orders' in request.path %}active{% endif %}" href="/orders"><i class="bi bi-list-check"></i>Замовлення</a>
+        <div class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle {% if '/orders' in request.path or '/deliveries' in request.path %}active{% endif %}" href="#" id="ordersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-list-check"></i>Замовлення
+            </a>
+            <ul class="dropdown-menu show position-static border-0 bg-transparent p-0" aria-labelledby="ordersDropdown" style="box-shadow:none;">
+                <li><a class="nav-link ps-5 {% if '/orders' in request.path %}active{% endif %}" href="/orders">Замовлення</a></li>
+                <li><a class="nav-link ps-5 {% if '/deliveries' in request.path %}active{% endif %}" href="/deliveries">Доставки</a></li>
+            </ul>
+        </div>
         <a class="nav-link {% if '/route-generator' in request.path %}active{% endif %}" href="/route-generator"><i class="bi bi-geo-alt"></i>Генератор маршруту</a>
     </nav>
     <div class="sidebar-section">Довідники</div>

@@ -87,65 +87,89 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body bg-white">
-          <div class="row g-3">
-            <div class="col-md-4 position-relative" style="z-index:1055;">
-              <label class="form-label">Клієнт (номер телефону)</label>
-              <input type="text" class="form-control" id="order-client-phone" name="phone" placeholder="Введіть номер телефону..." autocomplete="off" required>
-              <div class="list-group d-none" id="client-phone-list" style="position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.10); z-index:1060;"></div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Instagram</label>
-              <input type="text" name="instagram" class="form-control" required>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Місто</label>
-              <input type="text" name="city" class="form-control" required>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Вулиця</label>
-              <input type="text" name="street" class="form-control" required>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Номер будинку</label>
-              <input type="text" name="building_number" class="form-control">
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">КВ/поверх</label>
-              <input type="text" name="floor" class="form-control">
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Під'їзд</label>
-              <input type="text" name="entrance" class="form-control">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Тип доставки</label>
-              <select name="type" class="form-select" id="order-delivery-type" required>
-                <option value="">Оберіть тип</option>
-                <option value="Доставка">Доставка</option>
-                <option value="Самовивіз">Самовивіз</option>
-              </select>
-            </div>
-            <div class="col-md-3 d-none" id="bouquet-select-wrap">
-              <label class="form-label">Букет</label>
-              <select name="bouquet_id" class="form-select" id="order-bouquet-select">
-                <option value="">Оберіть букет</option>
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Кількість доставок</label>
-              <input type="number" name="delivery_count" class="form-control" min="1" value="1" required>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Розмір</label>
-              <input type="text" name="size" class="form-control">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Часове вікно</label>
-              <input type="text" name="time_window" class="form-control">
-            </div>
-            <div class="col-md-12">
-              <label class="form-label">Коментар</label>
-              <textarea name="comment" class="form-control"></textarea>
+          <div class="container-fluid">
+            <div class="row g-3">
+              <div class="col-md-4 position-relative" style="z-index:1055;">
+                <label class="form-label">Клієнт (номер телефону)</label>
+                <input type="text" class="form-control" id="order-client-phone" name="phone" placeholder="Введіть номер телефону..." autocomplete="off" required>
+                <div class="list-group d-none" id="client-phone-list" style="position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.10); z-index:1060;"></div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Отримувач (телефон)</label>
+                <input type="text" name="recipient_phone" class="form-control" placeholder="Введіть номер телефону отримувача" required>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Місто</label>
+                <select name="city" class="form-select" required>
+                  <option value="Київ" selected>Київ</option>
+                  <option value="Бровари">Бровари</option>
+                  <option value="Вишгород">Вишгород</option>
+                  <option value="Ірпінь">Ірпінь</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Вулиця</label>
+                <input type="text" name="street" class="form-control" required>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Номер будинку</label>
+                <input type="text" name="building_number" class="form-control">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Кв/підʼїзд</label>
+                <input type="text" name="entrance" class="form-control">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Тип доставки</label>
+                <select name="type" class="form-select" id="order-delivery-type" required>
+                  <option value="">Оберіть тип</option>
+                  <option value="Доставка - підписка">Доставка - підписка</option>
+                  <option value="Самовивіз - підписка">Самовивіз - підписка</option>
+                  <option value="Доставка">Доставка</option>
+                  <option value="Самовивіз">Самовивіз</option>
+                </select>
+              </div>
+              <div class="col-md-4" id="bouquet-select-wrap">
+                <label class="form-label">Букет</label>
+                <select name="bouquet_id" class="form-select" id="order-bouquet-select" disabled>
+                  <option value="">Оберіть букет</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Кількість доставок</label>
+                <input type="number" name="delivery_count" class="form-control" min="1" value="1" required disabled id="delivery-count-input">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Бажані дні</label>
+                <select name="preferred_days" class="form-select" multiple disabled id="preferred-days-select">
+                  <option value="пн">Пн</option>
+                  <option value="вт">Вт</option>
+                  <option value="ср">Ср</option>
+                  <option value="чт">Чт</option>
+                  <option value="пт">Пт</option>
+                  <option value="сб">Сб</option>
+                  <option value="нд">Нд</option>
+                </select>
+              </div>
+              <div class="col-md-4" id="periodicity-wrap">
+                <label class="form-label">Періодичність</label>
+                <select name="periodicity" class="form-select" disabled id="periodicity-select">
+                  <option value="1/7">1/7</option>
+                  <option value="1/14">1/14</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Час з</label>
+                <input type="time" name="time_from" class="form-control" disabled id="time-from-input">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label">Час до</label>
+                <input type="time" name="time_to" class="form-control" disabled id="time-to-input">
+              </div>
+              <div class="col-md-12">
+                <label class="form-label">Коментар</label>
+                <textarea name="comment" class="form-control"></textarea>
+              </div>
             </div>
           </div>
         </div>
@@ -346,16 +370,38 @@ document.addEventListener('DOMContentLoaded', function() {
   const deliveryType = document.getElementById('order-delivery-type');
   const bouquetWrap = document.getElementById('bouquet-select-wrap');
   const bouquetSelect = document.getElementById('order-bouquet-select');
+  const periodicityWrap = document.getElementById('periodicity-wrap');
+  const periodicitySelect = document.getElementById('periodicity-select');
+  const deliveryCountInput = document.getElementById('delivery-count-input');
+  const preferredDaysSelect = document.getElementById('preferred-days-select');
+  const timeFromInput = document.getElementById('time-from-input');
+  const timeToInput = document.getElementById('time-to-input');
+
+  function setDependentFieldsEnabled(enabled, isSubscription) {
+    bouquetSelect.disabled = !enabled;
+    deliveryCountInput.disabled = !enabled;
+    preferredDaysSelect.disabled = !enabled;
+    timeFromInput.disabled = !enabled;
+    timeToInput.disabled = !enabled;
+    periodicitySelect.disabled = !(enabled && isSubscription);
+  }
+
+  setDependentFieldsEnabled(false, false);
+
   deliveryType.addEventListener('change', function() {
     const type = deliveryType.value;
-    if (!type) { bouquetWrap.classList.add('d-none'); return; }
-    fetch(`/orders/bouquets?delivery_type=${encodeURIComponent(type)}`)
+    if (!type) {
+      setDependentFieldsEnabled(false, false);
+      return;
+    }
+    fetch(`/orders/bouquets?delivery_type=${encodeURIComponent(type.replace(' - підписка',''))}`)
       .then(r => r.json())
       .then(data => {
         bouquetSelect.innerHTML = '<option value="">Оберіть букет</option>' +
           data.map(b => `<option value="${b.id}">${b.bouquet_size} — ${b.price} грн</option>`).join('');
-        bouquetWrap.classList.remove('d-none');
       });
+    const isSubscription = type.includes('підписка');
+    setDependentFieldsEnabled(true, isSubscription);
   });
 });
 </script>

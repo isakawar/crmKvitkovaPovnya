@@ -1,0 +1,32 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Доставки</h2>
+<table class="table table-bordered table-hover align-middle">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Клієнт</th>
+      <th>Місто</th>
+      <th>Вулиця</th>
+      <th>Номер будинку</th>
+      <th>Телефон</th>
+      <th>Коментар</th>
+      <th>Часове вікно</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in deliveries %}
+    <tr>
+      <td>{{ d.id }}</td>
+      <td>{{ d.client.instagram }}</td>
+      <td>{{ d.client.city }}</td>
+      <td>{{ d.street }}</td>
+      <td>{{ d.building_number }}</td>
+      <td>{{ d.client.phone }}</td>
+      <td>{{ d.comment }}</td>
+      <td>{{ d.time_window }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %} 

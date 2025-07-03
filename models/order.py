@@ -10,4 +10,12 @@ class Order(db.Model):
     size = db.Column(db.String(32))
     type = db.Column(db.String(32))  # разова/постійна
     comment = db.Column(db.Text)
-    time_window = db.Column(db.String(64)) 
+    time_window = db.Column(db.String(64))
+    recipient_phone = db.Column(db.String(32))
+    periodicity = db.Column(db.String(8))
+    preferred_days = db.Column(db.String(64))
+    time_from = db.Column(db.String(8))
+    time_to = db.Column(db.String(8))
+    bouquet_id = db.Column(db.Integer, db.ForeignKey('price.id'))
+    bouquet = db.relationship('Price')
+    delivery_count = db.Column(db.Integer, default=1) 

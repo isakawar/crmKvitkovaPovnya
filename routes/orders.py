@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify
-from models import db, Client, Order, Price
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
+from models import db, Client, Order, Price, Delivery
+import datetime
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -29,28 +30,78 @@ def orders_list():
 
 @orders_bp.route('/orders/new', methods=['POST'])
 def order_create():
-    instagram = request.form['instagram']
     phone = request.form['phone']
     city = request.form['city']
-    client = Client.query.filter_by(instagram=instagram, phone=phone, city=city).first()
+    instagram = request.form.get('instagram')
+    client = Client.query.filter_by(phone=phone).first()
     if not client:
-        client = Client(instagram=instagram, phone=phone, city=city)
+        client = Client(phone=phone, city=city, instagram=instagram or '')
         db.session.add(client)
         db.session.commit()
+    else:
+        # Оновити дані, якщо змінились
+        if client.city != city:
+            client.city = city
+        if instagram and client.instagram != instagram:
+            client.instagram = instagram
+        db.session.commit()
+    delivery_count = int(request.form.get('delivery_count', 1))
+    bouquet_id = request.form.get('bouquet_id')
+    bouquet = Price.query.get(bouquet_id) if bouquet_id else None
+    credits_needed = bouquet.price * delivery_count if bouquet else 0
+    if client.credits < credits_needed:
+        flash('Недостатньо кредитів для створення замовлення!', 'danger')
+        return redirect('/orders')
+    client.credits -= credits_needed
+    db.session.commit()
+    # Створення замовлення
     order = Order(
         client_id=client.id,
         street=request.form['street'],
         building_number=request.form['building_number'],
-        floor=request.form['floor'],
+        floor=request.form.get('floor'),
         entrance=request.form['entrance'],
-        size=request.form['size'],
+        size=request.form.get('size'),
         type=request.form['type'],
         comment=request.form['comment'],
-        time_window=request.form['time_window']
+        time_window=request.form.get('time_window'),
+        bouquet_id=bouquet_id,
+        delivery_count=delivery_count,
+        recipient_phone=request.form.get('recipient_phone'),
+        periodicity=request.form.get('periodicity'),
+        preferred_days=','.join(request.form.getlist('preferred_days')),
+        time_from=request.form.get('time_from'),
+        time_to=request.form.get('time_to')
     )
     db.session.add(order)
     db.session.commit()
-    return redirect(url_for('orders.orders_list'))
+    # Створення доставок з датами
+    preferred_days = request.form.getlist('preferred_days')
+    periodicity = request.form.get('periodicity') or '1/7'
+    start_date = datetime.date.today()
+    created = 0
+    weekday_map = {'пн':0, 'вт':1, 'ср':2, 'чт':3, 'пт':4, 'сб':5, 'нд':6}
+    days = [weekday_map[d] for d in preferred_days if d in weekday_map]
+    i = 0
+    while created < delivery_count:
+        d = start_date + datetime.timedelta(days=i)
+        if d.weekday() in days:
+            if periodicity == '1/14' and created > 0:
+                d = d + datetime.timedelta(days=7*(created))
+            delivery = Delivery(
+                order_id=order.id,
+                client_id=client.id,
+                bouquet_id=bouquet.id if bouquet else None,
+                delivery_date=d,
+                status='Очікує',
+                comment=request.form.get('comment', '')
+            )
+            db.session.add(delivery)
+            created += 1
+        i += 1
+    db.session.commit()
+    flash('Замовлення створено, доставки додано!', 'success')
+    return redirect('/orders')
 
 @orders_bp.route('/orders/<int:order_id>/edit', methods=['GET', 'POST'])
 def order_edit(order_id):
