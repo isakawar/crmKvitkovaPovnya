@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, render_template
 from app.extensions import db, migrate
 from app.config import config_map
 from app.blueprints.orders.routes import orders_bp
@@ -19,4 +19,7 @@ def create_app(config_name=None):
     app.register_blueprint(deliveries_bp)
     app.register_blueprint(prices_bp)
     app.register_blueprint(reports_bp)
+    @app.route('/')
+    def index():
+        return render_template('index.html')
     return app
