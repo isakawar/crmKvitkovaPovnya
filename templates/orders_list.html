@@ -29,7 +29,7 @@
             <th>Instagram</th>
             <th>Місто</th>
             <th>Вулиця</th>
-            <th>Номер будинку</th>
+            <th>№ будинку</th>
             <th>КВ/поверх</th>
             <th>Під'їзд</th>
             <th>Телефон</th>
@@ -112,7 +112,7 @@
                 <input type="text" name="street" class="form-control" required>
               </div>
               <div class="col-md-2">
-                <label class="form-label">Номер будинку</label>
+                <label class="form-label">№ будинку</label>
                 <input type="text" name="building_number" class="form-control">
               </div>
               <div class="col-md-2">
@@ -136,12 +136,13 @@
                 </select>
               </div>
               <div class="col-md-2">
-                <label class="form-label">Кількість доставок</label>
+                <label class="form-label">К-сть</label>
                 <input type="number" name="delivery_count" class="form-control" min="1" value="1" required disabled id="delivery-count-input">
               </div>
               <div class="col-md-4">
-                <label class="form-label">Бажані дні</label>
-                <select name="preferred_days" class="form-select" multiple disabled id="preferred-days-select">
+                <label class="form-label">Бажаний день</label>
+                <select name="preferred_day" class="form-select" id="preferred-day-select">
+                  <option value="">Оберіть день</option>
                   <option value="пн">Пн</option>
                   <option value="вт">Вт</option>
                   <option value="ср">Ср</option>
@@ -207,7 +208,7 @@
               <input type="text" name="street" id="edit-street" class="form-control" required>
             </div>
             <div class="col-md-2">
-              <label class="form-label">Номер будинку</label>
+              <label class="form-label">№ будинку</label>
               <input type="text" name="building_number" id="edit-building_number" class="form-control">
             </div>
             <div class="col-md-2">
@@ -373,14 +374,12 @@ document.addEventListener('DOMContentLoaded', function() {
   const periodicityWrap = document.getElementById('periodicity-wrap');
   const periodicitySelect = document.getElementById('periodicity-select');
   const deliveryCountInput = document.getElementById('delivery-count-input');
-  const preferredDaysSelect = document.getElementById('preferred-days-select');
   const timeFromInput = document.getElementById('time-from-input');
   const timeToInput = document.getElementById('time-to-input');
 
   function setDependentFieldsEnabled(enabled, isSubscription) {
     bouquetSelect.disabled = !enabled;
     deliveryCountInput.disabled = !enabled;
-    preferredDaysSelect.disabled = !enabled;
     timeFromInput.disabled = !enabled;
     timeToInput.disabled = !enabled;
     periodicitySelect.disabled = !(enabled && isSubscription);

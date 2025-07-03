@@ -11,6 +11,13 @@ class Delivery(db.Model):
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    street = db.Column(db.String(128))
+    building_number = db.Column(db.String(32))
+    time_window = db.Column(db.String(64))
+    size = db.Column(db.String(32))
+    phone = db.Column(db.String(32))
+    time_from = db.Column(db.String(8))
+    time_to = db.Column(db.String(8))
     # relationships
     order = db.relationship('Order')
     client = db.relationship('Client')

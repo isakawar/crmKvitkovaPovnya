@@ -1,4 +1,7 @@
 Flask
 Flask-SQLAlchemy
 alembic
+Flask-WTF
+Flask-Migrate
+pytest
 python-dotenv

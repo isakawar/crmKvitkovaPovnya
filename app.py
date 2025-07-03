@@ -7,7 +7,19 @@ from routes.prices import prices_bp
 from routes.deliveries import deliveries_bp
 import random
 import datetime
+import logging
+import os
 
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(message)s',
+    handlers=[
+        logging.FileHandler('logs/app.log'),
+        logging.StreamHandler()
+    ]
+)
 
 def seed_db(app):
     with app.app_context():
