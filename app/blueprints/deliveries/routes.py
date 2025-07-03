@@ -6,7 +6,8 @@ deliveries_bp = Blueprint('deliveries', __name__)
 @deliveries_bp.route('/deliveries', methods=['GET'])
 def deliveries_list():
     date_str = request.args.get('date')
-    deliveries, selected_date = get_deliveries(date_str)
+    client_phone = request.args.get('client_phone', '').strip()
+    deliveries, selected_date = get_deliveries(date_str, client_phone)
     couriers = get_all_couriers()
     return render_template('deliveries_list.html', deliveries=deliveries, selected_date=selected_date, couriers=couriers)
 

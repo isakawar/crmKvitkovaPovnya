@@ -2,16 +2,19 @@
 {% block content %}
 <h2 class="mb-4">Доставки</h2>
 <div class="d-flex align-items-center mb-3">
-  <input type="date" id="filter-date" class="form-control form-control-sm me-2" style="width:170px;" value="{{ selected_date }}">
-  <select id="filter-status" class="form-select form-select-sm me-2" style="width:170px;">
-    <option value="">Всі статуси</option>
-    <option value="Очікує">Очікує</option>
-    <option value="Розподілено">Розподілено</option>
-    <option value="Доставлено">Доставлено</option>
-    <option value="НП">НП</option>
-  </select>
-  <button class="btn btn-outline-primary btn-sm me-2" id="apply-date-btn" type="button">Ок</button>
-  <button class="btn btn-outline-secondary btn-sm" id="reset-date-btn" type="button">Скинути</button>
+  <form class="d-flex align-items-center w-100" method="get" id="delivery-filter-form">
+    <input type="text" name="client_phone" class="form-control form-control-sm me-2" style="width:180px;" placeholder="Пошук за телефоном клієнта..." value="{{ request.args.get('client_phone', '') }}">
+    <input type="date" id="filter-date" name="date" class="form-control form-control-sm me-2" style="width:170px;" value="{{ selected_date }}">
+    <select id="filter-status" name="status" class="form-select form-select-sm me-2" style="width:170px;">
+      <option value="">Всі статуси</option>
+      <option value="Очікує">Очікує</option>
+      <option value="Розподілено">Розподілено</option>
+      <option value="Доставлено">Доставлено</option>
+      <option value="НП">НП</option>
+    </select>
+    <button class="btn btn-outline-primary btn-sm me-2" type="submit">Ок</button>
+    <button class="btn btn-outline-secondary btn-sm" id="reset-date-btn" type="button">Скинути</button>
+  </form>
 </div>
 <table class="table table-bordered table-hover align-middle">
   <thead>
