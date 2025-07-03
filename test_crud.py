@@ -30,11 +30,11 @@ def seed_data():
 
         # 5 букетів
         bouquets = [
-            Price(bouquet_size='M', delivery_type='Разова', price=300),
-            Price(bouquet_size='L', delivery_type='Разова', price=400),
-            Price(bouquet_size='XL', delivery_type='Постійна', price=500),
-            Price(bouquet_size='XXL', delivery_type='Постійна', price=600),
-            Price(bouquet_size='L', delivery_type='Постійна', price=420),
+            Price(bouquet_size='M', delivery_type='Доставка - підписка', price=300),
+            Price(bouquet_size='L', delivery_type='Доставка', price=400),
+            Price(bouquet_size='XL', delivery_type='Доставка - підписка', price=500),
+            Price(bouquet_size='XXL', delivery_type='Самовивіз', price=600),
+            Price(bouquet_size='L', delivery_type='Самовивіз', price=420),
         ]
         db.session.add_all(bouquets)
         db.session.commit()
@@ -55,11 +55,11 @@ def seed_data():
                 client_id=client.id,
                 street=f'Вулиця {i+1}',
                 building_number=str(10+i),
-                type=random.choice(['Разова', 'Постійна']),
+                type=random.choice(['Доставка', 'Самовивіз']),
                 bouquet_id=random.choice(bouquets).id,
                 delivery_count=random.randint(1, 4),
                 bouquet_size=random.choice(['M', 'L', 'XL', 'XXL']),
-                delivery_type=random.choice(['Разова', 'Постійна']),
+                delivery_type=random.choice(['Доставка', 'Самовивіз']),
                 price_at_order=random.choice([300, 400, 420, 500, 600]),
                 created_at=datetime.datetime.now() - datetime.timedelta(days=random.randint(0, 30))
             )

@@ -2,12 +2,15 @@ from app.extensions import db
 from app.models import Delivery, Courier
 from datetime import datetime
 import logging
+from app.models.client import Client
 
 logger = logging.getLogger(__name__)
 
-def get_deliveries(date_str=None):
+def get_deliveries(date_str=None, client_phone=None):
     deliveries_query = Delivery.query
     selected_date = None
+    if client_phone:
+        deliveries_query = deliveries_query.join(Client).filter(Client.phone.contains(client_phone))
     if date_str:
         try:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()

@@ -33,7 +33,7 @@ def order_create():
     required_fields = ['phone', 'street', 'building_number', 'type', 'bouquet_id', 'delivery_count', 'preferred_days']
     errors = []
     for field in required_fields:
-        value = request.form.getlist(field) if field == 'preferred_days' else request.form.get(field)
+        value = request.form.get(field)
         if not value or (isinstance(value, str) and value.strip() == '') or (field in ['type', 'bouquet_id'] and value == ''):
             errors.append(field)
     if errors:
