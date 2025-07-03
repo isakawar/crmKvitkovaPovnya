@@ -22,4 +22,5 @@ class Order(db.Model):
     # --- denormalized fields ---
     bouquet_size = db.Column(db.String(16))
     delivery_type = db.Column(db.String(32))
-    price_at_order = db.Column(db.Integer) 
+    price_at_order = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=db.func.now()) 

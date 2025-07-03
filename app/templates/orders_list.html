@@ -44,19 +44,19 @@
     <tbody>
     {% for order in orders_on_page %}
         <tr data-order-id="{{ order.id }}">
-            <td>{{ order.client.instagram }}</td>
-            <td>{{ order.client.city }}</td>
-            <td>{{ order.street }}</td>
-            <td>{{ order.building_number }}</td>
-            <td>{{ order.floor }}</td>
-            <td>{{ order.entrance }}</td>
-            <td>{{ order.client.phone }}</td>
-            <td>{{ order.type }}</td>
-            <td>{{ order.bouquet_size }}</td>
-            <td>{{ order.delivery_type }}</td>
-            <td>{{ order.price_at_order }}</td>
-            <td>{{ order.comment }}</td>
-            <td>{{ order.time_window }}</td>
+            <td>{{ order.client.instagram or '' }}</td>
+            <td>{{ order.client.city or '' }}</td>
+            <td>{{ order.street or '' }}</td>
+            <td>{{ order.building_number or '' }}</td>
+            <td>{{ order.floor or '' }}</td>
+            <td>{{ order.entrance or '' }}</td>
+            <td>{{ order.client.phone or '' }}</td>
+            <td>{{ order.type or '' }}</td>
+            <td>{{ order.bouquet_size or '' }}</td>
+            <td>{{ order.delivery_type or '' }}</td>
+            <td>{{ order.price_at_order or '' }}</td>
+            <td>{{ order.comment or '' }}</td>
+            <td>{{ order.time_window or '' }}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -406,6 +406,52 @@ document.addEventListener('DOMContentLoaded', function() {
     const isSubscription = type.includes('підписка');
     setDependentFieldsEnabled(true, isSubscription);
   });
+
+  // --- AJAX submit для модалки додавання замовлення ---
+  const addOrderForm = document.getElementById('addOrderForm');
+  if (addOrderForm) {
+    addOrderForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const formData = new FormData(addOrderForm);
+      fetch('/orders/new', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: formData
+      })
+      .then(async r => {
+        if (r.ok) {
+          // Успіх: закриваємо модалку, оновлюємо сторінку
+          const modal = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
+          if (modal) modal.hide();
+          location.reload();
+        } else {
+          const data = await r.json();
+          // Показати повідомлення про помилку у модалці
+          let msg = data.error || 'Помилка!';
+          let msgDiv = document.getElementById('add-order-error');
+          if (!msgDiv) {
+            msgDiv = document.createElement('div');
+            msgDiv.id = 'add-order-error';
+            msgDiv.className = 'alert alert-danger';
+            addOrderForm.querySelector('.modal-body').prepend(msgDiv);
+          }
+          msgDiv.textContent = msg;
+          msgDiv.classList.remove('d-none');
+        }
+      })
+      .catch(() => {
+        let msgDiv = document.getElementById('add-order-error');
+        if (!msgDiv) {
+          msgDiv = document.createElement('div');
+          msgDiv.id = 'add-order-error';
+          msgDiv.className = 'alert alert-danger';
+          addOrderForm.querySelector('.modal-body').prepend(msgDiv);
+        }
+        msgDiv.textContent = 'Помилка зʼєднання!';
+        msgDiv.classList.remove('d-none');
+      });
+    });
+  }
 });
 </script>
 {% endblock %} 

@@ -29,6 +29,19 @@ def order_form():
 def order_create():
     logging.info('--- ORDER CREATE ---')
     logging.info(f'Form data: {dict(request.form)}')
+    # Валідація обов'язкових полів
+    required_fields = ['phone', 'street', 'building_number', 'type', 'bouquet_id', 'delivery_count', 'preferred_days']
+    errors = []
+    for field in required_fields:
+        value = request.form.getlist(field) if field == 'preferred_days' else request.form.get(field)
+        if not value or (isinstance(value, str) and value.strip() == '') or (field in ['type', 'bouquet_id'] and value == ''):
+            errors.append(field)
+    if errors:
+        msg = 'Не всі обовʼязкові поля заповнені: ' + ', '.join(errors)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': msg}), 400
+        flash(msg, 'danger')
+        return redirect('/orders/new')
     phone = request.form['phone']
     city = request.form['city']
     instagram = request.form.get('instagram')
@@ -41,10 +54,14 @@ def order_create():
     ok, credits_needed = check_and_spend_credits(client, bouquet, delivery_count)
     if not ok:
         logging.warning('Not enough credits!')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Недостатньо кредитів для створення замовлення!'}), 400
         flash('Недостатньо кредитів для створення замовлення!', 'danger')
         return redirect('/orders')
     order = create_order_and_deliveries(client, request.form)
     logging.info(f'Order created: {order.id}')
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'order_id': order.id})
     flash('Замовлення створено, доставки додано!', 'success')
     return redirect('/orders')
 
