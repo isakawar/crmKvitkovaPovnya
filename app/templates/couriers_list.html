@@ -1,0 +1,39 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Кур'єри</h2>
+<form method="post" class="row g-3 align-items-end mb-4">
+  <div class="col-md-4">
+    <label class="form-label">Ім'я</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Телефон</label>
+    <input type="text" name="phone" class="form-control" required>
+  </div>
+  <div class="col-md-2 d-flex align-items-end">
+    <button type="submit" class="btn btn-primary w-100">Додати</button>
+  </div>
+</form>
+<table class="table table-bordered table-hover align-middle">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Ім'я</th>
+      <th>Телефон</th>
+      <th>Активний</th>
+      <th>Виконано доставок</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in couriers %}
+    <tr>
+      <td>{{ c.id }}</td>
+      <td>{{ c.name }}</td>
+      <td>{{ c.phone }}</td>
+      <td>{% if c.active %}Так{% else %}Ні{% endif %}</td>
+      <td>{{ c.deliveries_count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %} 

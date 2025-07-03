@@ -1,0 +1,1198 @@
+ 2025-07-03 15:31:43,534 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 15:31:43,534 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 15:31:43,535 INFO  * Restarting with stat
+2025-07-03 15:31:43,761 WARNING  * Debugger is active!
+2025-07-03 15:31:43,776 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:31:44,699 INFO 127.0.0.1 - - [03/Jul/2025 15:31:44] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:31:44,771 INFO 127.0.0.1 - - [03/Jul/2025 15:31:44] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:31:53,899 INFO 127.0.0.1 - - [03/Jul/2025 15:31:53] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:31:53,926 INFO 127.0.0.1 - - [03/Jul/2025 15:31:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:33:17,627 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:33:17,689 INFO  * Restarting with stat
+2025-07-03 15:33:18,004 WARNING  * Debugger is active!
+2025-07-03 15:33:18,009 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:33:53,331 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/app.py', reloading
+2025-07-03 15:33:53,407 INFO  * Restarting with stat
+2025-07-03 15:33:53,716 WARNING  * Debugger is active!
+2025-07-03 15:33:53,721 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:33:55,046 INFO 127.0.0.1 - - [03/Jul/2025 15:33:55] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:33:55,098 INFO 127.0.0.1 - - [03/Jul/2025 15:33:55] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:33:56,260 INFO 127.0.0.1 - - [03/Jul/2025 15:33:56] "GET /deliveries/4 HTTP/1.1" 200 -
+2025-07-03 15:34:00,453 INFO 127.0.0.1 - - [03/Jul/2025 15:34:00] "POST /deliveries/4/edit HTTP/1.1" 200 -
+2025-07-03 15:34:00,468 INFO 127.0.0.1 - - [03/Jul/2025 15:34:00] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:34:00,514 INFO 127.0.0.1 - - [03/Jul/2025 15:34:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:34:03,683 INFO 127.0.0.1 - - [03/Jul/2025 15:34:03] "GET /deliveries/6 HTTP/1.1" 200 -
+2025-07-03 15:34:55,979 INFO 127.0.0.1 - - [03/Jul/2025 15:34:55] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:34:56,039 INFO 127.0.0.1 - - [03/Jul/2025 15:34:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:35:23,824 INFO 127.0.0.1 - - [03/Jul/2025 15:35:23] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:35:23,881 INFO 127.0.0.1 - - [03/Jul/2025 15:35:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:35:51,304 INFO 127.0.0.1 - - [03/Jul/2025 15:35:51] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:35:51,326 INFO 127.0.0.1 - - [03/Jul/2025 15:35:51] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:36:31,375 INFO 127.0.0.1 - - [03/Jul/2025 15:36:31] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:36:31,428 INFO 127.0.0.1 - - [03/Jul/2025 15:36:31] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:37:00,809 INFO 127.0.0.1 - - [03/Jul/2025 15:37:00] "GET /deliveries/7 HTTP/1.1" 200 -
+2025-07-03 15:37:02,550 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:37:02,597 INFO  * Restarting with stat
+2025-07-03 15:37:02,902 WARNING  * Debugger is active!
+2025-07-03 15:37:02,908 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:37:07,959 INFO 127.0.0.1 - - [03/Jul/2025 15:37:07] "POST /deliveries/7/edit HTTP/1.1" 200 -
+2025-07-03 15:37:07,978 INFO 127.0.0.1 - - [03/Jul/2025 15:37:07] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:37:08,014 INFO 127.0.0.1 - - [03/Jul/2025 15:37:08] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:37:17,514 INFO 127.0.0.1 - - [03/Jul/2025 15:37:17] "GET /deliveries/4 HTTP/1.1" 200 -
+2025-07-03 15:37:20,580 INFO 127.0.0.1 - - [03/Jul/2025 15:37:20] "POST /deliveries/4/edit HTTP/1.1" 200 -
+2025-07-03 15:37:20,596 INFO 127.0.0.1 - - [03/Jul/2025 15:37:20] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:37:20,623 INFO 127.0.0.1 - - [03/Jul/2025 15:37:20] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:37:22,461 INFO 127.0.0.1 - - [03/Jul/2025 15:37:22] "POST /deliveries/7/status HTTP/1.1" 200 -
+2025-07-03 15:37:22,469 INFO 127.0.0.1 - - [03/Jul/2025 15:37:22] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:37:22,498 INFO 127.0.0.1 - - [03/Jul/2025 15:37:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:37:23,399 INFO 127.0.0.1 - - [03/Jul/2025 15:37:23] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:37:23,430 INFO 127.0.0.1 - - [03/Jul/2025 15:37:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:37:27,288 INFO 127.0.0.1 - - [03/Jul/2025 15:37:27] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:37:27,317 INFO 127.0.0.1 - - [03/Jul/2025 15:37:27] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:37:27,521 INFO 127.0.0.1 - - [03/Jul/2025 15:37:27] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:37:29,699 INFO 127.0.0.1 - - [03/Jul/2025 15:37:29] "GET /deliveries/6 HTTP/1.1" 200 -
+2025-07-03 15:38:51,910 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:38:51,960 INFO  * Restarting with stat
+2025-07-03 15:38:52,265 WARNING  * Debugger is active!
+2025-07-03 15:38:52,271 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:38:53,469 INFO 127.0.0.1 - - [03/Jul/2025 15:38:53] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:38:53,525 INFO 127.0.0.1 - - [03/Jul/2025 15:38:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:38:54,185 INFO 127.0.0.1 - - [03/Jul/2025 15:38:54] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:38:54,207 INFO 127.0.0.1 - - [03/Jul/2025 15:38:54] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:39:27,722 INFO 127.0.0.1 - - [03/Jul/2025 15:39:27] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:39:27,755 INFO 127.0.0.1 - - [03/Jul/2025 15:39:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:39:40,009 INFO 127.0.0.1 - - [03/Jul/2025 15:39:40] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:39:40,034 INFO 127.0.0.1 - - [03/Jul/2025 15:39:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:39:53,630 INFO 127.0.0.1 - - [03/Jul/2025 15:39:53] "GET /deliveries/4 HTTP/1.1" 200 -
+2025-07-03 15:40:03,197 INFO 127.0.0.1 - - [03/Jul/2025 15:40:03] "GET /deliveries/7 HTTP/1.1" 200 -
+2025-07-03 15:40:06,403 INFO 127.0.0.1 - - [03/Jul/2025 15:40:06] "POST /deliveries/7/edit HTTP/1.1" 200 -
+2025-07-03 15:40:06,414 INFO 127.0.0.1 - - [03/Jul/2025 15:40:06] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:40:06,456 INFO 127.0.0.1 - - [03/Jul/2025 15:40:06] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:46,931 INFO 127.0.0.1 - - [03/Jul/2025 15:41:46] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:41:47,006 INFO 127.0.0.1 - - [03/Jul/2025 15:41:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:47,021 INFO 127.0.0.1 - - [03/Jul/2025 15:41:47] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:41:47,929 INFO 127.0.0.1 - - [03/Jul/2025 15:41:47] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:41:47,988 INFO 127.0.0.1 - - [03/Jul/2025 15:41:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:48,547 INFO 127.0.0.1 - - [03/Jul/2025 15:41:48] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:41:48,593 INFO 127.0.0.1 - - [03/Jul/2025 15:41:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:48,619 INFO 127.0.0.1 - - [03/Jul/2025 15:41:48] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:41:50,433 INFO 127.0.0.1 - - [03/Jul/2025 15:41:50] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:41:50,489 INFO 127.0.0.1 - - [03/Jul/2025 15:41:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:55,169 INFO 127.0.0.1 - - [03/Jul/2025 15:41:55] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:41:55,236 INFO 127.0.0.1 - - [03/Jul/2025 15:41:55] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:55,251 INFO 127.0.0.1 - - [03/Jul/2025 15:41:55] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:41:55,872 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/delivery.py', reloading
+2025-07-03 15:41:55,942 INFO  * Restarting with stat
+2025-07-03 15:41:56,245 WARNING  * Debugger is active!
+2025-07-03 15:41:56,251 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:41:57,790 INFO 127.0.0.1 - - [03/Jul/2025 15:41:57] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:41:57,831 INFO 127.0.0.1 - - [03/Jul/2025 15:41:57] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:41:57,847 INFO 127.0.0.1 - - [03/Jul/2025 15:41:57] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:42:15,407 INFO 127.0.0.1 - - [03/Jul/2025 15:42:15] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:42:15,437 INFO 127.0.0.1 - - [03/Jul/2025 15:42:15] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:42:15,437 INFO 127.0.0.1 - - [03/Jul/2025 15:42:15] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:43:04,073 INFO 127.0.0.1 - - [03/Jul/2025 15:43:04] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:43:04,109 INFO 127.0.0.1 - - [03/Jul/2025 15:43:04] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:04,121 INFO 127.0.0.1 - - [03/Jul/2025 15:43:04] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:43:18,923 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/services/order_service.py', reloading
+2025-07-03 15:43:18,974 INFO  * Restarting with stat
+2025-07-03 15:43:19,232 WARNING  * Debugger is active!
+2025-07-03 15:43:19,238 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:43:20,251 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/delivery.py', reloading
+2025-07-03 15:43:20,312 INFO  * Restarting with stat
+2025-07-03 15:43:20,549 WARNING  * Debugger is active!
+2025-07-03 15:43:20,554 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:43:26,605 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:43:26,652 INFO  * Restarting with stat
+2025-07-03 15:43:26,899 WARNING  * Debugger is active!
+2025-07-03 15:43:26,905 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:43:27,916 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:43:27,968 INFO  * Restarting with stat
+2025-07-03 15:43:28,203 WARNING  * Debugger is active!
+2025-07-03 15:43:28,208 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:43:48,777 INFO 127.0.0.1 - - [03/Jul/2025 15:43:48] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:43:48,834 INFO 127.0.0.1 - - [03/Jul/2025 15:43:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:48,835 INFO 127.0.0.1 - - [03/Jul/2025 15:43:48] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:43:50,501 INFO 127.0.0.1 - - [03/Jul/2025 15:43:50] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:50,560 INFO 127.0.0.1 - - [03/Jul/2025 15:43:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:51,098 INFO 127.0.0.1 - - [03/Jul/2025 15:43:51] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:51,127 INFO 127.0.0.1 - - [03/Jul/2025 15:43:51] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:53,953 INFO 127.0.0.1 - - [03/Jul/2025 15:43:53] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:53,978 INFO 127.0.0.1 - - [03/Jul/2025 15:43:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:55,513 INFO 127.0.0.1 - - [03/Jul/2025 15:43:55] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:55,544 INFO 127.0.0.1 - - [03/Jul/2025 15:43:55] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:55,792 INFO 127.0.0.1 - - [03/Jul/2025 15:43:55] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:55,814 INFO 127.0.0.1 - - [03/Jul/2025 15:43:55] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:43:56,018 INFO 127.0.0.1 - - [03/Jul/2025 15:43:56] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:43:56,032 INFO 127.0.0.1 - - [03/Jul/2025 15:43:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:44:08,519 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:44:08,571 INFO  * Restarting with stat
+2025-07-03 15:44:08,860 WARNING  * Debugger is active!
+2025-07-03 15:44:08,866 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:44:10,882 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 15:44:10,932 INFO  * Restarting with stat
+2025-07-03 15:44:11,177 WARNING  * Debugger is active!
+2025-07-03 15:44:11,181 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:44:14,207 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/services/order_service.py', reloading
+2025-07-03 15:44:14,263 INFO  * Restarting with stat
+2025-07-03 15:44:14,505 WARNING  * Debugger is active!
+2025-07-03 15:44:14,510 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:44:20,713 INFO 127.0.0.1 - - [03/Jul/2025 15:44:20] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:44:20,779 INFO 127.0.0.1 - - [03/Jul/2025 15:44:20] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:44:23,566 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/services/order_service.py', reloading
+2025-07-03 15:44:23,612 INFO  * Restarting with stat
+2025-07-03 15:44:23,851 WARNING  * Debugger is active!
+2025-07-03 15:44:23,856 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:44:38,326 INFO 127.0.0.1 - - [03/Jul/2025 15:44:38] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:44:38,362 INFO 127.0.0.1 - - [03/Jul/2025 15:44:38] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:44:40,184 INFO 127.0.0.1 - - [03/Jul/2025 15:44:40] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:44:40,232 INFO 127.0.0.1 - - [03/Jul/2025 15:44:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:44:40,246 INFO 127.0.0.1 - - [03/Jul/2025 15:44:40] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:44:41,435 INFO 127.0.0.1 - - [03/Jul/2025 15:44:41] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:44:41,469 INFO 127.0.0.1 - - [03/Jul/2025 15:44:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:44:41,471 INFO 127.0.0.1 - - [03/Jul/2025 15:44:41] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:44:46,374 INFO 127.0.0.1 - - [03/Jul/2025 15:44:46] "GET /orders/6/edit HTTP/1.1" 200 -
+2025-07-03 15:47:34,551 INFO 127.0.0.1 - - [03/Jul/2025 15:47:34] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:47:34,617 INFO 127.0.0.1 - - [03/Jul/2025 15:47:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:47:34,635 INFO 127.0.0.1 - - [03/Jul/2025 15:47:34] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:47:36,197 INFO 127.0.0.1 - - [03/Jul/2025 15:47:36] "GET /orders/8/edit HTTP/1.1" 200 -
+2025-07-03 15:50:22,074 INFO 127.0.0.1 - - [03/Jul/2025 15:50:22] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:50:22,135 INFO 127.0.0.1 - - [03/Jul/2025 15:50:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:50:22,166 INFO 127.0.0.1 - - [03/Jul/2025 15:50:22] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:50:34,757 INFO 127.0.0.1 - - [03/Jul/2025 15:50:34] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:50:34,782 INFO 127.0.0.1 - - [03/Jul/2025 15:50:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:50:34,801 INFO 127.0.0.1 - - [03/Jul/2025 15:50:34] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:50:35,697 INFO 127.0.0.1 - - [03/Jul/2025 15:50:35] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:50:35,749 INFO 127.0.0.1 - - [03/Jul/2025 15:50:35] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:50:35,821 INFO 127.0.0.1 - - [03/Jul/2025 15:50:35] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:50:35,933 INFO 127.0.0.1 - - [03/Jul/2025 15:50:35] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:50:37,387 INFO 127.0.0.1 - - [03/Jul/2025 15:50:37] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:50:37,433 INFO 127.0.0.1 - - [03/Jul/2025 15:50:37] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:50:37,487 INFO 127.0.0.1 - - [03/Jul/2025 15:50:37] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:50:37,572 INFO 127.0.0.1 - - [03/Jul/2025 15:50:37] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:51:02,338 INFO 127.0.0.1 - - [03/Jul/2025 15:51:02] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:51:02,363 INFO 127.0.0.1 - - [03/Jul/2025 15:51:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:51:02,398 INFO 127.0.0.1 - - [03/Jul/2025 15:51:02] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:51:03,702 INFO 127.0.0.1 - - [03/Jul/2025 15:51:03] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:51:03,783 INFO 127.0.0.1 - - [03/Jul/2025 15:51:03] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:51:04,510 INFO 127.0.0.1 - - [03/Jul/2025 15:51:04] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 15:51:04,543 INFO 127.0.0.1 - - [03/Jul/2025 15:51:04] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:51:05,372 INFO 127.0.0.1 - - [03/Jul/2025 15:51:05] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:51:05,417 INFO 127.0.0.1 - - [03/Jul/2025 15:51:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:51:05,445 INFO 127.0.0.1 - - [03/Jul/2025 15:51:05] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:53:15,844 INFO 127.0.0.1 - - [03/Jul/2025 15:53:15] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:53:15,906 INFO 127.0.0.1 - - [03/Jul/2025 15:53:15] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:53:15,910 INFO 127.0.0.1 - - [03/Jul/2025 15:53:15] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:53:21,893 INFO 127.0.0.1 - - [03/Jul/2025 15:53:21] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:53:21,944 INFO 127.0.0.1 - - [03/Jul/2025 15:53:21] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:53:22,040 INFO 127.0.0.1 - - [03/Jul/2025 15:53:22] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:53:22,154 INFO 127.0.0.1 - - [03/Jul/2025 15:53:22] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:53:53,182 INFO 127.0.0.1 - - [03/Jul/2025 15:53:53] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:53:53,241 INFO 127.0.0.1 - - [03/Jul/2025 15:53:53] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:53:53,337 INFO 127.0.0.1 - - [03/Jul/2025 15:53:53] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:53:53,463 INFO 127.0.0.1 - - [03/Jul/2025 15:53:53] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:53:57,653 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 15:53:57,653 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 15:53:57,655 INFO  * Restarting with stat
+2025-07-03 15:53:57,877 WARNING  * Debugger is active!
+2025-07-03 15:53:57,882 INFO  * Debugger PIN: 814-053-175
+2025-07-03 15:53:59,220 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:53:59,252 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:53:59,278 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:53:59,878 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:53:59,905 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:53:59,963 INFO 127.0.0.1 - - [03/Jul/2025 15:53:59] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:54:00,057 INFO 127.0.0.1 - - [03/Jul/2025 15:54:00] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:54:38,274 INFO 127.0.0.1 - - [03/Jul/2025 15:54:38] "GET /orders HTTP/1.1" 200 -
+2025-07-03 15:54:38,328 INFO 127.0.0.1 - - [03/Jul/2025 15:54:38] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:54:38,414 INFO 127.0.0.1 - - [03/Jul/2025 15:54:38] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:54:38,554 INFO 127.0.0.1 - - [03/Jul/2025 15:54:38] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 15:54:47,871 INFO 127.0.0.1 - - [03/Jul/2025 15:54:47] "GET /orders?phone=&instagram=isakawar&city= HTTP/1.1" 200 -
+2025-07-03 15:54:47,941 INFO 127.0.0.1 - - [03/Jul/2025 15:54:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:54:47,942 INFO 127.0.0.1 - - [03/Jul/2025 15:54:47] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:54:50,148 INFO 127.0.0.1 - - [03/Jul/2025 15:54:50] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:54:50,203 INFO 127.0.0.1 - - [03/Jul/2025 15:54:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:54:50,215 INFO 127.0.0.1 - - [03/Jul/2025 15:54:50] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:56:05,712 INFO 127.0.0.1 - - [03/Jul/2025 15:56:05] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:56:05,792 INFO 127.0.0.1 - - [03/Jul/2025 15:56:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:56:05,795 INFO 127.0.0.1 - - [03/Jul/2025 15:56:05] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:56:05,834 INFO 127.0.0.1 - - [03/Jul/2025 15:56:05] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 15:56:06,740 INFO 127.0.0.1 - - [03/Jul/2025 15:56:06] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:56:06,799 INFO 127.0.0.1 - - [03/Jul/2025 15:56:06] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:56:06,883 INFO 127.0.0.1 - - [03/Jul/2025 15:56:06] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:56:07,000 INFO 127.0.0.1 - - [03/Jul/2025 15:56:07] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 15:56:20,446 INFO 127.0.0.1 - - [03/Jul/2025 15:56:20] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 15:57:41,167 INFO 127.0.0.1 - - [03/Jul/2025 15:57:41] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:57:41,246 INFO 127.0.0.1 - - [03/Jul/2025 15:57:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:57:41,402 INFO 127.0.0.1 - - [03/Jul/2025 15:57:41] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:57:41,574 INFO 127.0.0.1 - - [03/Jul/2025 15:57:41] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 15:58:24,743 INFO 127.0.0.1 - - [03/Jul/2025 15:58:24] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:58:24,780 INFO 127.0.0.1 - - [03/Jul/2025 15:58:24] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 15:58:24,786 INFO 127.0.0.1 - - [03/Jul/2025 15:58:24] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:58:25,376 INFO 127.0.0.1 - - [03/Jul/2025 15:58:25] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 15:58:25,415 INFO 127.0.0.1 - - [03/Jul/2025 15:58:25] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 15:58:25,501 INFO 127.0.0.1 - - [03/Jul/2025 15:58:25] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 15:58:25,561 INFO 127.0.0.1 - - [03/Jul/2025 15:58:25] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 16:00:25,201 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:25,262 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:00:25,298 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:25,776 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:25,825 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:00:25,838 INFO 127.0.0.1 - - [03/Jul/2025 16:00:25] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:26,317 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:26,377 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:00:26,381 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:26,551 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:26,578 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:00:26,598 INFO 127.0.0.1 - - [03/Jul/2025 16:00:26] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:54,335 INFO 127.0.0.1 - - [03/Jul/2025 16:00:54] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:54,407 INFO 127.0.0.1 - - [03/Jul/2025 16:00:54] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:00:54,410 INFO 127.0.0.1 - - [03/Jul/2025 16:00:54] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:55,854 INFO 127.0.0.1 - - [03/Jul/2025 16:00:55] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:00:55,915 INFO 127.0.0.1 - - [03/Jul/2025 16:00:55] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:00:55,976 INFO 127.0.0.1 - - [03/Jul/2025 16:00:55] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:00:56,095 INFO 127.0.0.1 - - [03/Jul/2025 16:00:56] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 16:00:59,376 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 16:00:59,376 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 16:00:59,377 INFO  * Restarting with stat
+2025-07-03 16:00:59,604 WARNING  * Debugger is active!
+2025-07-03 16:00:59,609 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:01:00,600 INFO 127.0.0.1 - - [03/Jul/2025 16:01:00] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:01:00,664 INFO 127.0.0.1 - - [03/Jul/2025 16:01:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:00,671 INFO 127.0.0.1 - - [03/Jul/2025 16:01:00] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:01:01,264 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:01:01,306 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:01,320 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:01:01,575 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "GET /orders?phone=&instagram=&city= HTTP/1.1" 200 -
+2025-07-03 16:01:01,623 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:01:01,677 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:01:01,767 INFO 127.0.0.1 - - [03/Jul/2025 16:01:01] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 16:01:03,150 INFO 127.0.0.1 - - [03/Jul/2025 16:01:03] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:01:03,209 INFO 127.0.0.1 - - [03/Jul/2025 16:01:03] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:03,332 INFO 127.0.0.1 - - [03/Jul/2025 16:01:03] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:01:04,183 INFO 127.0.0.1 - - [03/Jul/2025 16:01:04] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:01:04,243 INFO 127.0.0.1 - - [03/Jul/2025 16:01:04] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:04,258 INFO 127.0.0.1 - - [03/Jul/2025 16:01:04] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:01:04,943 INFO 127.0.0.1 - - [03/Jul/2025 16:01:04] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:01:05,005 INFO 127.0.0.1 - - [03/Jul/2025 16:01:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:06,342 INFO 127.0.0.1 - - [03/Jul/2025 16:01:06] "GET /deliveries/4 HTTP/1.1" 200 -
+2025-07-03 16:01:07,626 INFO 127.0.0.1 - - [03/Jul/2025 16:01:07] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:01:07,677 INFO 127.0.0.1 - - [03/Jul/2025 16:01:07] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:01:07,694 INFO 127.0.0.1 - - [03/Jul/2025 16:01:07] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:02:44,038 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:02:44,100 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:02:44,129 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:02:44,839 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:02:44,879 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:02:44,956 INFO 127.0.0.1 - - [03/Jul/2025 16:02:44] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:02:45,020 INFO 127.0.0.1 - - [03/Jul/2025 16:02:45] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 16:05:41,754 INFO 127.0.0.1 - - [03/Jul/2025 16:05:41] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:05:41,832 INFO 127.0.0.1 - - [03/Jul/2025 16:05:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:05:41,851 INFO 127.0.0.1 - - [03/Jul/2025 16:05:41] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:05:42,471 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:05:42,531 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:05:42,535 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:05:42,888 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:05:42,940 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:05:42,946 INFO 127.0.0.1 - - [03/Jul/2025 16:05:42] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:05:43,433 INFO 127.0.0.1 - - [03/Jul/2025 16:05:43] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:05:43,476 INFO 127.0.0.1 - - [03/Jul/2025 16:05:43] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:05:43,548 INFO 127.0.0.1 - - [03/Jul/2025 16:05:43] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:05:43,614 INFO 127.0.0.1 - - [03/Jul/2025 16:05:43] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 16:05:45,074 INFO 127.0.0.1 - - [03/Jul/2025 16:05:45] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:05:45,148 INFO 127.0.0.1 - - [03/Jul/2025 16:05:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:05:46,573 INFO 127.0.0.1 - - [03/Jul/2025 16:05:46] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:05:46,627 INFO 127.0.0.1 - - [03/Jul/2025 16:05:46] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:05:46,644 INFO 127.0.0.1 - - [03/Jul/2025 16:05:46] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:06:45,783 INFO 127.0.0.1 - - [03/Jul/2025 16:06:45] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:06:45,837 INFO 127.0.0.1 - - [03/Jul/2025 16:06:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:06:45,840 INFO 127.0.0.1 - - [03/Jul/2025 16:06:45] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:06:47,574 INFO 127.0.0.1 - - [03/Jul/2025 16:06:47] "GET /orders/7/edit HTTP/1.1" 200 -
+2025-07-03 16:07:18,274 INFO 127.0.0.1 - - [03/Jul/2025 16:07:18] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:07:18,300 INFO 127.0.0.1 - - [03/Jul/2025 16:07:18] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:07:18,316 INFO 127.0.0.1 - - [03/Jul/2025 16:07:18] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:07:18,378 INFO 127.0.0.1 - - [03/Jul/2025 16:07:18] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:07:20,215 INFO 127.0.0.1 - - [03/Jul/2025 16:07:20] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:07:20,264 INFO 127.0.0.1 - - [03/Jul/2025 16:07:20] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:07:20,279 INFO 127.0.0.1 - - [03/Jul/2025 16:07:20] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:07:20,323 INFO 127.0.0.1 - - [03/Jul/2025 16:07:20] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:07:23,076 INFO 127.0.0.1 - - [03/Jul/2025 16:07:23] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:07:23,125 INFO 127.0.0.1 - - [03/Jul/2025 16:07:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:07:23,138 INFO 127.0.0.1 - - [03/Jul/2025 16:07:23] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:07:23,184 INFO 127.0.0.1 - - [03/Jul/2025 16:07:23] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:07:27,640 INFO 127.0.0.1 - - [03/Jul/2025 16:07:27] "GET /orders/7/edit HTTP/1.1" 200 -
+2025-07-03 16:09:19,395 INFO 127.0.0.1 - - [03/Jul/2025 16:09:19] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:09:19,455 INFO 127.0.0.1 - - [03/Jul/2025 16:09:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:09:19,475 INFO 127.0.0.1 - - [03/Jul/2025 16:09:19] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:09:19,530 INFO 127.0.0.1 - - [03/Jul/2025 16:09:19] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:09:22,137 INFO 127.0.0.1 - - [03/Jul/2025 16:09:22] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:09:22,201 INFO 127.0.0.1 - - [03/Jul/2025 16:09:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:09:22,729 INFO 127.0.0.1 - - [03/Jul/2025 16:09:22] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:09:22,793 INFO 127.0.0.1 - - [03/Jul/2025 16:09:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:09:22,807 INFO 127.0.0.1 - - [03/Jul/2025 16:09:22] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:09:40,332 INFO 127.0.0.1 - - [03/Jul/2025 16:09:40] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:09:40,375 INFO 127.0.0.1 - - [03/Jul/2025 16:09:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:09:40,390 INFO 127.0.0.1 - - [03/Jul/2025 16:09:40] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:09:40,431 INFO 127.0.0.1 - - [03/Jul/2025 16:09:40] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:09:57,153 INFO 127.0.0.1 - - [03/Jul/2025 16:09:57] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:09:57,196 INFO 127.0.0.1 - - [03/Jul/2025 16:09:57] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:09:57,299 INFO 127.0.0.1 - - [03/Jul/2025 16:09:57] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:09:57,404 INFO 127.0.0.1 - - [03/Jul/2025 16:09:57] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:10:22,454 INFO 127.0.0.1 - - [03/Jul/2025 16:10:22] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 16:10:53,433 INFO 127.0.0.1 - - [03/Jul/2025 16:10:53] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:10:53,458 INFO 127.0.0.1 - - [03/Jul/2025 16:10:53] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 16:10:53,505 INFO 127.0.0.1 - - [03/Jul/2025 16:10:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:10:53,507 INFO 127.0.0.1 - - [03/Jul/2025 16:10:53] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:10:53,704 INFO 127.0.0.1 - - [03/Jul/2025 16:10:53] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:11:08,818 INFO 127.0.0.1 - - [03/Jul/2025 16:11:08] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:11:08,844 INFO 127.0.0.1 - - [03/Jul/2025 16:11:08] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:11:08,876 INFO 127.0.0.1 - - [03/Jul/2025 16:11:08] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:11:08,984 INFO 127.0.0.1 - - [03/Jul/2025 16:11:08] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:11:14,766 INFO 127.0.0.1 - - [03/Jul/2025 16:11:14] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:11:14,824 INFO 127.0.0.1 - - [03/Jul/2025 16:11:14] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:11:14,924 INFO 127.0.0.1 - - [03/Jul/2025 16:11:14] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:11:14,927 INFO 127.0.0.1 - - [03/Jul/2025 16:11:14] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:11:21,629 INFO 127.0.0.1 - - [03/Jul/2025 16:11:21] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:11:21,674 INFO 127.0.0.1 - - [03/Jul/2025 16:11:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:11:21,702 INFO 127.0.0.1 - - [03/Jul/2025 16:11:21] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:11:21,746 INFO 127.0.0.1 - - [03/Jul/2025 16:11:21] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:13:30,308 INFO 127.0.0.1 - - [03/Jul/2025 16:13:30] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:13:30,364 INFO 127.0.0.1 - - [03/Jul/2025 16:13:30] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:13:30,519 INFO 127.0.0.1 - - [03/Jul/2025 16:13:30] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:13:30,648 INFO 127.0.0.1 - - [03/Jul/2025 16:13:30] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:13:39,756 INFO 127.0.0.1 - - [03/Jul/2025 16:13:39] "GET /orders/bouquets?delivery_type=Доставка HTTP/1.1" 200 -
+2025-07-03 16:14:35,986 INFO 127.0.0.1 - - [03/Jul/2025 16:14:35] "GET /orders/6/edit HTTP/1.1" 200 -
+2025-07-03 16:15:02,504 INFO 127.0.0.1 - - [03/Jul/2025 16:15:02] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:15:02,578 INFO 127.0.0.1 - - [03/Jul/2025 16:15:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:15:02,580 INFO 127.0.0.1 - - [03/Jul/2025 16:15:02] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:15:02,613 INFO 127.0.0.1 - - [03/Jul/2025 16:15:02] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:15:03,643 INFO 127.0.0.1 - - [03/Jul/2025 16:15:03] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:15:03,688 INFO 127.0.0.1 - - [03/Jul/2025 16:15:03] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:15:03,764 INFO 127.0.0.1 - - [03/Jul/2025 16:15:03] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:15:03,898 INFO 127.0.0.1 - - [03/Jul/2025 16:15:03] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:15:04,742 INFO 127.0.0.1 - - [03/Jul/2025 16:15:04] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:15:04,798 INFO 127.0.0.1 - - [03/Jul/2025 16:15:04] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:15:04,863 INFO 127.0.0.1 - - [03/Jul/2025 16:15:04] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:15:04,942 INFO 127.0.0.1 - - [03/Jul/2025 16:15:04] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:15:16,106 INFO 127.0.0.1 - - [03/Jul/2025 16:15:16] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:15:16,156 INFO 127.0.0.1 - - [03/Jul/2025 16:15:16] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:15:16,207 INFO 127.0.0.1 - - [03/Jul/2025 16:15:16] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:15:16,272 INFO 127.0.0.1 - - [03/Jul/2025 16:15:16] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:15:47,501 INFO 127.0.0.1 - - [03/Jul/2025 16:15:47] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:15:47,549 INFO 127.0.0.1 - - [03/Jul/2025 16:15:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:15:47,563 INFO 127.0.0.1 - - [03/Jul/2025 16:15:47] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:15:47,613 INFO 127.0.0.1 - - [03/Jul/2025 16:15:47] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:15:48,343 INFO 127.0.0.1 - - [03/Jul/2025 16:15:48] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:15:48,403 INFO 127.0.0.1 - - [03/Jul/2025 16:15:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:15:49,110 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:15:49,150 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:15:49,208 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:15:49,726 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:15:49,766 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:15:49,824 INFO 127.0.0.1 - - [03/Jul/2025 16:15:49] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:12,620 INFO 127.0.0.1 - - [03/Jul/2025 16:16:12] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:12,646 INFO 127.0.0.1 - - [03/Jul/2025 16:16:12] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:12,729 INFO 127.0.0.1 - - [03/Jul/2025 16:16:12] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:13,543 INFO 127.0.0.1 - - [03/Jul/2025 16:16:13] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:13,575 INFO 127.0.0.1 - - [03/Jul/2025 16:16:13] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:13,643 INFO 127.0.0.1 - - [03/Jul/2025 16:16:13] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:14,248 INFO 127.0.0.1 - - [03/Jul/2025 16:16:14] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:14,303 INFO 127.0.0.1 - - [03/Jul/2025 16:16:14] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:16:14,538 INFO 127.0.0.1 - - [03/Jul/2025 16:16:14] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:16:17,690 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 16:16:17,690 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 16:16:17,691 INFO  * Restarting with stat
+2025-07-03 16:16:17,908 WARNING  * Debugger is active!
+2025-07-03 16:16:17,918 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:16:18,867 INFO 127.0.0.1 - - [03/Jul/2025 16:16:18] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:18,910 INFO 127.0.0.1 - - [03/Jul/2025 16:16:18] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:18,963 INFO 127.0.0.1 - - [03/Jul/2025 16:16:18] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:19,273 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:19,314 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:19,373 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:19,659 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:19,708 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:16:19,839 INFO 127.0.0.1 - - [03/Jul/2025 16:16:19] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:16:20,198 INFO 127.0.0.1 - - [03/Jul/2025 16:16:20] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:20,240 INFO 127.0.0.1 - - [03/Jul/2025 16:16:20] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:16:20,360 INFO 127.0.0.1 - - [03/Jul/2025 16:16:20] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:16:21,687 INFO 127.0.0.1 - - [03/Jul/2025 16:16:21] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:16:21,732 INFO 127.0.0.1 - - [03/Jul/2025 16:16:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:21,757 INFO 127.0.0.1 - - [03/Jul/2025 16:16:21] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:16:22,272 INFO 127.0.0.1 - - [03/Jul/2025 16:16:22] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:16:22,303 INFO 127.0.0.1 - - [03/Jul/2025 16:16:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:22,319 INFO 127.0.0.1 - - [03/Jul/2025 16:16:22] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:16:22,373 INFO 127.0.0.1 - - [03/Jul/2025 16:16:22] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:29,449 INFO 127.0.0.1 - - [03/Jul/2025 16:16:29] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:29,507 INFO 127.0.0.1 - - [03/Jul/2025 16:16:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:36,509 INFO 127.0.0.1 - - [03/Jul/2025 16:16:36] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:36,556 INFO 127.0.0.1 - - [03/Jul/2025 16:16:36] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:36,615 INFO 127.0.0.1 - - [03/Jul/2025 16:16:36] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:16:37,492 INFO 127.0.0.1 - - [03/Jul/2025 16:16:37] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:16:37,553 INFO 127.0.0.1 - - [03/Jul/2025 16:16:37] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:16:37,594 INFO 127.0.0.1 - - [03/Jul/2025 16:16:37] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:17:41,508 INFO 127.0.0.1 - - [03/Jul/2025 16:17:41] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:17:41,535 INFO 127.0.0.1 - - [03/Jul/2025 16:17:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:17:41,605 INFO 127.0.0.1 - - [03/Jul/2025 16:17:41] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:17:42,879 INFO 127.0.0.1 - - [03/Jul/2025 16:17:42] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:17:42,923 INFO 127.0.0.1 - - [03/Jul/2025 16:17:42] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:17:42,936 INFO 127.0.0.1 - - [03/Jul/2025 16:17:42] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:17:45,333 INFO 127.0.0.1 - - [03/Jul/2025 16:17:45] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:17:45,395 INFO 127.0.0.1 - - [03/Jul/2025 16:17:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:17:48,193 INFO 127.0.0.1 - - [03/Jul/2025 16:17:48] "GET /clients HTTP/1.1" 200 -
+2025-07-03 16:17:48,246 INFO 127.0.0.1 - - [03/Jul/2025 16:17:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:17:50,285 INFO 127.0.0.1 - - [03/Jul/2025 16:17:50] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:17:50,353 INFO 127.0.0.1 - - [03/Jul/2025 16:17:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:17:50,357 INFO 127.0.0.1 - - [03/Jul/2025 16:17:50] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:18:09,093 INFO 127.0.0.1 - - [03/Jul/2025 16:18:09] "GET /orders/bouquets?delivery_type=Доставка HTTP/1.1" 200 -
+2025-07-03 16:18:15,614 INFO 127.0.0.1 - - [03/Jul/2025 16:18:15] "GET /orders/bouquets?delivery_type=Самовивіз HTTP/1.1" 200 -
+2025-07-03 16:18:29,828 INFO --- ORDER CREATE ---
+2025-07-03 16:18:29,830 INFO Form data: {'phone': '+380501231005', 'recipient_phone': '099999999', 'city': 'Київ', 'street': 'Мадагаскара ', 'building_number': '5', 'entrance': '1,3', 'type': 'Самовивіз - підписка', 'bouquet_id': '4', 'delivery_count': '4', 'preferred_day': 'ср', 'periodicity': '1/7', 'time_from': '11:00', 'time_to': '', 'comment': ''}
+2025-07-03 16:18:29,847 INFO Order created: 9
+2025-07-03 16:18:29,848 INFO 127.0.0.1 - - [03/Jul/2025 16:18:29] "[32mPOST /orders/new HTTP/1.1[0m" 302 -
+2025-07-03 16:18:29,857 INFO 127.0.0.1 - - [03/Jul/2025 16:18:29] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:18:29,909 INFO 127.0.0.1 - - [03/Jul/2025 16:18:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:18:29,913 INFO 127.0.0.1 - - [03/Jul/2025 16:18:29] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:18:31,343 INFO 127.0.0.1 - - [03/Jul/2025 16:18:31] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:18:31,372 INFO 127.0.0.1 - - [03/Jul/2025 16:18:31] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:18:31,396 INFO 127.0.0.1 - - [03/Jul/2025 16:18:31] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:18:31,450 INFO 127.0.0.1 - - [03/Jul/2025 16:18:31] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:18:34,085 INFO 127.0.0.1 - - [03/Jul/2025 16:18:34] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:18:34,145 INFO 127.0.0.1 - - [03/Jul/2025 16:18:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:18:37,454 INFO 127.0.0.1 - - [03/Jul/2025 16:18:37] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:18:37,493 INFO 127.0.0.1 - - [03/Jul/2025 16:18:37] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:18:37,551 INFO 127.0.0.1 - - [03/Jul/2025 16:18:37] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:18:54,198 INFO 127.0.0.1 - - [03/Jul/2025 16:18:54] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:18:59,066 INFO 127.0.0.1 - - [03/Jul/2025 16:18:59] "POST /deliveries/10/edit HTTP/1.1" 200 -
+2025-07-03 16:18:59,076 INFO 127.0.0.1 - - [03/Jul/2025 16:18:59] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:18:59,125 INFO 127.0.0.1 - - [03/Jul/2025 16:18:59] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:18:59,182 INFO 127.0.0.1 - - [03/Jul/2025 16:18:59] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:19:01,817 INFO 127.0.0.1 - - [03/Jul/2025 16:19:01] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:19:05,161 INFO 127.0.0.1 - - [03/Jul/2025 16:19:05] "GET /deliveries/11 HTTP/1.1" 200 -
+2025-07-03 16:19:11,044 INFO 127.0.0.1 - - [03/Jul/2025 16:19:11] "GET /deliveries/11 HTTP/1.1" 200 -
+2025-07-03 16:20:13,696 INFO 127.0.0.1 - - [03/Jul/2025 16:20:13] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:20:24,191 INFO 127.0.0.1 - - [03/Jul/2025 16:20:24] "POST /deliveries/8/status HTTP/1.1" 200 -
+2025-07-03 16:20:24,200 INFO 127.0.0.1 - - [03/Jul/2025 16:20:24] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:20:24,247 INFO 127.0.0.1 - - [03/Jul/2025 16:20:24] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:20:24,321 INFO 127.0.0.1 - - [03/Jul/2025 16:20:24] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:20:25,329 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 16:20:25,381 INFO  * Restarting with stat
+2025-07-03 16:20:25,720 WARNING  * Debugger is active!
+2025-07-03 16:20:25,728 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:21:13,215 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 16:21:13,271 INFO  * Restarting with stat
+2025-07-03 16:21:14,090 WARNING  * Debugger is active!
+2025-07-03 16:21:14,095 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:21:14,113 INFO 127.0.0.1 - - [03/Jul/2025 16:21:14] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:21:14,164 INFO 127.0.0.1 - - [03/Jul/2025 16:21:14] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:21:14,213 INFO 127.0.0.1 - - [03/Jul/2025 16:21:14] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:21:15,925 INFO 127.0.0.1 - - [03/Jul/2025 16:21:15] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:21:18,865 INFO 127.0.0.1 - - [03/Jul/2025 16:21:18] "GET /deliveries/8 HTTP/1.1" 200 -
+2025-07-03 16:21:32,399 INFO 127.0.0.1 - - [03/Jul/2025 16:21:32] "GET /deliveries/7 HTTP/1.1" 200 -
+2025-07-03 16:22:06,735 INFO 127.0.0.1 - - [03/Jul/2025 16:22:06] "GET /deliveries/7 HTTP/1.1" 200 -
+2025-07-03 16:22:52,534 INFO 127.0.0.1 - - [03/Jul/2025 16:22:52] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:22:52,594 INFO 127.0.0.1 - - [03/Jul/2025 16:22:52] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:22:52,677 INFO 127.0.0.1 - - [03/Jul/2025 16:22:52] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:22:53,493 INFO 127.0.0.1 - - [03/Jul/2025 16:22:53] "GET /deliveries/9 HTTP/1.1" 200 -
+2025-07-03 16:22:55,030 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 16:22:55,080 INFO  * Restarting with stat
+2025-07-03 16:22:55,388 WARNING  * Debugger is active!
+2025-07-03 16:22:55,395 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:23:07,926 INFO 127.0.0.1 - - [03/Jul/2025 16:23:07] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:23:07,967 INFO 127.0.0.1 - - [03/Jul/2025 16:23:07] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:23:08,032 INFO 127.0.0.1 - - [03/Jul/2025 16:23:08] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:23:08,928 INFO 127.0.0.1 - - [03/Jul/2025 16:23:08] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:23:54,922 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 16:23:54,978 INFO  * Restarting with stat
+2025-07-03 16:23:55,470 WARNING  * Debugger is active!
+2025-07-03 16:23:55,476 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:24:21,712 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 16:24:21,776 INFO  * Restarting with stat
+2025-07-03 16:24:22,134 WARNING  * Debugger is active!
+2025-07-03 16:24:22,140 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:24:24,015 INFO 127.0.0.1 - - [03/Jul/2025 16:24:24] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:24:24,052 INFO 127.0.0.1 - - [03/Jul/2025 16:24:24] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:24:24,130 INFO 127.0.0.1 - - [03/Jul/2025 16:24:24] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:24:24,914 INFO 127.0.0.1 - - [03/Jul/2025 16:24:24] "GET /deliveries/4 HTTP/1.1" 200 -
+2025-07-03 16:24:28,181 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/delivery.py', reloading
+2025-07-03 16:24:28,231 INFO  * Restarting with stat
+2025-07-03 16:24:28,509 WARNING  * Debugger is active!
+2025-07-03 16:24:28,515 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:25:24,989 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/delivery.py', reloading
+2025-07-03 16:25:25,049 INFO  * Restarting with stat
+2025-07-03 16:25:25,358 WARNING  * Debugger is active!
+2025-07-03 16:25:25,364 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:29:07,945 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 16:29:07,946 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 16:29:07,946 INFO  * Restarting with stat
+2025-07-03 16:29:08,175 WARNING  * Debugger is active!
+2025-07-03 16:29:08,180 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:29:09,296 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[35m[1mGET /deliveries HTTP/1.1[0m" 500 -
+2025-07-03 16:29:09,357 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-07-03 16:29:09,358 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-07-03 16:29:09,372 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "GET /deliveries?__debugger__=yes&cmd=resource&f=console.png&s=oAN4jal4XoOJCCfpq7cE HTTP/1.1" 200 -
+2025-07-03 16:29:09,408 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[35m[1mGET /deliveries HTTP/1.1[0m" 500 -
+2025-07-03 16:29:09,485 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-07-03 16:29:09,491 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-07-03 16:29:09,508 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=console.png&s=oAN4jal4XoOJCCfpq7cE HTTP/1.1[0m" 304 -
+2025-07-03 16:29:09,601 INFO 127.0.0.1 - - [03/Jul/2025 16:29:09] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-07-03 16:29:10,082 INFO 127.0.0.1 - - [03/Jul/2025 16:29:10] "[35m[1mGET /deliveries HTTP/1.1[0m" 500 -
+2025-07-03 16:29:10,134 INFO 127.0.0.1 - - [03/Jul/2025 16:29:10] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-07-03 16:29:10,137 INFO 127.0.0.1 - - [03/Jul/2025 16:29:10] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-07-03 16:29:10,148 INFO 127.0.0.1 - - [03/Jul/2025 16:29:10] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=console.png&s=oAN4jal4XoOJCCfpq7cE HTTP/1.1[0m" 304 -
+2025-07-03 16:29:10,198 INFO 127.0.0.1 - - [03/Jul/2025 16:29:10] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-07-03 16:31:17,139 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 16:31:17,140 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 16:31:17,140 INFO  * Restarting with stat
+2025-07-03 16:31:17,373 WARNING  * Debugger is active!
+2025-07-03 16:31:17,379 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:31:19,429 INFO 127.0.0.1 - - [03/Jul/2025 16:31:19] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:31:19,490 INFO 127.0.0.1 - - [03/Jul/2025 16:31:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:31:19,574 INFO 127.0.0.1 - - [03/Jul/2025 16:31:19] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:31:20,596 INFO 127.0.0.1 - - [03/Jul/2025 16:31:20] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:32:04,828 INFO 127.0.0.1 - - [03/Jul/2025 16:32:04] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:32:04,889 INFO 127.0.0.1 - - [03/Jul/2025 16:32:04] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:32:04,920 INFO 127.0.0.1 - - [03/Jul/2025 16:32:04] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:32:06,375 INFO 127.0.0.1 - - [03/Jul/2025 16:32:06] "GET /deliveries/8 HTTP/1.1" 200 -
+2025-07-03 16:32:16,496 INFO 127.0.0.1 - - [03/Jul/2025 16:32:16] "GET /deliveries/11 HTTP/1.1" 200 -
+2025-07-03 16:32:23,648 INFO 127.0.0.1 - - [03/Jul/2025 16:32:23] "POST /deliveries/11/edit HTTP/1.1" 200 -
+2025-07-03 16:32:23,661 INFO 127.0.0.1 - - [03/Jul/2025 16:32:23] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:32:23,696 INFO 127.0.0.1 - - [03/Jul/2025 16:32:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:32:23,745 INFO 127.0.0.1 - - [03/Jul/2025 16:32:23] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:38,125 INFO 127.0.0.1 - - [03/Jul/2025 16:33:38] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:38,160 INFO 127.0.0.1 - - [03/Jul/2025 16:33:38] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:38,221 INFO 127.0.0.1 - - [03/Jul/2025 16:33:38] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,032 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:39,061 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,112 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,393 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:39,420 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,468 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,717 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:39,743 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,790 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:39,919 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:39,977 INFO 127.0.0.1 - - [03/Jul/2025 16:33:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:40,002 INFO 127.0.0.1 - - [03/Jul/2025 16:33:40] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:33:40,140 INFO 127.0.0.1 - - [03/Jul/2025 16:33:40] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:33:40,180 INFO 127.0.0.1 - - [03/Jul/2025 16:33:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:33:40,220 INFO 127.0.0.1 - - [03/Jul/2025 16:33:40] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:36:42,229 INFO 127.0.0.1 - - [03/Jul/2025 16:36:42] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:36:42,291 INFO 127.0.0.1 - - [03/Jul/2025 16:36:42] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:36:42,369 INFO 127.0.0.1 - - [03/Jul/2025 16:36:42] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:37:29,327 INFO 127.0.0.1 - - [03/Jul/2025 16:37:29] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:37:29,375 INFO 127.0.0.1 - - [03/Jul/2025 16:37:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:37:30,246 INFO 127.0.0.1 - - [03/Jul/2025 16:37:30] "GET /clients HTTP/1.1" 200 -
+2025-07-03 16:37:30,306 INFO 127.0.0.1 - - [03/Jul/2025 16:37:30] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:37:32,306 INFO 127.0.0.1 - - [03/Jul/2025 16:37:32] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:37:32,371 INFO 127.0.0.1 - - [03/Jul/2025 16:37:32] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:39:46,730 INFO 127.0.0.1 - - [03/Jul/2025 16:39:46] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:39:46,799 INFO 127.0.0.1 - - [03/Jul/2025 16:39:46] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:39:46,825 INFO 127.0.0.1 - - [03/Jul/2025 16:39:46] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:40:02,377 INFO 127.0.0.1 - - [03/Jul/2025 16:40:02] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:40:02,449 INFO 127.0.0.1 - - [03/Jul/2025 16:40:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:40:02,452 INFO 127.0.0.1 - - [03/Jul/2025 16:40:02] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:40:41,421 INFO 127.0.0.1 - - [03/Jul/2025 16:40:41] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:40:41,471 INFO 127.0.0.1 - - [03/Jul/2025 16:40:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:40:44,687 INFO 127.0.0.1 - - [03/Jul/2025 16:40:44] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:40:44,749 INFO 127.0.0.1 - - [03/Jul/2025 16:40:44] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:40:44,762 INFO 127.0.0.1 - - [03/Jul/2025 16:40:44] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:40:45,150 INFO 127.0.0.1 - - [03/Jul/2025 16:40:45] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:40:45,195 INFO 127.0.0.1 - - [03/Jul/2025 16:40:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:40:51,952 INFO 127.0.0.1 - - [03/Jul/2025 16:40:51] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:40:52,011 INFO 127.0.0.1 - - [03/Jul/2025 16:40:52] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:40:52,040 INFO 127.0.0.1 - - [03/Jul/2025 16:40:52] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:42:31,517 INFO 127.0.0.1 - - [03/Jul/2025 16:42:31] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:42:31,586 INFO 127.0.0.1 - - [03/Jul/2025 16:42:31] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:42:31,614 INFO 127.0.0.1 - - [03/Jul/2025 16:42:31] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:42:32,220 INFO 127.0.0.1 - - [03/Jul/2025 16:42:32] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:42:32,273 INFO 127.0.0.1 - - [03/Jul/2025 16:42:32] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:42:32,473 INFO 127.0.0.1 - - [03/Jul/2025 16:42:32] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:45:21,983 INFO 127.0.0.1 - - [03/Jul/2025 16:45:21] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:45:22,039 INFO 127.0.0.1 - - [03/Jul/2025 16:45:22] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:45:22,296 INFO 127.0.0.1 - - [03/Jul/2025 16:45:22] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:46:43,347 INFO 127.0.0.1 - - [03/Jul/2025 16:46:43] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:46:43,406 INFO 127.0.0.1 - - [03/Jul/2025 16:46:43] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:46:43,655 INFO 127.0.0.1 - - [03/Jul/2025 16:46:43] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:46:49,560 INFO 127.0.0.1 - - [03/Jul/2025 16:46:49] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:46:49,638 INFO 127.0.0.1 - - [03/Jul/2025 16:46:49] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:46:49,642 INFO 127.0.0.1 - - [03/Jul/2025 16:46:49] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:47:22,895 INFO 127.0.0.1 - - [03/Jul/2025 16:47:22] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:47:22,960 INFO 127.0.0.1 - - [03/Jul/2025 16:47:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:50:20,883 INFO 127.0.0.1 - - [03/Jul/2025 16:50:20] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:50:20,949 INFO 127.0.0.1 - - [03/Jul/2025 16:50:20] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:50:21,228 INFO 127.0.0.1 - - [03/Jul/2025 16:50:21] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:50:53,812 INFO 127.0.0.1 - - [03/Jul/2025 16:50:53] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:50:53,871 INFO 127.0.0.1 - - [03/Jul/2025 16:50:53] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:50:54,139 INFO 127.0.0.1 - - [03/Jul/2025 16:50:54] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:50:57,096 INFO 127.0.0.1 - - [03/Jul/2025 16:50:57] "GET /deliveries/11 HTTP/1.1" 200 -
+2025-07-03 16:51:53,053 INFO 127.0.0.1 - - [03/Jul/2025 16:51:53] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:51:53,106 INFO 127.0.0.1 - - [03/Jul/2025 16:51:53] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:51:53,392 INFO 127.0.0.1 - - [03/Jul/2025 16:51:53] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:52:13,725 INFO 127.0.0.1 - - [03/Jul/2025 16:52:13] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:52:13,772 INFO 127.0.0.1 - - [03/Jul/2025 16:52:13] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:52:13,900 INFO 127.0.0.1 - - [03/Jul/2025 16:52:13] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:52:36,270 INFO 127.0.0.1 - - [03/Jul/2025 16:52:36] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:52:36,320 INFO 127.0.0.1 - - [03/Jul/2025 16:52:36] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:52:36,478 INFO 127.0.0.1 - - [03/Jul/2025 16:52:36] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:53:14,449 INFO 127.0.0.1 - - [03/Jul/2025 16:53:14] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:53:14,505 INFO 127.0.0.1 - - [03/Jul/2025 16:53:14] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:53:14,744 INFO 127.0.0.1 - - [03/Jul/2025 16:53:14] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:53:24,981 INFO 127.0.0.1 - - [03/Jul/2025 16:53:24] "GET /deliveries/9 HTTP/1.1" 200 -
+2025-07-03 16:53:27,924 INFO 127.0.0.1 - - [03/Jul/2025 16:53:27] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:53:27,988 INFO 127.0.0.1 - - [03/Jul/2025 16:53:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:53:28,001 INFO 127.0.0.1 - - [03/Jul/2025 16:53:28] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:53:31,141 INFO 127.0.0.1 - - [03/Jul/2025 16:53:31] "GET /orders/9/edit HTTP/1.1" 200 -
+2025-07-03 16:53:40,077 INFO 127.0.0.1 - - [03/Jul/2025 16:53:40] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:53:40,123 INFO 127.0.0.1 - - [03/Jul/2025 16:53:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:53:47,482 INFO 127.0.0.1 - - [03/Jul/2025 16:53:47] "GET /prices HTTP/1.1" 200 -
+2025-07-03 16:53:47,527 INFO 127.0.0.1 - - [03/Jul/2025 16:53:47] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:53:47,848 INFO 127.0.0.1 - - [03/Jul/2025 16:53:47] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:53:48,613 INFO 127.0.0.1 - - [03/Jul/2025 16:53:48] "GET /orders HTTP/1.1" 200 -
+2025-07-03 16:53:48,658 INFO 127.0.0.1 - - [03/Jul/2025 16:53:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:53:48,683 INFO 127.0.0.1 - - [03/Jul/2025 16:53:48] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 16:53:49,393 INFO 127.0.0.1 - - [03/Jul/2025 16:53:49] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:53:49,438 INFO 127.0.0.1 - - [03/Jul/2025 16:53:49] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:56:27,555 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 16:56:27,556 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 16:56:27,556 INFO  * Restarting with stat
+2025-07-03 16:56:27,784 WARNING  * Debugger is active!
+2025-07-03 16:56:27,790 INFO  * Debugger PIN: 814-053-175
+2025-07-03 16:56:28,144 INFO 127.0.0.1 - - [03/Jul/2025 16:56:28] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:56:28,210 INFO 127.0.0.1 - - [03/Jul/2025 16:56:28] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:56:28,389 INFO 127.0.0.1 - - [03/Jul/2025 16:56:28] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:56:29,647 INFO 127.0.0.1 - - [03/Jul/2025 16:56:29] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:56:29,703 INFO 127.0.0.1 - - [03/Jul/2025 16:56:29] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:56:29,913 INFO 127.0.0.1 - - [03/Jul/2025 16:56:29] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:58:42,056 INFO 127.0.0.1 - - [03/Jul/2025 16:58:42] "GET /deliveries/10 HTTP/1.1" 200 -
+2025-07-03 16:58:48,466 INFO 127.0.0.1 - - [03/Jul/2025 16:58:48] "POST /deliveries/10/edit HTTP/1.1" 200 -
+2025-07-03 16:58:48,480 INFO 127.0.0.1 - - [03/Jul/2025 16:58:48] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:58:48,521 INFO 127.0.0.1 - - [03/Jul/2025 16:58:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:58:48,569 INFO 127.0.0.1 - - [03/Jul/2025 16:58:48] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:58:51,874 INFO 127.0.0.1 - - [03/Jul/2025 16:58:51] "GET /deliveries/9 HTTP/1.1" 200 -
+2025-07-03 16:59:01,332 INFO 127.0.0.1 - - [03/Jul/2025 16:59:01] "POST /deliveries/9/edit HTTP/1.1" 200 -
+2025-07-03 16:59:01,345 INFO 127.0.0.1 - - [03/Jul/2025 16:59:01] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:59:01,374 INFO 127.0.0.1 - - [03/Jul/2025 16:59:01] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 16:59:01,427 INFO 127.0.0.1 - - [03/Jul/2025 16:59:01] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 16:59:13,568 INFO 127.0.0.1 - - [03/Jul/2025 16:59:13] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:59:13,600 INFO 127.0.0.1 - - [03/Jul/2025 16:59:13] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:59:13,816 INFO 127.0.0.1 - - [03/Jul/2025 16:59:13] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:59:14,530 INFO 127.0.0.1 - - [03/Jul/2025 16:59:14] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 16:59:14,574 INFO 127.0.0.1 - - [03/Jul/2025 16:59:14] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 16:59:14,723 INFO 127.0.0.1 - - [03/Jul/2025 16:59:14] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 16:59:17,051 INFO 127.0.0.1 - - [03/Jul/2025 16:59:17] "[33mGET /assign-deliveries HTTP/1.1[0m" 404 -
+2025-07-03 16:59:17,181 INFO 127.0.0.1 - - [03/Jul/2025 16:59:17] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 17:00:34,166 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/courier.py', reloading
+2025-07-03 17:00:34,220 INFO  * Restarting with stat
+2025-07-03 17:00:34,503 WARNING  * Debugger is active!
+2025-07-03 17:00:34,509 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:00:38,548 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/models/delivery.py', reloading
+2025-07-03 17:00:38,597 INFO  * Restarting with stat
+2025-07-03 17:08:34,932 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 17:08:34,932 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 17:08:34,933 INFO  * Restarting with stat
+2025-07-03 17:08:35,170 WARNING  * Debugger is active!
+2025-07-03 17:08:35,176 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:08:36,930 INFO 127.0.0.1 - - [03/Jul/2025 17:08:36] "[35m[1mGET /deliveries HTTP/1.1[0m" 500 -
+2025-07-03 17:08:37,006 INFO 127.0.0.1 - - [03/Jul/2025 17:08:37] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1[0m" 304 -
+2025-07-03 17:08:37,007 INFO 127.0.0.1 - - [03/Jul/2025 17:08:37] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1[0m" 304 -
+2025-07-03 17:08:37,037 INFO 127.0.0.1 - - [03/Jul/2025 17:08:37] "GET /deliveries?__debugger__=yes&cmd=resource&f=console.png&s=tYzldgUKFUvU9sP5ndpH HTTP/1.1" 200 -
+2025-07-03 17:08:37,186 INFO 127.0.0.1 - - [03/Jul/2025 17:08:37] "[36mGET /deliveries?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1[0m" 304 -
+2025-07-03 17:11:45,125 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 17:11:45,125 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 17:11:45,126 INFO  * Restarting with stat
+2025-07-03 17:11:45,354 WARNING  * Debugger is active!
+2025-07-03 17:11:45,360 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:11:46,949 INFO 127.0.0.1 - - [03/Jul/2025 17:11:46] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:11:47,003 INFO 127.0.0.1 - - [03/Jul/2025 17:11:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:11:47,094 INFO 127.0.0.1 - - [03/Jul/2025 17:11:47] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:11:49,066 INFO 127.0.0.1 - - [03/Jul/2025 17:11:49] "[33mGET /route-generator HTTP/1.1[0m" 404 -
+2025-07-03 17:11:50,731 INFO 127.0.0.1 - - [03/Jul/2025 17:11:50] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:11:50,787 INFO 127.0.0.1 - - [03/Jul/2025 17:11:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:11:57,552 INFO 127.0.0.1 - - [03/Jul/2025 17:11:57] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:11:57,604 INFO 127.0.0.1 - - [03/Jul/2025 17:11:57] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:11:57,629 INFO 127.0.0.1 - - [03/Jul/2025 17:11:57] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:12:14,019 INFO 127.0.0.1 - - [03/Jul/2025 17:12:14] "GET /orders/bouquets?delivery_type=Доставка HTTP/1.1" 200 -
+2025-07-03 17:12:32,944 INFO --- ORDER CREATE ---
+2025-07-03 17:12:32,946 INFO Form data: {'phone': '+380501231005', 'recipient_phone': '+380666746225', 'city': 'Київ', 'street': 'Чоколівський бульвар', 'building_number': '6', 'entrance': '199/1', 'type': 'Доставка - підписка', 'bouquet_id': '1', 'delivery_count': '3', 'preferred_day': 'вт', 'periodicity': '1/7', 'time_from': '11:00', 'time_to': '14:00', 'comment': 'Перед відправкою завжди телефонувати'}
+2025-07-03 17:12:32,960 INFO Order created: 2
+2025-07-03 17:12:32,961 INFO 127.0.0.1 - - [03/Jul/2025 17:12:32] "[32mPOST /orders/new HTTP/1.1[0m" 302 -
+2025-07-03 17:12:32,970 INFO 127.0.0.1 - - [03/Jul/2025 17:12:32] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:12:33,042 INFO 127.0.0.1 - - [03/Jul/2025 17:12:33] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:12:33,053 INFO 127.0.0.1 - - [03/Jul/2025 17:12:33] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:12:35,649 INFO 127.0.0.1 - - [03/Jul/2025 17:12:35] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:12:35,699 INFO 127.0.0.1 - - [03/Jul/2025 17:12:35] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:12:41,199 INFO 127.0.0.1 - - [03/Jul/2025 17:12:41] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:12:41,277 INFO 127.0.0.1 - - [03/Jul/2025 17:12:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:12:41,279 INFO 127.0.0.1 - - [03/Jul/2025 17:12:41] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:12:43,638 INFO 127.0.0.1 - - [03/Jul/2025 17:12:43] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:12:43,668 INFO 127.0.0.1 - - [03/Jul/2025 17:12:43] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:12:43,700 INFO 127.0.0.1 - - [03/Jul/2025 17:12:43] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:12:43,717 INFO 127.0.0.1 - - [03/Jul/2025 17:12:43] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:13:23,434 INFO 127.0.0.1 - - [03/Jul/2025 17:13:23] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:13:23,490 INFO 127.0.0.1 - - [03/Jul/2025 17:13:23] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:13:23,673 INFO 127.0.0.1 - - [03/Jul/2025 17:13:23] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:13:23,794 INFO 127.0.0.1 - - [03/Jul/2025 17:13:23] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:13:26,721 INFO 127.0.0.1 - - [03/Jul/2025 17:13:26] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:13:26,772 INFO 127.0.0.1 - - [03/Jul/2025 17:13:26] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:33,115 INFO 127.0.0.1 - - [03/Jul/2025 17:13:33] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:13:33,183 INFO 127.0.0.1 - - [03/Jul/2025 17:13:33] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:40,147 INFO 127.0.0.1 - - [03/Jul/2025 17:13:40] "[32mPOST /couriers HTTP/1.1[0m" 302 -
+2025-07-03 17:13:40,161 INFO 127.0.0.1 - - [03/Jul/2025 17:13:40] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:13:40,232 INFO 127.0.0.1 - - [03/Jul/2025 17:13:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:43,650 INFO 127.0.0.1 - - [03/Jul/2025 17:13:43] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:13:43,715 INFO 127.0.0.1 - - [03/Jul/2025 17:13:43] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:53,661 INFO 127.0.0.1 - - [03/Jul/2025 17:13:53] "GET /clients HTTP/1.1" 200 -
+2025-07-03 17:13:53,712 INFO 127.0.0.1 - - [03/Jul/2025 17:13:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:54,116 INFO 127.0.0.1 - - [03/Jul/2025 17:13:54] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:13:54,172 INFO 127.0.0.1 - - [03/Jul/2025 17:13:54] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:13:59,774 INFO 127.0.0.1 - - [03/Jul/2025 17:13:59] "[32mPOST /couriers HTTP/1.1[0m" 302 -
+2025-07-03 17:13:59,787 INFO 127.0.0.1 - - [03/Jul/2025 17:13:59] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:13:59,857 INFO 127.0.0.1 - - [03/Jul/2025 17:13:59] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:14:01,728 INFO 127.0.0.1 - - [03/Jul/2025 17:14:01] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:14:01,796 INFO 127.0.0.1 - - [03/Jul/2025 17:14:01] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:14:43,950 INFO 127.0.0.1 - - [03/Jul/2025 17:14:43] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:14:44,010 INFO 127.0.0.1 - - [03/Jul/2025 17:14:44] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:14:44,044 INFO 127.0.0.1 - - [03/Jul/2025 17:14:44] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:14:44,614 INFO 127.0.0.1 - - [03/Jul/2025 17:14:44] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:14:44,672 INFO 127.0.0.1 - - [03/Jul/2025 17:14:44] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:14:44,959 INFO 127.0.0.1 - - [03/Jul/2025 17:14:44] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:16:40,250 INFO 127.0.0.1 - - [03/Jul/2025 17:16:40] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:16:40,313 INFO 127.0.0.1 - - [03/Jul/2025 17:16:40] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:16:40,603 INFO 127.0.0.1 - - [03/Jul/2025 17:16:40] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:16:41,644 INFO 127.0.0.1 - - [03/Jul/2025 17:16:41] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:16:41,672 INFO 127.0.0.1 - - [03/Jul/2025 17:16:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:20:21,999 INFO 127.0.0.1 - - [03/Jul/2025 17:20:21] "[35m[1mGET /assign-deliveries HTTP/1.1[0m" 500 -
+2025-07-03 17:20:22,061 INFO 127.0.0.1 - - [03/Jul/2025 17:20:22] "GET /assign-deliveries?__debugger__=yes&cmd=resource&f=style.css HTTP/1.1" 200 -
+2025-07-03 17:20:22,063 INFO 127.0.0.1 - - [03/Jul/2025 17:20:22] "GET /assign-deliveries?__debugger__=yes&cmd=resource&f=debugger.js HTTP/1.1" 200 -
+2025-07-03 17:20:22,090 INFO 127.0.0.1 - - [03/Jul/2025 17:20:22] "GET /assign-deliveries?__debugger__=yes&cmd=resource&f=console.png&s=eJKZYZjBHhI2mSiN51vR HTTP/1.1" 200 -
+2025-07-03 17:20:22,146 INFO 127.0.0.1 - - [03/Jul/2025 17:20:22] "GET /assign-deliveries?__debugger__=yes&cmd=resource&f=console.png HTTP/1.1" 200 -
+2025-07-03 17:20:47,536 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:20:47,587 INFO  * Restarting with stat
+2025-07-03 17:20:47,899 WARNING  * Debugger is active!
+2025-07-03 17:20:47,905 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:21:06,047 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:21:06,104 INFO  * Restarting with stat
+2025-07-03 17:21:06,422 WARNING  * Debugger is active!
+2025-07-03 17:21:06,432 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:21:06,902 INFO 127.0.0.1 - - [03/Jul/2025 17:21:06] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:21:06,954 INFO 127.0.0.1 - - [03/Jul/2025 17:21:06] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:21:07,186 INFO 127.0.0.1 - - [03/Jul/2025 17:21:07] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:21:37,723 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:21:37,769 INFO  * Restarting with stat
+2025-07-03 17:21:38,082 WARNING  * Debugger is active!
+2025-07-03 17:21:38,088 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:22:06,315 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:22:06,371 INFO  * Restarting with stat
+2025-07-03 17:22:06,721 WARNING  * Debugger is active!
+2025-07-03 17:22:06,727 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:22:06,925 INFO 127.0.0.1 - - [03/Jul/2025 17:22:06] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:22:06,955 INFO 127.0.0.1 - - [03/Jul/2025 17:22:06] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:22:07,268 INFO 127.0.0.1 - - [03/Jul/2025 17:22:07] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:22:12,707 INFO 127.0.0.1 - - [03/Jul/2025 17:22:12] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:23:32,801 INFO 127.0.0.1 - - [03/Jul/2025 17:23:32] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:24:00,689 INFO 127.0.0.1 - - [03/Jul/2025 17:24:00] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:24:00,739 INFO 127.0.0.1 - - [03/Jul/2025 17:24:00] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:24:00,776 INFO 127.0.0.1 - - [03/Jul/2025 17:24:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:24:00,813 INFO 127.0.0.1 - - [03/Jul/2025 17:24:00] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:24:05,931 INFO 127.0.0.1 - - [03/Jul/2025 17:24:05] "GET /orders/2/edit HTTP/1.1" 200 -
+2025-07-03 17:24:11,222 INFO 127.0.0.1 - - [03/Jul/2025 17:24:11] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:24:11,289 INFO 127.0.0.1 - - [03/Jul/2025 17:24:11] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:24:41,883 INFO 127.0.0.1 - - [03/Jul/2025 17:24:41] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:24:41,937 INFO 127.0.0.1 - - [03/Jul/2025 17:24:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:26:59,001 INFO 127.0.0.1 - - [03/Jul/2025 17:26:59] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:26:59,064 INFO 127.0.0.1 - - [03/Jul/2025 17:26:59] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:26:59,281 INFO 127.0.0.1 - - [03/Jul/2025 17:26:59] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:27:03,389 INFO 127.0.0.1 - - [03/Jul/2025 17:27:03] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:27:29,008 INFO 127.0.0.1 - - [03/Jul/2025 17:27:29] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:27:29,046 INFO 127.0.0.1 - - [03/Jul/2025 17:27:29] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:27:29,086 INFO 127.0.0.1 - - [03/Jul/2025 17:27:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:27:29,273 INFO 127.0.0.1 - - [03/Jul/2025 17:27:29] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:27:30,040 INFO 127.0.0.1 - - [03/Jul/2025 17:27:30] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:27:30,077 INFO 127.0.0.1 - - [03/Jul/2025 17:27:30] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:27:30,110 INFO 127.0.0.1 - - [03/Jul/2025 17:27:30] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:27:30,388 INFO 127.0.0.1 - - [03/Jul/2025 17:27:30] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:28:28,544 INFO 127.0.0.1 - - [03/Jul/2025 17:28:28] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:28:28,586 INFO 127.0.0.1 - - [03/Jul/2025 17:28:28] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:28:28,600 INFO 127.0.0.1 - - [03/Jul/2025 17:28:28] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:28,641 INFO 127.0.0.1 - - [03/Jul/2025 17:28:28] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:28:30,128 INFO 127.0.0.1 - - [03/Jul/2025 17:28:30] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:28:30,165 INFO 127.0.0.1 - - [03/Jul/2025 17:28:30] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:28:30,200 INFO 127.0.0.1 - - [03/Jul/2025 17:28:30] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:33,172 INFO 127.0.0.1 - - [03/Jul/2025 17:28:33] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:28:33,236 INFO 127.0.0.1 - - [03/Jul/2025 17:28:33] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:33,251 INFO 127.0.0.1 - - [03/Jul/2025 17:28:33] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:28:34,322 INFO 127.0.0.1 - - [03/Jul/2025 17:28:34] "GET /prices HTTP/1.1" 200 -
+2025-07-03 17:28:34,381 INFO 127.0.0.1 - - [03/Jul/2025 17:28:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:35,221 INFO 127.0.0.1 - - [03/Jul/2025 17:28:35] "GET /clients HTTP/1.1" 200 -
+2025-07-03 17:28:35,286 INFO 127.0.0.1 - - [03/Jul/2025 17:28:35] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:38,975 INFO 127.0.0.1 - - [03/Jul/2025 17:28:38] "GET /prices HTTP/1.1" 200 -
+2025-07-03 17:28:39,038 INFO 127.0.0.1 - - [03/Jul/2025 17:28:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:43,398 INFO 127.0.0.1 - - [03/Jul/2025 17:28:43] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:28:43,442 INFO 127.0.0.1 - - [03/Jul/2025 17:28:43] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:28:43,455 INFO 127.0.0.1 - - [03/Jul/2025 17:28:43] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:29:01,119 INFO 127.0.0.1 - - [03/Jul/2025 17:29:01] "GET /orders/bouquets?delivery_type=Самовивіз HTTP/1.1" 200 -
+2025-07-03 17:29:14,783 INFO --- ORDER CREATE ---
+2025-07-03 17:29:14,786 INFO Form data: {'phone': '+380501231004', 'recipient_phone': '066666666', 'city': 'Київ', 'street': 'Малевичка', 'building_number': '48', 'entrance': '83', 'type': 'Самовивіз - підписка', 'bouquet_id': '3', 'delivery_count': '4', 'preferred_day': 'чт', 'periodicity': '1/14', 'time_from': '', 'time_to': '', 'comment': ''}
+2025-07-03 17:29:14,800 INFO Order created: 3
+2025-07-03 17:29:14,801 INFO 127.0.0.1 - - [03/Jul/2025 17:29:14] "[32mPOST /orders/new HTTP/1.1[0m" 302 -
+2025-07-03 17:29:14,810 INFO 127.0.0.1 - - [03/Jul/2025 17:29:14] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:29:14,884 INFO 127.0.0.1 - - [03/Jul/2025 17:29:14] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:29:14,897 INFO 127.0.0.1 - - [03/Jul/2025 17:29:14] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:29:18,457 INFO 127.0.0.1 - - [03/Jul/2025 17:29:18] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:29:18,505 INFO 127.0.0.1 - - [03/Jul/2025 17:29:18] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:29:19,603 INFO 127.0.0.1 - - [03/Jul/2025 17:29:19] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:29:19,631 INFO 127.0.0.1 - - [03/Jul/2025 17:29:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:29:19,686 INFO 127.0.0.1 - - [03/Jul/2025 17:29:19] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:29:40,938 INFO 127.0.0.1 - - [03/Jul/2025 17:29:40] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:29:41,014 INFO 127.0.0.1 - - [03/Jul/2025 17:29:41] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:29:41,256 INFO 127.0.0.1 - - [03/Jul/2025 17:29:41] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:29:41,759 INFO 127.0.0.1 - - [03/Jul/2025 17:29:41] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:29:41,836 INFO 127.0.0.1 - - [03/Jul/2025 17:29:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:29:43,564 INFO 127.0.0.1 - - [03/Jul/2025 17:29:43] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:29:53,578 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 17:29:53,578 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 17:29:53,578 INFO  * Restarting with stat
+2025-07-03 17:29:53,803 WARNING  * Debugger is active!
+2025-07-03 17:29:53,810 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:29:54,381 INFO 127.0.0.1 - - [03/Jul/2025 17:29:54] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:29:54,421 INFO 127.0.0.1 - - [03/Jul/2025 17:29:54] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:29:54,454 INFO 127.0.0.1 - - [03/Jul/2025 17:29:54] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:29:54,768 INFO 127.0.0.1 - - [03/Jul/2025 17:29:54] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:30:19,979 INFO 127.0.0.1 - - [03/Jul/2025 17:30:19] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:30:20,021 INFO 127.0.0.1 - - [03/Jul/2025 17:30:20] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:30:20,056 INFO 127.0.0.1 - - [03/Jul/2025 17:30:20] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:30:20,062 INFO 127.0.0.1 - - [03/Jul/2025 17:30:20] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:30:21,173 INFO 127.0.0.1 - - [03/Jul/2025 17:30:21] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:30:21,205 INFO 127.0.0.1 - - [03/Jul/2025 17:30:21] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:30:21,240 INFO 127.0.0.1 - - [03/Jul/2025 17:30:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:30:22,026 INFO 127.0.0.1 - - [03/Jul/2025 17:30:22] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:30:22,058 INFO 127.0.0.1 - - [03/Jul/2025 17:30:22] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:30:22,086 INFO 127.0.0.1 - - [03/Jul/2025 17:30:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:30:22,104 INFO 127.0.0.1 - - [03/Jul/2025 17:30:22] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:30:24,072 INFO 127.0.0.1 - - [03/Jul/2025 17:30:24] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:30:24,108 INFO 127.0.0.1 - - [03/Jul/2025 17:30:24] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:30:24,135 INFO 127.0.0.1 - - [03/Jul/2025 17:30:24] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:31:12,989 INFO 127.0.0.1 - - [03/Jul/2025 17:31:12] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:31:13,023 INFO 127.0.0.1 - - [03/Jul/2025 17:31:13] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:31:13,060 INFO 127.0.0.1 - - [03/Jul/2025 17:31:13] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:31:45,769 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:31:45,839 INFO  * Restarting with stat
+2025-07-03 17:31:46,185 WARNING  * Debugger is active!
+2025-07-03 17:31:46,193 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:32:12,384 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:32:12,434 INFO  * Restarting with stat
+2025-07-03 17:32:12,783 WARNING  * Debugger is active!
+2025-07-03 17:32:12,788 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:32:14,327 INFO 127.0.0.1 - - [03/Jul/2025 17:32:14] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:32:14,392 INFO 127.0.0.1 - - [03/Jul/2025 17:32:14] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:32:14,622 INFO 127.0.0.1 - - [03/Jul/2025 17:32:14] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:32:19,436 INFO 127.0.0.1 - - [03/Jul/2025 17:32:19] "GET /deliveries?date=2025-07-04 HTTP/1.1" 200 -
+2025-07-03 17:32:19,484 INFO 127.0.0.1 - - [03/Jul/2025 17:32:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:32:23,913 INFO 127.0.0.1 - - [03/Jul/2025 17:32:23] "GET /deliveries?date=2025-07-17 HTTP/1.1" 200 -
+2025-07-03 17:32:23,977 INFO 127.0.0.1 - - [03/Jul/2025 17:32:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:32:45,130 INFO 127.0.0.1 - - [03/Jul/2025 17:32:45] "GET /deliveries?date=2025-07-03 HTTP/1.1" 200 -
+2025-07-03 17:32:45,175 INFO 127.0.0.1 - - [03/Jul/2025 17:32:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:32:50,971 INFO 127.0.0.1 - - [03/Jul/2025 17:32:50] "GET /deliveries?date= HTTP/1.1" 200 -
+2025-07-03 17:32:51,029 INFO 127.0.0.1 - - [03/Jul/2025 17:32:51] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:33:16,273 INFO 127.0.0.1 - - [03/Jul/2025 17:33:16] "GET /deliveries?date=2025-07-04 HTTP/1.1" 200 -
+2025-07-03 17:33:16,347 INFO 127.0.0.1 - - [03/Jul/2025 17:33:16] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:33:20,259 INFO 127.0.0.1 - - [03/Jul/2025 17:33:20] "GET /deliveries?date=2025-07-04 HTTP/1.1" 200 -
+2025-07-03 17:33:20,318 INFO 127.0.0.1 - - [03/Jul/2025 17:33:20] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:33:20,526 INFO 127.0.0.1 - - [03/Jul/2025 17:33:20] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:33:21,083 INFO 127.0.0.1 - - [03/Jul/2025 17:33:21] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:33:21,151 INFO 127.0.0.1 - - [03/Jul/2025 17:33:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:33:25,793 INFO 127.0.0.1 - - [03/Jul/2025 17:33:25] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:33:25,855 INFO 127.0.0.1 - - [03/Jul/2025 17:33:25] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:33:25,869 INFO 127.0.0.1 - - [03/Jul/2025 17:33:25] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:33:27,201 INFO 127.0.0.1 - - [03/Jul/2025 17:33:27] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:33:27,263 INFO 127.0.0.1 - - [03/Jul/2025 17:33:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:34:17,713 INFO 127.0.0.1 - - [03/Jul/2025 17:34:17] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:34:17,787 INFO 127.0.0.1 - - [03/Jul/2025 17:34:17] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:34:17,796 INFO 127.0.0.1 - - [03/Jul/2025 17:34:17] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:34:39,769 INFO 127.0.0.1 - - [03/Jul/2025 17:34:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:34:39,833 INFO 127.0.0.1 - - [03/Jul/2025 17:34:39] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:34:41,760 INFO 127.0.0.1 - - [03/Jul/2025 17:34:41] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:34:41,819 INFO 127.0.0.1 - - [03/Jul/2025 17:34:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:34:41,839 INFO 127.0.0.1 - - [03/Jul/2025 17:34:41] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:34:50,032 INFO 127.0.0.1 - - [03/Jul/2025 17:34:50] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:34:50,092 INFO 127.0.0.1 - - [03/Jul/2025 17:34:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:34:50,121 INFO 127.0.0.1 - - [03/Jul/2025 17:34:50] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:34:55,399 INFO 127.0.0.1 - - [03/Jul/2025 17:34:55] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:34:55,440 INFO 127.0.0.1 - - [03/Jul/2025 17:34:55] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:34:55,638 INFO 127.0.0.1 - - [03/Jul/2025 17:34:55] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:34:56,358 INFO 127.0.0.1 - - [03/Jul/2025 17:34:56] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:34:56,412 INFO 127.0.0.1 - - [03/Jul/2025 17:34:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:00,570 INFO 127.0.0.1 - - [03/Jul/2025 17:35:00] "GET /deliveries?date=2025-07-04 HTTP/1.1" 200 -
+2025-07-03 17:35:00,622 INFO 127.0.0.1 - - [03/Jul/2025 17:35:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:02,224 INFO 127.0.0.1 - - [03/Jul/2025 17:35:02] "GET /deliveries?date=2025-07-03 HTTP/1.1" 200 -
+2025-07-03 17:35:02,299 INFO 127.0.0.1 - - [03/Jul/2025 17:35:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:04,270 INFO 127.0.0.1 - - [03/Jul/2025 17:35:04] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:35:04,327 INFO 127.0.0.1 - - [03/Jul/2025 17:35:04] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:05,069 INFO 127.0.0.1 - - [03/Jul/2025 17:35:05] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:35:05,114 INFO 127.0.0.1 - - [03/Jul/2025 17:35:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:05,216 INFO 127.0.0.1 - - [03/Jul/2025 17:35:05] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:35:05,236 INFO 127.0.0.1 - - [03/Jul/2025 17:35:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:35:11,419 INFO 127.0.0.1 - - [03/Jul/2025 17:35:11] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:35:11,462 INFO 127.0.0.1 - - [03/Jul/2025 17:35:11] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:00,032 INFO 127.0.0.1 - - [03/Jul/2025 17:36:00] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:00,104 INFO 127.0.0.1 - - [03/Jul/2025 17:36:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:05,396 INFO 127.0.0.1 - - [03/Jul/2025 17:36:05] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:36:05,463 INFO 127.0.0.1 - - [03/Jul/2025 17:36:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:05,477 INFO 127.0.0.1 - - [03/Jul/2025 17:36:05] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:36:07,031 INFO 127.0.0.1 - - [03/Jul/2025 17:36:07] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:07,094 INFO 127.0.0.1 - - [03/Jul/2025 17:36:07] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:17,058 INFO 127.0.0.1 - - [03/Jul/2025 17:36:17] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:17,122 INFO 127.0.0.1 - - [03/Jul/2025 17:36:17] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:36:17,375 INFO 127.0.0.1 - - [03/Jul/2025 17:36:17] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:36:18,295 INFO 127.0.0.1 - - [03/Jul/2025 17:36:18] "GET /deliveries?date=2025-07-03 HTTP/1.1" 200 -
+2025-07-03 17:36:18,349 INFO 127.0.0.1 - - [03/Jul/2025 17:36:18] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:19,264 INFO 127.0.0.1 - - [03/Jul/2025 17:36:19] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:19,327 INFO 127.0.0.1 - - [03/Jul/2025 17:36:19] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:20,104 INFO 127.0.0.1 - - [03/Jul/2025 17:36:20] "GET /deliveries?date=2025-07-03 HTTP/1.1" 200 -
+2025-07-03 17:36:20,158 INFO 127.0.0.1 - - [03/Jul/2025 17:36:20] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:22,180 INFO 127.0.0.1 - - [03/Jul/2025 17:36:22] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:22,244 INFO 127.0.0.1 - - [03/Jul/2025 17:36:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:23,249 INFO 127.0.0.1 - - [03/Jul/2025 17:36:23] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:23,296 INFO 127.0.0.1 - - [03/Jul/2025 17:36:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:45,303 INFO 127.0.0.1 - - [03/Jul/2025 17:36:45] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:36:45,363 INFO 127.0.0.1 - - [03/Jul/2025 17:36:45] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:36:47,040 INFO 127.0.0.1 - - [03/Jul/2025 17:36:47] "GET /deliveries?date=2025-07-03 HTTP/1.1" 200 -
+2025-07-03 17:36:47,082 INFO 127.0.0.1 - - [03/Jul/2025 17:36:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:20,982 INFO 127.0.0.1 - - [03/Jul/2025 17:37:20] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:37:21,046 INFO 127.0.0.1 - - [03/Jul/2025 17:37:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:25,655 INFO 127.0.0.1 - - [03/Jul/2025 17:37:25] "GET /prices HTTP/1.1" 200 -
+2025-07-03 17:37:25,703 INFO 127.0.0.1 - - [03/Jul/2025 17:37:25] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:27,050 INFO 127.0.0.1 - - [03/Jul/2025 17:37:27] "GET /clients HTTP/1.1" 200 -
+2025-07-03 17:37:27,110 INFO 127.0.0.1 - - [03/Jul/2025 17:37:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:27,750 INFO 127.0.0.1 - - [03/Jul/2025 17:37:27] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 17:37:27,816 INFO 127.0.0.1 - - [03/Jul/2025 17:37:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:33,090 INFO 127.0.0.1 - - [03/Jul/2025 17:37:33] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:37:33,156 INFO 127.0.0.1 - - [03/Jul/2025 17:37:33] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:35,766 INFO 127.0.0.1 - - [03/Jul/2025 17:37:35] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:37:35,832 INFO 127.0.0.1 - - [03/Jul/2025 17:37:35] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:35,845 INFO 127.0.0.1 - - [03/Jul/2025 17:37:35] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:37:39,935 INFO 127.0.0.1 - - [03/Jul/2025 17:37:39] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:37:40,001 INFO 127.0.0.1 - - [03/Jul/2025 17:37:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:37:43,982 INFO 127.0.0.1 - - [03/Jul/2025 17:37:43] "GET /deliveries/9 HTTP/1.1" 200 -
+2025-07-03 17:37:54,614 INFO 127.0.0.1 - - [03/Jul/2025 17:37:54] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:37:55,431 INFO 127.0.0.1 - - [03/Jul/2025 17:37:55] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:37:56,484 INFO 127.0.0.1 - - [03/Jul/2025 17:37:56] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:37:56,848 INFO 127.0.0.1 - - [03/Jul/2025 17:37:56] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:37:57,229 INFO 127.0.0.1 - - [03/Jul/2025 17:37:57] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:37:59,094 INFO 127.0.0.1 - - [03/Jul/2025 17:37:59] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:38:04,420 INFO 127.0.0.1 - - [03/Jul/2025 17:38:04] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:38:16,577 INFO 127.0.0.1 - - [03/Jul/2025 17:38:16] "[35m[1mPOST /deliveries/9/edit HTTP/1.1[0m" 500 -
+2025-07-03 17:39:13,081 INFO 127.0.0.1 - - [03/Jul/2025 17:39:13] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:39:13,132 INFO 127.0.0.1 - - [03/Jul/2025 17:39:13] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:39:13,352 INFO 127.0.0.1 - - [03/Jul/2025 17:39:13] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:39:14,083 INFO 127.0.0.1 - - [03/Jul/2025 17:39:14] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:39:14,150 INFO 127.0.0.1 - - [03/Jul/2025 17:39:14] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:44:38,858 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 17:44:38,858 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 17:44:38,859 INFO  * Restarting with stat
+2025-07-03 17:44:39,092 WARNING  * Debugger is active!
+2025-07-03 17:44:39,101 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:44:40,860 INFO 127.0.0.1 - - [03/Jul/2025 17:44:40] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:44:40,924 INFO 127.0.0.1 - - [03/Jul/2025 17:44:40] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:44:41,194 INFO 127.0.0.1 - - [03/Jul/2025 17:44:41] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:46:06,935 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 17:46:06,935 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 17:46:06,936 INFO  * Restarting with stat
+2025-07-03 17:46:07,181 WARNING  * Debugger is active!
+2025-07-03 17:46:07,187 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:46:07,923 INFO 127.0.0.1 - - [03/Jul/2025 17:46:07] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:46:07,984 INFO 127.0.0.1 - - [03/Jul/2025 17:46:07] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:46:08,189 INFO 127.0.0.1 - - [03/Jul/2025 17:46:08] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:46:09,756 INFO 127.0.0.1 - - [03/Jul/2025 17:46:09] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:46:22,808 INFO 127.0.0.1 - - [03/Jul/2025 17:46:22] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:46:22,840 INFO 127.0.0.1 - - [03/Jul/2025 17:46:22] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:46:22,848 INFO 127.0.0.1 - - [03/Jul/2025 17:46:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:46:23,076 INFO 127.0.0.1 - - [03/Jul/2025 17:46:23] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:46:23,870 INFO 127.0.0.1 - - [03/Jul/2025 17:46:23] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:46:23,905 INFO 127.0.0.1 - - [03/Jul/2025 17:46:23] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:46:23,947 INFO 127.0.0.1 - - [03/Jul/2025 17:46:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:46:24,122 INFO 127.0.0.1 - - [03/Jul/2025 17:46:24] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:48:03,349 INFO 127.0.0.1 - - [03/Jul/2025 17:48:03] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:48:03,409 INFO 127.0.0.1 - - [03/Jul/2025 17:48:03] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:48:03,661 INFO 127.0.0.1 - - [03/Jul/2025 17:48:03] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:48:05,085 INFO 127.0.0.1 - - [03/Jul/2025 17:48:05] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:48:05,141 INFO 127.0.0.1 - - [03/Jul/2025 17:48:05] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:05,155 INFO 127.0.0.1 - - [03/Jul/2025 17:48:05] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:48:06,538 INFO 127.0.0.1 - - [03/Jul/2025 17:48:06] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:48:06,586 INFO 127.0.0.1 - - [03/Jul/2025 17:48:06] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:08,961 INFO 127.0.0.1 - - [03/Jul/2025 17:48:08] "GET /deliveries?date=2025-07-04 HTTP/1.1" 200 -
+2025-07-03 17:48:09,013 INFO 127.0.0.1 - - [03/Jul/2025 17:48:09] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:12,863 INFO 127.0.0.1 - - [03/Jul/2025 17:48:12] "GET /deliveries?date=2025-07-24 HTTP/1.1" 200 -
+2025-07-03 17:48:12,941 INFO 127.0.0.1 - - [03/Jul/2025 17:48:12] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:14,706 INFO 127.0.0.1 - - [03/Jul/2025 17:48:14] "GET /deliveries?date=2025-07-17 HTTP/1.1" 200 -
+2025-07-03 17:48:14,769 INFO 127.0.0.1 - - [03/Jul/2025 17:48:14] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:40,214 INFO 127.0.0.1 - - [03/Jul/2025 17:48:40] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:48:40,281 INFO 127.0.0.1 - - [03/Jul/2025 17:48:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:48:41,126 INFO 127.0.0.1 - - [03/Jul/2025 17:48:41] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:48:41,183 INFO 127.0.0.1 - - [03/Jul/2025 17:48:41] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:48:41,451 INFO 127.0.0.1 - - [03/Jul/2025 17:48:41] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:49:56,327 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:49:56,398 INFO  * Restarting with stat
+2025-07-03 17:49:56,694 WARNING  * Debugger is active!
+2025-07-03 17:49:56,700 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:50:03,786 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:50:03,852 INFO  * Restarting with stat
+2025-07-03 17:50:04,127 WARNING  * Debugger is active!
+2025-07-03 17:50:04,132 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:50:14,657 INFO 127.0.0.1 - - [03/Jul/2025 17:50:14] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:50:14,712 INFO 127.0.0.1 - - [03/Jul/2025 17:50:14] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:50:14,994 INFO 127.0.0.1 - - [03/Jul/2025 17:50:14] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:52:03,363 INFO 127.0.0.1 - - [03/Jul/2025 17:52:03] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:52:03,392 INFO 127.0.0.1 - - [03/Jul/2025 17:52:03] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:52:03,677 INFO 127.0.0.1 - - [03/Jul/2025 17:52:03] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:52:27,973 INFO 127.0.0.1 - - [03/Jul/2025 17:52:27] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:52:28,015 INFO 127.0.0.1 - - [03/Jul/2025 17:52:28] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:52:28,093 INFO 127.0.0.1 - - [03/Jul/2025 17:52:28] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:52:30,274 INFO 127.0.0.1 - - [03/Jul/2025 17:52:30] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:53:57,240 INFO 127.0.0.1 - - [03/Jul/2025 17:53:57] "GET /orders HTTP/1.1" 200 -
+2025-07-03 17:53:57,280 INFO 127.0.0.1 - - [03/Jul/2025 17:53:57] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:53:57,322 INFO 127.0.0.1 - - [03/Jul/2025 17:53:57] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:53:57,359 INFO 127.0.0.1 - - [03/Jul/2025 17:53:57] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 17:53:58,655 INFO 127.0.0.1 - - [03/Jul/2025 17:53:58] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 17:53:58,682 INFO 127.0.0.1 - - [03/Jul/2025 17:53:58] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:53:58,698 INFO 127.0.0.1 - - [03/Jul/2025 17:53:58] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:53:59,333 INFO 127.0.0.1 - - [03/Jul/2025 17:53:59] "[33mGET /route-generator HTTP/1.1[0m" 404 -
+2025-07-03 17:53:59,357 INFO 127.0.0.1 - - [03/Jul/2025 17:53:59] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:53:59,558 INFO 127.0.0.1 - - [03/Jul/2025 17:53:59] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 17:54:00,292 INFO 127.0.0.1 - - [03/Jul/2025 17:54:00] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:54:00,891 INFO 127.0.0.1 - - [03/Jul/2025 17:54:00] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:54:00,917 INFO 127.0.0.1 - - [03/Jul/2025 17:54:00] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:54:00,938 INFO 127.0.0.1 - - [03/Jul/2025 17:54:00] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:54:02,635 INFO 127.0.0.1 - - [03/Jul/2025 17:54:02] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:54:02,663 INFO 127.0.0.1 - - [03/Jul/2025 17:54:02] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:54:02,688 INFO 127.0.0.1 - - [03/Jul/2025 17:54:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:54:02,892 INFO 127.0.0.1 - - [03/Jul/2025 17:54:02] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:54:10,329 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:54:10,383 INFO  * Restarting with stat
+2025-07-03 17:54:10,710 WARNING  * Debugger is active!
+2025-07-03 17:54:10,718 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:54:15,770 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:54:15,854 INFO  * Restarting with stat
+2025-07-03 17:54:16,134 WARNING  * Debugger is active!
+2025-07-03 17:54:16,144 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:54:16,248 INFO 127.0.0.1 - - [03/Jul/2025 17:54:16] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:54:16,303 INFO 127.0.0.1 - - [03/Jul/2025 17:54:16] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:54:16,559 INFO 127.0.0.1 - - [03/Jul/2025 17:54:16] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:54:55,495 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:54:55,545 INFO  * Restarting with stat
+2025-07-03 17:54:55,842 WARNING  * Debugger is active!
+2025-07-03 17:54:55,847 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:55:03,918 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/routes/deliveries.py', reloading
+2025-07-03 17:55:03,964 INFO  * Restarting with stat
+2025-07-03 17:55:04,249 WARNING  * Debugger is active!
+2025-07-03 17:55:04,255 INFO  * Debugger PIN: 814-053-175
+2025-07-03 17:55:06,024 INFO 127.0.0.1 - - [03/Jul/2025 17:55:06] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:55:06,041 INFO 127.0.0.1 - - [03/Jul/2025 17:55:06] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 17:55:06,247 INFO 127.0.0.1 - - [03/Jul/2025 17:55:06] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 17:55:10,335 INFO 127.0.0.1 - - [03/Jul/2025 17:55:10] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:55:34,250 INFO 127.0.0.1 - - [03/Jul/2025 17:55:34] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:55:34,286 INFO 127.0.0.1 - - [03/Jul/2025 17:55:34] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:55:34,321 INFO 127.0.0.1 - - [03/Jul/2025 17:55:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:55:34,525 INFO 127.0.0.1 - - [03/Jul/2025 17:55:34] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 17:55:35,247 INFO 127.0.0.1 - - [03/Jul/2025 17:55:35] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 17:55:35,282 INFO 127.0.0.1 - - [03/Jul/2025 17:55:35] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 17:55:35,318 INFO 127.0.0.1 - - [03/Jul/2025 17:55:35] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 17:55:35,502 INFO 127.0.0.1 - - [03/Jul/2025 17:55:35] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 18:45:35,425 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-03 18:45:35,425 INFO [33mPress CTRL+C to quit[0m
+2025-07-03 18:45:35,427 INFO  * Restarting with stat
+2025-07-03 18:45:35,785 WARNING  * Debugger is active!
+2025-07-03 18:45:35,792 INFO  * Debugger PIN: 814-053-175
+2025-07-03 18:45:37,460 INFO 127.0.0.1 - - [03/Jul/2025 18:45:37] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 18:45:37,521 INFO 127.0.0.1 - - [03/Jul/2025 18:45:37] "[33mGET /.well-known/appspecific/com.chrome.devtools.json HTTP/1.1[0m" 404 -
+2025-07-03 18:45:37,535 INFO 127.0.0.1 - - [03/Jul/2025 18:45:37] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:37,798 INFO 127.0.0.1 - - [03/Jul/2025 18:45:37] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-03 18:45:42,194 INFO 127.0.0.1 - - [03/Jul/2025 18:45:42] "[33mGET /route-generator HTTP/1.1[0m" 404 -
+2025-07-03 18:45:42,352 INFO 127.0.0.1 - - [03/Jul/2025 18:45:42] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2025-07-03 18:45:45,046 INFO 127.0.0.1 - - [03/Jul/2025 18:45:45] "[33mGET /route-generator HTTP/1.1[0m" 404 -
+2025-07-03 18:45:46,513 INFO 127.0.0.1 - - [03/Jul/2025 18:45:46] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 18:45:46,580 INFO 127.0.0.1 - - [03/Jul/2025 18:45:46] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:47,200 INFO 127.0.0.1 - - [03/Jul/2025 18:45:47] "GET /orders HTTP/1.1" 200 -
+2025-07-03 18:45:47,250 INFO 127.0.0.1 - - [03/Jul/2025 18:45:47] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:47,275 INFO 127.0.0.1 - - [03/Jul/2025 18:45:47] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 18:45:47,980 INFO 127.0.0.1 - - [03/Jul/2025 18:45:47] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 18:45:48,038 INFO 127.0.0.1 - - [03/Jul/2025 18:45:48] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:50,452 INFO 127.0.0.1 - - [03/Jul/2025 18:45:50] "GET /orders HTTP/1.1" 200 -
+2025-07-03 18:45:50,505 INFO 127.0.0.1 - - [03/Jul/2025 18:45:50] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:50,536 INFO 127.0.0.1 - - [03/Jul/2025 18:45:50] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 18:45:51,248 INFO 127.0.0.1 - - [03/Jul/2025 18:45:51] "GET /orders HTTP/1.1" 200 -
+2025-07-03 18:45:51,283 INFO 127.0.0.1 - - [03/Jul/2025 18:45:51] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:51,296 INFO 127.0.0.1 - - [03/Jul/2025 18:45:51] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 18:45:51,661 INFO 127.0.0.1 - - [03/Jul/2025 18:45:51] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 18:45:51,717 INFO 127.0.0.1 - - [03/Jul/2025 18:45:51] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:52,748 INFO 127.0.0.1 - - [03/Jul/2025 18:45:52] "GET /orders HTTP/1.1" 200 -
+2025-07-03 18:45:52,792 INFO 127.0.0.1 - - [03/Jul/2025 18:45:52] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 18:45:52,810 INFO 127.0.0.1 - - [03/Jul/2025 18:45:52] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 18:45:53,833 INFO 127.0.0.1 - - [03/Jul/2025 18:45:53] "GET /clients HTTP/1.1" 200 -
+2025-07-03 18:45:53,894 INFO 127.0.0.1 - - [03/Jul/2025 18:45:53] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:05:18,685 INFO 127.0.0.1 - - [03/Jul/2025 19:05:18] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 19:05:18,757 INFO 127.0.0.1 - - [03/Jul/2025 19:05:18] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:05:28,599 INFO 127.0.0.1 - - [03/Jul/2025 19:05:28] "GET /prices HTTP/1.1" 200 -
+2025-07-03 19:05:28,658 INFO 127.0.0.1 - - [03/Jul/2025 19:05:28] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:09:41,205 INFO 127.0.0.1 - - [03/Jul/2025 19:09:41] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 19:09:41,264 INFO 127.0.0.1 - - [03/Jul/2025 19:09:41] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:09:42,271 INFO 127.0.0.1 - - [03/Jul/2025 19:09:42] "GET /clients HTTP/1.1" 200 -
+2025-07-03 19:09:42,345 INFO 127.0.0.1 - - [03/Jul/2025 19:09:42] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:09:43,342 INFO 127.0.0.1 - - [03/Jul/2025 19:09:43] "GET /clients HTTP/1.1" 200 -
+2025-07-03 19:09:43,393 INFO 127.0.0.1 - - [03/Jul/2025 19:09:43] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:09:55,182 INFO 127.0.0.1 - - [03/Jul/2025 19:09:55] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 19:09:55,236 INFO 127.0.0.1 - - [03/Jul/2025 19:09:55] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:10:02,191 INFO 127.0.0.1 - - [03/Jul/2025 19:10:02] "GET /orders HTTP/1.1" 200 -
+2025-07-03 19:10:02,263 INFO 127.0.0.1 - - [03/Jul/2025 19:10:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 19:10:02,266 INFO 127.0.0.1 - - [03/Jul/2025 19:10:02] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 19:10:03,257 INFO 127.0.0.1 - - [03/Jul/2025 19:10:03] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 19:10:03,321 INFO 127.0.0.1 - - [03/Jul/2025 19:10:03] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:16,392 INFO 127.0.0.1 - - [03/Jul/2025 20:11:16] "GET /orders HTTP/1.1" 200 -
+2025-07-03 20:11:16,475 INFO 127.0.0.1 - - [03/Jul/2025 20:11:16] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:16,491 INFO 127.0.0.1 - - [03/Jul/2025 20:11:16] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 20:11:26,454 INFO 127.0.0.1 - - [03/Jul/2025 20:11:26] "GET /clients HTTP/1.1" 200 -
+2025-07-03 20:11:26,529 INFO 127.0.0.1 - - [03/Jul/2025 20:11:26] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:26,773 INFO 127.0.0.1 - - [03/Jul/2025 20:11:26] "GET /couriers HTTP/1.1" 200 -
+2025-07-03 20:11:26,812 INFO 127.0.0.1 - - [03/Jul/2025 20:11:26] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:28,418 INFO 127.0.0.1 - - [03/Jul/2025 20:11:28] "GET /orders HTTP/1.1" 200 -
+2025-07-03 20:11:28,484 INFO 127.0.0.1 - - [03/Jul/2025 20:11:28] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:28,498 INFO 127.0.0.1 - - [03/Jul/2025 20:11:28] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 20:11:29,318 INFO 127.0.0.1 - - [03/Jul/2025 20:11:29] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 20:11:29,371 INFO 127.0.0.1 - - [03/Jul/2025 20:11:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:31,516 INFO 127.0.0.1 - - [03/Jul/2025 20:11:31] "GET /assign-deliveries HTTP/1.1" 200 -
+2025-07-03 20:11:31,579 INFO 127.0.0.1 - - [03/Jul/2025 20:11:31] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:33,702 INFO 127.0.0.1 - - [03/Jul/2025 20:11:33] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 20:11:33,755 INFO 127.0.0.1 - - [03/Jul/2025 20:11:33] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:34,067 INFO 127.0.0.1 - - [03/Jul/2025 20:11:34] "GET /orders HTTP/1.1" 200 -
+2025-07-03 20:11:34,129 INFO 127.0.0.1 - - [03/Jul/2025 20:11:34] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 20:11:34,133 INFO 127.0.0.1 - - [03/Jul/2025 20:11:34] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 22:10:54,998 INFO 127.0.0.1 - - [03/Jul/2025 22:10:54] "GET /orders HTTP/1.1" 200 -
+2025-07-03 22:10:55,064 INFO 127.0.0.1 - - [03/Jul/2025 22:10:55] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-03 22:10:55,191 INFO 127.0.0.1 - - [03/Jul/2025 22:10:55] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 22:10:55,333 INFO 127.0.0.1 - - [03/Jul/2025 22:10:55] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-03 22:10:56,325 INFO 127.0.0.1 - - [03/Jul/2025 22:10:56] "GET /orders HTTP/1.1" 200 -
+2025-07-03 22:10:56,355 INFO 127.0.0.1 - - [03/Jul/2025 22:10:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 22:10:56,356 INFO 127.0.0.1 - - [03/Jul/2025 22:10:56] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 22:10:56,607 INFO 127.0.0.1 - - [03/Jul/2025 22:10:56] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 22:10:56,703 INFO 127.0.0.1 - - [03/Jul/2025 22:10:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 22:11:01,056 INFO 127.0.0.1 - - [03/Jul/2025 22:11:01] "GET /clients HTTP/1.1" 200 -
+2025-07-03 22:11:01,115 INFO 127.0.0.1 - - [03/Jul/2025 22:11:01] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 22:11:02,375 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "GET /orders HTTP/1.1" 200 -
+2025-07-03 22:11:02,424 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-03 22:11:02,436 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "GET /clients/json HTTP/1.1" 200 -
+2025-07-03 22:11:02,758 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "GET /deliveries HTTP/1.1" 200 -
+2025-07-03 22:11:02,801 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -

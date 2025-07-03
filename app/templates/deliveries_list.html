@@ -1,0 +1,356 @@
+{% extends 'layout.html' %}
+{% block content %}
+<h2 class="mb-4">Доставки</h2>
+<div class="d-flex align-items-center mb-3">
+  <input type="date" id="filter-date" class="form-control form-control-sm me-2" style="width:170px;" value="{{ selected_date }}">
+  <select id="filter-status" class="form-select form-select-sm me-2" style="width:170px;">
+    <option value="">Всі статуси</option>
+    <option value="Очікує">Очікує</option>
+    <option value="Розподілено">Розподілено</option>
+    <option value="Доставлено">Доставлено</option>
+    <option value="НП">НП</option>
+  </select>
+  <button class="btn btn-outline-primary btn-sm me-2" id="apply-date-btn" type="button">Ок</button>
+  <button class="btn btn-outline-secondary btn-sm" id="reset-date-btn" type="button">Скинути</button>
+</div>
+<table class="table table-bordered table-hover align-middle">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Клієнт</th>
+      <th>Адреса</th>
+      <th>Телефон отримувача</th>
+      <th>Розмір</th>
+      <th>Тип доставки</th>
+      <th>Коментар</th>
+      <th style="width:90px;">Час</th>
+      <th>Дата</th>
+      <th>Статус</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for d in deliveries %}
+    <tr data-status="{{ d.status }}">
+      <td>{{ d.id }}</td>
+      <td>{{ d.client.phone }}</td>
+      <td>
+        <a href="#" class="address-link" 
+           data-city="{{ d.client.city }}" 
+           data-street="{{ d.street }}" 
+           data-building="{{ d.building_number }}" 
+           data-entrance="{{ d.entrance }}"
+           style="color:inherit; text-decoration:none; cursor:pointer;">
+          {{ d.client.city }}, {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
+        </a>
+      </td>
+      <td>{{ d.phone }}</td>
+      <td>{{ d.bouquet_size }}</td>
+      <td>{{ d.delivery_type }}</td>
+      <td>{{ d.comment }}</td>
+      <td>
+        {% if d.time_from or d.time_to %}
+          {{ d.time_from or '' }}{% if d.time_from and d.time_to %}-{% endif %}{{ d.time_to or '' }}
+        {% else %}
+          &nbsp;
+        {% endif %}
+      </td>
+      <td>{{ d.delivery_date.strftime('%d.%m') }}</td>
+      <td>
+        <span class="delivery-status badge 
+          {% if d.status == 'Очікує' %}bg-secondary
+          {% elif d.status == 'Розподілено' %}bg-primary
+          {% elif d.status == 'Доставлено' %}bg-success
+          {% elif d.status == 'НП' %}bg-danger
+          {% else %}bg-light text-dark
+          {% endif %}"
+          data-id="{{ d.id }}" data-status="{{ d.status }}" style="cursor:pointer;">
+          {{ d.status }}
+        </span>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- Modal -->
+<div class="modal fade" id="editDeliveryModal" tabindex="-1" aria-labelledby="editDeliveryModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editDeliveryModalLabel">Редагування доставки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editDeliveryForm">
+          <input type="hidden" name="delivery_id" id="editDeliveryId">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Місто</label>
+              <input type="text" class="form-control" id="editCity" readonly>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Вулиця</label>
+              <input type="text" class="form-control" id="editStreet">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">№ будинку</label>
+              <input type="text" class="form-control" id="editBuildingNumber">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Час з</label>
+              <input type="time" class="form-control" id="editTimeFrom">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Час до</label>
+              <input type="time" class="form-control" id="editTimeTo">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Телефон отримувача</label>
+              <input type="text" class="form-control" id="editPhone">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Дата доставки</label>
+              <input type="date" class="form-control" id="editDeliveryDate">
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Коментар</label>
+              <textarea class="form-control" id="editComment"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-primary" id="saveDeliveryBtn">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmStatusModal" tabindex="-1" aria-labelledby="confirmStatusModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmStatusModalLabel">Підтвердження</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Змінити статус доставки на <b>Доставлено</b>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ні</button>
+        <button type="button" class="btn btn-success" id="confirmDeliveredBtn">Так</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Address Modal -->
+<div class="modal fade" id="addressModal" tabindex="-1" aria-labelledby="addressModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addressModalLabel">Повна адреса</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="addressModalBody">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal для призначення кур'єра (аналогічно assign_deliveries.html) -->
+<div class="modal fade" id="assignCourierModal" tabindex="-1" aria-labelledby="assignCourierModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="assignCourierForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="assignCourierModalLabel">Виберіть кур'єра</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <select id="courierSelect" class="form-select mb-3" required>
+            <option value="">Оберіть кур'єра</option>
+            {% for courier in couriers %}
+              <option value="{{ courier.id }}">{{ courier.name }}</option>
+            {% endfor %}
+          </select>
+          <div id="selected-addresses" class="mb-2"></div>
+          <div id="assign-error" class="alert alert-danger d-none mt-2"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-primary">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // --- Фільтрація по статусу та даті (frontend) ---
+  const filterDate = document.getElementById('filter-date');
+  const filterStatus = document.getElementById('filter-status');
+  const applyBtn = document.getElementById('apply-date-btn');
+  const resetBtn = document.getElementById('reset-date-btn');
+  const tableRows = document.querySelectorAll('tbody tr');
+
+  function filterTable() {
+    const dateVal = filterDate.value;
+    const statusVal = filterStatus.value;
+    tableRows.forEach(row => {
+      let show = true;
+      if (dateVal) {
+        const dateCell = row.querySelector('td:nth-child(9)');
+        // Порівнюємо дати у форматі дд.мм
+        const rowDate = dateCell ? dateCell.textContent.trim() : '';
+        const jsDate = new Date(dateVal);
+        const formatted = jsDate.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'});
+        if (rowDate !== formatted) show = false;
+      }
+      if (statusVal) {
+        if (row.getAttribute('data-status') !== statusVal) show = false;
+      }
+      row.style.display = show ? '' : 'none';
+    });
+  }
+
+  filterStatus.addEventListener('change', filterTable);
+  filterDate.addEventListener('change', filterTable);
+  resetBtn.addEventListener('click', function() {
+    filterDate.value = '';
+    filterStatus.value = '';
+    filterTable();
+  });
+  applyBtn.addEventListener('click', filterTable);
+
+  // --- Інтерактивна зміна статусу ---
+  let currentDeliveryId = null;
+  const assignModal = new bootstrap.Modal(document.getElementById('assignCourierModal'));
+  const confirmModal = new bootstrap.Modal(document.getElementById('confirmStatusModal'));
+
+  document.querySelectorAll('.delivery-status').forEach(span => {
+    span.addEventListener('click', function() {
+      const status = this.dataset.status;
+      currentDeliveryId = this.dataset.id;
+      if (status === 'Очікує') {
+        document.getElementById('courierSelect').value = '';
+        document.getElementById('assign-error').classList.add('d-none');
+        // Показати адресу для цієї доставки
+        const row = span.closest('tr');
+        const city = row.querySelector('td:nth-child(2)').textContent.trim();
+        const address = row.querySelector('td:nth-child(3)').textContent.trim();
+        const date = row.querySelector('td:nth-child(9)').textContent.trim();
+        document.getElementById('selected-addresses').innerHTML =
+          `<b>Ви призначаєте курʼєра на адресу:</b><ul><li>${city}, ${address} — ${date}</li></ul>`;
+        assignModal.show();
+      } else if (status === 'Розподілено') {
+        confirmModal.show();
+      }
+    });
+  });
+
+  // Призначення кур'єра (submit)
+  document.getElementById('assignCourierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const courierId = document.getElementById('courierSelect').value;
+    const errorDiv = document.getElementById('assign-error');
+    errorDiv.classList.add('d-none');
+    if (!courierId) {
+      errorDiv.textContent = 'Оберіть курʼєра!';
+      errorDiv.classList.remove('d-none');
+      return;
+    }
+    fetch(`/deliveries/assign-courier`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({delivery_ids: [currentDeliveryId], courier_id: courierId})
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        location.reload();
+      } else {
+        errorDiv.textContent = data.error || 'Помилка при збереженні!';
+        errorDiv.classList.remove('d-none');
+      }
+    });
+  });
+
+  // Підтвердження "Доставлено?"
+  document.getElementById('confirmDeliveredBtn').onclick = function() {
+    fetch(`/deliveries/${currentDeliveryId}/status`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status: 'Доставлено'})
+    }).then(r => r.json()).then(data => {
+      if (data.success) {
+        location.reload();
+      }
+    });
+  }
+
+  // --- Логіка для адреси (попап) ---
+  const addressModal = new bootstrap.Modal(document.getElementById('addressModal'));
+  document.querySelectorAll('.address-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+      e.preventDefault();
+      const city = this.dataset.city || '';
+      const street = this.dataset.street || '';
+      const building = this.dataset.building || '';
+      const entrance = this.dataset.entrance || '';
+      let html = `<b>Місто:</b> ${city}<br><b>Вулиця:</b> ${street}<br><b>Будинок:</b> ${building}`;
+      if (entrance) html += `<br><b>Під'їзд:</b> ${entrance}`;
+      document.getElementById('addressModalBody').innerHTML = html;
+      addressModal.show();
+    });
+  });
+
+  // --- Логіка для редагування доставки (double click по рядку) ---
+  const editModal = new bootstrap.Modal(document.getElementById('editDeliveryModal'));
+  let currentId = null;
+  document.querySelectorAll('tbody tr').forEach(row => {
+    row.addEventListener('dblclick', function() {
+      const id = this.children[0].innerText;
+      fetch(`/deliveries/${id}`)
+        .then(r => r.json())
+        .then(data => {
+          currentId = data.id;
+          document.getElementById('editDeliveryId').value = data.id;
+          document.getElementById('editCity').value = data.city;
+          document.getElementById('editStreet').value = data.street;
+          document.getElementById('editBuildingNumber').value = data.building_number;
+          document.getElementById('editPhone').value = data.phone;
+          document.getElementById('editTimeFrom').value = data.time_from;
+          document.getElementById('editTimeTo').value = data.time_to;
+          document.getElementById('editDeliveryDate').value = data.delivery_date;
+          document.getElementById('editComment').value = data.comment;
+          editModal.show();
+        });
+    });
+  });
+  document.getElementById('saveDeliveryBtn').onclick = function() {
+    const payload = {
+      street: document.getElementById('editStreet').value,
+      building_number: document.getElementById('editBuildingNumber').value,
+      phone: document.getElementById('editPhone').value,
+      time_from: document.getElementById('editTimeFrom').value,
+      time_to: document.getElementById('editTimeTo').value,
+      delivery_date: document.getElementById('editDeliveryDate').value,
+      comment: document.getElementById('editComment').value
+    };
+    fetch(`/deliveries/${currentId}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    }).then(r => r.json()).then(data => {
+      if (data.success) {
+        location.reload();
+      }
+    });
+  }
+});
+</script>
+{% endblock %} 
