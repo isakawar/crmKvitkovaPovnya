@@ -1,31 +1,47 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2 class="mb-4">Клієнти</h2>
+<div class="mb-2"><strong>Всього клієнтів: {{ clients_count }}</strong></div>
 <div class="mb-3">
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">Додати клієнта</button>
 </div>
 <table class="table table-bordered table-hover align-middle">
     <thead>
         <tr>
-            <th>Номер телефону</th>
             <th>Instagram</th>
+            <th>Номер телефону</th>
             <th>Telegram</th>
             <th>Кредити</th>
+            <th>Звідки дізнались</th>
         </tr>
     </thead>
     <tbody>
     {% for client in clients %}
-        <tr>
-            <td>{{ client.phone }}</td>
+        <tr data-client-id="{{ client.id }}" style="cursor: pointer;">
             <td>{{ client.instagram }}</td>
+            <td>{{ client.phone }}</td>
             <td>{{ client.telegram or '' }}</td>
             <td>{{ client.credits }}</td>
+            <td>{{ client.marketing_source }}</td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
 
-<!-- Modal додавання клієнта -->
+<!-- Пагінація -->
+{% if clients_count > 30 %}
+<div class="d-flex justify-content-center align-items-center gap-2">
+    <form method="get" style="display:inline;">
+        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
+    </form>
+    <span class="mx-2">{{ page }}</span>
+    <form method="get" style="display:inline;">
+        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
+    </form>
+</div>
+{% endif %}
+
+<!-- Modal додавання/редагування клієнта -->
 <div class="modal fade" id="addClientModal" tabindex="-1" aria-labelledby="addClientModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -35,27 +51,44 @@
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body bg-white">
+          <input type="hidden" id="client-id" name="client_id">
           <div class="mb-3">
-            <label class="form-label">Номер телефону</label>
-            <input type="text" name="phone" class="form-control" required>
+            <label class="form-label">Instagram <span class="text-danger">*</span></label>
+            <input type="text" name="instagram" id="edit-instagram" class="form-control" required>
           </div>
           <div class="mb-3">
-            <label class="form-label">Instagram</label>
-            <input type="text" name="instagram" class="form-control">
+            <label class="form-label">Номер телефону <span class="text-danger">*</span></label>
+            <input type="text" name="phone" id="edit-phone" class="form-control" required 
+                   placeholder="+38" pattern="\+380[0-9]{9}" 
+                   title="Формат: +380XXXXXXXXX">
+            <small class="form-text text-muted">Формат: +380XXXXXXXXX</small>
           </div>
           <div class="mb-3">
             <label class="form-label">Telegram</label>
-            <input type="text" name="telegram" class="form-control">
+            <input type="text" name="telegram" id="edit-telegram" class="form-control" placeholder="Необов'язково">
           </div>
           <div class="mb-3">
             <label class="form-label">Кредити</label>
-            <input type="number" name="credits" class="form-control" value="0" min="0">
+            <input type="number" name="credits" id="edit-credits" class="form-control" value="0" min="0">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Звідки дізнались <span class="text-danger">*</span></label>
+            <select name="marketing_source" id="edit-marketing-source" class="form-select" required>
+              <option value="">Оберіть варіант</option>
+              <option value="Таргет">Таргет</option>
+              <option value="Тікток">Тікток</option>
+              <option value="Контент інстаграм">Контент інстаграм</option>
+              <option value="Розповіли друзі">Розповіли друзі</option>
+              <option value="Побачили офлайн">Побачили офлайн</option>
+              <option value="UGC/блогери">UGC/блогери</option>
+              <option value="Гугл пошук">Гугл пошук</option>
+            </select>
           </div>
           <div class="alert alert-danger d-none" id="client-error"></div>
         </div>
         <div class="modal-footer bg-light">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-          <button type="submit" class="btn btn-primary">Додати</button>
+          <button type="submit" class="btn btn-primary" id="submit-btn">Додати</button>
         </div>
       </form>
     </div>
@@ -65,14 +98,125 @@
 document.addEventListener('DOMContentLoaded', function() {
   const addForm = document.getElementById('addClientForm');
   const errorDiv = document.getElementById('client-error');
+  const phoneInput = document.getElementById('edit-phone');
+  const modal = document.getElementById('addClientModal');
+  const modalTitle = document.getElementById('addClientModalLabel');
+  const submitBtn = document.getElementById('submit-btn');
+  const clientIdInput = document.getElementById('client-id');
+  
+  let isEditMode = false;
+  
+  // Подвійний клік по рядку для редагування
+  document.querySelectorAll('tr[data-client-id]').forEach(row => {
+    row.addEventListener('dblclick', function() {
+      const clientId = this.getAttribute('data-client-id');
+      loadClientData(clientId);
+    });
+  });
+  
+  // Завантаження даних клієнта для редагування
+  async function loadClientData(clientId) {
+    try {
+      const response = await fetch(`/clients/${clientId}`);
+      if (response.ok) {
+        const client = await response.json();
+        fillFormWithClientData(client);
+        isEditMode = true;
+        modalTitle.textContent = 'Редагувати клієнта';
+        submitBtn.textContent = 'Зберегти';
+        clientIdInput.value = clientId;
+        const modalInstance = new bootstrap.Modal(modal);
+        modalInstance.show();
+      }
+    } catch (error) {
+      console.error('Помилка завантаження даних клієнта:', error);
+    }
+  }
+  
+  // Заповнення форми даними клієнта
+  function fillFormWithClientData(client) {
+    document.getElementById('edit-instagram').value = client.instagram;
+    document.getElementById('edit-phone').value = client.phone;
+    document.getElementById('edit-telegram').value = client.telegram;
+    document.getElementById('edit-credits').value = client.credits;
+    document.getElementById('edit-marketing-source').value = client.marketing_source;
+  }
+  
+  // Скидання форми при відкритті модальки для додавання
+  modal.addEventListener('show.bs.modal', function(event) {
+    if (!isEditMode) {
+      resetForm();
+    }
+  });
+  
+  // Скидання форми
+  function resetForm() {
+    addForm.reset();
+    clientIdInput.value = '';
+    isEditMode = false;
+    modalTitle.textContent = 'Додати клієнта';
+    submitBtn.textContent = 'Додати';
+    errorDiv.classList.add('d-none');
+  }
+  
+  // Маска для номера телефону
+  phoneInput.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, ''); // Видаляємо все крім цифр
+    
+    if (value.length === 0) {
+      e.target.value = '+38';
+      return;
+    }
+    
+    // Якщо починається з 380, додаємо +
+    if (value.startsWith('380')) {
+      e.target.value = '+' + value;
+    } else if (value.startsWith('38')) {
+      e.target.value = '+' + value;
+    } else if (value.startsWith('0')) {
+      // Якщо починається з 0, замінюємо на +380
+      e.target.value = '+38' + value;
+    } else {
+      // Інакше додаємо +380
+      e.target.value = '+380' + value;
+    }
+    
+    // Обмежуємо довжину до 13 символів (+380XXXXXXXXX)
+    if (e.target.value.length > 13) {
+      e.target.value = e.target.value.substring(0, 13);
+    }
+  });
+  
+  // При фокусі, якщо поле пусте, додаємо +38
+  phoneInput.addEventListener('focus', function(e) {
+    if (e.target.value === '') {
+      e.target.value = '+38';
+    }
+  });
+  
+  // Валідація перед відправкою
   addForm.addEventListener('submit', async function(e) {
     e.preventDefault();
     errorDiv.classList.add('d-none');
+    
+    // Перевіряємо формат номера телефону
+    const phoneValue = phoneInput.value;
+    const phonePattern = /^\+380[0-9]{9}$/;
+    
+    if (!phonePattern.test(phoneValue)) {
+      errorDiv.textContent = 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX';
+      errorDiv.classList.remove('d-none');
+      return;
+    }
+    
     const formData = new FormData(addForm);
-    const resp = await fetch('/clients/new', {
+    const url = isEditMode ? `/clients/${clientIdInput.value}` : '/clients/new';
+    
+    const resp = await fetch(url, {
       method: 'POST',
       body: formData
     });
+    
     if (resp.ok) {
       location.reload();
     } else {

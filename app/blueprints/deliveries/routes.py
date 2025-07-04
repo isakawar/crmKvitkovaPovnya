@@ -7,9 +7,31 @@ deliveries_bp = Blueprint('deliveries', __name__)
 def deliveries_list():
     date_str = request.args.get('date')
     client_phone = request.args.get('client_phone', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = 30
+    
     deliveries, selected_date = get_deliveries(date_str, client_phone)
     couriers = get_all_couriers()
-    return render_template('deliveries_list.html', deliveries=deliveries, selected_date=selected_date, couriers=couriers)
+    
+    # Проста пагінація
+    total_deliveries = len(deliveries)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    deliveries_on_page = deliveries[start_idx:end_idx]
+    
+    has_next = end_idx < total_deliveries
+    prev_page = page - 1 if page > 1 else 1
+    next_page = page + 1
+    
+    return render_template('deliveries_list.html', 
+                         deliveries=deliveries_on_page, 
+                         selected_date=selected_date, 
+                         couriers=couriers,
+                         page=page,
+                         prev_page=prev_page,
+                         next_page=next_page,
+                         has_next=has_next,
+                         deliveries_count=total_deliveries)
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>', methods=['GET'])
 def get_delivery(delivery_id):
@@ -17,7 +39,6 @@ def get_delivery(delivery_id):
     return jsonify({
         'id': d.id,
         'client': d.client.instagram,
-        'city': d.client.city,
         'street': d.order.street,
         'building_number': d.order.building_number,
         'phone': d.phone,

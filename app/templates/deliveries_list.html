@@ -1,6 +1,7 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2 class="mb-4">Доставки</h2>
+<div class="mb-2"><strong>Всього доставок: {{ deliveries_count }}</strong></div>
 <div class="d-flex align-items-center mb-3">
   <form class="d-flex align-items-center w-100" method="get" id="delivery-filter-form">
     <input type="text" name="client_phone" class="form-control form-control-sm me-2" style="width:180px;" placeholder="Пошук за телефоном клієнта..." value="{{ request.args.get('client_phone', '') }}">
@@ -38,12 +39,11 @@
       <td>{{ d.client.phone }}</td>
       <td>
         <a href="#" class="address-link" 
-           data-city="{{ d.client.city }}" 
            data-street="{{ d.street }}" 
            data-building="{{ d.building_number }}" 
            data-entrance="{{ d.entrance }}"
            style="color:inherit; text-decoration:none; cursor:pointer;">
-          {{ d.client.city }}, {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
+          {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
         </a>
       </td>
       <td>{{ d.phone }}</td>
@@ -74,6 +74,29 @@
     {% endfor %}
   </tbody>
 </table>
+
+<!-- Пагінація -->
+{% if deliveries_count > 30 %}
+<div class="d-flex justify-content-center align-items-center gap-2">
+    <form method="get" style="display:inline;">
+        {% for key, value in request.args.items() %}
+            {% if key != 'page' %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
+    </form>
+    <span class="mx-2">{{ page }}</span>
+    <form method="get" style="display:inline;">
+        {% for key, value in request.args.items() %}
+            {% if key != 'page' %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
+    </form>
+</div>
+{% endif %}
 
 <!-- Modal -->
 <div class="modal fade" id="editDeliveryModal" tabindex="-1" aria-labelledby="editDeliveryModalLabel" aria-hidden="true">

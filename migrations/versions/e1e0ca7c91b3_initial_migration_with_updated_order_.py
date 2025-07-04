@@ -1,8 +1,8 @@
-"""init full with courier and delivery link
+"""Initial migration with updated order model
 
-Revision ID: 10328ad9bdd7
+Revision ID: e1e0ca7c91b3
 Revises: 
-Create Date: 2025-07-03 17:11:26.940934
+Create Date: 2025-07-05 01:15:28.141696
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '10328ad9bdd7'
+revision: str = 'e1e0ca7c91b3'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -25,9 +25,9 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('instagram', sa.String(length=128), nullable=False),
     sa.Column('phone', sa.String(length=32), nullable=False),
-    sa.Column('city', sa.String(length=64), nullable=False),
     sa.Column('telegram', sa.String(length=128), nullable=True),
     sa.Column('credits', sa.Integer(), nullable=True),
+    sa.Column('marketing_source', sa.String(length=64), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('phone')
     )
@@ -51,22 +51,30 @@ def upgrade() -> None:
     op.create_table('order',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
+    sa.Column('recipient_name', sa.String(length=128), nullable=False),
+    sa.Column('recipient_phone', sa.String(length=32), nullable=False),
+    sa.Column('recipient_social', sa.String(length=128), nullable=True),
+    sa.Column('city', sa.String(length=64), nullable=False),
     sa.Column('street', sa.String(length=128), nullable=False),
     sa.Column('building_number', sa.String(length=32), nullable=True),
     sa.Column('floor', sa.String(length=16), nullable=True),
     sa.Column('entrance', sa.String(length=16), nullable=True),
-    sa.Column('size', sa.String(length=32), nullable=True),
-    sa.Column('type', sa.String(length=32), nullable=True),
-    sa.Column('comment', sa.Text(), nullable=True),
-    sa.Column('time_window', sa.String(length=64), nullable=True),
-    sa.Column('recipient_phone', sa.String(length=32), nullable=True),
-    sa.Column('periodicity', sa.String(length=8), nullable=True),
-    sa.Column('preferred_days', sa.String(length=64), nullable=True),
+    sa.Column('is_pickup', sa.Boolean(), nullable=True),
+    sa.Column('delivery_type', sa.String(length=32), nullable=False),
+    sa.Column('size', sa.String(length=32), nullable=False),
+    sa.Column('custom_amount', sa.Integer(), nullable=True),
+    sa.Column('first_delivery_date', sa.Date(), nullable=False),
+    sa.Column('delivery_day', sa.String(length=16), nullable=False),
     sa.Column('time_from', sa.String(length=8), nullable=True),
     sa.Column('time_to', sa.String(length=8), nullable=True),
-    sa.Column('bouquet_id', sa.Integer(), nullable=True),
-    sa.Column('delivery_count', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['bouquet_id'], ['price.id'], ),
+    sa.Column('comment', sa.Text(), nullable=True),
+    sa.Column('preferences', sa.Text(), nullable=True),
+    sa.Column('for_whom', sa.String(length=64), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('bouquet_size', sa.String(length=16), nullable=True),
+    sa.Column('price_at_order', sa.Integer(), nullable=True),
+    sa.Column('periodicity', sa.String(length=8), nullable=True),
+    sa.Column('preferred_days', sa.String(length=64), nullable=True),
     sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -74,7 +82,6 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('order_id', sa.Integer(), nullable=False),
     sa.Column('client_id', sa.Integer(), nullable=False),
-    sa.Column('bouquet_id', sa.Integer(), nullable=True),
     sa.Column('delivery_date', sa.Date(), nullable=False),
     sa.Column('status', sa.String(length=32), nullable=True),
     sa.Column('comment', sa.Text(), nullable=True),
@@ -82,13 +89,19 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('street', sa.String(length=128), nullable=True),
     sa.Column('building_number', sa.String(length=32), nullable=True),
-    sa.Column('time_window', sa.String(length=64), nullable=True),
-    sa.Column('size', sa.String(length=32), nullable=True),
-    sa.Column('phone', sa.String(length=32), nullable=True),
+    sa.Column('floor', sa.String(length=16), nullable=True),
+    sa.Column('entrance', sa.String(length=16), nullable=True),
+    sa.Column('is_pickup', sa.Boolean(), nullable=True),
     sa.Column('time_from', sa.String(length=8), nullable=True),
     sa.Column('time_to', sa.String(length=8), nullable=True),
+    sa.Column('size', sa.String(length=32), nullable=True),
+    sa.Column('phone', sa.String(length=32), nullable=True),
     sa.Column('courier_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['bouquet_id'], ['price.id'], ),
+    sa.Column('delivered_at', sa.DateTime(), nullable=True),
+    sa.Column('status_changed_at', sa.DateTime(), nullable=True),
+    sa.Column('bouquet_size', sa.String(length=16), nullable=True),
+    sa.Column('delivery_type', sa.String(length=32), nullable=True),
+    sa.Column('price_at_delivery', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['client_id'], ['client.id'], ),
     sa.ForeignKeyConstraint(['courier_id'], ['courier.id'], ),
     sa.ForeignKeyConstraint(['order_id'], ['order.id'], ),
