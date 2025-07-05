@@ -36,17 +36,20 @@ def deliveries_list():
 @deliveries_bp.route('/deliveries/<int:delivery_id>', methods=['GET'])
 def get_delivery(delivery_id):
     d = get_delivery_by_id(delivery_id)
+    order = d.order if hasattr(d, 'order') else None
     return jsonify({
         'id': d.id,
-        'client': d.client.instagram,
-        'street': d.order.street,
-        'building_number': d.order.building_number,
-        'phone': d.phone,
-        'comment': d.comment,
-        'time_window': d.order.time_window,
+        'city': order.city if order else '',
+        'street': d.street or (order.street if order else ''),
+        'building_number': d.building_number or (order.building_number if order else ''),
+        'phone': d.phone or '',
+        'time_from': d.time_from or '',
+        'time_to': d.time_to or '',
         'delivery_date': d.delivery_date.strftime('%Y-%m-%d'),
+        'comment': d.comment or '',
         'status': d.status,
-        'size': d.order.size,
+        'size': d.size or (order.size if order else ''),
+        'is_pickup': d.is_pickup
     })
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>/edit', methods=['POST'])

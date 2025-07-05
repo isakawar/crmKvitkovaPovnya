@@ -8,23 +8,28 @@
 <table class="table table-bordered table-hover align-middle">
     <thead>
         <tr>
+            <th style="width:48px;"></th>
             <th>Instagram</th>
             <th>Номер телефону</th>
             <th>Telegram</th>
             <th>Кредити</th>
             <th>Звідки дізнались</th>
-            <th>Персональна знижка</th>
+            <th style="width:80px; text-align:center;">Персональна знижка</th>
         </tr>
     </thead>
     <tbody>
     {% for client in clients %}
         <tr data-client-id="{{ client.id }}" style="cursor: pointer;">
+            <td style="text-align:center; font-size:1.3rem;">
+                {% set icons = ['bi-person', 'bi-flower1', 'bi-star', 'bi-emoji-smile', 'bi-gem'] %}
+                <i class="bi {{ icons[client.id % icons|length] }} text-primary"></i>
+            </td>
             <td>{{ client.instagram }}</td>
             <td>{{ client.phone }}</td>
             <td>{{ client.telegram or '' }}</td>
             <td>{{ client.credits }}</td>
             <td>{{ client.marketing_source }}</td>
-            <td>{% if client.personal_discount %}{{ client.personal_discount }}%{% endif %}</td>
+            <td style="text-align:center;">{% if client.personal_discount %}{{ client.personal_discount }}%{% endif %}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -77,13 +82,13 @@
             <label class="form-label">Звідки дізнались <span class="text-danger">*</span></label>
             <select name="marketing_source" id="edit-marketing-source" class="form-select" required>
               <option value="">Оберіть варіант</option>
-              <option value="Таргет">Таргет</option>
-              <option value="Тікток">Тікток</option>
-              <option value="Контент інстаграм">Контент інстаграм</option>
-              <option value="Розповіли друзі">Розповіли друзі</option>
-              <option value="Побачили офлайн">Побачили офлайн</option>
-              <option value="UGC/блогери">UGC/блогери</option>
-              <option value="Гугл пошук">Гугл пошук</option>
+              {% if marketing_sources and marketing_sources|length > 0 %}
+                {% for src in marketing_sources %}
+                  <option value="{{ src.value }}">{{ src.value }}</option>
+                {% endfor %}
+              {% else %}
+                <option disabled>Додайте варіанти у налаштуваннях</option>
+              {% endif %}
             </select>
           </div>
           <div class="mb-3">

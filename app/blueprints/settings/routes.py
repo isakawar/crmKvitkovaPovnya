@@ -78,4 +78,22 @@ def add_for_whom():
     item = Settings(type='for_whom', value=value)
     db.session.add(item)
     db.session.commit()
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+@settings_bp.route('/settings/marketing_sources', methods=['GET'])
+def get_marketing_sources():
+    items = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
+    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+
+@settings_bp.route('/settings/marketing_sources', methods=['POST'])
+def add_marketing_source():
+    data = request.get_json()
+    value = (data.get('value') or '').strip()
+    if not value:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    if Settings.query.filter_by(type='marketing_source', value=value).first():
+        return jsonify({'success': False, 'error': 'Такий варіант вже існує'}), 400
+    item = Settings(type='marketing_source', value=value)
+    db.session.add(item)
+    db.session.commit()
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}}) 

@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app.extensions import db
 from app.services.client_service import get_all_clients, create_client, get_clients_json, get_client_by_id, update_client
 from app.services.courier_service import get_all_couriers, create_courier
+from app.models.settings import Settings
 
 clients_bp = Blueprint('clients', __name__)
 
@@ -21,13 +22,16 @@ def clients_list():
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
     
+    marketing_sources = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
+    
     return render_template('clients_list.html', 
                          clients=clients_on_page, 
                          page=page, 
                          prev_page=prev_page, 
                          next_page=next_page, 
                          has_next=has_next, 
-                         clients_count=total_clients)
+                         clients_count=total_clients,
+                         marketing_sources=marketing_sources)
 
 @clients_bp.route('/clients/new', methods=['POST'])
 def client_create():

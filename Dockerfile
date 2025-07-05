@@ -6,4 +6,9 @@ COPY . .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-CMD sh -c "ls -l /app && echo '--- alembic.ini ---' && cat /app/alembic.ini && flask db upgrade && python3 test_crud.py && gunicorn -w 4 -b 0.0.0.0:8000 run:app" 
+# Зробити entrypoint скрипт виконуваним
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Використовувати entrypoint скрипт
+ENTRYPOINT ["/app/docker-entrypoint.sh"] 

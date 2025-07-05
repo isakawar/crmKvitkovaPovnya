@@ -18,6 +18,10 @@
         <i class="bi bi-people" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Для кого</div>
     </div>
+    <div class="marketing-source-sticker card p-4 d-flex align-items-center justify-content-center flex-column" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
+        <i class="bi bi-bullseye" style="font-size:2.2rem; color:#007bff;"></i>
+        <div class="mt-2 fw-bold w-100 text-center" style="font-size:1.1rem; color:#007bff;">Звідки дізнались</div>
+    </div>
 </div>
 
 <!-- Модалки для кожного довідника -->
@@ -48,6 +52,7 @@
 {{ settings_modal('deliveryTypesModal', 'Типи доставки', '/settings/delivery_types') }}
 {{ settings_modal('sizesModal', 'Розміри', '/settings/sizes') }}
 {{ settings_modal('forWhomModal', 'Для кого', '/settings/for_whom') }}
+{{ settings_modal('marketingSourcesModal', 'Звідки дізнались', '/settings/marketing_sources') }}
 
 {% endblock %}
 
@@ -73,7 +78,8 @@ document.addEventListener('DOMContentLoaded', function() {
         {id: 'citiesModal', endpoint: '/settings/cities'},
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
         {id: 'sizesModal', endpoint: '/settings/sizes'},
-        {id: 'forWhomModal', endpoint: '/settings/for_whom'}
+        {id: 'forWhomModal', endpoint: '/settings/for_whom'},
+        {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'}
     ].forEach(function(modal) {
         document.getElementById(modal.id).addEventListener('show.bs.modal', function() {
             loadSettings(modal.id, modal.endpoint);

@@ -2,6 +2,7 @@ from app.extensions import db
 from app.models import Client, Order, Price, Delivery
 import datetime
 import logging
+import calendar
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,6 @@ def check_and_spend_credits(client, bouquet, delivery_count):
 def create_order_and_deliveries(client, form):
     logger.info(f'Створення замовлення для клієнта {client.id}')
     
-    # Створюємо замовлення
     is_pickup = form.get('is_pickup') == 'on'
     order = Order(
         client_id=client.id,
@@ -56,56 +56,65 @@ def create_order_and_deliveries(client, form):
     )
     db.session.add(order)
     db.session.commit()
-    
-    # Створюємо доставки
+
     delivery_type = form['delivery_type']
-    days_between = DELIVERY_TYPE_MAP.get(delivery_type, 7)
     first_date = order.first_delivery_date
-    weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
-    
-    # Розраховуємо кількість доставок
-    if delivery_type == 'One-time':
-        delivery_count = 1
-    else:
-        # Для підписок - 12 доставок
-        delivery_count = 12
-    
-    created = 0
-    current_date = first_date
-    
-    while created < delivery_count:
-        if current_date.weekday() == weekday:
-            delivery = Delivery(
-                order_id=order.id,
-                client_id=client.id,
-                delivery_date=current_date,
-                status='Очікує',
-                comment=order.comment,
-                street=order.street if not order.is_pickup else None,
-                building_number=order.building_number if not order.is_pickup else None,
-                time_from=order.time_from,
-                time_to=order.time_to,
-                size=order.size,
-                phone=order.recipient_phone,
-                is_pickup=order.is_pickup
-            )
-            db.session.add(delivery)
-            created += 1
-        
-        # Переходимо до наступної дати
-        if delivery_type == 'One-time':
-            break
-        elif delivery_type == 'Weekly':
-            current_date += datetime.timedelta(days=7)
-        elif delivery_type == 'Bi-weekly':
-            current_date += datetime.timedelta(days=14)
-        elif delivery_type == 'Monthly':
-            # Додаємо місяць
-            if current_date.month == 12:
-                current_date = current_date.replace(year=current_date.year + 1, month=1)
+    desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
+    deliveries = []
+
+    # Перша доставка — це дата, яку ввів користувач
+    deliveries.append(first_date)
+
+    if delivery_type != 'One-Time':
+        count = 4
+        prev_date = first_date
+        for i in range(1, count):
+            if delivery_type == 'Weekly':
+                # Наступний тиждень, потрібний день
+                next_date = prev_date + datetime.timedelta(days=1)
+                while next_date.weekday() != desired_weekday:
+                    next_date += datetime.timedelta(days=1)
+            elif delivery_type == 'Bi-weekly':
+                # Через тиждень, потрібний день
+                next_date = prev_date + datetime.timedelta(days=8)  # мінімум через тиждень
+                while next_date.weekday() != desired_weekday:
+                    next_date += datetime.timedelta(days=1)
+            elif delivery_type == 'Monthly':
+                # Наступний місяць, потрібний день
+                year = prev_date.year + (prev_date.month // 12)
+                month = (prev_date.month % 12) + 1
+                c = calendar.Calendar()
+                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
+                next_date = None
+                for d in month_days:
+                    if d > prev_date:
+                        next_date = d
+                        break
+                if not next_date:
+                    next_date = prev_date + datetime.timedelta(days=30)
             else:
-                current_date = current_date.replace(month=current_date.month + 1)
-    
+                next_date = prev_date + datetime.timedelta(weeks=1)
+            deliveries.append(next_date)
+            prev_date = next_date
+
+    for d_date in deliveries:
+        status = 'Разова' if delivery_type == 'One-Time' else 'Активна'
+        delivery = Delivery(
+            order_id=order.id,
+            client_id=client.id,
+            delivery_date=d_date,
+            status=status,
+            comment=order.comment,
+            street=order.street if not order.is_pickup else None,
+            building_number=order.building_number if not order.is_pickup else None,
+            time_from=order.time_from,
+            time_to=order.time_to,
+            size=order.size,
+            phone=order.recipient_phone,
+            is_pickup=order.is_pickup,
+            delivery_type=order.delivery_type
+        )
+        db.session.add(delivery)
     db.session.commit()
     return order
 
