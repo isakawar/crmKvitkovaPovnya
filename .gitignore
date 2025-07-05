@@ -188,4 +188,4 @@ htmlcov/
 .coverage
 .coverage.*
 coverage.xml
-*.cover 
+*.cover __pycache__/
