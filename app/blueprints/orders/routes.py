@@ -254,7 +254,7 @@ def extend_subscription(order_id):
                 client_id=order.client_id,
                 delivery_date=d_date,
                 status=status,
-                comment=order.comment,
+                comment=order.comment if i == 0 else '',
                 street=order.street if not order.is_pickup else None,
                 building_number=order.building_number if not order.is_pickup else None,
                 time_from=order.time_from,
