@@ -2882,3 +2882,11 @@ FROM delivery
 2025-07-05 06:10:04,118 INFO 127.0.0.1 - - [05/Jul/2025 06:10:04] "GET /orders HTTP/1.1" 200 -
 2025-07-05 06:10:04,179 INFO 127.0.0.1 - - [05/Jul/2025 06:10:04] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
 2025-07-05 06:10:04,307 INFO 127.0.0.1 - - [05/Jul/2025 06:10:04] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-05 10:36:32,332 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 10:36:32,379 INFO 127.0.0.1 - - [05/Jul/2025 10:36:32] "GET /orders HTTP/1.1" 200 -
+2025-07-05 10:36:32,447 INFO 127.0.0.1 - - [05/Jul/2025 10:36:32] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 10:36:32,479 INFO 127.0.0.1 - - [05/Jul/2025 10:36:32] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-05 11:09:29,984 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 11:09:29,994 INFO 127.0.0.1 - - [05/Jul/2025 11:09:29] "GET /orders HTTP/1.1" 200 -
+2025-07-05 11:09:30,051 INFO 127.0.0.1 - - [05/Jul/2025 11:09:30] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-05 11:09:30,816 INFO 127.0.0.1 - - [05/Jul/2025 11:09:30] "GET /static/favicon.ico HTTP/1.1" 200 -
