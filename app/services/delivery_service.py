@@ -53,20 +53,28 @@ def update_delivery(d, data):
     logger.info(f'Оновлення доставки {d.id} даними: {data}')
     if 'delivery_date' in data:
         d.delivery_date = datetime.strptime(data['delivery_date'], '%Y-%m-%d').date()
-    if 'time_window' in data:
-        d.time_window = data['time_window']
     if 'time_from' in data:
         d.time_from = data['time_from']
     if 'time_to' in data:
         d.time_to = data['time_to']
     if 'street' in data:
         d.street = data['street']
-    if 'building_number' in data:
-        d.building_number = data['building_number']
     if 'phone' in data:
         d.phone = data['phone']
+    if 'size' in data:
+        d.size = data['size']
+    if 'delivery_type' in data:
+        d.delivery_type = data['delivery_type']
+    if 'status' in data:
+        d.status = data['status']
+    if 'is_pickup' in data:
+        d.is_pickup = data['is_pickup']
+    if 'is_subscription' in data:
+        d.is_subscription = data['is_subscription']
     if 'comment' in data:
         d.comment = data['comment']
+    if 'preferences' in data:
+        d.preferences = data['preferences']
     db.session.commit()
     return d
 
