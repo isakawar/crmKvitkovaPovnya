@@ -10,8 +10,8 @@
       <option value="">Всі статуси</option>
       <option value="Очікує">Очікує</option>
       <option value="Розподілено">Розподілено</option>
-      <option value="НП">НП</option>
       <option value="Доставлено">Доставлено</option>
+      <option value="Не оплачена">Не оплачена</option>
     </select>
   </div>
   <div class="col-md-2">
@@ -33,16 +33,24 @@
         </thead>
         <tbody>
           {% for d in all_deliveries %}
-          <tr data-id="{{ d.id }}" data-courier_id="{{ d.courier_id }}" data-date="{{ d.delivery_date.strftime('%Y-%m-%d') }}" data-status="{{ d.status }}">
+          <tr data-id="{{ d.id }}" data-courier_id="{{ d.courier_id }}" data-date="{{ d.delivery_date.strftime('%Y-%m-%d') }}" data-status="{{ d.status }}"
+              {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+              class="unpaid-subscription-delivery"
+              {% endif %}>
             <td><input type="checkbox" class="delivery-checkbox"></td>
-            <td>{{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}</td>
+            <td>
+              {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
+              {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+                <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
+              {% endif %}
+            </td>
             <td>{{ d.delivery_date.strftime('%d.%m') }}</td>
             <td>{% if d.courier %}{{ d.courier.name }}{% else %}<span class="text-muted">Без кур'єра</span>{% endif %}</td>
             <td><span class="badge 
               {% if d.status == 'Очікує' %}bg-secondary
               {% elif d.status == 'Розподілено' %}bg-primary
               {% elif d.status == 'Доставлено' %}bg-success
-              {% elif d.status == 'НП' %}bg-danger
+              {% elif d.status == 'Не оплачена' %}bg-danger
               {% else %}bg-light text-dark
               {% endif %}">
               {{ d.status }}

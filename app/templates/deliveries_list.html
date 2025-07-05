@@ -5,19 +5,25 @@
   <strong>Всього доставок: {{ deliveries_count }}</strong>
   <small class="text-muted ms-3">💡 Подвійний клік по рядку для редагування</small>
 </div>
-<div class="d-flex align-items-center mb-3">
-  <form class="d-flex align-items-center w-100" method="get" id="delivery-filter-form">
-    <input type="text" name="client_phone" class="form-control form-control-sm me-2" style="width:180px;" placeholder="Пошук за телефоном клієнта..." value="{{ request.args.get('client_phone', '') }}">
-    <input type="date" id="filter-date" name="date" class="form-control form-control-sm me-2" style="width:170px;" value="{{ selected_date }}">
-    <select id="filter-status" name="status" class="form-select form-select-sm me-2" style="width:170px;">
+<div class="filter-bar mb-3 w-100">
+  <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="delivery-filter-form">
+    <input type="text" name="client_instagram" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за Instagram клієнта..." value="{{ request.args.get('client_instagram', '') }}">
+    <input type="text" name="recipient_phone" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за телефоном отримувача..." value="{{ request.args.get('recipient_phone', '') }}">
+    <input type="date" id="filter-date" name="date" class="form-control" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" value="{{ selected_date }}">
+    <select id="filter-status" name="status" class="form-select" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
       <option value="">Всі статуси</option>
       <option value="Очікує">Очікує</option>
       <option value="Розподілено">Розподілено</option>
       <option value="Доставлено">Доставлено</option>
-      <option value="НП">НП</option>
+      <option value="Не оплачена">Не оплачена</option>
     </select>
-    <button class="btn btn-outline-primary btn-sm me-2" type="submit">Ок</button>
-    <button class="btn btn-outline-secondary btn-sm" id="reset-date-btn" type="button">Скинути</button>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '0' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="current-week-btn">Поточний фін. тиждень</button>
+      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '1' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="next-week-btn">Наступний фін. тиждень</button>
+    </div>
+    <div class="ms-auto">
+      <button class="btn btn-outline-secondary" id="reset-all-btn" type="button">Скинути</button>
+    </div>
   </form>
 </div>
 <table class="table table-bordered table-hover align-middle">
@@ -37,7 +43,10 @@
   </thead>
   <tbody>
     {% for d in deliveries %}
-    <tr data-status="{{ d.status }}" style="cursor: pointer;">
+    <tr data-status="{{ d.status }}" style="cursor: pointer;" 
+        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+        class="unpaid-subscription-delivery"
+        {% endif %}>
       <td>{{ d.id }}</td>
       <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
       <td>
@@ -55,7 +64,12 @@
       </td>
       <td>{{ d.phone }}</td>
       <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
-      <td>{{ d.delivery_type }}</td>
+      <td>
+        {{ d.delivery_type }}
+        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+          <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
+        {% endif %}
+      </td>
       <td>{{ d.comment }}</td>
       <td>
         {% if d.time_from and d.time_to %}
@@ -68,13 +82,13 @@
           &nbsp;
         {% endif %}
       </td>
-      <td>{{ d.delivery_date.strftime('%d.%m') }}</td>
+      <td class="delivery-date-cell" data-delivery-id="{{ d.id }}" style="cursor: pointer;">{{ d.delivery_date.strftime('%d.%m') }}</td>
       <td>
         <span class="delivery-status badge 
           {% if d.status == 'Очікує' %}bg-secondary
           {% elif d.status == 'Розподілено' %}bg-primary
           {% elif d.status == 'Доставлено' %}bg-success
-          {% elif d.status == 'НП' %}bg-danger
+          {% elif d.status == 'Не оплачена' %}bg-danger
           {% else %}bg-light text-dark
           {% endif %}"
           data-id="{{ d.id }}" data-status="{{ d.status }}" style="cursor:pointer;">
@@ -225,13 +239,53 @@
   </div>
 </div>
 
+<!-- Modal для зміни дати доставки -->
+<div class="modal fade" id="changeDeliveryDateModal" tabindex="-1" aria-labelledby="changeDeliveryDateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="changeDeliveryDateModalLabel">Зміна дати доставки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <strong>Клієнт:</strong> <span id="client-info"></span>
+          </div>
+          <div class="col-md-6">
+            <strong>Телефон:</strong> <span id="phone-info"></span>
+          </div>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label">Нова дата доставки:</label>
+          <input type="date" class="form-control" id="newDeliveryDate" required>
+        </div>
+        
+        <div class="mb-3">
+          <h6>Наступні доставки цього замовлення:</h6>
+          <div id="future-deliveries-list" class="border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+            <!-- Тут будуть відображатися наступні доставки -->
+          </div>
+        </div>
+        
+        <div id="date-change-error" class="alert alert-danger d-none mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-primary" id="saveDeliveryDateBtn">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // --- Фільтрація по статусу та даті (frontend) ---
   const filterDate = document.getElementById('filter-date');
   const filterStatus = document.getElementById('filter-status');
   const applyBtn = document.getElementById('apply-date-btn');
-  const resetBtn = document.getElementById('reset-date-btn');
+  const resetBtn = document.getElementById('reset-all-btn');
   const tableRows = document.querySelectorAll('tbody tr');
 
   function filterTable() {
@@ -264,6 +318,72 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   if (applyBtn) applyBtn.addEventListener('click', filterTable);
+  
+  // --- Логіка фінансового тижня ---
+  const currentWeekBtn = document.getElementById('current-week-btn');
+  const nextWeekBtn = document.getElementById('next-week-btn');
+  
+  function getFinancialWeekDates(offset = 0) {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Неділя, 5 = П'ятниця, 6 = Субота
+    
+    // Знаходимо найближчу п'ятницю (5)
+    let daysToFriday = 5 - currentDay;
+    if (daysToFriday <= 0) daysToFriday += 7;
+    
+    // Початок поточного фінансового тижня (п'ятниця)
+    const friday = new Date(today);
+    friday.setDate(today.getDate() + daysToFriday + (offset * 7));
+    
+    // Кінець фінансового тижня (наступна субота)
+    const nextSaturday = new Date(friday);
+    nextSaturday.setDate(friday.getDate() + 8); // +8 днів = наступна субота
+    
+    return {
+      start: friday.toISOString().split('T')[0],
+      end: nextSaturday.toISOString().split('T')[0]
+    };
+  }
+  
+  if (currentWeekBtn) {
+    currentWeekBtn.addEventListener('click', function() {
+      // Очищаємо інші фільтри
+      if (filterDate) filterDate.value = '';
+      if (filterStatus) filterStatus.value = '';
+      
+      // Перенаправляємо на сторінку з фільтром поточного фінансового тижня
+      const url = new URL(window.location);
+      url.searchParams.set('financial_week', '0');
+      url.searchParams.delete('date');
+      url.searchParams.delete('status');
+      window.location.href = url.toString();
+    });
+  }
+  
+  if (nextWeekBtn) {
+    nextWeekBtn.addEventListener('click', function() {
+      // Очищаємо інші фільтри
+      if (filterDate) filterDate.value = '';
+      if (filterStatus) filterStatus.value = '';
+      
+      // Перенаправляємо на сторінку з фільтром наступного фінансового тижня
+      const url = new URL(window.location);
+      url.searchParams.set('financial_week', '1');
+      url.searchParams.delete('date');
+      url.searchParams.delete('status');
+      window.location.href = url.toString();
+    });
+  }
+  
+  // Кнопка скидання всіх фільтрів
+  const resetAllBtn = document.getElementById('reset-all-btn');
+  if (resetAllBtn) {
+    resetAllBtn.addEventListener('click', function() {
+      const url = new URL(window.location);
+      url.search = '';
+      window.location.href = url.toString();
+    });
+  }
 
   // --- Інтерактивна зміна статусу ---
   let currentDeliveryId = null;
@@ -464,6 +584,150 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   } else {
     console.error('Кнопка saveDeliveryBtn не знайдена');
+  }
+  
+  // --- Логіка для зміни дати доставки ---
+  const changeDateModalElement = document.getElementById('changeDeliveryDateModal');
+  const changeDateModal = changeDateModalElement ? new bootstrap.Modal(changeDateModalElement) : null;
+  let currentDeliveryIdForDateChange = null;
+  let changedDeliveries = new Set(); // Для відстеження змінених доставок
+  
+  // Подвійний клік по даті доставки
+  document.querySelectorAll('.delivery-date-cell').forEach(cell => {
+    cell.addEventListener('dblclick', function(event) {
+      event.stopPropagation(); // Не даємо події піднятись до tr
+      const deliveryId = this.dataset.deliveryId;
+      currentDeliveryIdForDateChange = deliveryId;
+      
+      // Отримуємо дані доставки
+      fetch(`/deliveries/${deliveryId}`)
+        .then(r => r.json())
+        .then(data => {
+          // Заповнюємо інформацію про клієнта
+          document.getElementById('client-info').textContent = data.client_instagram || 'Невідомо';
+          document.getElementById('phone-info').textContent = data.phone || 'Невідомо';
+          
+          // Встановлюємо поточну дату
+          document.getElementById('newDeliveryDate').value = data.delivery_date;
+          
+          // Отримуємо наступні доставки цього замовлення
+          return fetch(`/deliveries/${deliveryId}/future-deliveries`);
+        })
+        .then(r => r.json())
+        .then(futureDeliveries => {
+          const futureList = document.getElementById('future-deliveries-list');
+          if (futureDeliveries.length === 0) {
+            futureList.innerHTML = '<p class="text-muted">Немає наступних доставок</p>';
+          } else {
+            let html = '<div class="row">';
+            futureDeliveries.forEach(delivery => {
+              const isChanged = changedDeliveries.has(delivery.id);
+              html += `
+                <div class="col-md-6 mb-2">
+                  <div class="card ${isChanged ? 'border-warning' : 'border-light'}">
+                    <div class="card-body p-2">
+                      <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                          <small class="text-muted">ID: ${delivery.id}</small><br>
+                          <strong>${delivery.delivery_date}</strong>
+                        </div>
+                        <div>
+                          <input type="date" class="form-control form-control-sm future-date-input" 
+                                 data-delivery-id="${delivery.id}" 
+                                 value="${delivery.delivery_date}"
+                                 style="width: 140px;">
+                          ${isChanged ? '<span class="badge bg-warning text-dark ms-1">Змінено</span>' : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+            html += '</div>';
+            futureList.innerHTML = html;
+            
+            // Додаємо обробники для зміни дат наступних доставок
+            document.querySelectorAll('.future-date-input').forEach(input => {
+              input.addEventListener('change', function() {
+                const deliveryId = this.dataset.deliveryId;
+                changedDeliveries.add(deliveryId);
+                this.closest('.card').classList.remove('border-light');
+                this.closest('.card').classList.add('border-warning');
+                
+                // Додаємо бейдж "Змінено"
+                const cardBody = this.closest('.card-body');
+                const existingBadge = cardBody.querySelector('.badge');
+                if (!existingBadge) {
+                  const badge = document.createElement('span');
+                  badge.className = 'badge bg-warning text-dark ms-1';
+                  badge.textContent = 'Змінено';
+                  this.parentNode.appendChild(badge);
+                }
+              });
+            });
+          }
+          
+          if (changeDateModal) {
+            changeDateModal.show();
+          }
+        })
+        .catch(error => {
+          console.error('Помилка завантаження даних:', error);
+          alert('Помилка завантаження даних доставки');
+        });
+    });
+  });
+  
+  // Збереження змінених дат
+  const saveDeliveryDateBtn = document.getElementById('saveDeliveryDateBtn');
+  if (saveDeliveryDateBtn) {
+    saveDeliveryDateBtn.addEventListener('click', function() {
+      if (!currentDeliveryIdForDateChange) {
+        alert('Помилка: не вибрано доставку для зміни');
+        return;
+      }
+      
+      const newDate = document.getElementById('newDeliveryDate').value;
+      if (!newDate) {
+        alert('Виберіть нову дату доставки');
+        return;
+      }
+      
+      // Збираємо всі змінені дати
+      const changedDates = {};
+      changedDates[currentDeliveryIdForDateChange] = newDate;
+      
+      document.querySelectorAll('.future-date-input').forEach(input => {
+        const deliveryId = input.dataset.deliveryId;
+        const dateValue = input.value;
+        if (dateValue && dateValue !== input.defaultValue) {
+          changedDates[deliveryId] = dateValue;
+        }
+      });
+      
+      // Відправляємо зміни на сервер
+      fetch(`/deliveries/${currentDeliveryIdForDateChange}/change-dates`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({changed_dates: changedDates})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          changeDateModal.hide();
+          location.reload();
+        } else {
+          const errorDiv = document.getElementById('date-change-error');
+          errorDiv.textContent = data.error || 'Помилка збереження дат';
+          errorDiv.classList.remove('d-none');
+        }
+      })
+      .catch(error => {
+        console.error('Помилка:', error);
+        alert('Помилка збереження дат доставки');
+      });
+    });
   }
 });
 </script>

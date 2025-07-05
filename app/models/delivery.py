@@ -36,4 +36,7 @@ class Delivery(db.Model):
     # --- denormalized fields ---
     bouquet_size = db.Column(db.String(16))
     delivery_type = db.Column(db.String(32))
-    price_at_delivery = db.Column(db.Integer) 
+    price_at_delivery = db.Column(db.Integer)
+    
+    # Подписка
+    is_subscription = db.Column(db.Boolean, default=False) 

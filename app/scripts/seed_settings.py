@@ -25,6 +25,7 @@ with app.app_context():
         ('size', 'L'),
         ('size', 'XL'),
         ('size', 'XXL'),
+        ('size', 'Власний'),
         # Для кого
         ('for_whom', 'дівчина собі'),
         ('for_whom', 'дівчина іншій дівчині'),
