@@ -38,7 +38,11 @@ def client_create():
     instagram = request.form.get('instagram', '').strip()
     phone = request.form.get('phone', '').strip()
     telegram = request.form.get('telegram', '').strip() or None
-    credits = int(request.form.get('credits', 0))
+    credits_raw = request.form.get('credits', 0)
+    try:
+        credits = int(credits_raw) if str(credits_raw).strip() else 0
+    except ValueError:
+        credits = 0
     marketing_source = request.form.get('marketing_source', '').strip()
     personal_discount = request.form.get('personal_discount', '').strip()
     personal_discount = int(personal_discount) if personal_discount.isdigit() else None
@@ -72,7 +76,11 @@ def client_update(client_id):
     instagram = request.form.get('instagram', '').strip()
     phone = request.form.get('phone', '').strip()
     telegram = request.form.get('telegram', '').strip() or None
-    credits = int(request.form.get('credits', 0))
+    credits_raw = request.form.get('credits', 0)
+    try:
+        credits = int(credits_raw) if str(credits_raw).strip() else 0
+    except ValueError:
+        credits = 0
     marketing_source = request.form.get('marketing_source', '').strip()
     personal_discount = request.form.get('personal_discount', '').strip()
     personal_discount = int(personal_discount) if personal_discount.isdigit() else None

@@ -353,17 +353,14 @@
             <img src="{{ url_for('static', filename='logoKvitkova.jpg') }}" alt="Logo">
         </div>
     </div>
-    <a href="/orders" class="nav-link {% if request.path.startswith('/orders') %}active{% endif %}" title="Замовлення">
-        <i class="bi bi-bag"></i>
-    </a>
     <a href="/clients" class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" title="Клієнти">
         <i class="bi bi-person"></i>
     </a>
+    <a href="/orders" class="nav-link {% if request.path.startswith('/orders') %}active{% endif %}" title="Замовлення">
+        <i class="bi bi-bag"></i>
+    </a>
     <a href="/deliveries" class="nav-link {% if request.path.startswith('/deliveries') %}active{% endif %}" title="Доставки">
         <i class="bi bi-truck"></i>
-    </a>
-    <a href="/prices" class="nav-link {% if request.path.startswith('/prices') %}active{% endif %}" title="Ціни">
-        <i class="bi bi-cash"></i>
     </a>
     <a href="/reports" class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}" title="Звіти">
         <i class="bi bi-bar-chart"></i>

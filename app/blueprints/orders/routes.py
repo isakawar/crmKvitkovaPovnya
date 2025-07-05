@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.settings import Settings
 import logging
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+import csv
+from sqlalchemy.orm import joinedload
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -270,3 +272,38 @@ def extend_subscription(order_id):
         db.session.rollback()
         logging.error(f'Помилка продовження підписки: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500 
+
+@orders_bp.route('/orders/export/csv', methods=['GET'])
+def export_orders_csv():
+    orders = Order.query.options(joinedload(Order.client)).order_by(Order.id.desc()).all()
+    def generate():
+        header = [
+            'ID', 'Instagram', 'Отримувач', 'Телефон', 'Місто', 'Адреса', 'Тип', 'Розмір', 'Сума',
+            'Дата першої доставки', 'День', 'Час з', 'Час до', 'Для кого', 'Коментар', 'Побажання', 'Створено', 'Продовжена підписка'
+        ]
+        yield ','.join(header) + '\n'
+        for o in orders:
+            row = [
+                str(o.id),
+                o.client.instagram if o.client else '',
+                o.recipient_name or '',
+                o.recipient_phone or '',
+                o.city or '',
+                o.street or '',
+                o.delivery_type or '',
+                o.size or '',
+                str(o.custom_amount) if o.custom_amount else '',
+                o.first_delivery_date.strftime('%Y-%m-%d') if o.first_delivery_date else '',
+                o.delivery_day or '',
+                o.time_from or '',
+                o.time_to or '',
+                o.for_whom or '',
+                (o.comment or '').replace('\n', ' ').replace('\r', ' '),
+                (o.preferences or '').replace('\n', ' ').replace('\r', ' '),
+                o.created_at.strftime('%Y-%m-%d %H:%M:%S') if o.created_at else '',
+                'Так' if getattr(o, 'is_subscription_extended', False) else 'Ні'
+            ]
+            yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
+    return Response(generate(), mimetype='text/csv', headers={
+        'Content-Disposition': 'attachment; filename=orders_export.csv'
+    }) 
