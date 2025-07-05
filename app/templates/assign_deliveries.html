@@ -10,8 +10,8 @@
       <option value="">Всі статуси</option>
       <option value="Очікує">Очікує</option>
       <option value="Розподілено">Розподілено</option>
-      <option value="НП">НП</option>
       <option value="Доставлено">Доставлено</option>
+      <option value="Не оплачена">Не оплачена</option>
     </select>
   </div>
   <div class="col-md-2">
@@ -50,7 +50,7 @@
               {% if d.status == 'Очікує' %}bg-secondary
               {% elif d.status == 'Розподілено' %}bg-primary
               {% elif d.status == 'Доставлено' %}bg-success
-              {% elif d.status == 'НП' %}bg-danger
+              {% elif d.status == 'Не оплачена' %}bg-danger
               {% else %}bg-light text-dark
               {% endif %}">
               {{ d.status }}

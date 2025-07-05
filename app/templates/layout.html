@@ -271,6 +271,18 @@
             background: inherit !important;
         }
         
+        /* Стилі для змінених дат доставки */
+        .delivery-date-cell {
+            transition: background-color 0.2s;
+        }
+        .delivery-date-cell:hover {
+            background-color: #e3f2fd !important;
+        }
+        .delivery-date-cell.changed {
+            background-color: #fff3cd !important;
+            border-left: 3px solid #ffc107 !important;
+        }
+        
         .pagination {
             margin: 0;
             display: flex;
@@ -363,7 +375,7 @@
 </div>
 <div class="main-content">
     <div class="topbar">
-        <div class="fw-bold fs-5">CRM Kvitkova</div>
+        <div class="fw-bold fs-5">CRM Kvitkova Povnya</div>
         <div>
             <a href="/" class="btn btn-outline-primary btn-sm"><i class="bi bi-house"></i></a>
         </div>

@@ -98,7 +98,17 @@ def create_order_and_deliveries(client, form):
             prev_date = next_date
 
     for i, d_date in enumerate(deliveries):
-        status = 'Разова' if delivery_type == 'One-Time' else 'Активна'
+        # Визначаємо статус залежно від типу доставки та порядкового номера
+        if delivery_type == 'One-Time':
+            status = 'Очікує'
+        elif delivery_type in ['Weekly', 'Monthly', 'Bi-weekly']:
+            # Перші 4 доставки - статус 'Очікує', 5-та - 'Не оплачена'
+            if i < 4:
+                status = 'Очікує'
+            else:
+                status = 'Не оплачена'
+        else:
+            status = 'Очікує'  # Для інших типів
         
         # Визначаємо чи це підписка для підписних типів
         is_subscription = False

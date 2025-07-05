@@ -1,23 +1,50 @@
 from app.extensions import db
 from app.models import Delivery, Courier
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from app.models.client import Client
 
 logger = logging.getLogger(__name__)
 
-def get_deliveries(date_str=None, client_phone=None):
+def get_financial_week_dates(offset=0):
+    """Отримати дати фінансового тижня (п'ятниця-п'ятниця, не включно)"""
+    today = datetime.now().date()
+    weekday = today.weekday()  # 0=Monday, ..., 4=Friday, 6=Sunday
+
+    # Знаходимо останню п'ятницю (до або включно сьогодні)
+    days_since_friday = (weekday - 4) % 7
+    current_friday = today - timedelta(days=days_since_friday) + timedelta(days=offset*7)
+    end_date = current_friday + timedelta(days=7)  # до наступної п'ятниці (НЕ включно)
+    return current_friday, end_date
+
+def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, financial_week=None):
     deliveries_query = Delivery.query
     selected_date = None
-    if client_phone:
-        deliveries_query = deliveries_query.join(Client).filter(Client.phone.contains(client_phone))
-    if date_str:
+    start_date = end_date = None
+
+    if client_instagram:
+        deliveries_query = deliveries_query.join(Client).filter(Client.instagram.contains(client_instagram))
+    if recipient_phone:
+        deliveries_query = deliveries_query.filter(Delivery.phone.contains(recipient_phone))
+
+    if financial_week is not None:
+        start_date, end_date = get_financial_week_dates(financial_week)
+        logger.info(f'Фільтрація по фінансовому тижню: {financial_week}, період: {start_date} - {end_date}')
+        deliveries_query = deliveries_query.filter(
+            Delivery.delivery_date >= start_date,
+            Delivery.delivery_date < end_date
+        )
+    elif date_str:
         try:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             deliveries_query = deliveries_query.filter(Delivery.delivery_date == selected_date)
-        except Exception:
-            pass
-    return deliveries_query.order_by(Delivery.id.desc()).all(), date_str or datetime.utcnow().strftime('%Y-%m-%d')
+        except Exception as e:
+            logger.warning(f'Помилка парсингу дати: {e}')
+
+    logger.info(f'Фінальний SQL: {str(deliveries_query)}')
+    result = deliveries_query.order_by(Delivery.id.desc()).all()
+    logger.info(f'Кількість доставок після фільтрації: {len(result)}')
+    return result, date_str or ''
 
 def get_delivery_by_id(delivery_id):
     return Delivery.query.get_or_404(delivery_id)
