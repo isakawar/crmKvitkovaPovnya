@@ -1,457 +1,594 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2 class="mb-4">Список замовлень</h2>
-<div class="mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">Додати замовлення</button>
+<div class="d-flex justify-content-between align-items-center mb-3 w-100">
+    <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addOrderModal" style="font-weight:500; font-size:1.05rem;">
+        <i class="bi bi-plus-lg"></i> Додати
+    </button>
+    <div></div>
 </div>
-<form class="row g-2 align-items-end mb-3" method="get">
-    <div class="col-md-3">
-        <input type="text" class="form-control" name="phone" placeholder="Пошук за номером телефону..." value="{{ request.args.get('phone', '') }}">
+<div class="stat-cards mb-4 w-100">
+    <div class="stat-card">
+        <div class="stat-title">Всього замовлень</div>
+        <div class="stat-value">{{ orders_count }}</div>
     </div>
-    <div class="col-md-3">
-        <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}">
+    <div class="stat-card">
+        <div class="stat-title">Середній чек</div>
+        <div class="stat-value">{{ avg_order_sum or '-' }}</div>
     </div>
-    <div class="col-md-3">
-        <select class="form-select" name="city">
-            <option value="">Всі міста</option>
-            {% for city in cities %}
-                <option value="{{ city }}" {% if request.args.get('city') == city %}selected{% endif %}>{{ city }}</option>
-            {% endfor %}
+    <div class="stat-card">
+        <div class="stat-title">Замовлень у роботі</div>
+        <div class="stat-value">{{ in_progress_count or '-' }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-title">Клієнтів</div>
+        <div class="stat-value">{{ clients_count or '-' }}</div>
+    </div>
+</div>
+
+<div class="filter-bar mb-3 w-100">
+    <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="orders-filter-form">
+        <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}" style="max-width:200px;">
+        <input type="text" class="form-control" name="phone" placeholder="Пошук за телефоном..." value="{{ request.args.get('phone', '') }}" style="max-width:200px;">
+        <select class="form-select" name="city" style="max-width:150px;">
+            <option value="">Місто</option>
+            <option value="Київ" {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
+            <option value="Бровари" {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
+            <option value="Вишгород" {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
+            <option value="Ірпінь" {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
         </select>
-    </div>
-    <div class="col-md-2">
-        <button type="submit" class="btn btn-outline-primary w-100">Застосувати</button>
-    </div>
-</form>
-<table class="table table-bordered table-hover align-middle" id="orders-table">
+        <select class="form-select" name="delivery_type" style="max-width:150px;">
+            <option value="">Тип доставки</option>
+            <option value="Weekly" {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
+            <option value="Monthly" {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
+            <option value="Bi-weekly" {% if request.args.get('delivery_type')=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
+            <option value="One-time" {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
+        </select>
+        <select class="form-select" name="size" style="max-width:120px;">
+            <option value="">Розмір</option>
+            <option value="M" {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
+            <option value="L" {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
+            <option value="XL" {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
+            <option value="XXL" {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
+            <option value="Custom" {% if request.args.get('size')=='Custom' %}selected{% endif %}>Власний</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Фільтрувати</button>
+        {% if request.args %}
+        <a href="/orders" class="btn btn-outline-secondary">Скинути</a>
+        {% endif %}
+    </form>
+</div>
+
+<table class="table table-hover align-middle w-100" id="orders-table">
     <thead>
         <tr>
-            <th>Instagram</th>
-            <th>Місто</th>
-            <th>Вулиця</th>
-            <th>№ будинку</th>
-            <th>КВ/поверх</th>
-            <th>Під'їзд</th>
+            <th>Клієнт</th>
+            <th>Отримувач</th>
             <th>Телефон</th>
+            <th>Місто</th>
+            <th>Адреса</th>
             <th>Тип</th>
             <th>Розмір</th>
-            <th>Тип доставки</th>
-            <th>Ціна на момент замовлення</th>
+            <th>Дата</th>
+            <th>День</th>
+            <th>Час</th>
+            <th>Для кого</th>
             <th>Коментар</th>
-            <th>Часове вікно</th>
         </tr>
     </thead>
     <tbody>
     {% for order in orders_on_page %}
         <tr data-order-id="{{ order.id }}">
             <td>{{ order.client.instagram or '' }}</td>
-            <td>{{ order.client.city or '' }}</td>
-            <td>{{ order.street or '' }}</td>
-            <td>{{ order.building_number or '' }}</td>
-            <td>{{ order.floor or '' }}</td>
-            <td>{{ order.entrance or '' }}</td>
-            <td>{{ order.client.phone or '' }}</td>
-            <td>{{ order.type or '' }}</td>
-            <td>{{ order.bouquet_size or '' }}</td>
-            <td>{{ order.delivery_type or '' }}</td>
-            <td>{{ order.price_at_order or '' }}</td>
-            <td>{{ order.comment or '' }}</td>
-            <td>{{ order.time_window or '' }}</td>
+            <td>{{ order.recipient_name or '' }}</td>
+            <td>{{ order.recipient_phone or '' }}</td>
+            <td>{{ order.city or '' }}</td>
+            <td>
+                {% if order.is_pickup %}
+                    <span class="tag tag-easy">Самовивіз</span>
+                {% else %}
+                    {{ order.street or '' }}
+                    {% if order.building_number %}, {{ order.building_number }}{% endif %}
+                    {% if order.floor %}, {{ order.floor }}{% endif %}
+                    {% if order.entrance %}, {{ order.entrance }}{% endif %}
+                {% endif %}
+            </td>
+            <td><span class="tag">{{ order.delivery_type or '' }}</span></td>
+            <td>
+                <span class="tag {% if order.size=='M' %}tag-easy{% elif order.size=='L' %}tag-medium{% elif order.size=='XL' or order.size=='XXL' %}tag-hard{% endif %}">{{ order.size or '' }}</span>
+                {% if order.size == 'Custom' and order.custom_amount %}
+                    <span class="tag">{{ order.custom_amount }} грн</span>
+                {% endif %}
+            </td>
+            <td>{{ order.first_delivery_date.strftime('%d.%m.%Y') if order.first_delivery_date else '' }}</td>
+            <td>{{ order.delivery_day or '' }}</td>
+            <td>
+                {% if order.time_from and order.time_to %}
+                    {{ order.time_from }} - {{ order.time_to }}
+                {% elif order.time_from %}
+                    {{ order.time_from }}
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ order.for_whom or '' }}</td>
+            <td>
+                {% if order.comment %}
+                    <span class="text-muted" title="{{ order.comment }}">{{ order.comment[:80] }}{% if order.comment|length > 80 %}...{% endif %}</span>
+                {% endif %}
+            </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
-<div class="d-flex justify-content-center align-items-center gap-2">
-    <form method="get" style="display:inline;">
-        {% for key, value in request.args.items() %}
-            {% if key != 'page' %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
-            {% endif %}
-        {% endfor %}
-        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
-    </form>
-    <span class="mx-2">{{ page }}</span>
-    <form method="get" style="display:inline;">
-        {% for key, value in request.args.items() %}
-            {% if key != 'page' %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
-            {% endif %}
-        {% endfor %}
-        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
-    </form>
-</div>
 
-<!-- Modal -->
+<!-- Пагінація -->
+{% set total_pages = (orders_count // per_page) + (1 if orders_count % per_page else 0) %}
+{% if total_pages > 1 %}
+<div class="bottom-controls mt-3">
+    <nav class="pagination">
+        <ul class="pagination mb-0">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(1) }}">&laquo;</a>
+            </li>
+            {% if page > 3 %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(1) }}">1</a></li>
+                {% if page > 4 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endif %}
+            {% for p in range(page-2, page+3) %}
+                {% if 1 <= p <= total_pages %}
+                    <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="?{{ update_query(p) }}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
+            {% if page < total_pages-2 %}
+                {% if page < total_pages-3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(total_pages) }}">{{ total_pages }}</a></li>
+            {% endif %}
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(total_pages) }}">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Модалка створення замовлення -->
 <div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form method="post" action="/orders/new" id="addOrderForm">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title" id="addOrderModalLabel">Додати замовлення</h5>
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="border-radius:18px; box-shadow:0 4px 32px 0 rgba(0,123,255,0.07); border:none;">
+      <form id="addOrderForm">
+        <div class="modal-header" style="border-bottom:none; background:#fff; border-radius:18px 18px 0 0;">
+          <h5 class="modal-title" id="addOrderModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem;">Нове замовлення</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body bg-white">
-          <div class="container-fluid">
-            <div class="row g-3">
-              <div class="col-md-4 position-relative" style="z-index:1055;">
-                <label class="form-label">Клієнт (номер телефону)</label>
-                <input type="text" class="form-control" id="order-client-phone" name="phone" placeholder="Введіть номер телефону..." autocomplete="off" required>
-                <div class="list-group d-none" id="client-phone-list" style="position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto; box-shadow:0 4px 16px rgba(0,0,0,0.10); z-index:1060;"></div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Отримувач (телефон)</label>
-                <input type="text" name="recipient_phone" class="form-control" placeholder="Введіть номер телефону отримувача" required>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Місто</label>
-                <select name="city" class="form-select" required>
-                  <option value="Київ" selected>Київ</option>
-                  <option value="Бровари">Бровари</option>
-                  <option value="Вишгород">Вишгород</option>
-                  <option value="Ірпінь">Ірпінь</option>
-                </select>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Вулиця</label>
-                <input type="text" name="street" class="form-control" required>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">№ будинку</label>
-                <input type="text" name="building_number" class="form-control">
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Кв/підʼїзд</label>
-                <input type="text" name="entrance" class="form-control">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Тип доставки</label>
-                <select name="type" class="form-select" id="order-delivery-type" required>
-                  <option value="">Оберіть тип</option>
-                  <option value="Доставка - підписка">Доставка - підписка</option>
-                  <option value="Самовивіз - підписка">Самовивіз - підписка</option>
-                  <option value="Доставка">Доставка</option>
-                  <option value="Самовивіз">Самовивіз</option>
-                </select>
-              </div>
-              <div class="col-md-4" id="bouquet-select-wrap">
-                <label class="form-label">Букет</label>
-                <select name="bouquet_id" class="form-select" id="order-bouquet-select" disabled>
-                  <option value="">Оберіть букет</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">К-сть</label>
-                <input type="number" name="delivery_count" class="form-control" min="1" value="1" required disabled id="delivery-count-input">
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Бажаний день</label>
-                <select name="preferred_days" class="form-select" id="preferred-day-select">
-                  <option value="">Оберіть день</option>
-                  <option value="пн">Пн</option>
-                  <option value="вт">Вт</option>
-                  <option value="ср">Ср</option>
-                  <option value="чт">Чт</option>
-                  <option value="пт">Пт</option>
-                  <option value="сб">Сб</option>
-                  <option value="нд">Нд</option>
-                </select>
-              </div>
-              <div class="col-md-4" id="periodicity-wrap">
-                <label class="form-label">Періодичність</label>
-                <select name="periodicity" class="form-select" disabled id="periodicity-select">
-                  <option value="1/7">1/7</option>
-                  <option value="1/14">1/14</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Час з</label>
-                <input type="time" name="time_from" class="form-control" disabled id="time-from-input">
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Час до</label>
-                <input type="time" name="time_to" class="form-control" disabled id="time-to-input">
-              </div>
-              <div class="col-md-12">
-                <label class="form-label">Коментар</label>
-                <textarea name="comment" class="form-control"></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-          <button type="submit" class="btn btn-primary">Додати</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<!-- Modal редагування -->
-<div class="modal fade" id="editOrderModal" tabindex="-1" aria-labelledby="editOrderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form id="editOrderForm">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title" id="editOrderModalLabel">Редагувати замовлення</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body bg-white">
-          <input type="hidden" name="order_id" id="edit-order-id">
+        <div class="modal-body" style="background:#fff; padding:32px 28px 18px 28px;">
           <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Instagram</label>
-              <input type="text" name="instagram" id="edit-instagram" class="form-control" required>
+            <div class="col-12">
+              <div style="position: relative;">
+                <input type="text" class="form-control form-control-lg" id="client-search" name="client_instagram" placeholder="Instagram клієнта *" required autocomplete="off" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <div class="list-group position-absolute w-100 d-none" id="client-results" style="z-index: 1000; max-height: 200px; overflow-y: auto; border-radius: 8px;"></div>
+              </div>
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Місто</label>
-              <input type="text" name="city" id="edit-city" class="form-control" required>
+            <div class="col-12">
+              <input type="text" name="recipient_name" class="form-control" required placeholder="Ім'я отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Вулиця</label>
-              <input type="text" name="street" id="edit-street" class="form-control" required>
+            <div class="col-12">
+              <input type="text" name="recipient_phone" class="form-control" required placeholder="Телефон отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" maxlength="13">
             </div>
-            <div class="col-md-2">
-              <label class="form-label">№ будинку</label>
-              <input type="text" name="building_number" id="edit-building_number" class="form-control">
+            <div class="col-12">
+              <input type="text" name="recipient_social" class="form-control" placeholder="Instagram/Telegram отримувача (необов'язково)" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-2">
-              <label class="form-label">КВ/поверх</label>
-              <input type="text" name="floor" id="edit-floor" class="form-control">
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Під'їзд</label>
-              <input type="text" name="entrance" id="edit-entrance" class="form-control">
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Телефон</label>
-              <input type="text" name="phone" id="edit-phone" class="form-control" required>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Тип доставки</label>
-              <select name="type" id="edit-type" class="form-select">
-                <option value="Разова">Разова</option>
-                <option value="Постійна">Постійна</option>
+            <div class="col-12">
+              <select name="city" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Місто</option>
+                {% if cities and cities|length > 0 %}
+                    {% for city in cities %}
+                        <option value="{{ city.value }}" {% if request.args.get('city')==city.value %}selected{% endif %}>{{ city.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте міста у налаштуваннях</option>
+                {% endif %}
               </select>
             </div>
-            <div class="col-md-2">
-              <label class="form-label">Розмір</label>
-              <input type="text" name="size" id="edit-size" class="form-control">
+            <div class="col-12 d-flex align-items-center gap-2">
+              <input class="form-check-input" type="checkbox" id="is-pickup" name="is_pickup" style="margin-top:0;">
+              <label class="form-check-label text-secondary small" for="is-pickup" style="margin-bottom:0;">Самовивіз</label>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Часове вікно</label>
-              <input type="text" name="time_window" id="edit-time_window" class="form-control">
+            <div class="col-12">
+              <input type="text" name="street" id="address-input" class="form-control" required placeholder="Адреса доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-12">
-              <label class="form-label">Коментар</label>
-              <textarea name="comment" id="edit-comment" class="form-control"></textarea>
+            <div class="col-12">
+              <select name="delivery_type" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Тип доставки *</option>
+                {% if delivery_types and delivery_types|length > 0 %}
+                    {% for t in delivery_types %}
+                        <option value="{{ t.value }}" {% if request.args.get('delivery_type')==t.value %}selected{% endif %}>{{ t.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте типи у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12">
+              <select name="size" id="size-select" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Розмір *</option>
+                {% if sizes and sizes|length > 0 %}
+                    {% for s in sizes %}
+                        <option value="{{ s.value }}" {% if request.args.get('size')==s.value %}selected{% endif %}>{{ s.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте розміри у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12" id="custom-amount-div" style="display: none;">
+              <input type="number" name="custom_amount" class="form-control" min="0" placeholder="Сума для власного розміру *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <input type="date" name="first_delivery_date" class="form-control" required placeholder="Дата першої доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="delivery_day" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">День тижня *</option>
+                <option value="ПН">Понеділок</option>
+                <option value="ВТ">Вівторок</option>
+                <option value="СР">Середа</option>
+                <option value="ЧТ">Четвер</option>
+                <option value="ПТ">П'ятниця</option>
+                <option value="СБ">Субота</option>
+                <option value="НД">Неділя</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <input type="time" name="time_from" class="form-control" placeholder="Час з" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-6">
+              <input type="time" name="time_to" class="form-control" placeholder="Час до" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="for_whom" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Для кого *</option>
+                {% if for_whom and for_whom|length > 0 %}
+                    {% for f in for_whom %}
+                        <option value="{{ f.value }}" {% if request.args.get('for_whom')==f.value %}selected{% endif %}>{{ f.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте варіанти у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12">
+              <textarea name="comment" class="form-control" rows="2" placeholder="Коментар (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
+            </div>
+            <div class="col-12">
+              <textarea name="preferences" class="form-control" rows="2" placeholder="Побажання (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
             </div>
           </div>
         </div>
-        <div class="modal-footer bg-light d-flex justify-content-between">
-          <div>
-            <button type="button" class="btn btn-outline-danger" id="delete-order-btn">Видалити</button>
-          </div>
-          <div>
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-            <button type="submit" class="btn btn-primary">Зберегти</button>
-          </div>
+        <div class="modal-footer" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
+          <button type="submit" class="btn btn-primary" id="order-submit-btn" style="border-radius:8px; font-weight:500; min-width:120px;">Створити</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Modal підтвердження видалення -->
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmDeleteModalLabel">Підтвердження видалення</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        Ви впевнені, що хочете видалити це замовлення?
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ні</button>
-        <button type="button" class="btn btn-danger" id="confirm-delete-yes">Так</button>
-      </div>
-    </div>
-  </div>
-</div>
+<style>
+.table th, .table td {
+  border-right: 1.5px solid #e3eafc;
+}
+.table th:last-child, .table td:last-child {
+  border-right: none;
+}
+#client-results {
+  left: 0;
+  right: 0;
+  width: auto;
+  min-width: unset;
+  max-width: unset;
+  overflow-x: auto;
+  box-shadow: 0 4px 16px 0 rgba(0,123,255,0.08);
+  border: 1.5px solid #e3eafc;
+  background: #fff;
+  z-index: 1055;
+}
+.modal-dialog { overflow: visible !important; }
+.input-disabled {
+  background: #d1d5db !important;
+  color: #6b7280 !important;
+  border: 1.5px solid #e3eafc !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+  font-weight: 500 !important;
+}
+</style>
+{% endblock %}
 
+{% block scripts %}
 <script>
-let allClients = [];
 document.addEventListener('DOMContentLoaded', function() {
-  // Завантажити всіх клієнтів для автокомпліта
-  fetch('/clients/json').then(r => r.json()).then(data => { allClients = data; });
-  const phoneInput = document.getElementById('order-client-phone');
-  const listDiv = document.getElementById('client-phone-list');
-  phoneInput.addEventListener('input', function() {
-    const val = phoneInput.value.trim();
-    if (!val) { listDiv.classList.add('d-none'); return; }
-    const filtered = allClients.filter(c => c.phone.includes(val));
-    if (filtered.length === 0) { listDiv.classList.add('d-none'); return; }
-    listDiv.innerHTML = filtered.map(c => `<button type="button" class="list-group-item list-group-item-action">${c.phone}</button>`).join('');
-    listDiv.classList.remove('d-none');
-    // Клік по варіанту
-    Array.from(listDiv.children).forEach(btn => {
-      btn.onclick = () => {
-        phoneInput.value = btn.textContent;
-        listDiv.classList.add('d-none');
-      };
-    });
-  });
-  // При втраті фокусу ховаємо список через 200мс (щоб встиг клікнути)
-  phoneInput.addEventListener('blur', function() { setTimeout(() => listDiv.classList.add('d-none'), 200); });
-
-  // Double-click по рядку — відкриває модалку редагування
-  const table = document.getElementById('orders-table');
-  table.addEventListener('dblclick', async function(e) {
-    let tr = e.target.closest('tr[data-order-id]');
-    if (!tr) return;
-    const orderId = tr.getAttribute('data-order-id');
-    // Завантажуємо дані замовлення
-    const resp = await fetch(`/orders/${orderId}/edit`);
-    const data = await resp.json();
-    document.getElementById('edit-order-id').value = data.id;
-    document.getElementById('edit-instagram').value = data.instagram;
-    document.getElementById('edit-phone').value = data.phone;
-    document.getElementById('edit-city').value = data.city;
-    document.getElementById('edit-street').value = data.street;
-    document.getElementById('edit-building_number').value = data.building_number;
-    document.getElementById('edit-floor').value = data.floor;
-    document.getElementById('edit-entrance').value = data.entrance;
-    document.getElementById('edit-size').value = data.size;
-    document.getElementById('edit-type').value = data.type;
-    document.getElementById('edit-comment').value = data.comment;
-    document.getElementById('edit-time_window').value = data.time_window;
-    let modal = new bootstrap.Modal(document.getElementById('editOrderModal'));
-    modal.show();
-  });
-
-  // Відправка форми редагування через AJAX
-  const editForm = document.getElementById('editOrderForm');
-  editForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const orderId = document.getElementById('edit-order-id').value;
-    const formData = new FormData(editForm);
-    const resp = await fetch(`/orders/${orderId}/edit`, {
-      method: 'POST',
-      body: formData
-    });
-    if (resp.ok) {
-      location.reload();
+    // --- МОДАЛКА СТВОРЕННЯ ЗАМОВЛЕННЯ ---
+    const clientSearch = document.getElementById('client-search');
+    const clientResults = document.getElementById('client-results');
+    const isPickupCheckbox = document.getElementById('is-pickup');
+    const addressInput = document.getElementById('address-input');
+    const sizeSelect = document.getElementById('size-select');
+    const customAmountDiv = document.getElementById('custom-amount-div');
+    const customAmountInput = document.querySelector('#addOrderForm input[name="custom_amount"]');
+    const addOrderForm = document.getElementById('addOrderForm');
+    const recipientPhoneInput = addOrderForm.querySelector('input[name="recipient_phone"]');
+    
+    if (recipientPhoneInput) {
+        recipientPhoneInput.setAttribute('maxlength', '13');
     }
-  });
 
-  // Видалення замовлення через окремий попап
-  let orderIdToDelete = null;
-  const deleteBtn = document.getElementById('delete-order-btn');
-  const confirmDeleteModalEl = document.getElementById('confirmDeleteModal');
-  const confirmDeleteModal = confirmDeleteModalEl ? new bootstrap.Modal(confirmDeleteModalEl) : null;
-  const confirmDeleteYes = document.getElementById('confirm-delete-yes');
-  if (deleteBtn && confirmDeleteModal && confirmDeleteYes) {
-    deleteBtn.addEventListener('click', function() {
-      orderIdToDelete = document.getElementById('edit-order-id').value;
-      confirmDeleteModal.show();
-    });
-    confirmDeleteYes.addEventListener('click', async function() {
-      if (!orderIdToDelete) return;
-      const resp = await fetch(`/orders/${orderIdToDelete}/delete`, {method: 'POST'});
-      if (resp.ok) {
-        confirmDeleteModal.hide();
-        const editModal = bootstrap.Modal.getInstance(document.getElementById('editOrderModal'));
-        if (editModal) editModal.hide();
-        location.reload();
-      }
-    });
-  } else {
-    console.warn('Delete button/modal/yes not found');
-  }
-
-  // Динамічне оновлення букетів за типом доставки
-  const deliveryType = document.getElementById('order-delivery-type');
-  const bouquetWrap = document.getElementById('bouquet-select-wrap');
-  const bouquetSelect = document.getElementById('order-bouquet-select');
-  const periodicityWrap = document.getElementById('periodicity-wrap');
-  const periodicitySelect = document.getElementById('periodicity-select');
-  const deliveryCountInput = document.getElementById('delivery-count-input');
-  const timeFromInput = document.getElementById('time-from-input');
-  const timeToInput = document.getElementById('time-to-input');
-
-  function setDependentFieldsEnabled(enabled, isSubscription) {
-    bouquetSelect.disabled = !enabled;
-    deliveryCountInput.disabled = !enabled;
-    timeFromInput.disabled = !enabled;
-    timeToInput.disabled = !enabled;
-    periodicitySelect.disabled = !(enabled && isSubscription);
-  }
-
-  setDependentFieldsEnabled(false, false);
-
-  deliveryType.addEventListener('change', function() {
-    const type = deliveryType.value;
-    if (!type) {
-      setDependentFieldsEnabled(false, false);
-      return;
+    // Автопошук клієнтів
+    if (clientSearch) {
+        clientSearch.addEventListener('input', async function() {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                clientResults.classList.add('d-none');
+                return;
+            }
+            try {
+                const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
+                const clients = await response.json();
+                if (clients.length > 0) {
+                    clientResults.innerHTML = clients.map(client => 
+                        `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
+                    ).join('');
+                    clientResults.classList.remove('d-none');
+                    clientResults.querySelectorAll('button').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            clientSearch.value = this.textContent;
+                            clientResults.classList.add('d-none');
+                        });
+                    });
+                } else {
+                    clientResults.classList.add('d-none');
+                }
+            } catch (error) {
+                console.error('Помилка пошуку клієнтів:', error);
+            }
+        });
+        clientSearch.addEventListener('blur', function() {
+            setTimeout(() => clientResults.classList.add('d-none'), 200);
+        });
     }
-    fetch(`/orders/bouquets?delivery_type=${encodeURIComponent(type.replace(' - підписка',''))}`)
-      .then(r => r.json())
-      .then(data => {
-        bouquetSelect.innerHTML = '<option value="">Оберіть букет</option>' +
-          data.map(b => `<option value="${b.id}">${b.bouquet_size} — ${b.price} грн</option>`).join('');
-      });
-    const isSubscription = type.includes('підписка');
-    setDependentFieldsEnabled(true, isSubscription);
-  });
 
-  // --- AJAX submit для модалки додавання замовлення ---
-  const addOrderForm = document.getElementById('addOrderForm');
-  if (addOrderForm) {
-    addOrderForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const formData = new FormData(addOrderForm);
-      fetch('/orders/new', {
-        method: 'POST',
-        headers: {'X-Requested-With': 'XMLHttpRequest'},
-        body: formData
-      })
-      .then(async r => {
-        if (r.ok) {
-          // Успіх: закриваємо модалку, оновлюємо сторінку
-          const modal = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
-          if (modal) modal.hide();
-          location.reload();
-        } else {
-          const data = await r.json();
-          // Показати повідомлення про помилку у модалці
-          let msg = data.error || 'Помилка!';
-          let msgDiv = document.getElementById('add-order-error');
-          if (!msgDiv) {
+    // Самовивіз - деактивація адреси і required
+    if (isPickupCheckbox) {
+        isPickupCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                addressInput.value = '';
+                addressInput.disabled = true;
+                addressInput.removeAttribute('required');
+                addressInput.classList.add('input-disabled');
+            } else {
+                addressInput.disabled = false;
+                addressInput.setAttribute('required', 'required');
+                addressInput.classList.remove('input-disabled');
+            }
+        });
+        // При завантаженні сторінки одразу застосувати стиль, якщо вже вибрано
+        if (isPickupCheckbox.checked) {
+            addressInput.disabled = true;
+            addressInput.removeAttribute('required');
+            addressInput.classList.add('input-disabled');
+        }
+    }
+
+    // Власний розмір - показ поля суми
+    if (sizeSelect) {
+        sizeSelect.addEventListener('change', function() {
+            if (this.value === 'Custom') {
+                customAmountDiv.style.display = 'block';
+                customAmountInput.required = true;
+            } else {
+                customAmountDiv.style.display = 'none';
+                customAmountInput.required = false;
+                customAmountInput.value = '';
+            }
+        });
+    }
+
+    // Маска для номера телефону отримувача (тільки + і цифри, не більше 13)
+    if (recipientPhoneInput) {
+        recipientPhoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d+]/g, '');
+            if (!value.startsWith('+')) value = '+' + value.replace(/^\+/, '');
+            value = value.slice(0, 13);
+            e.target.value = value;
+        });
+        recipientPhoneInput.addEventListener('focus', function(e) {
+            if (e.target.value === '') {
+                e.target.value = '+38';
+            }
+        });
+    }
+
+    // Валідація та AJAX submit
+    if (addOrderForm) {
+        addOrderForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            // Валідація телефону
+            const phoneValue = recipientPhoneInput.value;
+            const phonePattern = /^\+380[0-9]{9}$/;
+            if (!phonePattern.test(phoneValue) || phoneValue.length !== 13) {
+                showOrderError('Телефон має бути у форматі +380XXXXXXXXX (13 символів)');
+                return;
+            }
+            if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
+                showOrderError('Вкажіть адресу або оберіть "Самовивіз"');
+                return;
+            }
+            if (sizeSelect.value === 'Custom' && (!customAmountInput.value || customAmountInput.value <= 0)) {
+                showOrderError('Для власного розміру потрібно вказати суму більше 0');
+                return;
+            }
+            
+            // AJAX submit
+            const formData = new FormData(addOrderForm);
+            const orderId = addOrderForm.getAttribute('data-edit-id');
+            let url = '/orders/new';
+            if (orderId) {
+                url = `/orders/${orderId}/edit`;
+            }
+            
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                    body: formData
+                });
+                if (response.ok) {
+                    // Успіх: закриваємо модалку, оновлюємо сторінку
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
+                    if (modal) modal.hide();
+                    location.reload();
+                } else {
+                    const data = await response.json();
+                    showOrderError(data.error || 'Помилка збереження замовлення!');
+                }
+            } catch (error) {
+                showOrderError('Помилка зʼєднання з сервером!');
+            }
+        });
+    }
+
+    // Вивід помилок у модалці
+    function showOrderError(msg) {
+        let msgDiv = document.getElementById('add-order-error');
+        if (!msgDiv) {
             msgDiv = document.createElement('div');
             msgDiv.id = 'add-order-error';
             msgDiv.className = 'alert alert-danger';
             addOrderForm.querySelector('.modal-body').prepend(msgDiv);
-          }
-          msgDiv.textContent = msg;
-          msgDiv.classList.remove('d-none');
         }
-      })
-      .catch(() => {
-        let msgDiv = document.getElementById('add-order-error');
-        if (!msgDiv) {
-          msgDiv = document.createElement('div');
-          msgDiv.id = 'add-order-error';
-          msgDiv.className = 'alert alert-danger';
-          addOrderForm.querySelector('.modal-body').prepend(msgDiv);
-        }
-        msgDiv.textContent = 'Помилка зʼєднання!';
+        msgDiv.textContent = msg;
         msgDiv.classList.remove('d-none');
-      });
+    }
+
+    // При відкритті модалки для створення замовлення
+    const addOrderBtn = document.querySelector('[data-bs-target="#addOrderModal"]');
+    if (addOrderBtn) {
+        addOrderBtn.addEventListener('click', function() {
+            const form = document.getElementById('addOrderForm');
+            if (form) {
+                form.reset();
+                form.removeAttribute('data-edit-id');
+                const submitBtn = document.getElementById('order-submit-btn');
+                if (submitBtn) {
+                    submitBtn.textContent = 'Створити замовлення';
+                }
+                // Скидаємо всі custom поля, required, disabled тощо
+                const streetInput = form.querySelector('[name="street"]');
+                if (streetInput) {
+                    streetInput.disabled = false;
+                    streetInput.setAttribute('required', 'required');
+                }
+                if (customAmountDiv) {
+                    customAmountDiv.style.display = 'none';
+                }
+                if (customAmountInput) {
+                    customAmountInput.required = false;
+                }
+            }
+        });
+    }
+
+    // --- РЕДАГУВАННЯ ЗАМОВЛЕНЬ ЧЕРЕЗ ПОДВІЙНИЙ КЛІК ---
+    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
+        row.addEventListener('dblclick', async function() {
+            const orderId = this.getAttribute('data-order-id');
+            try {
+                const response = await fetch(`/orders/${orderId}/edit`);
+                const orderData = await response.json();
+                
+                // Заповнюємо форму даними замовлення
+                addOrderForm.setAttribute('data-edit-id', orderId);
+                addOrderForm.querySelector('[name="client_instagram"]').value = orderData.client_instagram;
+                addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name;
+                addOrderForm.querySelector('[name="recipient_phone"]').value = orderData.recipient_phone;
+                addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
+                addOrderForm.querySelector('[name="city"]').value = orderData.city;
+                addOrderForm.querySelector('[name="street"]').value = orderData.street;
+                addOrderForm.querySelector('[name="delivery_type"]').value = orderData.delivery_type;
+                addOrderForm.querySelector('[name="size"]').value = orderData.size;
+                addOrderForm.querySelector('[name="custom_amount"]').value = orderData.custom_amount || '';
+                addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date;
+                addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day;
+                addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+                addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+                addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom;
+                addOrderForm.querySelector('[name="comment"]').value = orderData.comment || '';
+                addOrderForm.querySelector('[name="preferences"]').value = orderData.preferences || '';
+                
+                // Самовивіз
+                const isPickup = orderData.is_pickup;
+                addOrderForm.querySelector('[name="is_pickup"]').checked = isPickup;
+                const addressInput = addOrderForm.querySelector('[name="street"]');
+                if (isPickup) {
+                    addressInput.value = '';
+                    addressInput.disabled = true;
+                    addressInput.removeAttribute('required');
+                } else {
+                    addressInput.disabled = false;
+                    addressInput.setAttribute('required', 'required');
+                }
+                
+                // Власний розмір
+                const sizeSelect = addOrderForm.querySelector('[name="size"]');
+                const customAmountDiv = document.getElementById('custom-amount-div');
+                const customAmountInput = addOrderForm.querySelector('[name="custom_amount"]');
+                if (orderData.size === 'Custom') {
+                    customAmountDiv.style.display = 'block';
+                    customAmountInput.required = true;
+                } else {
+                    customAmountDiv.style.display = 'none';
+                    customAmountInput.required = false;
+                    customAmountInput.value = '';
+                }
+                
+                // Відкриваємо модалку
+                const modal = new bootstrap.Modal(document.getElementById('addOrderModal'));
+                modal.show();
+                document.getElementById('order-submit-btn').textContent = 'Зберегти зміни';
+            } catch (error) {
+                alert('Помилка завантаження даних замовлення');
+            }
+        });
     });
-  }
+
+    const commentInput = document.querySelector('textarea[name="comment"]');
+    const preferencesInput = document.querySelector('textarea[name="preferences"]');
+    if (commentInput) {
+        commentInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
+    if (preferencesInput) {
+        preferencesInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
 });
 </script>
-{% endblock %} 
+{% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %} 

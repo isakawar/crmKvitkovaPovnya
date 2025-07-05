@@ -25,7 +25,6 @@
         <thead>
           <tr>
             <th style="width:40px;"><input type="checkbox" id="select-all"></th>
-            <th>Місто</th>
             <th>Адреса</th>
             <th>Дата</th>
             <th>Кур'єр</th>
@@ -36,7 +35,6 @@
           {% for d in all_deliveries %}
           <tr data-id="{{ d.id }}" data-courier_id="{{ d.courier_id }}" data-date="{{ d.delivery_date.strftime('%Y-%m-%d') }}" data-status="{{ d.status }}">
             <td><input type="checkbox" class="delivery-checkbox"></td>
-            <td>{{ d.client.city }}</td>
             <td>{{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}</td>
             <td>{{ d.delivery_date.strftime('%d.%m') }}</td>
             <td>{% if d.courier %}{{ d.courier.name }}{% else %}<span class="text-muted">Без кур'єра</span>{% endif %}</td>

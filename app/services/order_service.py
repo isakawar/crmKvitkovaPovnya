@@ -2,24 +2,23 @@ from app.extensions import db
 from app.models import Client, Order, Price, Delivery
 import datetime
 import logging
+import calendar
 
 logger = logging.getLogger(__name__)
 
-WEEKDAY_MAP = {'пн':0, 'вт':1, 'ср':2, 'чт':3, 'пт':4, 'сб':5, 'нд':6}
+WEEKDAY_MAP = {'ПН':0, 'ВТ':1, 'СР':2, 'ЧТ':3, 'ПТ':4, 'СБ':5, 'НД':6}
+DELIVERY_TYPE_MAP = {
+    'Weekly': 7,
+    'Bi-weekly': 14,
+    'Monthly': 30,
+    'One-time': 1
+}
 
-def get_or_create_client(phone, city, instagram):
-    client = Client.query.filter_by(phone=phone).first()
+def get_or_create_client(instagram):
+    client = Client.query.filter_by(instagram=instagram).first()
     if not client:
-        client = Client(phone=phone, city=city, instagram=instagram or '')
-        db.session.add(client)
-        db.session.commit()
-    else:
-        if client.city != city:
-            client.city = city
-        if instagram and client.instagram != instagram:
-            client.instagram = instagram
-        db.session.commit()
-    return client
+        return None, 'Клієнт з таким Instagram не знайдений!'
+    return client, None
 
 def check_and_spend_credits(client, bouquet, delivery_count):
     credits_needed = bouquet.price * delivery_count if bouquet else 0
@@ -31,81 +30,107 @@ def check_and_spend_credits(client, bouquet, delivery_count):
 
 def create_order_and_deliveries(client, form):
     logger.info(f'Створення замовлення для клієнта {client.id}')
-    delivery_count = int(form.get('delivery_count', 1))
-    bouquet_id = form.get('bouquet_id')
-    bouquet = None
-    if bouquet_id:
-        bouquet = Price.query.get(bouquet_id)
+    
+    is_pickup = form.get('is_pickup') == 'on'
     order = Order(
         client_id=client.id,
-        street=form['street'],
+        recipient_name=form['recipient_name'],
+        recipient_phone=form['recipient_phone'],
+        recipient_social=form.get('recipient_social'),
+        city=form['city'],
+        street='Самовивіз' if is_pickup else form['street'],
         building_number=form.get('building_number'),
         floor=form.get('floor'),
         entrance=form.get('entrance'),
-        size=form.get('size'),
-        type=form.get('type'),
-        comment=form.get('comment'),
-        time_window=form.get('time_window'),
-        recipient_phone=form.get('recipient_phone'),
-        periodicity=form.get('periodicity'),
-        preferred_days=form.get('preferred_days'),
+        is_pickup=is_pickup,
+        delivery_type=form['delivery_type'],
+        size=form['size'],
+        custom_amount=int(form.get('custom_amount', 0)) if form.get('custom_amount') else None,
+        first_delivery_date=datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date(),
+        delivery_day=form['delivery_day'],
         time_from=form.get('time_from'),
         time_to=form.get('time_to'),
-        bouquet_id=bouquet.id if bouquet else None,
-        delivery_count=delivery_count,
-        bouquet_size=bouquet.bouquet_size if bouquet else None,
-        delivery_type=bouquet.delivery_type if bouquet else None,
-        price_at_order=bouquet.price if bouquet else None
+        comment=form.get('comment'),
+        preferences=form.get('preferences'),
+        for_whom=form['for_whom']
     )
     db.session.add(order)
     db.session.commit()
-    # Доставки
-    preferred_days = form.getlist('preferred_days')
-    days = [WEEKDAY_MAP[d] for d in preferred_days if d in WEEKDAY_MAP]
-    if not days:
-        days = [datetime.date.today().weekday()]
-    periodicity = form.get('periodicity') or '1/7'
-    start_date = datetime.date.today()
-    created = 0
-    i = 0
+
+    delivery_type = form['delivery_type']
+    first_date = order.first_delivery_date
+    desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
     deliveries = []
-    while created < delivery_count:
-        d_date = start_date + datetime.timedelta(days=i)
-        if d_date.weekday() in days:
-            if periodicity == '1/14' and created > 0:
-                d_date = d_date + datetime.timedelta(days=7*(created))
-            delivery = Delivery(
-                order_id=order.id,
-                client_id=client.id,
-                bouquet_id=bouquet.id if bouquet else None,
-                delivery_date=d_date,
-                status='Очікує',
-                comment=form.get('comment', ''),
-                street=order.street,
-                building_number=order.building_number,
-                time_window=order.time_window,
-                size=order.size,
-                phone=order.recipient_phone,
-                bouquet_size=bouquet.bouquet_size if bouquet else None,
-                delivery_type=bouquet.delivery_type if bouquet else None,
-                price_at_delivery=bouquet.price if bouquet else None
-            )
-            db.session.add(delivery)
-            deliveries.append(delivery)
-            created += 1
-        i += 1
+
+    # Перша доставка — це дата, яку ввів користувач
+    deliveries.append(first_date)
+
+    if delivery_type != 'One-Time':
+        count = 4
+        prev_date = first_date
+        for i in range(1, count):
+            if delivery_type == 'Weekly':
+                # Наступний тиждень, потрібний день
+                next_date = prev_date + datetime.timedelta(days=1)
+                while next_date.weekday() != desired_weekday:
+                    next_date += datetime.timedelta(days=1)
+            elif delivery_type == 'Bi-weekly':
+                # Через тиждень, потрібний день
+                next_date = prev_date + datetime.timedelta(days=8)  # мінімум через тиждень
+                while next_date.weekday() != desired_weekday:
+                    next_date += datetime.timedelta(days=1)
+            elif delivery_type == 'Monthly':
+                # Наступний місяць, потрібний день
+                year = prev_date.year + (prev_date.month // 12)
+                month = (prev_date.month % 12) + 1
+                c = calendar.Calendar()
+                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
+                next_date = None
+                for d in month_days:
+                    if d > prev_date:
+                        next_date = d
+                        break
+                if not next_date:
+                    next_date = prev_date + datetime.timedelta(days=30)
+            else:
+                next_date = prev_date + datetime.timedelta(weeks=1)
+            deliveries.append(next_date)
+            prev_date = next_date
+
+    for d_date in deliveries:
+        status = 'Разова' if delivery_type == 'One-Time' else 'Активна'
+        delivery = Delivery(
+            order_id=order.id,
+            client_id=client.id,
+            delivery_date=d_date,
+            status=status,
+            comment=order.comment,
+            street=order.street if not order.is_pickup else None,
+            building_number=order.building_number if not order.is_pickup else None,
+            time_from=order.time_from,
+            time_to=order.time_to,
+            size=order.size,
+            phone=order.recipient_phone,
+            is_pickup=order.is_pickup,
+            delivery_type=order.delivery_type
+        )
+        db.session.add(delivery)
     db.session.commit()
     return order
 
-def get_orders(phone=None, instagram=None, city=None):
-    logger.info(f'Фільтрація замовлень: phone={phone}, instagram={instagram}, city={city}')
+def get_orders(phone=None, instagram=None, city=None, delivery_type=None, size=None):
+    logger.info(f'Фільтрація замовлень: phone={phone}, instagram={instagram}, city={city}, delivery_type={delivery_type}, size={size}')
     query = Order.query.join(Client)
     if phone:
-        query = query.filter(Client.phone.contains(phone))
+        query = query.filter(Order.recipient_phone.contains(phone))
     if instagram:
         query = query.filter(Client.instagram.contains(instagram))
     if city:
-        query = query.filter(Client.city == city)
+        query = query.filter(Order.city == city)
+    if delivery_type:
+        query = query.filter(Order.delivery_type == delivery_type)
+    if size:
+        query = query.filter(Order.size == size)
     return query.order_by(Order.id.desc()).all()
 
 def paginate_orders(orders, page=1, per_page=10):
@@ -114,17 +139,32 @@ def paginate_orders(orders, page=1, per_page=10):
     return orders[start:end], end < len(orders)
 
 def update_order(order, form):
+    # Оновлення клієнта, якщо змінено Instagram
+    new_instagram = form.get('client_instagram')
+    if new_instagram and new_instagram != order.client.instagram:
+        new_client = Client.query.filter_by(instagram=new_instagram).first()
+        if not new_client:
+            raise ValueError('Клієнта з таким Instagram не знайдено!')
+        order.client_id = new_client.id
+    order.recipient_name = form['recipient_name']
+    order.recipient_phone = form['recipient_phone']
+    order.recipient_social = form.get('recipient_social')
+    order.city = form['city']
     order.street = form['street']
-    order.building_number = form['building_number']
-    order.floor = form['floor']
-    order.entrance = form['entrance']
+    order.building_number = form.get('building_number')
+    order.floor = form.get('floor')
+    order.entrance = form.get('entrance')
+    order.is_pickup = form.get('is_pickup') == 'on'
+    order.delivery_type = form['delivery_type']
     order.size = form['size']
-    order.type = form['type']
-    order.comment = form['comment']
-    order.time_window = form['time_window']
-    order.client.instagram = form['instagram']
-    order.client.phone = form['phone']
-    order.client.city = form['city']
+    order.custom_amount = int(form.get('custom_amount', 0)) if form.get('custom_amount') else None
+    order.first_delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
+    order.delivery_day = form['delivery_day']
+    order.time_from = form.get('time_from')
+    order.time_to = form.get('time_to')
+    order.comment = form.get('comment')
+    order.preferences = form.get('preferences')
+    order.for_whom = form['for_whom']
     db.session.commit()
     return order
 

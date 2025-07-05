@@ -3,216 +3,363 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kvitkova Admin</title>
+    <title>Kvitkova CRM</title>
     {% block head %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     {% endblock %}
     <style>
-        body { background: #f7f8fa; }
-        .main-bluebar {
-            width: 100vw;
-            background: #2d4cc8;
-            color: #fff;
-            font-size: 1.2rem;
-            font-weight: 500;
-            padding: 0.7rem 0 0.7rem 0;
-            letter-spacing: 0.2px;
-            position: fixed;
-            top: 0; left: 0; z-index: 200;
-            box-shadow: 0 2px 8px rgba(45,76,200,0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        body, html {
+            cursor: url('data:image/svg+xml;utf8,<svg height="32" width="32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="8" fill="%23007bff"/></svg>') 16 16, auto;
         }
-        .main-bluebar .right-icons {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            margin-right: 32px;
+        body:hover, html:hover {
+            cursor: url('data:image/svg+xml;utf8,<svg height="32" width="32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="8" fill="%230056b3"/></svg>') 16 16, auto;
+        }
+        body {
+            background: #f9fafb;
+            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
+            color: #23272f;
+            font-weight: 400;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
+            font-weight: 500;
+            color: #23272f;
+        }
+        html, body { height: 100%; }
+        .container-fluid {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px 32px 32px 32px;
+        }
+        .main-content > .container-fluid > *:not(:last-child) {
+            margin-bottom: 32px;
         }
         .sidebar {
-            min-height: 100vh;
-            background: #f9fafb;
-            color: #222;
-            width: 240px;
+            background: #007bff;
+            color: #fff;
+            width: 72px;
             position: fixed;
             left: 0; top: 0; bottom: 0;
             display: flex;
             flex-direction: column;
-            z-index: 100;
-            border-right: 1px solid #e5e7eb;
-            padding-top: 56px;
-            transition: width 0.3s, min-width 0.3s, padding 0.3s, opacity 0.3s;
-        }
-        .sidebar-hidden {
-            width: 0 !important;
-            min-width: 0 !important;
-            padding: 0 !important;
-            opacity: 0;
-            overflow: hidden !important;
-            border: none !important;
-            pointer-events: none;
-        }
-        .sidebar-hidden .sidebar-logo-wrap,
-        .sidebar-hidden .sidebar-section,
-        .sidebar-hidden .nav-link,
-        .sidebar-hidden .copyright {
-            display: none !important;
-        }
-        .sidebar-logo-wrap {
-            display: flex;
-            flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            margin-top: 32px;
-            margin-bottom: 1.5rem;
+            z-index: 100;
+            border-right: none;
+            box-shadow: 2px 0 24px 0 rgba(0,123,255,0.04);
+            padding-top: 0;
+            transition: width 0.2s;
         }
-        .sidebar-logo-img {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2.5px solid #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-            background: #fff;
-            margin-bottom: 16px;
-            z-index: 2;
+        .sidebar-logo {
+            margin: 24px 0 24px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .sidebar-logo-text {
-            font-weight: bold;
-            font-size: 1.25rem;
-            color: #222;
-            letter-spacing: 0.5px;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            pointer-events: none;
-            z-index: 3;
+        .sidebar-logo-inner {
+            background:#fff;
+            border-radius:50%;
+            padding:8px;
+            box-shadow:0 2px 12px rgba(0,0,0,0.07);
+            width:48px; height:48px;
+            display:flex; align-items:center; justify-content:center;
         }
-        .sidebar-section {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #7a7e87;
-            text-transform: uppercase;
-            margin: 18px 0 6px 24px;
-            letter-spacing: 0.5px;
+        .sidebar-logo-inner img {
+            width:32px; height:32px; object-fit:cover; border-radius:50%;
         }
         .sidebar .nav-link {
-            color: #222;
-            border-radius: 6px;
-            margin: 0 12px 4px 12px;
-            padding-left: 18px;
-            font-weight: 500;
-            transition: background 0.15s;
+            color: #fff;
+            border-radius: 12px;
+            margin: 0 0 8px 0;
+            padding: 14px 0;
+            font-size: 1.7rem;
+            width: 48px;
+            height: 48px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            transition: background 0.18s, color 0.18s;
         }
         .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background: #e5e7eb;
-            color: #111;
+            background: rgba(255,255,255,0.18);
+            color: #fff;
         }
-        .sidebar .copyright {
-            margin-top: auto;
-            font-size: 0.9rem;
-            text-align: center;
-            color: #b0b8c1;
-            padding-bottom: 1rem;
+        .sidebar .nav-link i {
+            color: inherit;
+            font-size: 1.7rem;
         }
         .main-content {
-            margin-left: 240px;
-            margin-top: 56px;
-            transition: margin-left 0.3s;
-        }
-        .content-fullwidth {
-            margin-left: 0 !important;
+            margin-left: 72px;
+            min-height: 100vh;
+            background: #f9fafb;
+            transition: margin-left 0.2s;
         }
         .topbar {
-            background: #fff;
+            background: #eaf1fb;
             color: #222;
-            padding: 1rem 2rem;
+            padding: 1.2rem 2rem 1.2rem 2rem;
             font-size: 1.1rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #e5e7eb;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            border-bottom: 1.5px solid #e3eafc;
+            box-shadow: 0 2px 24px 0 rgba(0,123,255,0.04);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .topbar .btn, .topbar .btn-outline-primary {
+            background: #fff;
+            color: #007bff;
+            border: 1.5px solid #e3eafc;
+            border-radius: 8px;
+            transition: background 0.18s, color 0.18s, border 0.18s;
+        }
+        .topbar .btn:hover, .topbar .btn-outline-primary:hover {
+            background: #007bff;
+            color: #fff;
+            border: 1.5px solid #007bff;
+        }
+        .stat-cards {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 36px;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: #fcfcfd;
+            border-radius: 18px;
+            box-shadow: 0 4px 32px 0 rgba(0,123,255,0.04);
+            padding: 32px 40px;
+            min-width: 180px;
+            flex: 1 1 180px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: center;
+            border: 1.5px solid #e3eafc;
+        }
+        .stat-card .stat-title {
+            font-size: 1.02rem;
+            color: #8b909a;
+            margin-bottom: 6px;
+            font-weight: 400;
+        }
+        .stat-card .stat-value {
+            font-size: 2.1rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 18px;
+            background: #fcfcfd;
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(0,123,255,0.03);
+            padding: 14px 20px 8px 20px;
+            border: 1.5px solid #e3eafc;
+        }
+        .filter-bar input, .filter-bar select {
+            font-size: 0.98rem;
+            border-radius: 8px;
+            border: 1.5px solid #e3eafc;
+            background: #f7f8fa;
+            color: #23272f;
+            padding: 6px 10px;
+            height: 36px;
+            box-shadow: none;
+            transition: border 0.18s, background 0.18s;
+        }
+        .filter-bar input:focus, .filter-bar select:focus {
+            border: 1.5px solid #007bff;
+            background: #f3f6fa;
+            outline: none;
+        }
+        .filter-bar .btn, .filter-bar .btn-outline-primary, .filter-bar .btn-outline-secondary {
+            font-size: 0.98rem;
+            border-radius: 8px;
+            padding: 6px 16px;
+            font-weight: 500;
+            background: #eaf1fb;
+            color: #007bff;
+            border: 1.5px solid #e3eafc;
+            transition: background 0.18s, color 0.18s, border 0.18s;
+        }
+        .filter-bar .btn:hover, .filter-bar .btn-outline-primary:hover, .filter-bar .btn-outline-secondary:hover {
+            background: #007bff;
+            color: #fff;
+            border: 1.5px solid #007bff;
+        }
+        .filter-tag {
+            background: #f3f6fa;
+            color: #388e3c;
+            border-radius: 16px;
+            padding: 4px 14px;
+            font-size: 0.97rem;
+            margin-right: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .filter-tag .bi-x {
+            cursor: pointer;
+            margin-left: 4px;
         }
         .table {
-            background: #fff;
-            border-radius: 12px;
+            background: #fcfcfd;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 32px 0 rgba(0,123,255,0.03);
+            margin-bottom: 0;
+            border: 1.5px solid #e3eafc;
         }
         .table th {
-            background: #f3f4f6;
+            background: #eaf1fb;
             color: #222;
             font-weight: 600;
-            border-bottom: 1.5px solid #e5e7eb;
+            border-bottom: 1.5px solid #e3eafc;
+            font-size: 1.01rem;
+            letter-spacing: 0.01em;
+            border-top: none;
+            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
+            font-weight: 500;
         }
         .table td {
-            background: #fff;
-            color: #222;
-            border-bottom: 1px solid #f3f4f6;
+            background: #fcfcfd;
+            color: #23272f;
+            border-bottom: 1px solid #eaf1fb;
+            font-size: 0.99rem;
+            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
+            font-weight: 400;
         }
-        .sidebar-collapsed {
-            width: 56px !important;
-            min-width: 56px !important;
-            transition: width 0.3s;
-            overflow-x: hidden;
+        .tag {
+            display: inline-block;
+            background: #f3f6fa;
+            color: #23272f;
+            border-radius: 8px;
+            padding: 2px 10px;
+            font-size: 0.95rem;
+            margin-right: 4px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            border: 1.5px solid #e3eafc;
         }
-        .sidebar-collapsed .sidebar-logo-text,
-        .sidebar-collapsed .sidebar-section,
-        .sidebar-collapsed .nav-link:not(.active) span,
-        .sidebar-collapsed .copyright {
-            display: none !important;
+        .tag-hard { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
+        .tag-medium { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
+        .tag-easy { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+        .tag-pickup { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
+        .tag-neutral { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
+        .tag-info { background: #eaf1fb; color: #3a4a5d; border-color: #d2e3f7; }
+        .tag-warning { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
+        .tag-success { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+        .tag-error { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
+        .pagination {
+            margin: 0;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
         }
-        .sidebar-collapsed .sidebar-logo-img {
-            margin-bottom: 0 !important;
+        .pagination .page-link {
+            border-radius: 8px !important;
+            color: #007bff;
+            border: none;
+            background: #eaf1fb;
+            margin: 0 2px;
+            font-weight: 500;
+            transition: background 0.18s, color 0.18s;
         }
-        .sidebar-collapsed ~ .main-content {
-            margin-left: 56px !important;
+        .pagination .page-item.active .page-link {
+            background: #007bff;
+            color: #fff;
         }
-        .sidebar-toggle-btn {
-            transition: right 0.3s, box-shadow 0.2s;
-            background: #fff !important;
+        .pagination .page-link:focus {
+            box-shadow: none;
         }
-        .sidebar-collapsed .sidebar-toggle-btn i {
-            transform: rotate(180deg);
-            transition: transform 0.3s;
+        .dropdown-menu {
+            min-width: 180px;
         }
-        .sidebar-collapsed .sidebar-toggle-btn {
-            right: -18px;
+        /* Show on page + pagination row */
+        .bottom-controls {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 24px;
+            margin-top: 18px;
+        }
+        .show-on-page-label {
+            font-size: 1rem;
+            color: #8b909a;
+            margin-right: 8px;
+        }
+        .show-on-page-select {
+            min-width: 70px;
+            border-radius: 8px;
+            border: 1.5px solid #e3eafc;
+            background: #eaf1fb;
+            color: #007bff;
+            font-size: 1rem;
+            padding: 4px 10px;
+        }
+        @media (max-width: 900px) {
+            .container-fluid { padding: 18px 2vw 18px 2vw; }
+            .stat-cards { flex-direction: column; gap: 16px; }
+            .sidebar { width: 56px; }
+            .main-content { margin-left: 56px; }
+        }
+        @media (max-width: 600px) {
+            .container-fluid { padding: 4px 1vw 4px 1vw; }
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; }
         }
     </style>
 </head>
 <body>
-{% import 'macros.html' as macros %}
-{{ macros.render_topbar() }}
-{{ macros.render_sidebar(request) }}
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <div class="sidebar-logo-inner">
+            <img src="{{ url_for('static', filename='logoKvitkova.jpg') }}" alt="Logo">
+        </div>
+    </div>
+    <a href="/orders" class="nav-link {% if request.path.startswith('/orders') %}active{% endif %}" title="Замовлення">
+        <i class="bi bi-bag"></i>
+    </a>
+    <a href="/clients" class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" title="Клієнти">
+        <i class="bi bi-person"></i>
+    </a>
+    <a href="/deliveries" class="nav-link {% if request.path.startswith('/deliveries') %}active{% endif %}" title="Доставки">
+        <i class="bi bi-truck"></i>
+    </a>
+    <a href="/prices" class="nav-link {% if request.path.startswith('/prices') %}active{% endif %}" title="Ціни">
+        <i class="bi bi-cash"></i>
+    </a>
+    <a href="/reports" class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}" title="Звіти">
+        <i class="bi bi-bar-chart"></i>
+    </a>
+    <div style="flex:1 1 auto;"></div>
+    <a href="/settings" class="nav-link {% if request.path.startswith('/settings') %}active{% endif %}" title="Налаштування" style="margin-bottom: 24px;">
+        <i class="bi bi-gear"></i>
+    </a>
+</div>
 <div class="main-content">
     <div class="topbar">
-        <div></div>
+        <div class="fw-bold fs-5">CRM Kvitkova</div>
+        <div>
+            <a href="/" class="btn btn-outline-primary btn-sm"><i class="bi bi-house"></i></a>
+        </div>
     </div>
-    {{ macros.render_alerts() }}
-    <div class="container py-4">
+    <div class="container-fluid py-4">
         {% block content %}{% endblock %}
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const sidebar = document.querySelector('.sidebar');
-  const mainContent = document.querySelector('.main-content');
-  const toggleBtn = document.getElementById('sidebarToggle');
-  let hidden = false;
-  toggleBtn.addEventListener('click', function() {
-    hidden = !hidden;
-    sidebar.classList.toggle('sidebar-hidden', hidden);
-    mainContent.classList.toggle('content-fullwidth', hidden);
-  });
-});
-</script>
 {% block scripts %}{% endblock %}
 </body>
 </html> 

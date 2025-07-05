@@ -114,164 +114,299 @@
   </style>
 {% endblock %}
 {% block content %}
-<h2 class="mb-4">Нове замовлення</h2>
-<div id="order-message" class="fade-message"></div>
-<form method="post" class="row g-3" id="orderForm">
-    <div class="col-md-4">
-        <label class="form-label">Instagram</label>
-        <input type="text" name="instagram" class="form-control" required>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Місто</label>
-        <input type="text" name="city" class="form-control" required>
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Вулиця</label>
-        <input type="text" name="street" class="form-control" required>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">Номер будинку</label>
-        <input type="text" name="building_number" class="form-control" required>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">КВ/поверх</label>
-        <input type="text" name="floor" class="form-control">
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">Під'їзд</label>
-        <input type="text" name="entrance" class="form-control">
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Телефон</label>
-        <input type="text" name="phone" class="form-control" required>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Тип доставки</label>
-        <select name="type" class="form-select" required>
-            <option value="">Оберіть тип доставки</option>
-            <option value="Разова">Разова</option>
-            <option value="Постійна">Постійна</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">Розмір</label>
-        <input type="text" name="size" class="form-control">
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Часове вікно</label>
-        <input type="text" name="time_window" class="form-control">
-    </div>
-    <div class="col-md-4">
-        <label class="form-label">Дні доставки</label>
-        <select name="preferred_days" class="form-select" multiple required>
-            <option value="пн">Пн</option>
-            <option value="вт">Вт</option>
-            <option value="ср">Ср</option>
-            <option value="чт">Чт</option>
-            <option value="пт">Пт</option>
-            <option value="сб">Сб</option>
-            <option value="нд">Нд</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <label class="form-label">Кількість доставок</label>
-        <input type="number" name="delivery_count" class="form-control" value="1" min="1" required>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Букет</label>
-        <select name="bouquet_id" class="form-select" required>
-            <option value="">Оберіть букет</option>
-            {% for b in bouquets %}
-                <option value="{{ b.id }}">{{ b.bouquet_size }} ({{ b.delivery_type }}) — {{ b.price }} грн</option>
-            {% endfor %}
-        </select>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Періодичність</label>
-        <select name="periodicity" class="form-select">
-            <option value="1/7">Щотижня</option>
-            <option value="1/14">Раз на 2 тижні</option>
-        </select>
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Час з</label>
-        <input type="time" name="time_from" class="form-control">
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Час до</label>
-        <input type="time" name="time_to" class="form-control">
-    </div>
-    <div class="col-md-3">
-        <label class="form-label">Телефон отримувача</label>
-        <input type="text" name="recipient_phone" class="form-control">
-    </div>
-    <div class="col-md-12">
-        <label class="form-label">Коментар</label>
-        <textarea name="comment" class="form-control"></textarea>
-    </div>
-    <div class="col-12">
-        <button type="submit" class="btn btn-success">Створити</button>
-        <a href="/orders" class="btn btn-secondary">Скасувати</a>
-    </div>
-</form>
-{% endblock %}
-{% block scripts %}
+<div class="container-fluid">
+    <h2 class="mb-4">Створення замовлення</h2>
+    
+    <form method="post" class="row g-3" id="orderForm">
+        <!-- Клієнт -->
+        <div class="col-md-6">
+            <label class="form-label">Клієнт <span class="text-danger">*</span></label>
+            <div class="position-relative">
+                <input type="text" class="form-control" id="client-search" name="client_instagram" 
+                       placeholder="Введіть Instagram клієнта..." required autocomplete="off">
+                <div class="list-group position-absolute w-100 d-none" id="client-results" 
+                     style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
+            </div>
+        </div>
+        
+        <!-- Отримувач -->
+        <div class="col-md-6">
+            <label class="form-label">Ім'я отримувача <span class="text-danger">*</span></label>
+            <input type="text" name="recipient_name" class="form-control" required>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Номер телефону отримувача <span class="text-danger">*</span></label>
+            <input type="text" name="recipient_phone" class="form-control" required 
+                   placeholder="+380" pattern="\+380[0-9]{9}">
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Instagram/Telegram отримувача</label>
+            <input type="text" name="recipient_social" class="form-control" placeholder="Необов'язково">
+        </div>
+        
+        <!-- Адреса -->
+        <div class="col-md-6">
+            <label class="form-label">Місто <span class="text-danger">*</span></label>
+            <select name="city" class="form-select" required>
+                <option value="">Оберіть місто</option>
+                {% if cities and cities|length > 0 %}
+                    {% for city in cities %}
+                        <option value="{{ city.value }}">{{ city.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте міста у налаштуваннях</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="form-check mt-4">
+                <input class="form-check-input" type="checkbox" id="is-pickup" name="is_pickup">
+                <label class="form-check-label" for="is-pickup">
+                    Самовивіз
+                </label>
+            </div>
+        </div>
+        
+        <div class="col-md-12">
+            <label class="form-label">Адреса <span class="text-danger">*</span></label>
+            <input type="text" name="street" id="address-input" class="form-control" required>
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">№ будинку</label>
+            <input type="text" name="building_number" class="form-control">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Поверх</label>
+            <input type="text" name="floor" class="form-control">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Під'їзд</label>
+            <input type="text" name="entrance" class="form-control">
+        </div>
+        
+        <!-- Тип доставки -->
+        <div class="col-md-6">
+            <label class="form-label">Тип доставки <span class="text-danger">*</span></label>
+            <select name="delivery_type" class="form-select" required>
+                <option value="">Оберіть тип</option>
+                {% if delivery_types and delivery_types|length > 0 %}
+                    {% for t in delivery_types %}
+                        <option value="{{ t.value }}">{{ t.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте типи у налаштуваннях</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <!-- Розмір -->
+        <div class="col-md-6">
+            <label class="form-label">Розмір <span class="text-danger">*</span></label>
+            <select name="size" class="form-select" required>
+                <option value="">Оберіть розмір</option>
+                {% if sizes and sizes|length > 0 %}
+                    {% for s in sizes %}
+                        <option value="{{ s.value }}">{{ s.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте розміри у налаштуваннях</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <div class="col-md-6" id="custom-amount-div" style="display: none;">
+            <label class="form-label">Сума <span class="text-danger">*</span></label>
+            <input type="number" name="custom_amount" class="form-control" min="0" placeholder="Введіть суму">
+        </div>
+        
+        <!-- Дата та день -->
+        <div class="col-md-6">
+            <label class="form-label">Дата першої доставки <span class="text-danger">*</span></label>
+            <input type="date" name="first_delivery_date" class="form-control" required>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">День <span class="text-danger">*</span></label>
+            <select name="delivery_day" class="form-select" required>
+                <option value="">Оберіть день</option>
+                <option value="ПН">ПН</option>
+                <option value="ВТ">ВТ</option>
+                <option value="СР">СР</option>
+                <option value="ЧТ">ЧТ</option>
+                <option value="ПТ">ПТ</option>
+                <option value="СБ">СБ</option>
+                <option value="НД">НД</option>
+            </select>
+        </div>
+        
+        <!-- Час -->
+        <div class="col-md-3">
+            <label class="form-label">Час з</label>
+            <input type="time" name="time_from" class="form-control">
+        </div>
+        
+        <div class="col-md-3">
+            <label class="form-label">Час до</label>
+            <input type="time" name="time_to" class="form-control">
+        </div>
+        
+        <!-- Для кого -->
+        <div class="col-md-6">
+            <label class="form-label">Для кого <span class="text-danger">*</span></label>
+            <select name="for_whom" class="form-select" required>
+                <option value="">Оберіть для кого</option>
+                {% if for_whom and for_whom|length > 0 %}
+                    {% for f in for_whom %}
+                        <option value="{{ f.value }}">{{ f.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте варіанти у налаштуваннях</option>
+                {% endif %}
+            </select>
+        </div>
+        
+        <!-- Коментар та побажання -->
+        <div class="col-md-6">
+            <label class="form-label">Коментар</label>
+            <textarea name="comment" class="form-control" rows="3" placeholder="Додаткові коментарі..."></textarea>
+        </div>
+        
+        <div class="col-md-6">
+            <label class="form-label">Побажання</label>
+            <textarea name="preferences" class="form-control" rows="3" placeholder="Особливі побажання..."></textarea>
+        </div>
+        
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Створити замовлення</button>
+            <a href="/orders" class="btn btn-secondary">Скасувати</a>
+        </div>
+    </form>
+</div>
+
 <script>
-// Плавне з'явлення/зникнення повідомлень
-function showOrderMessage(msg, type='success') {
-  const el = document.getElementById('order-message');
-  el.textContent = msg;
-  el.className = 'fade-message ' + type + ' show';
-  setTimeout(() => { el.classList.remove('show'); }, 2500);
-}
-
-// AJAX submit для форми замовлення
-const orderForm = document.getElementById('orderForm');
-if (orderForm) {
-  orderForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(orderForm);
-    const phone = orderForm.querySelector('[name="phone"]').value;
-    const recipient = orderForm.querySelector('[name="recipient_phone"]');
-    if (recipient && !recipient.value) {
-      recipient.value = phone;
-    }
-    fetch('/orders/new', {
-      method: 'POST',
-      headers: {'X-Requested-With': 'XMLHttpRequest'},
-      body: formData
-    })
-    .then(async r => {
-      if (r.ok) {
-        showOrderMessage('Замовлення створено!', 'success');
-        setTimeout(() => window.location.href = '/orders', 1200);
-      } else {
-        const data = await r.json();
-        showOrderMessage(data.error || 'Помилка!', 'error');
-      }
-    })
-    .catch(() => showOrderMessage('Помилка зʼєднання!', 'error'));
-  });
-}
-
-// Плавна анімація для вибору днів
-const daysSelect = document.querySelector('select[name="preferred_days"]');
-if (daysSelect) {
-  daysSelect.addEventListener('change', function(e) {
-    daysSelect.classList.add('changed');
-    setTimeout(() => daysSelect.classList.remove('changed'), 400);
-  });
-}
-
-// Плавна анімація для time_from/time_to
-['time_from','time_to'].forEach(id => {
-  const el = document.querySelector(`[name="${id}"]`);
-  if (el) {
-    el.addEventListener('change', function() {
-      el.classList.add('changed');
-      setTimeout(() => el.classList.remove('changed'), 400);
+document.addEventListener('DOMContentLoaded', function() {
+    const clientSearch = document.getElementById('client-search');
+    const clientResults = document.getElementById('client-results');
+    const isPickupCheckbox = document.getElementById('is-pickup');
+    const addressInput = document.getElementById('address-input');
+    const sizeSelect = document.getElementById('size-select');
+    const customAmountDiv = document.getElementById('custom-amount-div');
+    const customAmountInput = document.querySelector('input[name="custom_amount"]');
+    
+    // Автопоиск клієнтів
+    clientSearch.addEventListener('input', async function() {
+        const query = this.value.trim();
+        if (query.length < 2) {
+            clientResults.classList.add('d-none');
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
+            const clients = await response.json();
+            
+            if (clients.length > 0) {
+                clientResults.innerHTML = clients.map(client => 
+                    `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
+                ).join('');
+                clientResults.classList.remove('d-none');
+                
+                // Клік по результату
+                clientResults.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        clientSearch.value = this.textContent;
+                        clientResults.classList.add('d-none');
+                    });
+                });
+            } else {
+                clientResults.classList.add('d-none');
+            }
+        } catch (error) {
+            console.error('Помилка пошуку клієнтів:', error);
+        }
     });
-  }
+    
+    // Приховування результатів при втраті фокусу
+    clientSearch.addEventListener('blur', function() {
+        setTimeout(() => clientResults.classList.add('d-none'), 200);
+    });
+    
+    // Самовивіз - деактивація адреси
+    isPickupCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            addressInput.value = '';
+            addressInput.disabled = true;
+        } else {
+            addressInput.disabled = false;
+        }
+    });
+    
+    // Власний розмір - показ поля суми
+    sizeSelect.addEventListener('change', function() {
+        if (this.value === 'Custom') {
+            customAmountDiv.style.display = 'block';
+            customAmountInput.required = true;
+        } else {
+            customAmountDiv.style.display = 'none';
+            customAmountInput.required = false;
+            customAmountInput.value = '';
+        }
+    });
+    
+    // Маска для номера телефону отримувача
+    const recipientPhoneInput = document.querySelector('input[name="recipient_phone"]');
+    recipientPhoneInput.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        if (value.length === 0) {
+            e.target.value = '+38';
+            return;
+        }
+        
+        if (value.startsWith('380')) {
+            e.target.value = '+' + value;
+        } else if (value.startsWith('38')) {
+            e.target.value = '+' + value;
+        } else if (value.startsWith('0')) {
+            e.target.value = '+38' + value;
+        } else {
+            e.target.value = '+380' + value;
+        }
+        
+        if (e.target.value.length > 13) {
+            e.target.value = e.target.value.substring(0, 13);
+        }
+    });
+    
+    recipientPhoneInput.addEventListener('focus', function(e) {
+        if (e.target.value === '') {
+            e.target.value = '+38';
+        }
+    });
+    
+    // Валідація форми
+    document.getElementById('orderForm').addEventListener('submit', function(e) {
+        const phoneValue = recipientPhoneInput.value;
+        const phonePattern = /^\+380[0-9]{9}$/;
+        
+        if (!phonePattern.test(phoneValue)) {
+            e.preventDefault();
+            alert('Невірний формат номера телефону отримувача. Використовуйте формат: +380XXXXXXXXX');
+            return;
+        }
+        
+        if (sizeSelect.value === 'Custom' && (!customAmountInput.value || customAmountInput.value <= 0)) {
+            e.preventDefault();
+            alert('Для власного розміру потрібно вказати суму більше 0');
+            return;
+        }
+    });
 });
 </script>
 {% endblock %} 

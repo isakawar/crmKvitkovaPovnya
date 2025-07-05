@@ -1,6 +1,10 @@
 {% extends 'layout.html' %}
 {% block content %}
 <h2 class="mb-4">Доставки</h2>
+<div class="mb-2">
+  <strong>Всього доставок: {{ deliveries_count }}</strong>
+  <small class="text-muted ms-3">💡 Подвійний клік по рядку для редагування</small>
+</div>
 <div class="d-flex align-items-center mb-3">
   <form class="d-flex align-items-center w-100" method="get" id="delivery-filter-form">
     <input type="text" name="client_phone" class="form-control form-control-sm me-2" style="width:180px;" placeholder="Пошук за телефоном клієнта..." value="{{ request.args.get('client_phone', '') }}">
@@ -33,26 +37,33 @@
   </thead>
   <tbody>
     {% for d in deliveries %}
-    <tr data-status="{{ d.status }}">
+    <tr data-status="{{ d.status }}" style="cursor: pointer;">
       <td>{{ d.id }}</td>
-      <td>{{ d.client.phone }}</td>
+      <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
       <td>
-        <a href="#" class="address-link" 
-           data-city="{{ d.client.city }}" 
-           data-street="{{ d.street }}" 
-           data-building="{{ d.building_number }}" 
-           data-entrance="{{ d.entrance }}"
-           style="color:inherit; text-decoration:none; cursor:pointer;">
-          {{ d.client.city }}, {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
-        </a>
+        {% if d.is_pickup %}
+          <span class="tag tag-easy">Самовивіз</span>
+        {% else %}
+          <a href="#" class="address-link" 
+             data-street="{{ d.street }}" 
+             data-building="{{ d.building_number }}" 
+             data-entrance="{{ d.entrance }}"
+             style="color:inherit; text-decoration:none; cursor:pointer;">
+            {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
+          </a>
+        {% endif %}
       </td>
       <td>{{ d.phone }}</td>
-      <td>{{ d.bouquet_size }}</td>
+      <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
       <td>{{ d.delivery_type }}</td>
       <td>{{ d.comment }}</td>
       <td>
-        {% if d.time_from or d.time_to %}
-          {{ d.time_from or '' }}{% if d.time_from and d.time_to %}-{% endif %}{{ d.time_to or '' }}
+        {% if d.time_from and d.time_to %}
+          {{ d.time_from }}-{{ d.time_to }}
+        {% elif d.time_from and not d.time_to %}
+          з {{ d.time_from }}
+        {% elif d.time_to and not d.time_from %}
+          до {{ d.time_to }}
         {% else %}
           &nbsp;
         {% endif %}
@@ -74,6 +85,29 @@
     {% endfor %}
   </tbody>
 </table>
+
+<!-- Пагінація -->
+{% if deliveries_count > 30 %}
+<div class="d-flex justify-content-center align-items-center gap-2">
+    <form method="get" style="display:inline;">
+        {% for key, value in request.args.items() %}
+            {% if key != 'page' %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
+    </form>
+    <span class="mx-2">{{ page }}</span>
+    <form method="get" style="display:inline;">
+        {% for key, value in request.args.items() %}
+            {% if key != 'page' %}
+                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% endif %}
+        {% endfor %}
+        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
+    </form>
+</div>
+{% endif %}
 
 <!-- Modal -->
 <div class="modal fade" id="editDeliveryModal" tabindex="-1" aria-labelledby="editDeliveryModalLabel" aria-hidden="true">
@@ -201,8 +235,8 @@ document.addEventListener('DOMContentLoaded', function() {
   const tableRows = document.querySelectorAll('tbody tr');
 
   function filterTable() {
-    const dateVal = filterDate.value;
-    const statusVal = filterStatus.value;
+    const dateVal = filterDate ? filterDate.value : '';
+    const statusVal = filterStatus ? filterStatus.value : '';
     tableRows.forEach(row => {
       let show = true;
       if (dateVal) {
@@ -220,83 +254,102 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  filterStatus.addEventListener('change', filterTable);
-  filterDate.addEventListener('change', filterTable);
-  resetBtn.addEventListener('click', function() {
-    filterDate.value = '';
-    filterStatus.value = '';
-    filterTable();
-  });
-  applyBtn.addEventListener('click', filterTable);
+  if (filterStatus) filterStatus.addEventListener('change', filterTable);
+  if (filterDate) filterDate.addEventListener('change', filterTable);
+  if (resetBtn) {
+    resetBtn.addEventListener('click', function() {
+      if (filterDate) filterDate.value = '';
+      if (filterStatus) filterStatus.value = '';
+      filterTable();
+    });
+  }
+  if (applyBtn) applyBtn.addEventListener('click', filterTable);
 
   // --- Інтерактивна зміна статусу ---
   let currentDeliveryId = null;
-  const assignModal = new bootstrap.Modal(document.getElementById('assignCourierModal'));
-  const confirmModal = new bootstrap.Modal(document.getElementById('confirmStatusModal'));
+  const assignModalElement = document.getElementById('assignCourierModal');
+  const confirmModalElement = document.getElementById('confirmStatusModal');
+  const assignModal = assignModalElement ? new bootstrap.Modal(assignModalElement) : null;
+  const confirmModal = confirmModalElement ? new bootstrap.Modal(confirmModalElement) : null;
 
   document.querySelectorAll('.delivery-status').forEach(span => {
     span.addEventListener('click', function() {
       const status = this.dataset.status;
       currentDeliveryId = this.dataset.id;
-      if (status === 'Очікує') {
-        document.getElementById('courierSelect').value = '';
-        document.getElementById('assign-error').classList.add('d-none');
+      if (status === 'Очікує' && assignModal) {
+        const courierSelect = document.getElementById('courierSelect');
+        const assignError = document.getElementById('assign-error');
+        if (courierSelect) courierSelect.value = '';
+        if (assignError) assignError.classList.add('d-none');
         // Показати адресу для цієї доставки
         const row = span.closest('tr');
         const city = row.querySelector('td:nth-child(2)').textContent.trim();
         const address = row.querySelector('td:nth-child(3)').textContent.trim();
         const date = row.querySelector('td:nth-child(9)').textContent.trim();
-        document.getElementById('selected-addresses').innerHTML =
-          `<b>Ви призначаєте курʼєра на адресу:</b><ul><li>${city}, ${address} — ${date}</li></ul>`;
+        const selectedAddresses = document.getElementById('selected-addresses');
+        if (selectedAddresses) {
+          selectedAddresses.innerHTML = `<b>Ви призначаєте курʼєра на адресу:</b><ul><li>${city}, ${address} — ${date}</li></ul>`;
+        }
         assignModal.show();
-      } else if (status === 'Розподілено') {
+      } else if (status === 'Розподілено' && confirmModal) {
         confirmModal.show();
       }
     });
   });
 
   // Призначення кур'єра (submit)
-  document.getElementById('assignCourierForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const courierId = document.getElementById('courierSelect').value;
-    const errorDiv = document.getElementById('assign-error');
-    errorDiv.classList.add('d-none');
-    if (!courierId) {
-      errorDiv.textContent = 'Оберіть курʼєра!';
-      errorDiv.classList.remove('d-none');
-      return;
-    }
-    fetch(`/deliveries/assign-courier`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({delivery_ids: [currentDeliveryId], courier_id: courierId})
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.success) {
-        location.reload();
-      } else {
-        errorDiv.textContent = data.error || 'Помилка при збереженні!';
-        errorDiv.classList.remove('d-none');
+  const assignCourierForm = document.getElementById('assignCourierForm');
+  if (assignCourierForm) {
+    assignCourierForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const courierId = document.getElementById('courierSelect') ? document.getElementById('courierSelect').value : '';
+      const errorDiv = document.getElementById('assign-error');
+      if (errorDiv) errorDiv.classList.add('d-none');
+      if (!courierId) {
+        if (errorDiv) {
+          errorDiv.textContent = 'Оберіть курʼєра!';
+          errorDiv.classList.remove('d-none');
+        }
+        return;
       }
-    });
-  });
-
-  // Підтвердження "Доставлено?"
-  document.getElementById('confirmDeliveredBtn').onclick = function() {
-    fetch(`/deliveries/${currentDeliveryId}/status`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({status: 'Доставлено'})
-    }).then(r => r.json()).then(data => {
-      if (data.success) {
-        location.reload();
-      }
+      fetch(`/deliveries/assign-courier`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({delivery_ids: [currentDeliveryId], courier_id: courierId})
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          location.reload();
+        } else {
+          if (errorDiv) {
+            errorDiv.textContent = data.error || 'Помилка при збереженні!';
+            errorDiv.classList.remove('d-none');
+          }
+        }
+      });
     });
   }
 
+  // Підтвердження "Доставлено?"
+  const confirmDeliveredBtn = document.getElementById('confirmDeliveredBtn');
+  if (confirmDeliveredBtn) {
+    confirmDeliveredBtn.onclick = function() {
+      fetch(`/deliveries/${currentDeliveryId}/status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: 'Доставлено'})
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          location.reload();
+        }
+      });
+    }
+  }
+
   // --- Логіка для адреси (попап) ---
-  const addressModal = new bootstrap.Modal(document.getElementById('addressModal'));
+  const addressModalElement = document.getElementById('addressModal');
+  const addressModal = addressModalElement ? new bootstrap.Modal(addressModalElement) : null;
   document.querySelectorAll('.address-link').forEach(link => {
     link.addEventListener('click', function(e) {
       e.preventDefault();
@@ -306,53 +359,111 @@ document.addEventListener('DOMContentLoaded', function() {
       const entrance = this.dataset.entrance || '';
       let html = `<b>Місто:</b> ${city}<br><b>Вулиця:</b> ${street}<br><b>Будинок:</b> ${building}`;
       if (entrance) html += `<br><b>Під'їзд:</b> ${entrance}`;
-      document.getElementById('addressModalBody').innerHTML = html;
-      addressModal.show();
+      const addressModalBody = document.getElementById('addressModalBody');
+      if (addressModalBody) {
+        addressModalBody.innerHTML = html;
+      }
+      if (addressModal) {
+        addressModal.show();
+      }
     });
   });
 
   // --- Логіка для редагування доставки (double click по рядку) ---
-  const editModal = new bootstrap.Modal(document.getElementById('editDeliveryModal'));
+  const editModalElement = document.getElementById('editDeliveryModal');
+  const editModal = editModalElement ? new bootstrap.Modal(editModalElement) : null;
   let currentId = null;
+  
+  if (!editModal) {
+    console.error('Модальне вікно редагування не знайдено');
+  }
+  
   document.querySelectorAll('tbody tr').forEach(row => {
     row.addEventListener('dblclick', function() {
+      console.log('Дабл клік спрацював');
       const id = this.children[0].innerText;
+      console.log('ID доставки:', id);
+      currentId = id;
+      
       fetch(`/deliveries/${id}`)
-        .then(r => r.json())
+        .then(r => {
+          console.log('Fetch response status:', r.status);
+          if (!r.ok) {
+            throw new Error('Помилка завантаження даних доставки');
+          }
+          return r.json();
+        })
         .then(data => {
-          currentId = data.id;
+          console.log('Отримані дані:', data);
           document.getElementById('editDeliveryId').value = data.id;
-          document.getElementById('editCity').value = data.city;
-          document.getElementById('editStreet').value = data.street;
-          document.getElementById('editBuildingNumber').value = data.building_number;
-          document.getElementById('editPhone').value = data.phone;
-          document.getElementById('editTimeFrom').value = data.time_from;
-          document.getElementById('editTimeTo').value = data.time_to;
-          document.getElementById('editDeliveryDate').value = data.delivery_date;
-          document.getElementById('editComment').value = data.comment;
-          editModal.show();
+          document.getElementById('editCity').value = data.city || '';
+          document.getElementById('editStreet').value = data.street || '';
+          document.getElementById('editBuildingNumber').value = data.building_number || '';
+          document.getElementById('editPhone').value = data.phone || '';
+          document.getElementById('editTimeFrom').value = data.time_from || '';
+          document.getElementById('editTimeTo').value = data.time_to || '';
+          document.getElementById('editDeliveryDate').value = data.delivery_date || '';
+          document.getElementById('editComment').value = data.comment || '';
+          console.log('Модальне вікно відкривається');
+          if (editModal) {
+            editModal.show();
+          } else {
+            console.error('Модальне вікно не ініціалізовано');
+            alert('Помилка відкриття модального вікна');
+          }
+        })
+        .catch(error => {
+          console.error('Помилка:', error);
+          alert('Помилка завантаження даних доставки');
         });
     });
   });
-  document.getElementById('saveDeliveryBtn').onclick = function() {
-    const payload = {
-      street: document.getElementById('editStreet').value,
-      building_number: document.getElementById('editBuildingNumber').value,
-      phone: document.getElementById('editPhone').value,
-      time_from: document.getElementById('editTimeFrom').value,
-      time_to: document.getElementById('editTimeTo').value,
-      delivery_date: document.getElementById('editDeliveryDate').value,
-      comment: document.getElementById('editComment').value
-    };
-    fetch(`/deliveries/${currentId}/edit`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    }).then(r => r.json()).then(data => {
-      if (data.success) {
-        location.reload();
+  
+  // Збереження змін доставки
+  const saveDeliveryBtn = document.getElementById('saveDeliveryBtn');
+  if (saveDeliveryBtn) {
+    saveDeliveryBtn.addEventListener('click', function() {
+      if (!currentId) {
+        alert('Помилка: не вибрано доставку для редагування');
+        return;
       }
+      
+      const payload = {
+        street: document.getElementById('editStreet').value,
+        building_number: document.getElementById('editBuildingNumber').value,
+        phone: document.getElementById('editPhone').value,
+        time_from: document.getElementById('editTimeFrom').value,
+        time_to: document.getElementById('editTimeTo').value,
+        delivery_date: document.getElementById('editDeliveryDate').value,
+        comment: document.getElementById('editComment').value
+      };
+      
+      fetch(`/deliveries/${currentId}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+      })
+      .then(r => {
+        if (!r.ok) {
+          throw new Error('Помилка збереження');
+        }
+        return r.json();
+      })
+      .then(data => {
+        if (data.success) {
+          editModal.hide();
+          location.reload();
+        } else {
+          alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
+        }
+      })
+      .catch(error => {
+        console.error('Помилка:', error);
+        alert('Помилка збереження доставки');
+      });
     });
+  } else {
+    console.error('Кнопка saveDeliveryBtn не знайдена');
   }
 });
 </script>

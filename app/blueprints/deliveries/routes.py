@@ -7,25 +7,49 @@ deliveries_bp = Blueprint('deliveries', __name__)
 def deliveries_list():
     date_str = request.args.get('date')
     client_phone = request.args.get('client_phone', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = 30
+    
     deliveries, selected_date = get_deliveries(date_str, client_phone)
     couriers = get_all_couriers()
-    return render_template('deliveries_list.html', deliveries=deliveries, selected_date=selected_date, couriers=couriers)
+    
+    # Проста пагінація
+    total_deliveries = len(deliveries)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    deliveries_on_page = deliveries[start_idx:end_idx]
+    
+    has_next = end_idx < total_deliveries
+    prev_page = page - 1 if page > 1 else 1
+    next_page = page + 1
+    
+    return render_template('deliveries_list.html', 
+                         deliveries=deliveries_on_page, 
+                         selected_date=selected_date, 
+                         couriers=couriers,
+                         page=page,
+                         prev_page=prev_page,
+                         next_page=next_page,
+                         has_next=has_next,
+                         deliveries_count=total_deliveries)
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>', methods=['GET'])
 def get_delivery(delivery_id):
     d = get_delivery_by_id(delivery_id)
+    order = d.order if hasattr(d, 'order') else None
     return jsonify({
         'id': d.id,
-        'client': d.client.instagram,
-        'city': d.client.city,
-        'street': d.order.street,
-        'building_number': d.order.building_number,
-        'phone': d.phone,
-        'comment': d.comment,
-        'time_window': d.order.time_window,
+        'city': order.city if order else '',
+        'street': d.street or (order.street if order else ''),
+        'building_number': d.building_number or (order.building_number if order else ''),
+        'phone': d.phone or '',
+        'time_from': d.time_from or '',
+        'time_to': d.time_to or '',
         'delivery_date': d.delivery_date.strftime('%Y-%m-%d'),
+        'comment': d.comment or '',
         'status': d.status,
-        'size': d.order.size,
+        'size': d.size or (order.size if order else ''),
+        'is_pickup': d.is_pickup
     })
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>/edit', methods=['POST'])
