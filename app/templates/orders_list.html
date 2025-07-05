@@ -16,8 +16,8 @@
         <div class="stat-value">{{ avg_order_sum or '-' }}</div>
     </div>
     <div class="stat-card">
-        <div class="stat-title">Замовлень у роботі</div>
-        <div class="stat-value">{{ in_progress_count or '-' }}</div>
+        <div class="stat-title">Продовжень підписок</div>
+        <div class="stat-value">{{ subscription_extensions_count or '-' }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-title">Клієнтів</div>
@@ -49,7 +49,7 @@
             <option value="L" {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
             <option value="XL" {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
             <option value="XXL" {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
-            <option value="Custom" {% if request.args.get('size')=='Custom' %}selected{% endif %}>Власний</option>
+            <option value="Власний" {% if request.args.get('size')=='Власний' %}selected{% endif %}>Власний</option>
         </select>
         <button type="submit" class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Фільтрувати</button>
         {% if request.args %}
@@ -95,7 +95,7 @@
             <td><span class="tag">{{ order.delivery_type or '' }}</span></td>
             <td>
                 <span class="tag {% if order.size=='M' %}tag-easy{% elif order.size=='L' %}tag-medium{% elif order.size=='XL' or order.size=='XXL' %}tag-hard{% endif %}">{{ order.size or '' }}</span>
-                {% if order.size == 'Custom' and order.custom_amount %}
+                {% if order.size == 'Власний' and order.custom_amount %}
                     <span class="tag">{{ order.custom_amount }} грн</span>
                 {% endif %}
             </td>
@@ -161,7 +161,12 @@
     <div class="modal-content" style="border-radius:18px; box-shadow:0 4px 32px 0 rgba(0,123,255,0.07); border:none;">
       <form id="addOrderForm">
         <div class="modal-header" style="border-bottom:none; background:#fff; border-radius:18px 18px 0 0;">
-          <h5 class="modal-title" id="addOrderModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem;">Нове замовлення</h5>
+          <h5 class="modal-title d-flex align-items-center gap-2" id="addOrderModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem;">
+            <span id="order-modal-title">Нове замовлення</span>
+            <button type="button" class="btn btn-outline-success btn-sm d-none" id="extend-subscription-header-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+          </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body" style="background:#fff; padding:32px 28px 18px 28px;">
@@ -268,11 +273,35 @@
             </div>
           </div>
         </div>
-        <div class="modal-footer" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
-          <button type="submit" class="btn btn-primary" id="order-submit-btn" style="border-radius:8px; font-weight:500; min-width:120px;">Створити</button>
+        <div class="modal-footer d-flex justify-content-between align-items-center" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-outline-success d-none" id="extend-subscription-modal-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
+          </div>
+          <button type="submit" class="btn btn-primary" id="order-submit-btn" style="border-radius:8px; font-weight:500; min-width:120px;">Зберегти зміни</button>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Модальне вікно для підтвердження продовження підписки -->
+<div class="modal fade" id="extendSubscriptionModal" tabindex="-1" aria-labelledby="extendSubscriptionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="extendSubscriptionModalLabel">Підтвердження</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Продовжити підписку для клієнта <strong id="extend-client-instagram"></strong>?</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ні</button>
+        <button type="button" class="btn btn-success" id="confirmExtendBtn">Так</button>
+      </div>
     </div>
   </div>
 </div>
@@ -385,7 +414,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Власний розмір - показ поля суми
     if (sizeSelect) {
         sizeSelect.addEventListener('change', function() {
-            if (this.value === 'Custom') {
+            if (this.value === 'Власний') {
                 customAmountDiv.style.display = 'block';
                 customAmountInput.required = true;
             } else {
@@ -426,7 +455,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showOrderError('Вкажіть адресу або оберіть "Самовивіз"');
                 return;
             }
-            if (sizeSelect.value === 'Custom' && (!customAmountInput.value || customAmountInput.value <= 0)) {
+            if (sizeSelect.value === 'Власний' && (!customAmountInput.value || customAmountInput.value <= 0)) {
                 showOrderError('Для власного розміру потрібно вказати суму більше 0');
                 return;
             }
@@ -497,6 +526,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (customAmountInput) {
                     customAmountInput.required = false;
                 }
+                // --- Ховаємо кнопку 'Продовжити' ---
+                const extendBtn = document.getElementById('extend-subscription-modal-btn');
+                if (extendBtn) extendBtn.classList.add('d-none');
+                const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
+                if (extendHeaderBtn) extendHeaderBtn.classList.add('d-none');
+                // --- Заголовок ---
+                const titleSpan = document.getElementById('order-modal-title');
+                if (titleSpan) titleSpan.textContent = 'Нове замовлення';
             }
         });
     }
@@ -545,7 +582,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const sizeSelect = addOrderForm.querySelector('[name="size"]');
                 const customAmountDiv = document.getElementById('custom-amount-div');
                 const customAmountInput = addOrderForm.querySelector('[name="custom_amount"]');
-                if (orderData.size === 'Custom') {
+                if (orderData.size === 'Власний') {
                     customAmountDiv.style.display = 'block';
                     customAmountInput.required = true;
                 } else {
@@ -558,6 +595,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 const modal = new bootstrap.Modal(document.getElementById('addOrderModal'));
                 modal.show();
                 document.getElementById('order-submit-btn').textContent = 'Зберегти зміни';
+                // --- Заголовок ---
+                const titleSpan = document.getElementById('order-modal-title');
+                if (titleSpan) titleSpan.textContent = 'Редагування замовлення';
+
+                // --- КНОПКА ПРОДОВЖИТИ ПІДПИСКУ ---
+                const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
+                if(['Weekly','Monthly','Bi-weekly'].includes(orderData.delivery_type) && orderData.can_extend_subscription) {
+                    if (extendHeaderBtn) {
+                        extendHeaderBtn.classList.remove('d-none');
+                        extendHeaderBtn.setAttribute('data-order-id', orderId);
+                        extendHeaderBtn.setAttribute('data-client-instagram', orderData.client_instagram);
+                        if (window.bootstrap && bootstrap.Tooltip) {
+                            new bootstrap.Tooltip(extendHeaderBtn);
+                        }
+                    }
+                } else {
+                    if (extendHeaderBtn) extendHeaderBtn.classList.add('d-none');
+                }
             } catch (error) {
                 alert('Помилка завантаження даних замовлення');
             }
@@ -574,6 +629,60 @@ document.addEventListener('DOMContentLoaded', function() {
     if (preferencesInput) {
         preferencesInput.addEventListener('input', function() {
             if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
+
+    // Логіка продовження підписки
+    const extendModal = new bootstrap.Modal(document.getElementById('extendSubscriptionModal'));
+    let currentOrderId = null;
+    
+    // Обробка кліків по кнопках "Продовжити підписку"
+    document.querySelectorAll('.extend-subscription-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation(); // Запобігаємо спрацьовуванню подвійного кліку по рядку
+            currentOrderId = this.getAttribute('data-order-id');
+            const clientInstagram = this.getAttribute('data-client-instagram');
+            
+            document.getElementById('extend-client-instagram').textContent = clientInstagram;
+            extendModal.show();
+        });
+    });
+    
+    // Підтвердження продовження підписки
+    document.getElementById('confirmExtendBtn').addEventListener('click', async function() {
+        const orderId = window.currentOrderId;
+        if (!orderId) return;
+        
+        try {
+            const response = await fetch(`/orders/${orderId}/extend-subscription`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'}
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                extendModal.hide();
+                alert('Підписку успішно продовжено!');
+                location.reload(); // Оновлюємо сторінку
+            } else {
+                alert('Помилка: ' + (data.error || 'Невідома помилка'));
+            }
+        } catch (error) {
+            alert('Помилка зʼєднання з сервером!');
+        }
+    });
+
+    // --- Логіка продовження підписки з іконки в заголовку ---
+    const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
+    if (extendHeaderBtn) {
+        extendHeaderBtn.addEventListener('click', function() {
+            const orderId = this.getAttribute('data-order-id');
+            const clientInstagram = this.getAttribute('data-client-instagram');
+            document.getElementById('extend-client-instagram').textContent = clientInstagram;
+            window.currentOrderId = orderId;
+            const extendModal = new bootstrap.Modal(document.getElementById('extendSubscriptionModal'));
+            extendModal.show();
         });
     }
 });

@@ -45,4 +45,5 @@ class Order(db.Model):
     bouquet_size = db.Column(db.String(16))
     price_at_order = db.Column(db.Integer)
     periodicity = db.Column(db.String(8))
-    preferred_days = db.Column(db.String(64)) 
+    preferred_days = db.Column(db.String(64))
+    is_subscription_extended = db.Column(db.Boolean, default=False)  # Чи вже продовжено підписку 
