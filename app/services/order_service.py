@@ -109,13 +109,19 @@ def create_order_and_deliveries(client, form):
     db.session.commit()
     return order
 
-def get_orders(phone=None, instagram=None):
-    logger.info(f'Фільтрація замовлень: phone={phone}, instagram={instagram}')
+def get_orders(phone=None, instagram=None, city=None, delivery_type=None, size=None):
+    logger.info(f'Фільтрація замовлень: phone={phone}, instagram={instagram}, city={city}, delivery_type={delivery_type}, size={size}')
     query = Order.query.join(Client)
     if phone:
-        query = query.filter(Client.phone.contains(phone))
+        query = query.filter(Order.recipient_phone.contains(phone))
     if instagram:
         query = query.filter(Client.instagram.contains(instagram))
+    if city:
+        query = query.filter(Order.city == city)
+    if delivery_type:
+        query = query.filter(Order.delivery_type == delivery_type)
+    if size:
+        query = query.filter(Order.size == size)
     return query.order_by(Order.id.desc()).all()
 
 def paginate_orders(orders, page=1, per_page=10):

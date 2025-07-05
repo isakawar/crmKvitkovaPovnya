@@ -1,32 +1,74 @@
 {% extends 'layout.html' %}
 {% block content %}
-<h2 class="mb-4">Список замовлень</h2>
-<div class="mb-2"><strong>Всього замовлень: {{ orders_count }}</strong></div>
-<div class="mb-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addOrderModal">Додати замовлення</button>
+<div class="d-flex justify-content-between align-items-center mb-3 w-100">
+    <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addOrderModal" style="font-weight:500; font-size:1.05rem;">
+        <i class="bi bi-plus-lg"></i> Додати
+    </button>
+    <div></div>
 </div>
-<form class="row g-2 align-items-end mb-3" method="get">
-    <div class="col-md-4">
-        <input type="text" class="form-control" name="phone" placeholder="Пошук за номером телефону..." value="{{ request.args.get('phone', '') }}">
+<div class="stat-cards mb-4 w-100">
+    <div class="stat-card">
+        <div class="stat-title">Всього замовлень</div>
+        <div class="stat-value">{{ orders_count }}</div>
     </div>
-    <div class="col-md-4">
-        <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}">
+    <div class="stat-card">
+        <div class="stat-title">Середній чек</div>
+        <div class="stat-value">{{ avg_order_sum or '-' }}</div>
     </div>
-    <div class="col-md-2">
-        <button type="submit" class="btn btn-outline-primary w-100">Застосувати</button>
+    <div class="stat-card">
+        <div class="stat-title">Замовлень у роботі</div>
+        <div class="stat-value">{{ in_progress_count or '-' }}</div>
     </div>
-</form>
-<table class="table table-bordered table-hover align-middle" id="orders-table">
+    <div class="stat-card">
+        <div class="stat-title">Клієнтів</div>
+        <div class="stat-value">{{ clients_count or '-' }}</div>
+    </div>
+</div>
+
+<div class="filter-bar mb-3 w-100">
+    <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="orders-filter-form">
+        <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}" style="max-width:200px;">
+        <input type="text" class="form-control" name="phone" placeholder="Пошук за телефоном..." value="{{ request.args.get('phone', '') }}" style="max-width:200px;">
+        <select class="form-select" name="city" style="max-width:150px;">
+            <option value="">Місто</option>
+            <option value="Київ" {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
+            <option value="Бровари" {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
+            <option value="Вишгород" {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
+            <option value="Ірпінь" {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
+        </select>
+        <select class="form-select" name="delivery_type" style="max-width:150px;">
+            <option value="">Тип доставки</option>
+            <option value="Weekly" {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
+            <option value="Monthly" {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
+            <option value="Bi-weekly" {% if request.args.get('delivery_type')=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
+            <option value="One-time" {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
+        </select>
+        <select class="form-select" name="size" style="max-width:120px;">
+            <option value="">Розмір</option>
+            <option value="M" {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
+            <option value="L" {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
+            <option value="XL" {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
+            <option value="XXL" {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
+            <option value="Custom" {% if request.args.get('size')=='Custom' %}selected{% endif %}>Власний</option>
+        </select>
+        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Фільтрувати</button>
+        {% if request.args %}
+        <a href="/orders" class="btn btn-outline-secondary">Скинути</a>
+        {% endif %}
+    </form>
+</div>
+
+<table class="table table-hover align-middle w-100" id="orders-table">
     <thead>
         <tr>
             <th>Клієнт</th>
             <th>Отримувач</th>
-            <th>Телефон отримувача</th>
+            <th>Телефон</th>
             <th>Місто</th>
             <th>Адреса</th>
-            <th>Тип доставки</th>
+            <th>Тип</th>
             <th>Розмір</th>
-            <th>Дата першої доставки</th>
+            <th>Дата</th>
             <th>День</th>
             <th>Час</th>
             <th>Для кого</th>
@@ -42,7 +84,7 @@
             <td>{{ order.city or '' }}</td>
             <td>
                 {% if order.is_pickup %}
-                    <span class="badge bg-warning">Самовивіз</span>
+                    <span class="tag tag-easy">Самовивіз</span>
                 {% else %}
                     {{ order.street or '' }}
                     {% if order.building_number %}, {{ order.building_number }}{% endif %}
@@ -50,11 +92,11 @@
                     {% if order.entrance %}, {{ order.entrance }}{% endif %}
                 {% endif %}
             </td>
-            <td>{{ order.delivery_type or '' }}</td>
+            <td><span class="tag">{{ order.delivery_type or '' }}</span></td>
             <td>
-                {{ order.size or '' }}
+                <span class="tag {% if order.size=='M' %}tag-easy{% elif order.size=='L' %}tag-medium{% elif order.size=='XL' or order.size=='XXL' %}tag-hard{% endif %}">{{ order.size or '' }}</span>
                 {% if order.size == 'Custom' and order.custom_amount %}
-                    ({{ order.custom_amount }} грн)
+                    <span class="tag">{{ order.custom_amount }} грн</span>
                 {% endif %}
             </td>
             <td>{{ order.first_delivery_date.strftime('%d.%m.%Y') if order.first_delivery_date else '' }}</td>
@@ -71,179 +113,199 @@
             <td>{{ order.for_whom or '' }}</td>
             <td>
                 {% if order.comment %}
-                    <span class="text-muted" title="{{ order.comment }}">{{ order.comment[:30] }}{% if order.comment|length > 30 %}...{% endif %}</span>
+                    <span class="text-muted" title="{{ order.comment }}">{{ order.comment[:80] }}{% if order.comment|length > 80 %}...{% endif %}</span>
                 {% endif %}
             </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
-<div class="d-flex justify-content-center align-items-center gap-2">
-    <form method="get" style="display:inline;">
-        {% for key, value in request.args.items() %}
-            {% if key != 'page' %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
+
+<!-- Пагінація -->
+{% set total_pages = (orders_count // per_page) + (1 if orders_count % per_page else 0) %}
+{% if total_pages > 1 %}
+<div class="bottom-controls mt-3">
+    <nav class="pagination">
+        <ul class="pagination mb-0">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(1) }}">&laquo;</a>
+            </li>
+            {% if page > 3 %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(1) }}">1</a></li>
+                {% if page > 4 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
             {% endif %}
-        {% endfor %}
-        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
-    </form>
-    <span class="mx-2">{{ page }}</span>
-    <form method="get" style="display:inline;">
-        {% for key, value in request.args.items() %}
-            {% if key != 'page' %}
-                <input type="hidden" name="{{ key }}" value="{{ value }}">
+            {% for p in range(page-2, page+3) %}
+                {% if 1 <= p <= total_pages %}
+                    <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="?{{ update_query(p) }}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
+            {% if page < total_pages-2 %}
+                {% if page < total_pages-3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(total_pages) }}">{{ total_pages }}</a></li>
             {% endif %}
-        {% endfor %}
-        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
-    </form>
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(total_pages) }}">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
 </div>
+{% endif %}
 
 <!-- Модалка створення замовлення -->
 <div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="border-radius:18px; box-shadow:0 4px 32px 0 rgba(0,123,255,0.07); border:none;">
       <form id="addOrderForm">
-        <div class="modal-header bg-light">
-          <h5 class="modal-title" id="addOrderModalLabel">Створення замовлення</h5>
+        <div class="modal-header" style="border-bottom:none; background:#fff; border-radius:18px 18px 0 0;">
+          <h5 class="modal-title" id="addOrderModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem;">Нове замовлення</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
-        <div class="modal-body bg-white">
-          <div class="container-fluid">
-            <div class="row g-3">
-              <!-- Клієнт -->
-              <div class="col-md-6">
-                <label class="form-label">Клієнт <span class="text-danger">*</span></label>
-                <div class="position-relative">
-                  <input type="text" class="form-control" id="client-search" name="client_instagram" 
-                         placeholder="Введіть Instagram клієнта..." required autocomplete="off">
-                  <div class="list-group position-absolute w-100 d-none" id="client-results" 
-                       style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
-                </div>
+        <div class="modal-body" style="background:#fff; padding:32px 28px 18px 28px;">
+          <div class="row g-3">
+            <div class="col-12">
+              <div style="position: relative;">
+                <input type="text" class="form-control form-control-lg" id="client-search" name="client_instagram" placeholder="Instagram клієнта *" required autocomplete="off" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <div class="list-group position-absolute w-100 d-none" id="client-results" style="z-index: 1000; max-height: 200px; overflow-y: auto; border-radius: 8px;"></div>
               </div>
-              <!-- Отримувач -->
-              <div class="col-md-6">
-                <label class="form-label">Ім'я отримувача <span class="text-danger">*</span></label>
-                <input type="text" name="recipient_name" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Номер телефону отримувача <span class="text-danger">*</span></label>
-                <input type="text" name="recipient_phone" class="form-control" required 
-                       placeholder="+380" pattern="\+380[0-9]{9}" maxlength="13">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Instagram/Telegram отримувача</label>
-                <input type="text" name="recipient_social" class="form-control" placeholder="Необов'язково">
-              </div>
-              <!-- Адреса -->
-              <div class="col-md-6">
-                <label class="form-label">Місто <span class="text-danger">*</span></label>
-                <select name="city" class="form-select" required>
-                  <option value="Київ" selected>Київ</option>
-                  <option value="Бровари">Бровари</option>
-                  <option value="Вишгород">Вишгород</option>
-                  <option value="Ірпінь">Ірпінь</option>
-                </select>
-              </div>
-              <div class="col-md-6">
-                <div class="form-check mt-4">
-                  <input class="form-check-input" type="checkbox" id="is-pickup" name="is_pickup">
-                  <label class="form-check-label" for="is-pickup">
-                    Самовивіз
-                  </label>
-                </div>
-              </div>
-              <div class="col-md-12">
-                <label class="form-label">Адреса <span class="text-danger">*</span></label>
-                <input type="text" name="street" id="address-input" class="form-control" required>
-              </div>
-              <!-- Тип доставки -->
-              <div class="col-md-6">
-                <label class="form-label">Тип доставки <span class="text-danger">*</span></label>
-                <select name="delivery_type" class="form-select" required>
-                  <option value="">Оберіть тип</option>
-                  <option value="Weekly">Weekly</option>
-                  <option value="Monthly">Monthly</option>
-                  <option value="Bi-weekly">Bi-weekly</option>
-                  <option value="One-time">One-time</option>
-                </select>
-              </div>
-              <!-- Розмір -->
-              <div class="col-md-6">
-                <label class="form-label">Розмір <span class="text-danger">*</span></label>
-                <select name="size" id="size-select" class="form-select" required>
-                  <option value="">Оберіть розмір</option>
-                  <option value="M">M</option>
-                  <option value="L">L</option>
-                  <option value="XL">XL</option>
-                  <option value="XXL">XXL</option>
-                  <option value="Custom">Власний</option>
-                </select>
-              </div>
-              <div class="col-md-6" id="custom-amount-div" style="display: none;">
-                <label class="form-label">Сума <span class="text-danger">*</span></label>
-                <input type="number" name="custom_amount" class="form-control" min="0" placeholder="Введіть суму">
-              </div>
-              <!-- Дата та день -->
-              <div class="col-md-6">
-                <label class="form-label">Дата першої доставки <span class="text-danger">*</span></label>
-                <input type="date" name="first_delivery_date" class="form-control" required>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">День <span class="text-danger">*</span></label>
-                <select name="delivery_day" class="form-select" required>
-                  <option value="">Оберіть день</option>
-                  <option value="ПН">ПН</option>
-                  <option value="ВТ">ВТ</option>
-                  <option value="СР">СР</option>
-                  <option value="ЧТ">ЧТ</option>
-                  <option value="ПТ">ПТ</option>
-                  <option value="СБ">СБ</option>
-                  <option value="НД">НД</option>
-                </select>
-              </div>
-              <!-- Час -->
-              <div class="col-md-3">
-                <label class="form-label">Час з</label>
-                <input type="time" name="time_from" class="form-control">
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Час до</label>
-                <input type="time" name="time_to" class="form-control">
-              </div>
-              <!-- Для кого -->
-              <div class="col-md-6">
-                <label class="form-label">Для кого <span class="text-danger">*</span></label>
-                <select name="for_whom" class="form-select" required>
-                  <option value="">Оберіть варіант</option>
-                  <option value="дівчина собі">дівчина собі</option>
-                  <option value="дівчина іншій дівчині">дівчина іншій дівчині</option>
-                  <option value="хлопець дівчині">хлопець дівчині</option>
-                  <option value="хлопець собі">хлопець собі</option>
-                  <option value="корпоративна підписка">корпоративна підписка</option>
-                  <option value="весільна підписка">весільна підписка</option>
-                  <option value="хлопець хлопцю">хлопець хлопцю</option>
-                </select>
-              </div>
-              <!-- Коментар та побажання -->
-              <div class="col-md-6">
-                <label class="form-label">Коментар</label>
-                <textarea name="comment" class="form-control" rows="3" placeholder="Додаткові коментарі..."></textarea>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Побажання</label>
-                <textarea name="preferences" class="form-control" rows="3" placeholder="Особливі побажання..."></textarea>
-              </div>
+            </div>
+            <div class="col-12">
+              <input type="text" name="recipient_name" class="form-control" required placeholder="Ім'я отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <input type="text" name="recipient_phone" class="form-control" required placeholder="Телефон отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" maxlength="13">
+            </div>
+            <div class="col-12">
+              <input type="text" name="recipient_social" class="form-control" placeholder="Instagram/Telegram отримувача (необов'язково)" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="city" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Місто</option>
+                {% if cities and cities|length > 0 %}
+                    {% for city in cities %}
+                        <option value="{{ city.value }}" {% if request.args.get('city')==city.value %}selected{% endif %}>{{ city.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте міста у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12 d-flex align-items-center gap-2">
+              <input class="form-check-input" type="checkbox" id="is-pickup" name="is_pickup" style="margin-top:0;">
+              <label class="form-check-label text-secondary small" for="is-pickup" style="margin-bottom:0;">Самовивіз</label>
+            </div>
+            <div class="col-12">
+              <input type="text" name="street" id="address-input" class="form-control" required placeholder="Адреса доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="delivery_type" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Тип доставки *</option>
+                {% if delivery_types and delivery_types|length > 0 %}
+                    {% for t in delivery_types %}
+                        <option value="{{ t.value }}" {% if request.args.get('delivery_type')==t.value %}selected{% endif %}>{{ t.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте типи у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12">
+              <select name="size" id="size-select" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Розмір *</option>
+                {% if sizes and sizes|length > 0 %}
+                    {% for s in sizes %}
+                        <option value="{{ s.value }}" {% if request.args.get('size')==s.value %}selected{% endif %}>{{ s.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте розміри у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12" id="custom-amount-div" style="display: none;">
+              <input type="number" name="custom_amount" class="form-control" min="0" placeholder="Сума для власного розміру *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <input type="date" name="first_delivery_date" class="form-control" required placeholder="Дата першої доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="delivery_day" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">День тижня *</option>
+                <option value="ПН">Понеділок</option>
+                <option value="ВТ">Вівторок</option>
+                <option value="СР">Середа</option>
+                <option value="ЧТ">Четвер</option>
+                <option value="ПТ">П'ятниця</option>
+                <option value="СБ">Субота</option>
+                <option value="НД">Неділя</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <input type="time" name="time_from" class="form-control" placeholder="Час з" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-6">
+              <input type="time" name="time_to" class="form-control" placeholder="Час до" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select name="for_whom" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Для кого *</option>
+                {% if for_whom and for_whom|length > 0 %}
+                    {% for f in for_whom %}
+                        <option value="{{ f.value }}" {% if request.args.get('for_whom')==f.value %}selected{% endif %}>{{ f.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте варіанти у налаштуваннях</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-12">
+              <textarea name="comment" class="form-control" rows="2" placeholder="Коментар (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
+            </div>
+            <div class="col-12">
+              <textarea name="preferences" class="form-control" rows="2" placeholder="Побажання (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
             </div>
           </div>
         </div>
-        <div class="modal-footer bg-light">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-          <button type="submit" class="btn btn-primary" id="order-submit-btn">Створити замовлення</button>
+        <div class="modal-footer" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
+          <button type="submit" class="btn btn-primary" id="order-submit-btn" style="border-radius:8px; font-weight:500; min-width:120px;">Створити</button>
         </div>
       </form>
     </div>
   </div>
 </div>
+
+<style>
+.table th, .table td {
+  border-right: 1.5px solid #e3eafc;
+}
+.table th:last-child, .table td:last-child {
+  border-right: none;
+}
+#client-results {
+  left: 0;
+  right: 0;
+  width: auto;
+  min-width: unset;
+  max-width: unset;
+  overflow-x: auto;
+  box-shadow: 0 4px 16px 0 rgba(0,123,255,0.08);
+  border: 1.5px solid #e3eafc;
+  background: #fff;
+  z-index: 1055;
+}
+.modal-dialog { overflow: visible !important; }
+.input-disabled {
+  background: #d1d5db !important;
+  color: #6b7280 !important;
+  border: 1.5px solid #e3eafc !important;
+  opacity: 1 !important;
+  cursor: not-allowed !important;
+  font-weight: 500 !important;
+}
+</style>
 {% endblock %}
 
 {% block scripts %}
@@ -305,11 +367,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 addressInput.value = '';
                 addressInput.disabled = true;
                 addressInput.removeAttribute('required');
+                addressInput.classList.add('input-disabled');
             } else {
                 addressInput.disabled = false;
                 addressInput.setAttribute('required', 'required');
+                addressInput.classList.remove('input-disabled');
             }
         });
+        // При завантаженні сторінки одразу застосувати стиль, якщо вже вибрано
+        if (isPickupCheckbox.checked) {
+            addressInput.disabled = true;
+            addressInput.removeAttribute('required');
+            addressInput.classList.add('input-disabled');
+        }
     }
 
     // Власний розмір - показ поля суми
@@ -493,6 +563,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    const commentInput = document.querySelector('textarea[name="comment"]');
+    const preferencesInput = document.querySelector('textarea[name="preferences"]');
+    if (commentInput) {
+        commentInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
+    if (preferencesInput) {
+        preferencesInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
 });
 </script>
-{% endblock %} 
+{% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %} 

@@ -36,13 +36,15 @@ def client_create():
     telegram = request.form.get('telegram', '').strip() or None
     credits = int(request.form.get('credits', 0))
     marketing_source = request.form.get('marketing_source', '').strip()
-    
+    personal_discount = request.form.get('personal_discount', '').strip()
+    personal_discount = int(personal_discount) if personal_discount.isdigit() else None
     client, error = create_client(
         instagram=instagram,
         phone=phone,
         telegram=telegram,
         credits=credits,
-        marketing_source=marketing_source
+        marketing_source=marketing_source,
+        personal_discount=personal_discount
     )
     if error:
         return jsonify({'success': False, 'error': error}), 400
@@ -57,7 +59,8 @@ def get_client(client_id):
         'phone': client.phone,
         'telegram': client.telegram or '',
         'credits': client.credits,
-        'marketing_source': client.marketing_source
+        'marketing_source': client.marketing_source,
+        'personal_discount': client.personal_discount or ''
     })
 
 @clients_bp.route('/clients/<int:client_id>', methods=['POST'])
@@ -67,14 +70,16 @@ def client_update(client_id):
     telegram = request.form.get('telegram', '').strip() or None
     credits = int(request.form.get('credits', 0))
     marketing_source = request.form.get('marketing_source', '').strip()
-    
+    personal_discount = request.form.get('personal_discount', '').strip()
+    personal_discount = int(personal_discount) if personal_discount.isdigit() else None
     client, error = update_client(
         client_id=client_id,
         instagram=instagram,
         phone=phone,
         telegram=telegram,
         credits=credits,
-        marketing_source=marketing_source
+        marketing_source=marketing_source,
+        personal_discount=personal_discount
     )
     if error:
         return jsonify({'success': False, 'error': error}), 400

@@ -151,10 +151,13 @@
             <label class="form-label">Місто <span class="text-danger">*</span></label>
             <select name="city" class="form-select" required>
                 <option value="">Оберіть місто</option>
-                <option value="Київ">Київ</option>
-                <option value="Бровари">Бровари</option>
-                <option value="Вишгород">Вишгород</option>
-                <option value="Ірпінь">Ірпінь</option>
+                {% if cities and cities|length > 0 %}
+                    {% for city in cities %}
+                        <option value="{{ city.value }}">{{ city.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте міста у налаштуваннях</option>
+                {% endif %}
             </select>
         </div>
         
@@ -192,23 +195,28 @@
             <label class="form-label">Тип доставки <span class="text-danger">*</span></label>
             <select name="delivery_type" class="form-select" required>
                 <option value="">Оберіть тип</option>
-                <option value="Weekly">Weekly</option>
-                <option value="Monthly">Monthly</option>
-                <option value="Bi-weekly">Bi-weekly</option>
-                <option value="One-time">One-time</option>
+                {% if delivery_types and delivery_types|length > 0 %}
+                    {% for t in delivery_types %}
+                        <option value="{{ t.value }}">{{ t.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте типи у налаштуваннях</option>
+                {% endif %}
             </select>
         </div>
         
         <!-- Розмір -->
         <div class="col-md-6">
             <label class="form-label">Розмір <span class="text-danger">*</span></label>
-            <select name="size" id="size-select" class="form-select" required>
+            <select name="size" class="form-select" required>
                 <option value="">Оберіть розмір</option>
-                <option value="M">M</option>
-                <option value="L">L</option>
-                <option value="XL">XL</option>
-                <option value="XXL">XXL</option>
-                <option value="Custom">Власний</option>
+                {% if sizes and sizes|length > 0 %}
+                    {% for s in sizes %}
+                        <option value="{{ s.value }}">{{ s.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте розміри у налаштуваннях</option>
+                {% endif %}
             </select>
         </div>
         
@@ -252,14 +260,14 @@
         <div class="col-md-6">
             <label class="form-label">Для кого <span class="text-danger">*</span></label>
             <select name="for_whom" class="form-select" required>
-                <option value="">Оберіть варіант</option>
-                <option value="дівчина собі">дівчина собі</option>
-                <option value="дівчина іншій дівчині">дівчина іншій дівчині</option>
-                <option value="хлопець дівчині">хлопець дівчині</option>
-                <option value="хлопець собі">хлопець собі</option>
-                <option value="корпоративна підписка">корпоративна підписка</option>
-                <option value="весільна підписка">весільна підписка</option>
-                <option value="хлопець хлопцю">хлопець хлопцю</option>
+                <option value="">Оберіть для кого</option>
+                {% if for_whom and for_whom|length > 0 %}
+                    {% for f in for_whom %}
+                        <option value="{{ f.value }}">{{ f.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте варіанти у налаштуваннях</option>
+                {% endif %}
             </select>
         </div>
         

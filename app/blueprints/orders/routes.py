@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
 from app.extensions import db
 from app.models import Order, Client, Delivery
+from app.models.settings import Settings
 import logging
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
 
@@ -10,19 +11,33 @@ orders_bp = Blueprint('orders', __name__)
 def orders_list():
     phone = request.args.get('phone', '').strip()
     instagram = request.args.get('instagram', '').strip()
+    city = request.args.get('city', '').strip()
+    delivery_type = request.args.get('delivery_type', '').strip()
+    size = request.args.get('size', '').strip()
     page = int(request.args.get('page', 1))
     per_page = 30
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
     all_orders_count = Order.query.count()
-    orders = get_orders(phone, instagram)
+    orders = get_orders(phone, instagram, city if city else None, delivery_type if delivery_type else None, size if size else None)
     orders_on_page, has_next = paginate_orders(orders, page, per_page)
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
-    return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count)
+    clients_count = db.session.query(Order.client_id).distinct().count()
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
 
 @orders_bp.route('/orders/new', methods=['GET'])
 def order_form():
     clients = Client.query.all()
-    return render_template('order_form.html', clients=clients)
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    return render_template('order_form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
 
 @orders_bp.route('/orders/new', methods=['POST'])
 def order_create():

@@ -8,7 +8,7 @@ def get_all_clients():
 def get_client_by_id(client_id):
     return Client.query.get_or_404(client_id)
 
-def create_client(instagram, phone=None, telegram=None, credits=0, marketing_source=None):
+def create_client(instagram, phone=None, telegram=None, credits=0, marketing_source=None, personal_discount=None):
     if not instagram:
         return None, 'Instagram є обовʼязковим!'
     if not phone:
@@ -28,13 +28,14 @@ def create_client(instagram, phone=None, telegram=None, credits=0, marketing_sou
         phone=phone,
         telegram=telegram,
         credits=credits,
-        marketing_source=marketing_source
+        marketing_source=marketing_source,
+        personal_discount=personal_discount
     )
     db.session.add(client)
     db.session.commit()
     return client, None
 
-def update_client(client_id, instagram, phone=None, telegram=None, credits=0, marketing_source=None):
+def update_client(client_id, instagram, phone=None, telegram=None, credits=0, marketing_source=None, personal_discount=None):
     client = get_client_by_id(client_id)
     
     if not instagram:
@@ -60,6 +61,7 @@ def update_client(client_id, instagram, phone=None, telegram=None, credits=0, ma
     client.telegram = telegram
     client.credits = credits
     client.marketing_source = marketing_source
+    client.personal_discount = personal_discount
     
     db.session.commit()
     return client, None

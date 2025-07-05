@@ -13,6 +13,7 @@
             <th>Telegram</th>
             <th>Кредити</th>
             <th>Звідки дізнались</th>
+            <th>Персональна знижка</th>
         </tr>
     </thead>
     <tbody>
@@ -23,6 +24,7 @@
             <td>{{ client.telegram or '' }}</td>
             <td>{{ client.credits }}</td>
             <td>{{ client.marketing_source }}</td>
+            <td>{% if client.personal_discount %}{{ client.personal_discount }}%{% endif %}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -84,6 +86,10 @@
               <option value="Гугл пошук">Гугл пошук</option>
             </select>
           </div>
+          <div class="mb-3">
+            <label class="form-label">Персональна знижка</label>
+            <input type="number" name="personal_discount" id="edit-personal-discount" class="form-control" placeholder="Наприклад: 5" min="0" max="100" step="1">
+          </div>
           <div class="alert alert-danger d-none" id="client-error"></div>
         </div>
         <div class="modal-footer bg-light">
@@ -140,6 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('edit-telegram').value = client.telegram;
     document.getElementById('edit-credits').value = client.credits;
     document.getElementById('edit-marketing-source').value = client.marketing_source;
+    document.getElementById('edit-personal-discount').value = client.personal_discount;
   }
   
   // Скидання форми при відкритті модальки для додавання

@@ -8,3 +8,4 @@ class Client(db.Model):
     credits = db.Column(db.Integer, default=0)
     orders = db.relationship('Order', backref='client', lazy=True) 
     marketing_source = db.Column(db.String(64), nullable=True)
+    personal_discount = db.Column(db.String(16), nullable=True)

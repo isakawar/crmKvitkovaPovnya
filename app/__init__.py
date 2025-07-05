@@ -7,6 +7,7 @@ from app.blueprints.clients.routes import clients_bp
 from app.blueprints.deliveries.routes import deliveries_bp
 from app.blueprints.prices.routes import prices_bp
 from app.blueprints.reports.routes import reports_bp
+from app.blueprints.settings.routes import settings_bp
 
 def create_app(config_name=None):
     app = Flask(__name__)
@@ -19,6 +20,7 @@ def create_app(config_name=None):
     app.register_blueprint(deliveries_bp)
     app.register_blueprint(prices_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(settings_bp)
     @app.route('/')
     def index():
         return render_template('index.html')
