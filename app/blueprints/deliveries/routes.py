@@ -49,7 +49,9 @@ def get_delivery(delivery_id):
         'comment': d.comment or '',
         'status': d.status,
         'size': d.size or (order.size if order else ''),
-        'is_pickup': d.is_pickup
+        'is_pickup': d.is_pickup,
+        'is_subscription': d.is_subscription,
+        'delivery_type': d.delivery_type
     })
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>/edit', methods=['POST'])

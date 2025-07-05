@@ -66,7 +66,7 @@ def create_order_and_deliveries(client, form):
     deliveries.append(first_date)
 
     if delivery_type != 'One-Time':
-        count = 4
+        count = 5  # Змінено з 4 на 5 для підписок
         prev_date = first_date
         for i in range(1, count):
             if delivery_type == 'Weekly':
@@ -97,8 +97,15 @@ def create_order_and_deliveries(client, form):
             deliveries.append(next_date)
             prev_date = next_date
 
-    for d_date in deliveries:
+    for i, d_date in enumerate(deliveries):
         status = 'Разова' if delivery_type == 'One-Time' else 'Активна'
+        
+        # Визначаємо чи це підписка для підписних типів
+        is_subscription = False
+        if delivery_type in ['Weekly', 'Monthly', 'Bi-weekly']:
+            # Перші 4 доставки - оплачені (is_subscription=True), 5-та - не оплачена (is_subscription=False)
+            is_subscription = i < 4
+        
         delivery = Delivery(
             order_id=order.id,
             client_id=client.id,
@@ -112,7 +119,8 @@ def create_order_and_deliveries(client, form):
             size=order.size,
             phone=order.recipient_phone,
             is_pickup=order.is_pickup,
-            delivery_type=order.delivery_type
+            delivery_type=order.delivery_type,
+            is_subscription=is_subscription
         )
         db.session.add(delivery)
     db.session.commit()

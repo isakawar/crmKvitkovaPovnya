@@ -37,7 +37,10 @@
   </thead>
   <tbody>
     {% for d in deliveries %}
-    <tr data-status="{{ d.status }}" style="cursor: pointer;">
+    <tr data-status="{{ d.status }}" style="cursor: pointer;" 
+        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+        class="unpaid-subscription-delivery"
+        {% endif %}>
       <td>{{ d.id }}</td>
       <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
       <td>
@@ -55,7 +58,12 @@
       </td>
       <td>{{ d.phone }}</td>
       <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
-      <td>{{ d.delivery_type }}</td>
+      <td>
+        {{ d.delivery_type }}
+        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+          <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
+        {% endif %}
+      </td>
       <td>{{ d.comment }}</td>
       <td>
         {% if d.time_from and d.time_to %}

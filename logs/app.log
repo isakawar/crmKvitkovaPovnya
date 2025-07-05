@@ -1196,3 +1196,64 @@
 2025-07-03 22:11:02,436 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "GET /clients/json HTTP/1.1" 200 -
 2025-07-03 22:11:02,758 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "GET /deliveries HTTP/1.1" 200 -
 2025-07-03 22:11:02,801 INFO 127.0.0.1 - - [03/Jul/2025 22:11:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:05,744 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-05 04:46:05,745 INFO [33mPress CTRL+C to quit[0m
+2025-07-05 04:46:05,745 INFO  * Restarting with stat
+2025-07-05 04:46:06,067 WARNING  * Debugger is active!
+2025-07-05 04:46:06,075 INFO  * Debugger PIN: 814-053-175
+2025-07-05 04:46:09,665 INFO 127.0.0.1 - - [05/Jul/2025 04:46:09] "GET / HTTP/1.1" 200 -
+2025-07-05 04:46:09,830 INFO 127.0.0.1 - - [05/Jul/2025 04:46:09] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:09,830 INFO 127.0.0.1 - - [05/Jul/2025 04:46:09] "[36mGET /static/cats.jpeg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:11,251 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 04:46:11,285 INFO 127.0.0.1 - - [05/Jul/2025 04:46:11] "GET /orders HTTP/1.1" 200 -
+2025-07-05 04:46:11,330 INFO 127.0.0.1 - - [05/Jul/2025 04:46:11] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:11,950 INFO 127.0.0.1 - - [05/Jul/2025 04:46:11] "GET /clients HTTP/1.1" 200 -
+2025-07-05 04:46:12,009 INFO 127.0.0.1 - - [05/Jul/2025 04:46:12] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:12,834 INFO 127.0.0.1 - - [05/Jul/2025 04:46:12] "GET /clients HTTP/1.1" 200 -
+2025-07-05 04:46:12,863 INFO 127.0.0.1 - - [05/Jul/2025 04:46:12] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:13,276 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 04:46:13,280 INFO 127.0.0.1 - - [05/Jul/2025 04:46:13] "GET /orders HTTP/1.1" 200 -
+2025-07-05 04:46:13,328 INFO 127.0.0.1 - - [05/Jul/2025 04:46:13] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:16,952 INFO 127.0.0.1 - - [05/Jul/2025 04:46:16] "GET /clients/search?q=vl HTTP/1.1" 200 -
+2025-07-05 04:46:17,064 INFO 127.0.0.1 - - [05/Jul/2025 04:46:17] "GET /clients/search?q=vla HTTP/1.1" 200 -
+2025-07-05 04:46:17,165 INFO 127.0.0.1 - - [05/Jul/2025 04:46:17] "GET /clients/search?q=vlad HTTP/1.1" 200 -
+2025-07-05 04:46:38,243 INFO --- ORDER CREATE ---
+2025-07-05 04:46:38,245 INFO Form data: {'client_instagram': 'vladbilobrov', 'recipient_name': 'Влад', 'recipient_phone': '+380666746225', 'recipient_social': '', 'city': 'Київ', 'street': 'qewqweq', 'delivery_type': 'One-Time', 'size': 'L', 'custom_amount': '', 'first_delivery_date': '2025-07-07', 'delivery_day': 'ПН', 'time_from': '', 'time_to': '', 'for_whom': 'весільна підписка', 'comment': '', 'preferences': ''}
+2025-07-05 04:46:38,247 INFO Створення замовлення для клієнта 1
+2025-07-05 04:46:38,265 INFO Order created: 4
+2025-07-05 04:46:38,266 INFO 127.0.0.1 - - [05/Jul/2025 04:46:38] "POST /orders/new HTTP/1.1" 200 -
+2025-07-05 04:46:38,272 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 04:46:38,275 INFO 127.0.0.1 - - [05/Jul/2025 04:46:38] "GET /orders HTTP/1.1" 200 -
+2025-07-05 04:46:38,343 INFO 127.0.0.1 - - [05/Jul/2025 04:46:38] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:38,394 INFO 127.0.0.1 - - [05/Jul/2025 04:46:38] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-05 04:46:40,651 INFO 127.0.0.1 - - [05/Jul/2025 04:46:40] "GET /deliveries HTTP/1.1" 200 -
+2025-07-05 04:46:40,702 INFO 127.0.0.1 - - [05/Jul/2025 04:46:40] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:44,011 INFO 127.0.0.1 - - [05/Jul/2025 04:46:44] "GET /deliveries HTTP/1.1" 200 -
+2025-07-05 04:46:44,074 INFO 127.0.0.1 - - [05/Jul/2025 04:46:44] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:44,117 INFO 127.0.0.1 - - [05/Jul/2025 04:46:44] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-05 04:46:44,758 INFO 127.0.0.1 - - [05/Jul/2025 04:46:44] "GET /deliveries HTTP/1.1" 200 -
+2025-07-05 04:46:44,812 INFO 127.0.0.1 - - [05/Jul/2025 04:46:44] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-05 04:46:45,023 INFO 127.0.0.1 - - [05/Jul/2025 04:46:45] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-05 04:46:56,112 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 04:46:56,114 INFO 127.0.0.1 - - [05/Jul/2025 04:46:56] "GET /orders HTTP/1.1" 200 -
+2025-07-05 04:46:56,174 INFO 127.0.0.1 - - [05/Jul/2025 04:46:56] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:46:58,980 INFO 127.0.0.1 - - [05/Jul/2025 04:46:58] "GET /clients/search?q=vl HTTP/1.1" 200 -
+2025-07-05 04:46:59,150 INFO 127.0.0.1 - - [05/Jul/2025 04:46:59] "GET /clients/search?q=vla HTTP/1.1" 200 -
+2025-07-05 04:46:59,232 INFO 127.0.0.1 - - [05/Jul/2025 04:46:59] "GET /clients/search?q=vlad HTTP/1.1" 200 -
+2025-07-05 04:47:27,791 INFO --- ORDER CREATE ---
+2025-07-05 04:47:27,793 INFO Form data: {'client_instagram': 'vladbilobrov', 'recipient_name': 'Влад', 'recipient_phone': '+380666746225', 'recipient_social': '', 'city': 'Буча', 'is_pickup': 'on', 'delivery_type': 'Weekly', 'size': 'XL', 'custom_amount': '', 'first_delivery_date': '2025-07-07', 'delivery_day': 'СБ', 'time_from': '', 'time_to': '', 'for_whom': 'дівчина собі', 'comment': '', 'preferences': ''}
+2025-07-05 04:47:27,794 INFO Створення замовлення для клієнта 1
+2025-07-05 04:47:27,800 INFO Order created: 5
+2025-07-05 04:47:27,801 INFO 127.0.0.1 - - [05/Jul/2025 04:47:27] "POST /orders/new HTTP/1.1" 200 -
+2025-07-05 04:47:27,808 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-05 04:47:27,812 INFO 127.0.0.1 - - [05/Jul/2025 04:47:27] "GET /orders HTTP/1.1" 200 -
+2025-07-05 04:47:27,867 INFO 127.0.0.1 - - [05/Jul/2025 04:47:27] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:47:27,949 INFO 127.0.0.1 - - [05/Jul/2025 04:47:27] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-05 04:47:29,693 INFO 127.0.0.1 - - [05/Jul/2025 04:47:29] "GET /deliveries HTTP/1.1" 200 -
+2025-07-05 04:47:29,783 INFO 127.0.0.1 - - [05/Jul/2025 04:47:29] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-05 04:47:31,124 INFO 127.0.0.1 - - [05/Jul/2025 04:47:31] "GET /deliveries HTTP/1.1" 200 -
+2025-07-05 04:47:31,177 INFO 127.0.0.1 - - [05/Jul/2025 04:47:31] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-05 04:47:31,399 INFO 127.0.0.1 - - [05/Jul/2025 04:47:31] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-05 04:47:44,223 INFO 127.0.0.1 - - [05/Jul/2025 04:47:44] "GET /deliveries/15 HTTP/1.1" 200 -
+2025-07-05 04:48:02,672 INFO 127.0.0.1 - - [05/Jul/2025 04:48:02] "GET /deliveries/14 HTTP/1.1" 200 -
