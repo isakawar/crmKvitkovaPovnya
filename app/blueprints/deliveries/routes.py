@@ -85,6 +85,28 @@ def get_delivery(delivery_id):
 def edit_delivery(delivery_id):
     d = get_delivery_by_id(delivery_id)
     data = request.json or {}
+    
+    # Обробляємо зміни дат наступних доставок
+    changed_dates = data.get('changed_dates', {})
+    if changed_dates:
+        try:
+            for delivery_id_str, new_date_str in changed_dates.items():
+                delivery_id_int = int(delivery_id_str)
+                delivery = Delivery.query.get(delivery_id_int)
+                
+                # Перевіряємо, що доставка належить тому ж замовленню
+                if delivery and delivery.order_id == d.order_id:
+                    new_date = datetime.strptime(new_date_str, '%Y-%m-%d').date()
+                    delivery.delivery_date = new_date
+                else:
+                    return jsonify({'success': False, 'error': 'Спроба змінити доставку з іншого замовлення'}), 403
+        except Exception as e:
+            return jsonify({'success': False, 'error': f'Помилка обробки дат: {str(e)}'}), 400
+    
+    # Видаляємо changed_dates з data перед оновленням основної доставки
+    if 'changed_dates' in data:
+        del data['changed_dates']
+    
     update_delivery(d, data)
     return jsonify({'success': True})
 

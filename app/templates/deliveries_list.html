@@ -212,6 +212,15 @@
               <textarea id="editPreferences" class="form-control" rows="2" placeholder="Побажання (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
             </div>
           </div>
+          
+          <!-- Секція для наступних доставок -->
+          <div id="future-deliveries-section" class="mt-4" style="display: none;">
+            <hr class="my-3">
+            <h6 class="mb-3 text-secondary">Наступні доставки цього замовлення:</h6>
+            <div id="future-deliveries-edit-list" class="border rounded p-3" style="max-height: 300px; overflow-y: auto; background: #f8f9fa;">
+              <!-- Тут будуть відображатися наступні доставки -->
+            </div>
+          </div>
         </div>
         <div class="modal-footer d-flex justify-content-between align-items-center" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
@@ -322,6 +331,21 @@
     </div>
   </div>
 </div>
+
+<style>
+.future-delivery-card.changed {
+  background: #fffbe6;
+  border-color: #ffc107 !important;
+  transition: background 0.2s;
+}
+.future-delivery-card:hover {
+  box-shadow: 0 2px 8px #ffe082;
+}
+.future-delivery-card {
+  min-height: 120px;
+  transition: background 0.2s, border-color 0.2s;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -600,6 +624,10 @@ document.addEventListener('DOMContentLoaded', function() {
             extendBtn.style.display = 'none';
           }
           console.log('Модальне вікно відкривається');
+          
+          // Завантажуємо наступні доставки при відкритті модалки
+          loadFutureDeliveries(data.id);
+          
           if (editModal) {
             editModal.show();
           } else {
@@ -623,6 +651,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
+      // Збираємо зміни для наступних доставок
+      const changedDates = {};
+      document.querySelectorAll('.future-delivery-date-input').forEach(input => {
+        const deliveryId = input.dataset.deliveryId;
+        const dateValue = input.value;
+        if (dateValue && changedFutureDeliveries.has(parseInt(deliveryId))) {
+          changedDates[deliveryId] = dateValue;
+        }
+      });
+      
       const payload = {
         phone: document.getElementById('editPhone').value,
         street: document.getElementById('editStreet').value,
@@ -634,7 +672,8 @@ document.addEventListener('DOMContentLoaded', function() {
         status: document.getElementById('editStatus').value,
         is_pickup: document.getElementById('editIsPickup').checked,
         comment: document.getElementById('editComment').value,
-        preferences: document.getElementById('editPreferences').value
+        preferences: document.getElementById('editPreferences').value,
+        changed_dates: changedDates // Додаємо зміни для наступних доставок
       };
       
       fetch(`/deliveries/${currentId}/edit`, {
@@ -648,14 +687,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return r.json();
       })
-      .then(data => {
-        if (data.success) {
-          editModal.hide();
-          location.reload();
-        } else {
-          alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
-        }
-      })
+              .then(data => {
+          if (data.success) {
+            editModal.hide();
+            // Показуємо повідомлення про успішне збереження
+            const successMessage = changedFutureDeliveries.size > 0 
+              ? `Збережено зміни для ${changedFutureDeliveries.size + 1} доставок` 
+              : 'Зміни збережено';
+            alert(successMessage);
+            location.reload();
+          } else {
+            alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
+          }
+        })
       .catch(error => {
         console.error('Помилка:', error);
         alert('Помилка збереження доставки');
@@ -670,6 +714,88 @@ document.addEventListener('DOMContentLoaded', function() {
   const changeDateModal = changeDateModalElement ? new bootstrap.Modal(changeDateModalElement) : null;
   let currentDeliveryIdForDateChange = null;
   let changedDeliveries = new Set(); // Для відстеження змінених доставок
+  let changedFutureDeliveries = new Set(); // Для відстеження змінених наступних доставок в модалці редагування
+  
+  // Функція для завантаження наступних доставок в модалці редагування
+  function loadFutureDeliveries(deliveryId) {
+    fetch(`/deliveries/${deliveryId}/future-deliveries`)
+      .then(r => r.json())
+      .then(futureDeliveries => {
+        const futureSection = document.getElementById('future-deliveries-section');
+        const futureList = document.getElementById('future-deliveries-edit-list');
+        
+        if (futureDeliveries.length === 0) {
+          futureSection.style.display = 'none';
+        } else {
+          futureSection.style.display = 'block';
+          let html = '<div class="row">';
+          futureDeliveries.forEach(delivery => {
+            const isChanged = changedFutureDeliveries.has(delivery.id);
+            html += `
+              <div class="col-md-6 mb-2">
+                <div class="card future-delivery-card ${isChanged ? 'changed border-warning' : 'border-light'}" style="min-height: 120px;">
+                  <div class="card-body p-2 d-flex flex-column justify-content-between">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <div>
+                        <span class="text-muted small">ID: ${delivery.id}</span>
+                      </div>
+                      <span class="badge ${delivery.status === 'Не оплачена' ? 'bg-danger' : 'bg-secondary'}">${delivery.status}</span>
+                    </div>
+                    <div class="mb-2">
+                      <span class="fw-bold fs-5">${delivery.delivery_date}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="date" class="form-control form-control-sm future-delivery-date-input" 
+                             data-delivery-id="${delivery.id}" 
+                             value="${delivery.delivery_date}"
+                             style="width: 140px;">
+                      <span class="badge bg-warning text-dark ms-1" title="Дата змінена" style="display: ${isChanged ? '' : 'none'};">Змінено</span>
+                      <i class="bi bi-check-circle-fill text-success ms-1" style="display: ${isChanged ? '' : 'none'};"></i>
+                    </div>
+                    <small class="text-muted">Нова дата</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          html += '</div>';
+          futureList.innerHTML = html;
+          
+          // Додаємо обробники для зміни дат наступних доставок
+          document.querySelectorAll('.future-delivery-date-input').forEach(input => {
+            input.addEventListener('change', function() {
+              const deliveryId = this.dataset.deliveryId;
+              changedFutureDeliveries.add(parseInt(deliveryId));
+              const card = this.closest('.future-delivery-card');
+              card.classList.add('changed', 'border-warning');
+              // Показати бейдж і іконку
+              const badge = card.querySelector('.badge.bg-warning');
+              if (badge) badge.style.display = '';
+              const checkIcon = card.querySelector('.bi-check-circle-fill');
+              if (checkIcon) checkIcon.style.display = '';
+            });
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Помилка завантаження наступних доставок:', error);
+      });
+  }
+  
+  // Обробник зміни дати в модалці редагування
+  document.getElementById('editDeliveryDate').addEventListener('change', function() {
+    const deliveryId = document.getElementById('editDeliveryId').value;
+    if (deliveryId) {
+      // Оновлюємо наступні доставки при зміні дати
+      loadFutureDeliveries(deliveryId);
+    }
+  });
+  
+  // Очищення змінених доставок при закритті модалки редагування
+  document.getElementById('editDeliveryModal').addEventListener('hidden.bs.modal', function() {
+    changedFutureDeliveries.clear();
+    document.getElementById('future-deliveries-section').style.display = 'none';
+  });
   
   // Подвійний клік по даті доставки
   document.querySelectorAll('.delivery-date-cell').forEach(cell => {
