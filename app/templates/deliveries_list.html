@@ -7,26 +7,29 @@
 </div>
 <div class="filter-bar mb-3 w-100" style="position: relative;">
   <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="delivery-filter-form">
+    {% if request.args.get('financial_week') %}
+      <input type="hidden" name="financial_week" value="{{ request.args.get('financial_week') }}">
+    {% endif %}
     <input type="text" name="client_instagram" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за Instagram клієнта..." value="{{ request.args.get('client_instagram', '') }}">
     <input type="text" name="recipient_phone" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за телефоном отримувача..." value="{{ request.args.get('recipient_phone', '') }}">
     <input type="date" id="filter-date" name="date" class="form-control" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" value="{{ selected_date }}">
     <select id="filter-status" name="status" class="form-select" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-      <option value="">Всі статуси</option>
-      <option value="Очікує">Очікує</option>
-      <option value="Розподілено">Розподілено</option>
-      <option value="Доставлено">Доставлено</option>
-      <option value="Не оплачена">Не оплачена</option>
+      <option value="" {% if request.args.get('status', '') == '' %}selected{% endif %}>Всі статуси</option>
+      <option value="Очікує" {% if request.args.get('status') == 'Очікує' %}selected{% endif %}>Очікує</option>
+      <option value="Розподілено" {% if request.args.get('status') == 'Розподілено' %}selected{% endif %}>Розподілено</option>
+      <option value="Доставлено" {% if request.args.get('status') == 'Доставлено' %}selected{% endif %}>Доставлено</option>
+      <option value="Не оплачена" {% if request.args.get('status') == 'Не оплачена' %}selected{% endif %}>Не оплачена</option>
     </select>
     <div class="d-flex gap-2">
-      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '0' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="current-week-btn">Поточний фін. тиждень</button>
-      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '1' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="next-week-btn">Наступний фін. тиждень</button>
+      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '0' %}btn-primary active-week{% else %}btn-outline-primary{% endif %}" id="current-week-btn">Поточний фін. тиждень</button>
+      <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '1' %}btn-primary active-week{% else %}btn-outline-primary{% endif %}" id="next-week-btn">Наступний фін. тиждень</button>
     </div>
     <div class="me-5">
       <button class="btn btn-outline-secondary" id="reset-all-btn" type="button">Скинути</button>
     </div>
   </form>
   <!-- Іконка налаштування колонок у filter-bar -->
-  <div style="position: absolute; top: 8px; right: 8px; z-index: 10;">
+  <div style="position: absolute; top: 50%; right: 8px; transform: translateY(-50%); z-index: 10;">
     <button id="column-settings-btn" title="Налаштувати колонки">
       <span style="font-size: 2.1rem;">&#9776;</span>
     </button>
@@ -462,15 +465,9 @@ tbody tr > td[colspan] > div {
 .tag-medium { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
 .tag-easy { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
 .table th {
-  background: #eaf1fb !important;
-  color: #222 !important;
-  font-weight: 500 !important;
-  border-bottom: 1.5px solid #e3eafc !important;
-  font-size: 16.16px !important;
-  letter-spacing: 0.01em !important;
-  border-top: none !important;
-  font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif !important;
-  padding: 8px !important;
+  background: #e0edfa !important;
+  color: #1565c0 !important;
+  font-weight: 600 !important;
 }
 .table td {
   border-bottom: 1.5px solid #e3eafc !important;
@@ -478,10 +475,24 @@ tbody tr > td[colspan] > div {
 .table tbody tr:last-child td {
   border-bottom: none !important;
 }
+.table tbody tr:nth-child(even):not(.unpaid-row) td {
+  background: #f7f8fa !important;
+}
+.table tbody tr:nth-child(odd):not(.unpaid-row) td {
+  background: #fff !important;
+}
+.btn-primary.active-week {
+  background: #1976d2 !important;
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px #b5c9e6;
+  border: 2px solid #1565c0 !important;
+}
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  const filterForm = document.getElementById('delivery-filter-form');
   // --- Фільтрація по статусу та даті (frontend) ---
   const filterDate = document.getElementById('filter-date');
   const filterStatus = document.getElementById('filter-status');
@@ -580,6 +591,49 @@ document.addEventListener('DOMContentLoaded', function() {
       const url = new URL(window.location);
       url.search = '';
       window.location.href = url.toString();
+    });
+  }
+
+  // --- Обробка Enter для пошуку за Instagram та телефоном ---
+  const instagramInput = filterForm.querySelector('input[name="client_instagram"]');
+  const phoneInput = filterForm.querySelector('input[name="recipient_phone"]');
+  
+  // Функція для відправки форми
+  function submitFilterForm() {
+    filterForm.submit();
+  }
+  
+  // Обробка Enter у полі Instagram
+  if (instagramInput) {
+    instagramInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitFilterForm();
+      }
+    });
+  }
+  
+  // Обробка Enter у полі телефону
+  if (phoneInput) {
+    phoneInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitFilterForm();
+      }
+    });
+  }
+
+  // --- Автосабміт при зміні дати ---
+  if (filterDate && filterForm) {
+    filterDate.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+
+  // --- Автосабміт при зміні статусу ---
+  if (filterStatus && filterForm) {
+    filterStatus.addEventListener('change', function() {
+      filterForm.submit();
     });
   }
 
@@ -1117,60 +1171,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
   });
-});
 
-// === JS для керування видимістю колонок ===
-const STORAGE_KEY = 'delivery_columns_v1';
-function getColumnSettings() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  } catch {
-    return {};
+  // === JS для керування видимістю колонок ===
+  const STORAGE_KEY = 'delivery_columns_v1';
+  function getColumnSettings() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    } catch {
+      return {};
+    }
   }
-}
-function setColumnSettings(settings) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-}
-function applyColumnSettings() {
-  const settings = getColumnSettings();
-  // th
-  document.querySelectorAll('table thead th').forEach(th => {
-    const col = th.dataset.col;
-    th.style.display = (settings[col] === false) ? 'none' : '';
-  });
-  // td
-  document.querySelectorAll('table tbody tr').forEach(tr => {
-    tr.querySelectorAll('td').forEach(td => {
-      const col = td.dataset.col;
-      td.style.display = (settings[col] === false) ? 'none' : '';
+  function setColumnSettings(settings) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  }
+  function applyColumnSettings() {
+    const settings = getColumnSettings();
+    // th
+    document.querySelectorAll('table thead th').forEach(th => {
+      const col = th.dataset.col;
+      th.style.display = (settings[col] === false) ? 'none' : '';
     });
-  });
-  // чекбокси
-  document.querySelectorAll('.column-toggle').forEach(cb => {
-    cb.checked = settings[cb.dataset.col] !== false;
-  });
-}
-document.getElementById('column-settings-btn').onclick = function(e) {
-  e.stopPropagation();
-  const menu = document.getElementById('column-settings-menu');
-  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-};
-document.getElementById('save-columns').onclick = function() {
-  const settings = {};
-  document.querySelectorAll('.column-toggle').forEach(cb => {
-    settings[cb.dataset.col] = cb.checked;
-  });
-  setColumnSettings(settings);
-  applyColumnSettings();
-  document.getElementById('column-settings-menu').style.display = 'none';
-};
-document.addEventListener('click', function(e) {
-  const menu = document.getElementById('column-settings-menu');
-  if (menu.style.display === 'block' && !menu.contains(e.target) && e.target.id !== 'column-settings-btn') {
-    menu.style.display = 'none';
+    // td
+    document.querySelectorAll('table tbody tr').forEach(tr => {
+      tr.querySelectorAll('td').forEach(td => {
+        const col = td.dataset.col;
+        td.style.display = (settings[col] === false) ? 'none' : '';
+      });
+    });
+    // чекбокси
+    document.querySelectorAll('.column-toggle').forEach(cb => {
+      cb.checked = settings[cb.dataset.col] !== false;
+    });
   }
+  document.getElementById('column-settings-btn').onclick = function(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('column-settings-menu');
+    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+  };
+  document.getElementById('save-columns').onclick = function() {
+    const settings = {};
+    document.querySelectorAll('.column-toggle').forEach(cb => {
+      settings[cb.dataset.col] = cb.checked;
+    });
+    setColumnSettings(settings);
+    applyColumnSettings();
+    document.getElementById('column-settings-menu').style.display = 'none';
+  };
+  document.addEventListener('click', function(e) {
+    const menu = document.getElementById('column-settings-menu');
+    if (menu.style.display === 'block' && !menu.contains(e.target) && e.target.id !== 'column-settings-btn') {
+      menu.style.display = 'none';
+    }
+  });
+  window.addEventListener('DOMContentLoaded', applyColumnSettings);
+  // === /JS для керування видимістю колонок ===
 });
-window.addEventListener('DOMContentLoaded', applyColumnSettings);
-// === /JS для керування видимістю колонок ===
 </script>
 {% endblock %} 

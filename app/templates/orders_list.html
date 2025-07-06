@@ -31,21 +31,21 @@
     <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="orders-filter-form">
         <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}" style="max-width:200px;">
         <input type="text" class="form-control" name="phone" placeholder="Пошук за телефоном..." value="{{ request.args.get('phone', '') }}" style="max-width:200px;">
-        <select class="form-select" name="city" style="max-width:150px;">
+        <select class="form-select" name="city" id="filter-city" style="max-width:150px;">
             <option value="">Місто</option>
             <option value="Київ" {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
             <option value="Бровари" {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
             <option value="Вишгород" {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
             <option value="Ірпінь" {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
         </select>
-        <select class="form-select" name="delivery_type" style="max-width:150px;">
+        <select class="form-select" name="delivery_type" id="filter-delivery-type" style="max-width:150px;">
             <option value="">Тип доставки</option>
             <option value="Weekly" {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
             <option value="Monthly" {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
             <option value="Bi-weekly" {% if request.args.get('delivery_type')=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
             <option value="One-time" {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
         </select>
-        <select class="form-select" name="size" style="max-width:120px;">
+        <select class="form-select" name="size" id="filter-size" style="max-width:120px;">
             <option value="">Розмір</option>
             <option value="M" {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
             <option value="L" {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
@@ -53,10 +53,7 @@
             <option value="XXL" {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
             <option value="Власний" {% if request.args.get('size')=='Власний' %}selected{% endif %}>Власний</option>
         </select>
-        <button type="submit" class="btn btn-outline-primary"><i class="bi bi-funnel"></i> Фільтрувати</button>
-        {% if request.args %}
-        <a href="/orders" class="btn btn-outline-secondary">Скинути</a>
-        {% endif %}
+        <button type="button" class="btn btn-outline-secondary" id="reset-filters-btn">Скинути</button>
     </form>
 </div>
 
@@ -341,6 +338,17 @@
 }
 .table tbody tr:last-child td {
   border-bottom: none !important;
+}
+.table tbody tr:nth-child(even):not(.unpaid-row) td {
+  background: #f7f8fa !important;
+}
+.table tbody tr:nth-child(odd):not(.unpaid-row) td {
+  background: #fff !important;
+}
+.table th {
+  background: #e0edfa !important;
+  color: #1565c0 !important;
+  font-weight: 600 !important;
 }
 </style>
 {% endblock %}
@@ -695,6 +703,37 @@ document.addEventListener('DOMContentLoaded', function() {
             window.currentOrderId = orderId;
             const extendModal = new bootstrap.Modal(document.getElementById('extendSubscriptionModal'));
             extendModal.show();
+        });
+    }
+
+    // --- АВТОСАБМІТ ДЛЯ ФІЛЬТРІВ ---
+    const filterForm = document.getElementById('orders-filter-form');
+    const filterCity = document.getElementById('filter-city');
+    const filterDeliveryType = document.getElementById('filter-delivery-type');
+    const filterSize = document.getElementById('filter-size');
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+
+    // Автосабміт для фільтрів
+    if (filterCity) {
+        filterCity.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    if (filterDeliveryType) {
+        filterDeliveryType.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    if (filterSize) {
+        filterSize.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+
+    // Кнопка скидання фільтрів
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            window.location.href = '/orders';
         });
     }
 });

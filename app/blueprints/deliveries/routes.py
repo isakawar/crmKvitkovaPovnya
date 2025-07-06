@@ -19,6 +19,12 @@ def deliveries_list():
     page = int(request.args.get('page', 1))
     per_page = 30
     
+    # Додаємо логування для діагностики
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f'Deliveries route called with: client_instagram="{client_instagram}", recipient_phone="{recipient_phone}", date="{date_str}", status="{status}"')
+    logger.info(f'All request args: {dict(request.args)}')
+    
     # Конвертуємо financial_week в число якщо він є
     if financial_week:
         try:
@@ -27,6 +33,7 @@ def deliveries_list():
             financial_week = None
     
     deliveries, selected_date, grouped_deliveries = get_deliveries(date_str, client_instagram, recipient_phone, financial_week, status)
+    logger.info(f'get_deliveries returned {len(deliveries)} deliveries')
     couriers = get_all_couriers()
     
     # Отримуємо дані з налаштувань для форми
@@ -41,6 +48,8 @@ def deliveries_list():
     end_idx = start_idx + per_page
     deliveries_on_page = deliveries[start_idx:end_idx]
     
+    logger.info(f'Пагінація: total={total_deliveries}, page={page}, per_page={per_page}, start_idx={start_idx}, end_idx={end_idx}, deliveries_on_page={len(deliveries_on_page)}')
+    
     # Для пагінації також групуємо deliveries_on_page
     from app.services.delivery_service import group_deliveries_by_date
     grouped_on_page = group_deliveries_by_date(deliveries_on_page)
@@ -49,6 +58,7 @@ def deliveries_list():
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
     
+    logger.info(f'Рендеримо шаблон з {len(deliveries_on_page)} доставками на сторінці, загалом {total_deliveries}')
     return render_template('deliveries_list.html', 
                          deliveries=deliveries_on_page, 
                          grouped_deliveries=grouped_on_page,
