@@ -42,61 +42,82 @@
     </tr>
   </thead>
   <tbody>
-    {% for d in deliveries %}
-    <tr data-status="{{ d.status }}" style="cursor: pointer;" 
-        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
-        class="unpaid-subscription-delivery"
-        {% endif %}>
-      <td>{{ d.id }}</td>
-      <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
-      <td>
-        {% if d.is_pickup %}
-          <span class="tag tag-easy">Самовивіз</span>
-        {% else %}
-          <a href="#" class="address-link" 
-             data-street="{{ d.street }}" 
-             data-building="{{ d.building_number }}" 
-             data-entrance="{{ d.entrance }}"
-             style="color:inherit; text-decoration:none; cursor:pointer;">
-            {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
-          </a>
-        {% endif %}
-      </td>
-      <td>{{ d.phone }}</td>
-      <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
-      <td>
-        {{ d.delivery_type }}
-        {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
-          <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
-        {% endif %}
-      </td>
-      <td>{{ d.comment }}</td>
-      <td>
-        {% if d.time_from and d.time_to %}
-          {{ d.time_from }}-{{ d.time_to }}
-        {% elif d.time_from and not d.time_to %}
-          з {{ d.time_from }}
-        {% elif d.time_to and not d.time_from %}
-          до {{ d.time_to }}
-        {% else %}
-          &nbsp;
-        {% endif %}
-      </td>
-      <td class="delivery-date-cell" data-delivery-id="{{ d.id }}" style="cursor: pointer;">{{ d.delivery_date.strftime('%d.%m') }}</td>
-      <td>
-        <span class="delivery-status badge 
-          {% if d.status == 'Очікує' %}bg-secondary
-          {% elif d.status == 'Розподілено' %}bg-primary
-          {% elif d.status == 'Доставлено' %}bg-success
-          {% elif d.status == 'Не оплачена' %}bg-danger
-          {% else %}bg-light text-dark
-          {% endif %}"
-          data-id="{{ d.id }}" data-status="{{ d.status }}" style="cursor:pointer;">
-          {{ d.status }}
-        </span>
-      </td>
-    </tr>
-    {% endfor %}
+    {% set weekday_map = {
+      0: 'Понеділок',
+      1: 'Вівторок',
+      2: 'Середа',
+      3: 'Четвер',
+      4: 'Пʼятниця',
+      5: 'Субота',
+      6: 'Неділя'
+    } %}
+    {% if deliveries|length == 0 %}
+      <tr><td colspan="10" class="text-center text-muted py-4">Доставок не знайдено</td></tr>
+    {% else %}
+      {% for date, group in grouped_deliveries|dictsort %}
+        <tr>
+          <td colspan="10" style="background:linear-gradient(90deg,#eaf1fb 0%,#f7f8fa 100%); text-align:center; font-weight:700; color:#1565c0; font-size:1.18rem; border-radius:18px; margin:12px 0; border:none; padding:18px 0 10px 0; letter-spacing:0.5px; box-shadow:0 2px 12px 0 rgba(21,101,192,0.06);">
+            <div style="display:inline-block; padding:2px 24px; border-radius:16px; background:#e3eafc;">
+              {{ weekday_map[date.weekday()] }} <span style="color:#007bff; font-weight:600;">({{ date.strftime('%d.%m') }})</span> - {{ group|length }} достав{{ 'ка' if group|length == 1 else ('ки' if group|length in [2,3,4] else 'ок') }}
+            </div>
+          </td>
+        </tr>
+        {% for d in group %}
+          <tr data-status="{{ d.status }}"
+              {% if d.status == 'Не оплачена' %}class="unpaid-row{% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %} unpaid-subscription-delivery{% endif %}"{% elif not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}class="unpaid-subscription-delivery"{% endif %}
+              style="cursor: pointer;">
+            <td>{{ d.id }}</td>
+            <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
+            <td>
+              {% if d.is_pickup %}
+                <span class="tag tag-easy">Самовивіз</span>
+              {% else %}
+                <a href="#" class="address-link" 
+                   data-street="{{ d.street }}" 
+                   data-building="{{ d.building_number }}" 
+                   data-entrance="{{ d.entrance }}"
+                   style="color:inherit; text-decoration:none; cursor:pointer;">
+                  {{ d.street }}{% if d.building_number %}, {{ d.building_number }}{% endif %}
+                </a>
+              {% endif %}
+            </td>
+            <td>{{ d.phone }}</td>
+            <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
+            <td>
+              {{ d.delivery_type }}
+              {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+                <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
+              {% endif %}
+            </td>
+            <td>{{ d.comment }}</td>
+            <td>
+              {% if d.time_from and d.time_to %}
+                {{ d.time_from }}-{{ d.time_to }}
+              {% elif d.time_from and not d.time_to %}
+                з {{ d.time_from }}
+              {% elif d.time_to and not d.time_from %}
+                до {{ d.time_to }}
+              {% else %}
+                &nbsp;
+              {% endif %}
+            </td>
+            <td class="delivery-date-cell" data-delivery-id="{{ d.id }}" style="cursor: pointer;">{{ d.delivery_date.strftime('%d.%m') }}</td>
+            <td>
+              <span class="delivery-status badge 
+                {% if d.status == 'Очікує' %}bg-secondary
+                {% elif d.status == 'Розподілено' %}bg-primary
+                {% elif d.status == 'Доставлено' %}bg-success
+                {% elif d.status == 'Не оплачена' %}bg-danger text-white
+                {% else %}bg-light text-dark
+                {% endif %}"
+                data-id="{{ d.id }}" data-status="{{ d.status }}" style="cursor:pointer;">
+                {{ d.status }}
+              </span>
+            </td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    {% endif %}
   </tbody>
 </table>
 
@@ -345,6 +366,13 @@
   min-height: 120px;
   transition: background 0.2s, border-color 0.2s;
 }
+.unpaid-row {
+  background: #ffeaea !important;
+  position: relative;
+}
+.unpaid-row td:first-child {
+  border-left: 6px solid #dc3545 !important; /* темно-червоний як bg-danger */
+}
 </style>
 
 <script>
@@ -393,23 +421,20 @@ document.addEventListener('DOMContentLoaded', function() {
   
   function getFinancialWeekDates(offset = 0) {
     const today = new Date();
-    const currentDay = today.getDay(); // 0 = Неділя, 5 = П'ятниця, 6 = Субота
-    
-    // Знаходимо найближчу п'ятницю (5)
-    let daysToFriday = 5 - currentDay;
-    if (daysToFriday <= 0) daysToFriday += 7;
-    
-    // Початок поточного фінансового тижня (п'ятниця)
-    const friday = new Date(today);
-    friday.setDate(today.getDate() + daysToFriday + (offset * 7));
-    
-    // Кінець фінансового тижня (наступна субота)
-    const nextSaturday = new Date(friday);
-    nextSaturday.setDate(friday.getDate() + 8); // +8 днів = наступна субота
-    
+    const currentDay = today.getDay(); // 0 = Неділя, 6 = Субота
+
+    // Знаходимо найближчу попередню/поточну суботу (6)
+    let daysSinceSaturday = (currentDay - 6 + 7) % 7;
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() - daysSinceSaturday + (offset * 7));
+
+    // Кінець фінансового тижня (наступна п'ятниця, включно)
+    const nextFriday = new Date(saturday);
+    nextFriday.setDate(saturday.getDate() + 6); // +6 днів = наступна п'ятниця
+
     return {
-      start: friday.toISOString().split('T')[0],
-      end: nextSaturday.toISOString().split('T')[0]
+      start: saturday.toISOString().split('T')[0],
+      end: nextFriday.toISOString().split('T')[0]
     };
   }
   

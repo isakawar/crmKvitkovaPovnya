@@ -7,17 +7,26 @@ from app.models.client import Client
 logger = logging.getLogger(__name__)
 
 def get_financial_week_dates(offset=0):
-    """Отримати дати фінансового тижня (п'ятниця-п'ятниця, не включно)"""
+    """Отримати дати фінансового тижня (субота-п'ятниця, включно)"""
     today = datetime.now().date()
-    weekday = today.weekday()  # 0=Monday, ..., 4=Friday, 6=Sunday
+    weekday = today.weekday()  # 0=Monday, ..., 5=Saturday, 6=Sunday
 
-    # Знаходимо останню п'ятницю (до або включно сьогодні)
-    days_since_friday = (weekday - 4) % 7
-    current_friday = today - timedelta(days=days_since_friday) + timedelta(days=offset*7)
-    end_date = current_friday + timedelta(days=7)  # до наступної п'ятниці (НЕ включно)
-    return current_friday, end_date
+    # Знаходимо останню суботу (до або включно сьогодні)
+    days_since_saturday = (weekday - 5) % 7
+    current_saturday = today - timedelta(days=days_since_saturday) + timedelta(days=offset*7)
+    end_date = current_saturday + timedelta(days=6)  # до наступної п'ятниці (включно)
+    return current_saturday, end_date
 
-def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, financial_week=None):
+def group_deliveries_by_date(deliveries):
+    grouped = {}
+    for d in deliveries:
+        key = d.delivery_date
+        if key not in grouped:
+            grouped[key] = []
+        grouped[key].append(d)
+    return grouped
+
+def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, financial_week=None, status=None):
     deliveries_query = Delivery.query
     selected_date = None
     start_date = end_date = None
@@ -26,13 +35,15 @@ def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, f
         deliveries_query = deliveries_query.join(Client).filter(Client.instagram.contains(client_instagram))
     if recipient_phone:
         deliveries_query = deliveries_query.filter(Delivery.phone.contains(recipient_phone))
+    if status:
+        deliveries_query = deliveries_query.filter(Delivery.status == status)
 
     if financial_week is not None:
         start_date, end_date = get_financial_week_dates(financial_week)
         logger.info(f'Фільтрація по фінансовому тижню: {financial_week}, період: {start_date} - {end_date}')
         deliveries_query = deliveries_query.filter(
             Delivery.delivery_date >= start_date,
-            Delivery.delivery_date < end_date
+            Delivery.delivery_date <= end_date
         )
     elif date_str:
         try:
@@ -42,9 +53,23 @@ def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, f
             logger.warning(f'Помилка парсингу дати: {e}')
 
     logger.info(f'Фінальний SQL: {str(deliveries_query)}')
-    result = deliveries_query.order_by(Delivery.id.desc()).all()
+    # Сортуємо по даті, потім по time_from (nulls last), потім по id
+    result = deliveries_query.order_by(
+        Delivery.delivery_date.asc(),
+        db.case((Delivery.time_from == None, 1), else_=0),
+        Delivery.time_from.asc(),
+        Delivery.id.asc()
+    ).all()
+    # Гарантуємо, що delivery_date завжди date
+    for d in result:
+        if isinstance(d.delivery_date, str):
+            try:
+                d.delivery_date = datetime.strptime(d.delivery_date, '%Y-%m-%d').date()
+            except Exception:
+                pass
+    grouped = group_deliveries_by_date(result)
     logger.info(f'Кількість доставок після фільтрації: {len(result)}')
-    return result, date_str or ''
+    return result, date_str or '', grouped
 
 def get_delivery_by_id(delivery_id):
     return Delivery.query.get_or_404(delivery_id)

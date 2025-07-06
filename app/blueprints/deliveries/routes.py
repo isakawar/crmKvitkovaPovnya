@@ -15,6 +15,7 @@ def deliveries_list():
     recipient_phone = request.args.get('recipient_phone', '').strip()
     client_phone = request.args.get('client_phone', '').strip()  # для сумісності, але не використовується
     financial_week = request.args.get('financial_week')
+    status = request.args.get('status')
     page = int(request.args.get('page', 1))
     per_page = 30
     
@@ -25,7 +26,7 @@ def deliveries_list():
         except ValueError:
             financial_week = None
     
-    deliveries, selected_date = get_deliveries(date_str, client_instagram, recipient_phone, financial_week)
+    deliveries, selected_date, grouped_deliveries = get_deliveries(date_str, client_instagram, recipient_phone, financial_week, status)
     couriers = get_all_couriers()
     
     # Отримуємо дані з налаштувань для форми
@@ -40,12 +41,17 @@ def deliveries_list():
     end_idx = start_idx + per_page
     deliveries_on_page = deliveries[start_idx:end_idx]
     
+    # Для пагінації також групуємо deliveries_on_page
+    from app.services.delivery_service import group_deliveries_by_date
+    grouped_on_page = group_deliveries_by_date(deliveries_on_page)
+    
     has_next = end_idx < total_deliveries
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
     
     return render_template('deliveries_list.html', 
                          deliveries=deliveries_on_page, 
+                         grouped_deliveries=grouped_on_page,
                          selected_date=selected_date, 
                          couriers=couriers,
                          page=page,
