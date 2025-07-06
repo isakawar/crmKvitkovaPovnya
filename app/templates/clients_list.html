@@ -63,11 +63,12 @@
             <label class="form-label">Instagram <span class="text-danger">*</span></label>
             <input type="text" name="instagram" id="edit-instagram" class="form-control" required>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Номер телефону <span class="text-danger">*</span></label>
-            <input type="text" name="phone" id="edit-phone" class="form-control" required 
+          <div class="mb-3 position-relative">
+            <label class="form-label">Номер телефону</label>
+            <input type="text" name="phone" id="edit-phone" class="form-control" 
                    placeholder="+38" pattern="\+380[0-9]{9}" 
                    title="Формат: +380XXXXXXXXX">
+            <button type="button" id="clear-phone-btn" style="position:absolute; right:10px; top:34px; background:transparent; border:none; font-size:1.2em; color:#aaa; cursor:pointer; z-index:2;" tabindex="-1" title="Очистити поле">&times;</button>
             <small class="form-text text-muted">Формат: +380XXXXXXXXX</small>
           </div>
           <div class="mb-3">
@@ -79,8 +80,8 @@
             <input type="number" name="credits" id="edit-credits" class="form-control" min="0">
           </div>
           <div class="mb-3">
-            <label class="form-label">Звідки дізнались <span class="text-danger">*</span></label>
-            <select name="marketing_source" id="edit-marketing-source" class="form-select" required>
+            <label class="form-label">Звідки дізнались</label>
+            <select name="marketing_source" id="edit-marketing-source" class="form-select">
               <option value="">Оберіть варіант</option>
               {% if marketing_sources and marketing_sources|length > 0 %}
                 {% for src in marketing_sources %}
@@ -114,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalTitle = document.getElementById('addClientModalLabel');
   const submitBtn = document.getElementById('submit-btn');
   const clientIdInput = document.getElementById('client-id');
+  const clearPhoneBtn = document.getElementById('clear-phone-btn');
   
   let isEditMode = false;
   
@@ -199,25 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // При фокусі, якщо поле пусте, додаємо +38
-  phoneInput.addEventListener('focus', function(e) {
-    if (e.target.value === '') {
-      e.target.value = '+38';
-    }
-  });
-  
   // Валідація перед відправкою
   addForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
     errorDiv.classList.add('d-none');
-    
-    // Перевіряємо формат номера телефону
-    const phoneValue = phoneInput.value;
+    // Перевіряємо формат номера телефону ТІЛЬКИ якщо поле не порожнє і не дорівнює '+38'
+    const phoneValue = phoneInput.value.trim();
     const phonePattern = /^\+380[0-9]{9}$/;
-    
-    if (!phonePattern.test(phoneValue)) {
+    if (phoneValue && phoneValue !== '+38' && !phonePattern.test(phoneValue)) {
       errorDiv.textContent = 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX';
       errorDiv.classList.remove('d-none');
+      e.preventDefault();
       return;
     }
     
@@ -237,6 +230,13 @@ document.addEventListener('DOMContentLoaded', function() {
       errorDiv.classList.remove('d-none');
     }
   });
+
+  if (clearPhoneBtn && phoneInput) {
+    clearPhoneBtn.addEventListener('click', function() {
+      phoneInput.value = '';
+      phoneInput.focus();
+    });
+  }
 });
 </script>
 {% endblock %} 

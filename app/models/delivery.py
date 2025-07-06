@@ -39,4 +39,7 @@ class Delivery(db.Model):
     price_at_delivery = db.Column(db.Integer)
     
     # Подписка
-    is_subscription = db.Column(db.Boolean, default=False) 
+    is_subscription = db.Column(db.Boolean, default=False)
+    
+    # Побажання
+    preferences = db.Column(db.Text) 

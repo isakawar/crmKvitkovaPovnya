@@ -125,55 +125,108 @@
 
 <!-- Modal -->
 <div class="modal fade" id="editDeliveryModal" tabindex="-1" aria-labelledby="editDeliveryModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="editDeliveryModalLabel">Редагування доставки</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <form id="editDeliveryForm">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="border-radius:18px; box-shadow:0 4px 32px 0 rgba(0,123,255,0.07); border:none;">
+      <form id="editDeliveryForm">
+        <div class="modal-header d-flex align-items-center gap-2" style="border-bottom:none; background:#fff; border-radius:18px 18px 0 0;">
+          <h5 class="modal-title d-flex align-items-center gap-2" id="editDeliveryModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem; margin-bottom:0;">
+            Редагування доставки
+            <button type="button" class="btn btn-outline-success btn-sm ms-2" id="extendDeliverySubscriptionBtn" style="display:none; border-radius:8px; padding:4px 8px;" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
+              <i class="bi bi-arrow-repeat"></i>
+            </button>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="background:#fff; padding:32px 28px 18px 28px;">
           <input type="hidden" name="delivery_id" id="editDeliveryId">
+          
           <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Місто</label>
-              <input type="text" class="form-control" id="editCity" readonly>
+            <div class="col-12">
+              <input type="text" id="editPhone" class="form-control" placeholder="Телефон отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Вулиця</label>
-              <input type="text" class="form-control" id="editStreet">
+            <div class="col-12">
+              <select id="editCity" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Місто</option>
+                {% if cities and cities|length > 0 %}
+                    {% for city in cities %}
+                        <option value="{{ city.value }}">{{ city.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте міста у налаштуваннях</option>
+                {% endif %}
+              </select>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">№ будинку</label>
-              <input type="text" class="form-control" id="editBuildingNumber">
+            <div class="col-12 d-flex align-items-center gap-2">
+              <input class="form-check-input" type="checkbox" id="editIsPickup" style="margin-top:0;">
+              <label class="form-check-label text-secondary small" for="editIsPickup" style="margin-bottom:0;">Самовивіз</label>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Час з</label>
-              <input type="time" class="form-control" id="editTimeFrom">
+            <div class="col-12">
+              <input type="text" id="editStreet" class="form-control" placeholder="Адреса доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Час до</label>
-              <input type="time" class="form-control" id="editTimeTo">
+            <div class="col-12">
+              <select id="editDeliveryType" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Тип доставки</option>
+                {% if delivery_types and delivery_types|length > 0 %}
+                    {% for t in delivery_types %}
+                        <option value="{{ t.value }}">{{ t.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте типи у налаштуваннях</option>
+                {% endif %}
+              </select>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Телефон отримувача</label>
-              <input type="text" class="form-control" id="editPhone">
+            <div class="col-12">
+              <select id="editSize" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="">Розмір</option>
+                {% if sizes and sizes|length > 0 %}
+                    {% for s in sizes %}
+                        <option value="{{ s.value }}">{{ s.value }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option disabled>Додайте розміри у налаштуваннях</option>
+                {% endif %}
+              </select>
             </div>
-            <div class="col-md-4">
-              <label class="form-label">Дата доставки</label>
-              <input type="date" class="form-control" id="editDeliveryDate">
+            <div class="col-12">
+              <input type="date" id="editDeliveryDate" class="form-control" placeholder="Дата доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
-            <div class="col-md-12">
-              <label class="form-label">Коментар</label>
-              <textarea class="form-control" id="editComment"></textarea>
+            <div class="col-6">
+              <input type="time" id="editTimeFrom" class="form-control" placeholder="Час з" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-6">
+              <input type="time" id="editTimeTo" class="form-control" placeholder="Час до" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+            </div>
+            <div class="col-12">
+              <select id="editStatus" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="Очікує">Очікує</option>
+                <option value="Розподілено">Розподілено</option>
+                <option value="Доставлено">Доставлено</option>
+                <option value="Скасовано">Скасовано</option>
+                <option value="Не оплачена">Не оплачена</option>
+              </select>
+            </div>
+            <div class="col-12">
+              <textarea id="editComment" class="form-control" rows="2" placeholder="Коментар (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
+            </div>
+            <div class="col-12">
+              <textarea id="editPreferences" class="form-control" rows="2" placeholder="Побажання (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
             </div>
           </div>
-        </form>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-        <button type="button" class="btn btn-primary" id="saveDeliveryBtn">Зберегти</button>
-      </div>
+          
+          <!-- Секція для наступних доставок -->
+          <div id="future-deliveries-section" class="mt-4" style="display: none;">
+            <hr class="my-3">
+            <h6 class="mb-3 text-secondary">Наступні доставки цього замовлення:</h6>
+            <div id="future-deliveries-edit-list" class="border rounded p-3" style="max-height: 300px; overflow-y: auto; background: #f8f9fa;">
+              <!-- Тут будуть відображатися наступні доставки -->
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer d-flex justify-content-between align-items-center" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
+          <button type="button" class="btn btn-primary" id="saveDeliveryBtn" style="border-radius:8px; font-weight:500; min-width:120px;">Зберегти зміни</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
@@ -278,6 +331,21 @@
     </div>
   </div>
 </div>
+
+<style>
+.future-delivery-card.changed {
+  background: #fffbe6;
+  border-color: #ffc107 !important;
+  transition: background 0.2s;
+}
+.future-delivery-card:hover {
+  box-shadow: 0 2px 8px #ffe082;
+}
+.future-delivery-card {
+  min-height: 120px;
+  transition: background 0.2s, border-color 0.2s;
+}
+</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -494,6 +562,23 @@ document.addEventListener('DOMContentLoaded', function() {
   const editModal = editModalElement ? new bootstrap.Modal(editModalElement) : null;
   let currentId = null;
   
+  // Самовивіз - деактивація адреси
+  const editIsPickupCheckbox = document.getElementById('editIsPickup');
+  const editStreetInput = document.getElementById('editStreet');
+  
+  if (editIsPickupCheckbox && editStreetInput) {
+    editIsPickupCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        editStreetInput.value = '';
+        editStreetInput.disabled = true;
+        editStreetInput.classList.add('input-disabled');
+      } else {
+        editStreetInput.disabled = false;
+        editStreetInput.classList.remove('input-disabled');
+      }
+    });
+  }
+  
   if (!editModal) {
     console.error('Модальне вікно редагування не знайдено');
   }
@@ -516,15 +601,33 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
           console.log('Отримані дані:', data);
           document.getElementById('editDeliveryId').value = data.id;
-          document.getElementById('editCity').value = data.city || '';
-          document.getElementById('editStreet').value = data.street || '';
-          document.getElementById('editBuildingNumber').value = data.building_number || '';
           document.getElementById('editPhone').value = data.phone || '';
+          document.getElementById('editCity').value = data.city || '';
+          document.getElementById('editIsPickup').checked = data.is_pickup || false;
+          document.getElementById('editStreet').value = data.street || '';
+          document.getElementById('editDeliveryType').value = data.delivery_type || '';
+          document.getElementById('editSize').value = data.size || '';
+          document.getElementById('editDeliveryDate').value = data.delivery_date || '';
           document.getElementById('editTimeFrom').value = data.time_from || '';
           document.getElementById('editTimeTo').value = data.time_to || '';
-          document.getElementById('editDeliveryDate').value = data.delivery_date || '';
-          document.getElementById('editComment').value = data.comment || '';
+          document.getElementById('editStatus').value = data.status || 'Очікує';
+          // --- ПОКАЗ/СХОВАТИ КНОПКУ ПРОДОВЖЕННЯ ПІДПИСКИ ---
+          const extendBtn = document.getElementById('extendDeliverySubscriptionBtn');
+          const status = document.getElementById('editStatus').value;
+          const deliveryType = document.getElementById('editDeliveryType').value;
+          if (
+            status === 'Не оплачена' &&
+            ['Weekly', 'Monthly', 'Bi-weekly'].includes(deliveryType)
+          ) {
+            extendBtn.style.display = '';
+          } else {
+            extendBtn.style.display = 'none';
+          }
           console.log('Модальне вікно відкривається');
+          
+          // Завантажуємо наступні доставки при відкритті модалки
+          loadFutureDeliveries(data.id);
+          
           if (editModal) {
             editModal.show();
           } else {
@@ -548,14 +651,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
+      // Збираємо зміни для наступних доставок
+      const changedDates = {};
+      document.querySelectorAll('.future-delivery-date-input').forEach(input => {
+        const deliveryId = input.dataset.deliveryId;
+        const dateValue = input.value;
+        if (dateValue && changedFutureDeliveries.has(parseInt(deliveryId))) {
+          changedDates[deliveryId] = dateValue;
+        }
+      });
+      
       const payload = {
-        street: document.getElementById('editStreet').value,
-        building_number: document.getElementById('editBuildingNumber').value,
         phone: document.getElementById('editPhone').value,
+        street: document.getElementById('editStreet').value,
+        delivery_type: document.getElementById('editDeliveryType').value,
+        size: document.getElementById('editSize').value,
+        delivery_date: document.getElementById('editDeliveryDate').value,
         time_from: document.getElementById('editTimeFrom').value,
         time_to: document.getElementById('editTimeTo').value,
-        delivery_date: document.getElementById('editDeliveryDate').value,
-        comment: document.getElementById('editComment').value
+        status: document.getElementById('editStatus').value,
+        is_pickup: document.getElementById('editIsPickup').checked,
+        comment: document.getElementById('editComment').value,
+        preferences: document.getElementById('editPreferences').value,
+        changed_dates: changedDates // Додаємо зміни для наступних доставок
       };
       
       fetch(`/deliveries/${currentId}/edit`, {
@@ -569,14 +687,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return r.json();
       })
-      .then(data => {
-        if (data.success) {
-          editModal.hide();
-          location.reload();
-        } else {
-          alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
-        }
-      })
+              .then(data => {
+          if (data.success) {
+            editModal.hide();
+            // Показуємо повідомлення про успішне збереження
+            const successMessage = changedFutureDeliveries.size > 0 
+              ? `Збережено зміни для ${changedFutureDeliveries.size + 1} доставок` 
+              : 'Зміни збережено';
+            alert(successMessage);
+            location.reload();
+          } else {
+            alert('Помилка збереження: ' + (data.error || 'Невідома помилка'));
+          }
+        })
       .catch(error => {
         console.error('Помилка:', error);
         alert('Помилка збереження доставки');
@@ -591,6 +714,88 @@ document.addEventListener('DOMContentLoaded', function() {
   const changeDateModal = changeDateModalElement ? new bootstrap.Modal(changeDateModalElement) : null;
   let currentDeliveryIdForDateChange = null;
   let changedDeliveries = new Set(); // Для відстеження змінених доставок
+  let changedFutureDeliveries = new Set(); // Для відстеження змінених наступних доставок в модалці редагування
+  
+  // Функція для завантаження наступних доставок в модалці редагування
+  function loadFutureDeliveries(deliveryId) {
+    fetch(`/deliveries/${deliveryId}/future-deliveries`)
+      .then(r => r.json())
+      .then(futureDeliveries => {
+        const futureSection = document.getElementById('future-deliveries-section');
+        const futureList = document.getElementById('future-deliveries-edit-list');
+        
+        if (futureDeliveries.length === 0) {
+          futureSection.style.display = 'none';
+        } else {
+          futureSection.style.display = 'block';
+          let html = '<div class="row">';
+          futureDeliveries.forEach(delivery => {
+            const isChanged = changedFutureDeliveries.has(delivery.id);
+            html += `
+              <div class="col-md-6 mb-2">
+                <div class="card future-delivery-card ${isChanged ? 'changed border-warning' : 'border-light'}" style="min-height: 120px;">
+                  <div class="card-body p-2 d-flex flex-column justify-content-between">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <div>
+                        <span class="text-muted small">ID: ${delivery.id}</span>
+                      </div>
+                      <span class="badge ${delivery.status === 'Не оплачена' ? 'bg-danger' : 'bg-secondary'}">${delivery.status}</span>
+                    </div>
+                    <div class="mb-2">
+                      <span class="fw-bold fs-5">${delivery.delivery_date}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="date" class="form-control form-control-sm future-delivery-date-input" 
+                             data-delivery-id="${delivery.id}" 
+                             value="${delivery.delivery_date}"
+                             style="width: 140px;">
+                      <span class="badge bg-warning text-dark ms-1" title="Дата змінена" style="display: ${isChanged ? '' : 'none'};">Змінено</span>
+                      <i class="bi bi-check-circle-fill text-success ms-1" style="display: ${isChanged ? '' : 'none'};"></i>
+                    </div>
+                    <small class="text-muted">Нова дата</small>
+                  </div>
+                </div>
+              </div>
+            `;
+          });
+          html += '</div>';
+          futureList.innerHTML = html;
+          
+          // Додаємо обробники для зміни дат наступних доставок
+          document.querySelectorAll('.future-delivery-date-input').forEach(input => {
+            input.addEventListener('change', function() {
+              const deliveryId = this.dataset.deliveryId;
+              changedFutureDeliveries.add(parseInt(deliveryId));
+              const card = this.closest('.future-delivery-card');
+              card.classList.add('changed', 'border-warning');
+              // Показати бейдж і іконку
+              const badge = card.querySelector('.badge.bg-warning');
+              if (badge) badge.style.display = '';
+              const checkIcon = card.querySelector('.bi-check-circle-fill');
+              if (checkIcon) checkIcon.style.display = '';
+            });
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Помилка завантаження наступних доставок:', error);
+      });
+  }
+  
+  // Обробник зміни дати в модалці редагування
+  document.getElementById('editDeliveryDate').addEventListener('change', function() {
+    const deliveryId = document.getElementById('editDeliveryId').value;
+    if (deliveryId) {
+      // Оновлюємо наступні доставки при зміні дати
+      loadFutureDeliveries(deliveryId);
+    }
+  });
+  
+  // Очищення змінених доставок при закритті модалки редагування
+  document.getElementById('editDeliveryModal').addEventListener('hidden.bs.modal', function() {
+    changedFutureDeliveries.clear();
+    document.getElementById('future-deliveries-section').style.display = 'none';
+  });
   
   // Подвійний клік по даті доставки
   document.querySelectorAll('.delivery-date-cell').forEach(cell => {
@@ -729,6 +934,57 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
+  
+  let pendingExtendDeliveryId = null;
+  const extendDeliveryBtn = document.getElementById('extendDeliverySubscriptionBtn');
+  const editDeliveryModal = document.getElementById('editDeliveryModal');
+
+  extendDeliveryBtn.addEventListener('click', function() {
+    pendingExtendDeliveryId = document.getElementById('editDeliveryId').value;
+    // Закриваємо модалку редагування доставки
+    const editModal = bootstrap.Modal.getInstance(editDeliveryModal);
+    if (editModal) editModal.hide();
+  });
+
+  // Слухаємо подію повного закриття модального вікна редагування доставки
+  editDeliveryModal.addEventListener('hidden.bs.modal', function handler() {
+    if (!pendingExtendDeliveryId) return;
+    // Після повного закриття — робимо AJAX-запит і відкриваємо нову модалку
+    fetch(`/orders/extend-form-from-delivery/${pendingExtendDeliveryId}`)
+      .then(r => r.text())
+      .then(html => {
+        let container = document.getElementById('dynamic-modal-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'dynamic-modal-container';
+          document.body.appendChild(container);
+        }
+        container.innerHTML = html;
+        const newModal = new bootstrap.Modal(document.getElementById('extendOrderModal'));
+        newModal.show();
+        pendingExtendDeliveryId = null;
+        // Додаємо обробник сабміту після вставки модалки
+        const form = document.getElementById('extendOrderForm');
+        if (form) {
+          form.onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/orders/new', {
+              method: 'POST',
+              body: formData,
+              headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await response.json();
+            if (data.success) {
+              bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
+              location.reload();
+            } else {
+              alert(data.error || 'Помилка збереження!');
+            }
+          };
+        }
+      });
+  });
 });
 </script>
 {% endblock %} 

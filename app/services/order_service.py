@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models import Client, Order, Price, Delivery
+from app.models import Client, Order, Delivery
 import datetime
 import logging
 import calendar
@@ -21,7 +21,7 @@ def get_or_create_client(instagram):
     return client, None
 
 def check_and_spend_credits(client, bouquet, delivery_count):
-    credits_needed = bouquet.price * delivery_count if bouquet else 0
+    credits_needed = 0
     if client.credits < credits_needed:
         return False, credits_needed
     client.credits -= credits_needed
@@ -121,7 +121,8 @@ def create_order_and_deliveries(client, form):
             client_id=client.id,
             delivery_date=d_date,
             status=status,
-            comment=order.comment,
+            comment=order.comment if i == 0 else '',
+            preferences=order.preferences,
             street=order.street if not order.is_pickup else None,
             building_number=order.building_number if not order.is_pickup else None,
             time_from=order.time_from,
@@ -189,7 +190,4 @@ def update_order(order, form):
 def delete_order(order):
     logger.warning(f'Видалення замовлення {order.id}')
     db.session.delete(order)
-    db.session.commit()
-
-def get_bouquets_by_type(delivery_type):
-    return Price.query.filter_by(delivery_type=delivery_type).all() 
+    db.session.commit() 

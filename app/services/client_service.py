@@ -11,17 +11,13 @@ def get_client_by_id(client_id):
 def create_client(instagram, phone=None, telegram=None, credits=0, marketing_source=None, personal_discount=None):
     if not instagram:
         return None, 'Instagram є обовʼязковим!'
-    if not phone:
-        return None, 'Номер телефону є обовʼязковим!'
-    
-    # Валідація формату номера телефону
-    phone_pattern = re.compile(r'^\+380[0-9]{9}$')
-    if not phone_pattern.match(phone):
-        return None, 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX'
-    
-    if not marketing_source:
-        return None, 'Поле "Звідки дізнались" є обовʼязковим!'
-    if Client.query.filter_by(phone=phone).first():
+    if phone:
+        phone = phone.strip()
+        if phone:
+            phone_pattern = re.compile(r'^\+380[0-9]{9}$')
+            if not phone_pattern.match(phone):
+                return None, 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX'
+    if phone and Client.query.filter_by(phone=phone).first():
         return None, 'Клієнт з таким номером вже існує!'
     client = Client(
         instagram=instagram,
@@ -37,32 +33,24 @@ def create_client(instagram, phone=None, telegram=None, credits=0, marketing_sou
 
 def update_client(client_id, instagram, phone=None, telegram=None, credits=0, marketing_source=None, personal_discount=None):
     client = get_client_by_id(client_id)
-    
     if not instagram:
         return None, 'Instagram є обовʼязковим!'
-    if not phone:
-        return None, 'Номер телефону є обовʼязковим!'
-    
-    # Валідація формату номера телефону
-    phone_pattern = re.compile(r'^\+380[0-9]{9}$')
-    if not phone_pattern.match(phone):
-        return None, 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX'
-    
-    if not marketing_source:
-        return None, 'Поле "Звідки дізнались" є обовʼязковим!'
-    
-    # Перевіряємо унікальність телефону (крім поточного клієнта)
-    existing_client = Client.query.filter_by(phone=phone).first()
-    if existing_client and existing_client.id != client_id:
-        return None, 'Клієнт з таким номером вже існує!'
-    
+    if phone:
+        phone = phone.strip()
+        if phone:
+            phone_pattern = re.compile(r'^\+380[0-9]{9}$')
+            if not phone_pattern.match(phone):
+                return None, 'Невірний формат номера телефону. Використовуйте формат: +380XXXXXXXXX'
+    if phone:
+        existing_client = Client.query.filter_by(phone=phone).first()
+        if existing_client and existing_client.id != client_id:
+            return None, 'Клієнт з таким номером вже існує!'
     client.instagram = instagram
     client.phone = phone
     client.telegram = telegram
     client.credits = credits
     client.marketing_source = marketing_source
     client.personal_discount = personal_discount
-    
     db.session.commit()
     return client, None
 

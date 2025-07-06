@@ -1,9 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.settings import Settings
 import logging
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+import csv
+from sqlalchemy.orm import joinedload
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -252,7 +254,7 @@ def extend_subscription(order_id):
                 client_id=order.client_id,
                 delivery_date=d_date,
                 status=status,
-                comment=order.comment,
+                comment=order.comment if i == 0 else '',
                 street=order.street if not order.is_pickup else None,
                 building_number=order.building_number if not order.is_pickup else None,
                 time_from=order.time_from,
@@ -270,3 +272,60 @@ def extend_subscription(order_id):
         db.session.rollback()
         logging.error(f'Помилка продовження підписки: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500 
+
+@orders_bp.route('/orders/export/csv', methods=['GET'])
+def export_orders_csv():
+    orders = Order.query.options(joinedload(Order.client)).order_by(Order.id.desc()).all()
+    def generate():
+        header = [
+            'ID', 'Instagram', 'Отримувач', 'Телефон', 'Місто', 'Адреса', 'Тип', 'Розмір', 'Сума',
+            'Дата першої доставки', 'День', 'Час з', 'Час до', 'Для кого', 'Коментар', 'Побажання', 'Створено', 'Продовжена підписка'
+        ]
+        yield ','.join(header) + '\n'
+        for o in orders:
+            row = [
+                str(o.id),
+                o.client.instagram if o.client else '',
+                o.recipient_name or '',
+                o.recipient_phone or '',
+                o.city or '',
+                o.street or '',
+                o.delivery_type or '',
+                o.size or '',
+                str(o.custom_amount) if o.custom_amount else '',
+                o.first_delivery_date.strftime('%Y-%m-%d') if o.first_delivery_date else '',
+                o.delivery_day or '',
+                o.time_from or '',
+                o.time_to or '',
+                o.for_whom or '',
+                (o.comment or '').replace('\n', ' ').replace('\r', ' '),
+                (o.preferences or '').replace('\n', ' ').replace('\r', ' '),
+                o.created_at.strftime('%Y-%m-%d %H:%M:%S') if o.created_at else '',
+                'Так' if getattr(o, 'is_subscription_extended', False) else 'Ні'
+            ]
+            yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
+    return Response(generate(), mimetype='text/csv', headers={
+        'Content-Disposition': 'attachment; filename=orders_export.csv'
+    })
+
+@orders_bp.route('/orders/extend-form-from-delivery/<int:delivery_id>')
+def extend_form_from_delivery(delivery_id):
+    from app.models import Delivery, Order, Client
+    delivery = Delivery.query.get_or_404(delivery_id)
+    order = delivery.order
+    client = delivery.client
+    from app.models.settings import Settings
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    return render_template(
+        'extend_order_modal.html',
+        delivery=delivery,
+        order=order,
+        client=client,
+        cities=cities,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom
+    ) 
