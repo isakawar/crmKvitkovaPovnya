@@ -587,6 +587,18 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('editTimeFrom').value = data.time_from || '';
           document.getElementById('editTimeTo').value = data.time_to || '';
           document.getElementById('editStatus').value = data.status || 'Очікує';
+          // --- ПОКАЗ/СХОВАТИ КНОПКУ ПРОДОВЖЕННЯ ПІДПИСКИ ---
+          const extendBtn = document.getElementById('extendDeliverySubscriptionBtn');
+          const status = document.getElementById('editStatus').value;
+          const deliveryType = document.getElementById('editDeliveryType').value;
+          if (
+            status === 'Не оплачена' &&
+            ['Weekly', 'Monthly', 'Bi-weekly'].includes(deliveryType)
+          ) {
+            extendBtn.style.display = '';
+          } else {
+            extendBtn.style.display = 'none';
+          }
           console.log('Модальне вікно відкривається');
           if (editModal) {
             editModal.show();
@@ -797,45 +809,55 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // --- Логіка продовження підписки доставок ---
+  let pendingExtendDeliveryId = null;
   const extendDeliveryBtn = document.getElementById('extendDeliverySubscriptionBtn');
-  let currentDeliveryIdForExtension = null;
-
-  // Показувати/ховати кнопку при відкритті модального вікна
   const editDeliveryModal = document.getElementById('editDeliveryModal');
-  editDeliveryModal.addEventListener('show.bs.modal', function (event) {
-    // Отримати дані про доставку (можливо, через data-* атрибути або AJAX)
-    // Для прикладу, якщо ви підставляєте дані через JS, додайте перевірку тут:
-    const status = document.getElementById('editStatus').value;
-    const deliveryType = document.getElementById('editDeliveryType').value;
-    const deliveryId = document.getElementById('editDeliveryId').value;
-    if (status === 'Не оплачена' && ['Weekly', 'Monthly', 'Bi-weekly'].includes(deliveryType)) {
-      extendDeliveryBtn.style.display = '';
-      currentDeliveryIdForExtension = deliveryId;
-    } else {
-      extendDeliveryBtn.style.display = 'none';
-      currentDeliveryIdForExtension = null;
-    }
+
+  extendDeliveryBtn.addEventListener('click', function() {
+    pendingExtendDeliveryId = document.getElementById('editDeliveryId').value;
+    // Закриваємо модалку редагування доставки
+    const editModal = bootstrap.Modal.getInstance(editDeliveryModal);
+    if (editModal) editModal.hide();
   });
 
-  extendDeliveryBtn.addEventListener('click', async function() {
-    if (!currentDeliveryIdForExtension) return;
-    if (!confirm('Продовжити підписку для цієї доставки?')) return;
-    try {
-      const response = await fetch(`/deliveries/${currentDeliveryIdForExtension}/extend-subscription`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'}
+  // Слухаємо подію повного закриття модального вікна редагування доставки
+  editDeliveryModal.addEventListener('hidden.bs.modal', function handler() {
+    if (!pendingExtendDeliveryId) return;
+    // Після повного закриття — робимо AJAX-запит і відкриваємо нову модалку
+    fetch(`/orders/extend-form-from-delivery/${pendingExtendDeliveryId}`)
+      .then(r => r.text())
+      .then(html => {
+        let container = document.getElementById('dynamic-modal-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'dynamic-modal-container';
+          document.body.appendChild(container);
+        }
+        container.innerHTML = html;
+        const newModal = new bootstrap.Modal(document.getElementById('extendOrderModal'));
+        newModal.show();
+        pendingExtendDeliveryId = null;
+        // Додаємо обробник сабміту після вставки модалки
+        const form = document.getElementById('extendOrderForm');
+        if (form) {
+          form.onsubmit = async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const response = await fetch('/orders/new', {
+              method: 'POST',
+              body: formData,
+              headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await response.json();
+            if (data.success) {
+              bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
+              location.reload();
+            } else {
+              alert(data.error || 'Помилка збереження!');
+            }
+          };
+        }
       });
-      const data = await response.json();
-      if (data.success) {
-        alert('Підписку успішно продовжено!');
-        location.reload();
-      } else {
-        alert('Помилка: ' + (data.error || 'Невідома помилка'));
-      }
-    } catch (error) {
-      alert('Помилка зʼєднання з сервером!');
-    }
   });
 });
 </script>

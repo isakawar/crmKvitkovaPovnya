@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from app.services.delivery_service import get_deliveries, get_delivery_by_id, update_delivery, set_delivery_status, assign_deliveries, get_all_deliveries_ordered, get_all_couriers, assign_courier_to_deliveries
-from app.models import Delivery, Settings, Order
+from app.models import Delivery, Settings
+from app.models.order import Order
 from app.extensions import db
 from datetime import datetime
 import logging
@@ -231,6 +232,16 @@ def extend_delivery_subscription(delivery_id):
         # Відмічаємо старий order як продовжений
         order.is_subscription_extended = True
         
+        # Видаляємо всі інші доставки з is_subscription=False і статусом "Не оплачена" у старому замовленні
+        other_unpaid = Delivery.query.filter(
+            Delivery.order_id == order.id,
+            Delivery.id != d.id,
+            Delivery.status == 'Не оплачена',
+            Delivery.is_subscription == False
+        ).all()
+        for deliv in other_unpaid:
+            db.session.delete(deliv)
+        
         # Створюємо 4 нові доставки
         prev_date = d.delivery_date
         desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
@@ -249,11 +260,11 @@ def extend_delivery_subscription(delivery_id):
                 year = prev_date.year + (prev_date.month // 12)
                 month = (prev_date.month % 12) + 1
                 c = calendar.Calendar()
-                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
+                month_days = [day for day in c.itermonthdates(year, month) if day.month == month and day.weekday() == desired_weekday]
                 next_date = None
-                for d in month_days:
-                    if d > prev_date:
-                        next_date = d
+                for day in month_days:
+                    if day > prev_date:
+                        next_date = day
                         break
                 if not next_date:
                     next_date = prev_date + datetime.timedelta(days=30)

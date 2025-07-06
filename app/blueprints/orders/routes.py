@@ -306,4 +306,26 @@ def export_orders_csv():
             yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
     return Response(generate(), mimetype='text/csv', headers={
         'Content-Disposition': 'attachment; filename=orders_export.csv'
-    }) 
+    })
+
+@orders_bp.route('/orders/extend-form-from-delivery/<int:delivery_id>')
+def extend_form_from_delivery(delivery_id):
+    from app.models import Delivery, Order, Client
+    delivery = Delivery.query.get_or_404(delivery_id)
+    order = delivery.order
+    client = delivery.client
+    from app.models.settings import Settings
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    return render_template(
+        'extend_order_modal.html',
+        delivery=delivery,
+        order=order,
+        client=client,
+        cities=cities,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom
+    ) 
