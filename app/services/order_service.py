@@ -70,28 +70,23 @@ def create_order_and_deliveries(client, form):
         prev_date = first_date
         for i in range(1, count):
             if delivery_type == 'Weekly':
-                # Наступний тиждень, потрібний день
                 next_date = prev_date + datetime.timedelta(days=1)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
             elif delivery_type == 'Bi-weekly':
-                # Через тиждень, потрібний день
-                next_date = prev_date + datetime.timedelta(days=8)  # мінімум через тиждень
+                next_date = prev_date + datetime.timedelta(days=8)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
             elif delivery_type == 'Monthly':
-                # Наступний місяць, потрібний день
-                year = prev_date.year + (prev_date.month // 12)
-                month = (prev_date.month % 12) + 1
-                c = calendar.Calendar()
-                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
-                next_date = None
-                for d in month_days:
-                    if d > prev_date:
-                        next_date = d
-                        break
-                if not next_date:
-                    next_date = prev_date + datetime.timedelta(days=30)
+                # Monthly = кожні 4 тижні (28 днів) від попередньої дати, але дата має бути найближчим бажаним днем тижня (вперед або назад)
+                base_date = prev_date + datetime.timedelta(days=28)
+                days_forward = (desired_weekday - base_date.weekday()) % 7
+                days_backward = (base_date.weekday() - desired_weekday) % 7
+                # Якщо вперед і назад однаково — беремо вперед (щоб не було дублювання дат)
+                if days_forward <= days_backward:
+                    next_date = base_date + datetime.timedelta(days=days_forward)
+                else:
+                    next_date = base_date - datetime.timedelta(days=days_backward)
             else:
                 next_date = prev_date + datetime.timedelta(weeks=1)
             deliveries.append(next_date)
