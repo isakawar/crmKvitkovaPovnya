@@ -341,6 +341,7 @@
 
 {% block scripts %}
 <script>
+console.log('JS loaded!');
 document.addEventListener('DOMContentLoaded', function() {
     // --- МОДАЛКА СТВОРЕННЯ ЗАМОВЛЕННЯ ---
     const clientSearch = document.getElementById('client-search');
@@ -353,6 +354,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const addOrderForm = document.getElementById('addOrderForm');
     const recipientPhoneInput = addOrderForm.querySelector('input[name="recipient_phone"]');
     
+    console.log('clientSearch:', clientSearch);
+    console.log('recipientPhoneInput:', recipientPhoneInput);
+
     if (recipientPhoneInput) {
         recipientPhoneInput.setAttribute('maxlength', '13');
     }
