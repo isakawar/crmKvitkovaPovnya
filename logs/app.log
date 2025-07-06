@@ -3561,3 +3561,140 @@ WHERE delivery.delivery_date >= ? AND delivery.delivery_date <= ?
 2025-07-06 21:12:02,354 INFO 127.0.0.1 - - [06/Jul/2025 21:12:02] "GET /orders HTTP/1.1" 200 -
 2025-07-06 21:12:02,376 INFO 127.0.0.1 - - [06/Jul/2025 21:12:02] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
 2025-07-06 21:12:02,435 INFO 127.0.0.1 - - [06/Jul/2025 21:12:02] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-06 22:17:03,149 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-06 22:17:03,150 INFO [33mPress CTRL+C to quit[0m
+2025-07-06 22:17:03,150 INFO  * Restarting with stat
+2025-07-06 22:17:03,439 WARNING  * Debugger is active!
+2025-07-06 22:17:03,446 INFO  * Debugger PIN: 814-053-175
+2025-07-06 22:17:04,264 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:17:04,298 INFO 127.0.0.1 - - [06/Jul/2025 22:17:04] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:17:04,381 INFO 127.0.0.1 - - [06/Jul/2025 22:17:04] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:17:04,669 INFO 127.0.0.1 - - [06/Jul/2025 22:17:04] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:18:52,360 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:18:52,371 INFO 127.0.0.1 - - [06/Jul/2025 22:18:52] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:18:52,441 INFO 127.0.0.1 - - [06/Jul/2025 22:18:52] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:18:52,683 INFO 127.0.0.1 - - [06/Jul/2025 22:18:52] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:20:12,552 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:20:12,562 INFO 127.0.0.1 - - [06/Jul/2025 22:20:12] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:20:12,610 INFO 127.0.0.1 - - [06/Jul/2025 22:20:12] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:20:12,824 INFO 127.0.0.1 - - [06/Jul/2025 22:20:12] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:20:13,578 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:20:13,582 INFO 127.0.0.1 - - [06/Jul/2025 22:20:13] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:20:13,631 INFO 127.0.0.1 - - [06/Jul/2025 22:20:13] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:20:13,801 INFO 127.0.0.1 - - [06/Jul/2025 22:20:13] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:20:49,114 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:20:49,122 INFO 127.0.0.1 - - [06/Jul/2025 22:20:49] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:20:49,190 INFO 127.0.0.1 - - [06/Jul/2025 22:20:49] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:20:49,474 INFO 127.0.0.1 - - [06/Jul/2025 22:20:49] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:20:50,211 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:20:50,214 INFO 127.0.0.1 - - [06/Jul/2025 22:20:50] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:20:50,263 INFO 127.0.0.1 - - [06/Jul/2025 22:20:50] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:20:50,402 INFO 127.0.0.1 - - [06/Jul/2025 22:20:50] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:21:03,380 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:21:03,383 INFO 127.0.0.1 - - [06/Jul/2025 22:21:03] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:21:03,427 INFO 127.0.0.1 - - [06/Jul/2025 22:21:03] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:21:03,590 INFO 127.0.0.1 - - [06/Jul/2025 22:21:03] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:22:38,369 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:22:38,380 INFO 127.0.0.1 - - [06/Jul/2025 22:22:38] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:22:38,451 INFO 127.0.0.1 - - [06/Jul/2025 22:22:38] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:22:38,770 INFO 127.0.0.1 - - [06/Jul/2025 22:22:38] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:22:44,272 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:22:44,282 INFO 127.0.0.1 - - [06/Jul/2025 22:22:44] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:22:44,340 INFO 127.0.0.1 - - [06/Jul/2025 22:22:44] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:22:44,525 INFO 127.0.0.1 - - [06/Jul/2025 22:22:44] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:23:03,747 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:23:03,753 INFO 127.0.0.1 - - [06/Jul/2025 22:23:03] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:23:03,780 INFO 127.0.0.1 - - [06/Jul/2025 22:23:03] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-06 22:23:03,840 INFO 127.0.0.1 - - [06/Jul/2025 22:23:03] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-06 22:23:08,814 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:23:08,818 INFO 127.0.0.1 - - [06/Jul/2025 22:23:08] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:23:08,877 INFO 127.0.0.1 - - [06/Jul/2025 22:23:08] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:23:09,093 INFO 127.0.0.1 - - [06/Jul/2025 22:23:09] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:23:09,713 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:23:09,718 INFO 127.0.0.1 - - [06/Jul/2025 22:23:09] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:23:09,773 INFO 127.0.0.1 - - [06/Jul/2025 22:23:09] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:23:09,950 INFO 127.0.0.1 - - [06/Jul/2025 22:23:09] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:23:11,511 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:23:11,515 INFO 127.0.0.1 - - [06/Jul/2025 22:23:11] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:23:11,571 INFO 127.0.0.1 - - [06/Jul/2025 22:23:11] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:23:11,749 INFO 127.0.0.1 - - [06/Jul/2025 22:23:11] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:23:14,367 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-06 22:23:14,367 INFO [33mPress CTRL+C to quit[0m
+2025-07-06 22:23:14,368 INFO  * Restarting with stat
+2025-07-06 22:23:14,643 WARNING  * Debugger is active!
+2025-07-06 22:23:14,650 INFO  * Debugger PIN: 814-053-175
+2025-07-06 22:23:14,992 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:23:15,023 INFO 127.0.0.1 - - [06/Jul/2025 22:23:15] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:23:15,082 INFO 127.0.0.1 - - [06/Jul/2025 22:23:15] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:23:15,270 INFO 127.0.0.1 - - [06/Jul/2025 22:23:15] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:25:01,508 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:25:01,520 INFO 127.0.0.1 - - [06/Jul/2025 22:25:01] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:25:01,554 INFO 127.0.0.1 - - [06/Jul/2025 22:25:01] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:25:01,818 INFO 127.0.0.1 - - [06/Jul/2025 22:25:01] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:25:12,816 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:25:12,821 INFO 127.0.0.1 - - [06/Jul/2025 22:25:12] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:25:12,866 INFO 127.0.0.1 - - [06/Jul/2025 22:25:12] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:25:13,017 INFO 127.0.0.1 - - [06/Jul/2025 22:25:13] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:25:41,659 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:25:41,663 INFO 127.0.0.1 - - [06/Jul/2025 22:25:41] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:25:41,732 INFO 127.0.0.1 - - [06/Jul/2025 22:25:41] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:25:41,988 INFO 127.0.0.1 - - [06/Jul/2025 22:25:41] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:26:17,156 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:26:17,163 INFO 127.0.0.1 - - [06/Jul/2025 22:26:17] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:26:17,243 INFO 127.0.0.1 - - [06/Jul/2025 22:26:17] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:26:17,498 INFO 127.0.0.1 - - [06/Jul/2025 22:26:17] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:26:23,509 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:26:23,517 INFO 127.0.0.1 - - [06/Jul/2025 22:26:23] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:26:23,574 INFO 127.0.0.1 - - [06/Jul/2025 22:26:23] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:26:23,738 INFO 127.0.0.1 - - [06/Jul/2025 22:26:23] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:27:52,771 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:27:52,781 INFO 127.0.0.1 - - [06/Jul/2025 22:27:52] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:27:52,855 INFO 127.0.0.1 - - [06/Jul/2025 22:27:52] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:27:53,107 INFO 127.0.0.1 - - [06/Jul/2025 22:27:53] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:28:58,478 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:28:58,482 INFO 127.0.0.1 - - [06/Jul/2025 22:28:58] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:28:58,510 INFO 127.0.0.1 - - [06/Jul/2025 22:28:58] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-06 22:28:58,660 INFO 127.0.0.1 - - [06/Jul/2025 22:28:58] "[36mGET /static/favicon.ico HTTP/1.1[0m" 304 -
+2025-07-06 22:29:16,353 INFO  * Detected change in '/Users/vladbilobrov/Documents/Develop/crmKvitkovaPovnya/crmKvitkovaPovnya/app/__init__.py', reloading
+2025-07-06 22:29:16,436 INFO  * Restarting with stat
+2025-07-06 22:29:16,838 WARNING  * Debugger is active!
+2025-07-06 22:29:16,844 INFO  * Debugger PIN: 814-053-175
+2025-07-06 22:29:48,714 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:29:48,758 INFO 127.0.0.1 - - [06/Jul/2025 22:29:48] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:29:48,802 INFO 127.0.0.1 - - [06/Jul/2025 22:29:48] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:29:49,064 INFO 127.0.0.1 - - [06/Jul/2025 22:29:49] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:29:50,278 INFO 127.0.0.1 - - [06/Jul/2025 22:29:50] "GET /changelog HTTP/1.1" 200 -
+2025-07-06 22:31:44,995 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:31:45,014 INFO 127.0.0.1 - - [06/Jul/2025 22:31:45] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:31:45,055 INFO 127.0.0.1 - - [06/Jul/2025 22:31:45] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:31:45,299 INFO 127.0.0.1 - - [06/Jul/2025 22:31:45] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:31:46,495 INFO 127.0.0.1 - - [06/Jul/2025 22:31:46] "GET /changelog HTTP/1.1" 200 -
+2025-07-06 22:31:58,892 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:31:58,895 INFO 127.0.0.1 - - [06/Jul/2025 22:31:58] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:31:58,921 INFO 127.0.0.1 - - [06/Jul/2025 22:31:58] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:31:59,072 INFO 127.0.0.1 - - [06/Jul/2025 22:31:59] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:32:02,017 INFO [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5055
+2025-07-06 22:32:02,017 INFO [33mPress CTRL+C to quit[0m
+2025-07-06 22:32:02,018 INFO  * Restarting with stat
+2025-07-06 22:32:02,316 WARNING  * Debugger is active!
+2025-07-06 22:32:02,323 INFO  * Debugger PIN: 814-053-175
+2025-07-06 22:32:02,685 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:32:02,717 INFO 127.0.0.1 - - [06/Jul/2025 22:32:02] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:32:02,779 INFO 127.0.0.1 - - [06/Jul/2025 22:32:02] "GET /static/logoKvitkova.jpg HTTP/1.1" 200 -
+2025-07-06 22:32:02,946 INFO 127.0.0.1 - - [06/Jul/2025 22:32:02] "GET /static/favicon.ico HTTP/1.1" 200 -
+2025-07-06 22:35:10,167 INFO 127.0.0.1 - - [06/Jul/2025 22:35:10] "GET /changelog HTTP/1.1" 200 -
+2025-07-06 22:35:20,943 INFO 127.0.0.1 - - [06/Jul/2025 22:35:20] "GET /clients HTTP/1.1" 200 -
+2025-07-06 22:35:21,019 INFO 127.0.0.1 - - [06/Jul/2025 22:35:21] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-06 22:35:22,432 INFO Фільтрація замовлень: phone=, instagram=, city=None, delivery_type=None, size=None
+2025-07-06 22:35:22,438 INFO 127.0.0.1 - - [06/Jul/2025 22:35:22] "GET /orders HTTP/1.1" 200 -
+2025-07-06 22:35:22,508 INFO 127.0.0.1 - - [06/Jul/2025 22:35:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-06 22:35:22,783 INFO Фінальний SQL: SELECT delivery.id AS delivery_id, delivery.order_id AS delivery_order_id, delivery.client_id AS delivery_client_id, delivery.delivery_date AS delivery_delivery_date, delivery.status AS delivery_status, delivery.comment AS delivery_comment, delivery.created_at AS delivery_created_at, delivery.updated_at AS delivery_updated_at, delivery.street AS delivery_street, delivery.building_number AS delivery_building_number, delivery.floor AS delivery_floor, delivery.entrance AS delivery_entrance, delivery.is_pickup AS delivery_is_pickup, delivery.time_from AS delivery_time_from, delivery.time_to AS delivery_time_to, delivery.size AS delivery_size, delivery.phone AS delivery_phone, delivery.courier_id AS delivery_courier_id, delivery.delivered_at AS delivery_delivered_at, delivery.status_changed_at AS delivery_status_changed_at, delivery.bouquet_size AS delivery_bouquet_size, delivery.delivery_type AS delivery_delivery_type, delivery.price_at_delivery AS delivery_price_at_delivery, delivery.is_subscription AS delivery_is_subscription, delivery.preferences AS delivery_preferences 
+FROM delivery
+2025-07-06 22:35:22,786 INFO Кількість доставок після фільтрації: 83
+2025-07-06 22:35:22,812 INFO 127.0.0.1 - - [06/Jul/2025 22:35:22] "GET /deliveries HTTP/1.1" 200 -
+2025-07-06 22:35:22,849 INFO 127.0.0.1 - - [06/Jul/2025 22:35:22] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
+2025-07-06 22:35:23,108 INFO 127.0.0.1 - - [06/Jul/2025 22:35:23] "GET /reports HTTP/1.1" 200 -
+2025-07-06 22:35:23,182 INFO 127.0.0.1 - - [06/Jul/2025 22:35:23] "[36mGET /static/logoKvitkova.jpg HTTP/1.1[0m" 304 -
