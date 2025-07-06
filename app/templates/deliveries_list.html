@@ -5,7 +5,7 @@
   <strong>Всього доставок: {{ deliveries_count }}</strong>
   <small class="text-muted ms-3">💡 Подвійний клік по рядку для редагування</small>
 </div>
-<div class="filter-bar mb-3 w-100">
+<div class="filter-bar mb-3 w-100" style="position: relative;">
   <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="delivery-filter-form">
     <input type="text" name="client_instagram" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за Instagram клієнта..." value="{{ request.args.get('client_instagram', '') }}">
     <input type="text" name="recipient_phone" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за телефоном отримувача..." value="{{ request.args.get('recipient_phone', '') }}">
@@ -21,24 +21,48 @@
       <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '0' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="current-week-btn">Поточний фін. тиждень</button>
       <button type="button" class="btn btn-sm {% if request.args.get('financial_week') == '1' %}btn-primary{% else %}btn-outline-primary{% endif %}" id="next-week-btn">Наступний фін. тиждень</button>
     </div>
-    <div class="ms-auto">
+    <div class="me-5">
       <button class="btn btn-outline-secondary" id="reset-all-btn" type="button">Скинути</button>
     </div>
   </form>
+  <!-- Іконка налаштування колонок у filter-bar -->
+  <div style="position: absolute; top: 8px; right: 8px; z-index: 10;">
+    <button id="column-settings-btn" title="Налаштувати колонки">
+      <span style="font-size: 2.1rem;">&#9776;</span>
+    </button>
+    <div id="column-settings-menu">
+      <strong>Показати/сховати колонки</strong>
+      <form id="column-settings-form">
+        <label><input type="checkbox" class="column-toggle" data-col="id" checked>ID</label>
+        <label><input type="checkbox" class="column-toggle" data-col="client" checked>Клієнт</label>
+        <label><input type="checkbox" class="column-toggle" data-col="address" checked>Адреса</label>
+        <label><input type="checkbox" class="column-toggle" data-col="phone" checked>Телефон отримувача</label>
+        <label><input type="checkbox" class="column-toggle" data-col="size" checked>Розмір</label>
+        <label><input type="checkbox" class="column-toggle" data-col="delivery_type" checked>Тип доставки</label>
+        <label><input type="checkbox" class="column-toggle" data-col="comment" checked>Коментар</label>
+        <label><input type="checkbox" class="column-toggle" data-col="preferences" checked>Побажання</label>
+        <label><input type="checkbox" class="column-toggle" data-col="time" checked>Час</label>
+        <label><input type="checkbox" class="column-toggle" data-col="date" checked>Дата</label>
+        <label><input type="checkbox" class="column-toggle" data-col="status" checked>Статус</label>
+        <button type="button" id="save-columns" style="margin-top:8px;" class="btn btn-sm btn-primary w-100">Зберегти</button>
+      </form>
+    </div>
+  </div>
 </div>
 <table class="table table-bordered table-hover align-middle">
   <thead>
     <tr>
-      <th>ID</th>
-      <th>Клієнт</th>
-      <th>Адреса</th>
-      <th>Телефон отримувача</th>
-      <th>Розмір</th>
-      <th>Тип доставки</th>
-      <th>Коментар</th>
-      <th style="width:90px;">Час</th>
-      <th>Дата</th>
-      <th>Статус</th>
+      <th data-col="id">ID</th>
+      <th data-col="client">Клієнт</th>
+      <th data-col="address">Адреса</th>
+      <th data-col="phone">Телефон отримувача</th>
+      <th data-col="size">Розмір</th>
+      <th data-col="delivery_type">Тип доставки</th>
+      <th data-col="comment">Коментар</th>
+      <th data-col="preferences">Побажання</th>
+      <th data-col="time" style="width:90px;">Час</th>
+      <th data-col="date">Дата</th>
+      <th data-col="status">Статус</th>
     </tr>
   </thead>
   <tbody>
@@ -66,9 +90,9 @@
           <tr data-status="{{ d.status }}"
               {% if d.status == 'Не оплачена' %}class="unpaid-row{% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %} unpaid-subscription-delivery{% endif %}"{% elif not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}class="unpaid-subscription-delivery"{% endif %}
               style="cursor: pointer;">
-            <td>{{ d.id }}</td>
-            <td>{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
-            <td>
+            <td data-col="id">{{ d.id }}</td>
+            <td data-col="client">{% if d.client and d.client.instagram %}{{ d.client.instagram }}{% else %}—{% endif %}</td>
+            <td data-col="address">
               {% if d.is_pickup %}
                 <span class="tag tag-easy">Самовивіз</span>
               {% else %}
@@ -81,16 +105,20 @@
                 </a>
               {% endif %}
             </td>
-            <td>{{ d.phone }}</td>
-            <td>{% if d.bouquet_size %}{{ d.bouquet_size }}{% elif d.size %}{{ d.size }}{% else %}-{% endif %}</td>
-            <td>
-              {{ d.delivery_type }}
+            <td data-col="phone">{{ d.phone }}</td>
+            <td data-col="size">
+              {% set size_val = d.bouquet_size if d.bouquet_size else d.size %}
+              <span class="tag {% if size_val=='M' %}tag-easy{% elif size_val=='L' %}tag-medium{% elif size_val in ['XL','XXL'] %}tag-hard{% endif %}">{{ size_val or '-' }}</span>
+            </td>
+            <td data-col="delivery_type">
+              <span class="tag">{{ d.delivery_type }}</span>
               {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
                 <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
               {% endif %}
             </td>
-            <td>{{ d.comment }}</td>
-            <td>
+            <td data-col="comment">{{ d.comment }}</td>
+            <td data-col="preferences">{{ d.preferences }}</td>
+            <td data-col="time">
               {% if d.time_from and d.time_to %}
                 {{ d.time_from }}-{{ d.time_to }}
               {% elif d.time_from and not d.time_to %}
@@ -101,8 +129,8 @@
                 &nbsp;
               {% endif %}
             </td>
-            <td class="delivery-date-cell" data-delivery-id="{{ d.id }}" style="cursor: pointer;">{{ d.delivery_date.strftime('%d.%m') }}</td>
-            <td>
+            <td data-col="date" class="delivery-date-cell" data-delivery-id="{{ d.id }}" style="cursor: pointer;">{{ d.delivery_date.strftime('%d.%m') }}</td>
+            <td data-col="status">
               <span class="delivery-status badge 
                 {% if d.status == 'Очікує' %}bg-secondary
                 {% elif d.status == 'Розподілено' %}bg-primary
@@ -373,6 +401,83 @@
 .unpaid-row td:first-child {
   border-left: 6px solid #dc3545 !important; /* темно-червоний як bg-danger */
 }
+#column-settings-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 40px;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  z-index: 1000;
+  min-width: 220px;
+  padding: 12px 16px;
+  border-radius: 8px;
+}
+#column-settings-menu label {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+#column-settings-menu input[type="checkbox"] {
+  margin-right: 8px;
+}
+#column-settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+/* Збільшуємо шрифти для таблиці доставок */
+.table th, .table td {
+  font-size: 1.18rem;
+  border-right: 2px solid #b5c9e6 !important;
+  text-align: center;
+}
+.table thead th {
+  font-size: 1.22rem;
+  font-weight: 600;
+}
+.table th:last-child, .table td:last-child {
+  border-right: none !important;
+}
+/* Групові рядки з датою */
+tbody tr > td[colspan] > div {
+  font-size: 1.18rem !important;
+}
+.tag {
+  display: inline-block;
+  background: #f3f6fa;
+  color: #23272f;
+  border-radius: 8px;
+  padding: 2px 10px;
+  font-size: 0.95rem;
+  margin-right: 4px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: 1.5px solid #e3eafc;
+}
+.tag-hard { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
+.tag-medium { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
+.tag-easy { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+.table th {
+  background: #eaf1fb !important;
+  color: #222 !important;
+  font-weight: 500 !important;
+  border-bottom: 1.5px solid #e3eafc !important;
+  font-size: 16.16px !important;
+  letter-spacing: 0.01em !important;
+  border-top: none !important;
+  font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif !important;
+  padding: 8px !important;
+}
+.table td {
+  border-bottom: 1.5px solid #e3eafc !important;
+}
+.table tbody tr:last-child td {
+  border-bottom: none !important;
+}
 </style>
 
 <script>
@@ -636,6 +741,8 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('editTimeFrom').value = data.time_from || '';
           document.getElementById('editTimeTo').value = data.time_to || '';
           document.getElementById('editStatus').value = data.status || 'Очікує';
+          document.getElementById('editComment').value = data.comment || '';
+          document.getElementById('editPreferences').value = data.preferences || '';
           // --- ПОКАЗ/СХОВАТИ КНОПКУ ПРОДОВЖЕННЯ ПІДПИСКИ ---
           const extendBtn = document.getElementById('extendDeliverySubscriptionBtn');
           const status = document.getElementById('editStatus').value;
@@ -1011,5 +1118,59 @@ document.addEventListener('DOMContentLoaded', function() {
       });
   });
 });
+
+// === JS для керування видимістю колонок ===
+const STORAGE_KEY = 'delivery_columns_v1';
+function getColumnSettings() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+function setColumnSettings(settings) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+function applyColumnSettings() {
+  const settings = getColumnSettings();
+  // th
+  document.querySelectorAll('table thead th').forEach(th => {
+    const col = th.dataset.col;
+    th.style.display = (settings[col] === false) ? 'none' : '';
+  });
+  // td
+  document.querySelectorAll('table tbody tr').forEach(tr => {
+    tr.querySelectorAll('td').forEach(td => {
+      const col = td.dataset.col;
+      td.style.display = (settings[col] === false) ? 'none' : '';
+    });
+  });
+  // чекбокси
+  document.querySelectorAll('.column-toggle').forEach(cb => {
+    cb.checked = settings[cb.dataset.col] !== false;
+  });
+}
+document.getElementById('column-settings-btn').onclick = function(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('column-settings-menu');
+  menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+};
+document.getElementById('save-columns').onclick = function() {
+  const settings = {};
+  document.querySelectorAll('.column-toggle').forEach(cb => {
+    settings[cb.dataset.col] = cb.checked;
+  });
+  setColumnSettings(settings);
+  applyColumnSettings();
+  document.getElementById('column-settings-menu').style.display = 'none';
+};
+document.addEventListener('click', function(e) {
+  const menu = document.getElementById('column-settings-menu');
+  if (menu.style.display === 'block' && !menu.contains(e.target) && e.target.id !== 'column-settings-btn') {
+    menu.style.display = 'none';
+  }
+});
+window.addEventListener('DOMContentLoaded', applyColumnSettings);
+// === /JS для керування видимістю колонок ===
 </script>
 {% endblock %} 

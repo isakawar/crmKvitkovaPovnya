@@ -310,10 +310,10 @@
 
 <style>
 .table th, .table td {
-  border-right: 1.5px solid #e3eafc;
+  border-right: 2px solid #b5c9e6 !important;
 }
 .table th:last-child, .table td:last-child {
-  border-right: none;
+  border-right: none !important;
 }
 #client-results {
   left: 0;
@@ -335,6 +335,12 @@
   opacity: 1 !important;
   cursor: not-allowed !important;
   font-weight: 500 !important;
+}
+.table td {
+  border-bottom: 1.5px solid #e3eafc !important;
+}
+.table tbody tr:last-child td {
+  border-bottom: none !important;
 }
 </style>
 {% endblock %}
