@@ -47,8 +47,11 @@ def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, f
         )
     elif date_str:
         try:
+            logger.info(f'Парсинг дати: "{date_str}"')
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            logger.info(f'Парсована дата: {selected_date}')
             deliveries_query = deliveries_query.filter(Delivery.delivery_date == selected_date)
+            logger.info(f'Додано фільтр по даті: {selected_date}')
         except Exception as e:
             logger.warning(f'Помилка парсингу дати: {e}')
 
