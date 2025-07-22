@@ -1,4 +1,6 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
 {% block head %}
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
   <style>
@@ -289,6 +291,8 @@
     </form>
 </div>
 
+{{ render_toast() }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const clientSearch = document.getElementById('client-search');
@@ -390,21 +394,98 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Валідація форми
-    document.getElementById('orderForm').addEventListener('submit', function(e) {
+    // Функція для показу toast повідомлень
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('notification-toast');
+      if (!toast) return;
+      
+      const toastBody = toast.querySelector('.toast-body');
+      const toastHeader = toast.querySelector('.toast-header');
+      const icon = toast.querySelector('.toast-header i');
+      
+      toastBody.textContent = message;
+      
+      // Змінюємо стилі залежно від типу
+      toastHeader.className = 'toast-header';
+      icon.className = 'me-2';
+      
+      switch(type) {
+        case 'success':
+          toastHeader.classList.add('bg-success', 'text-white');
+          icon.classList.add('bi', 'bi-check-circle-fill');
+          break;
+        case 'danger':
+        case 'error':
+          toastHeader.classList.add('bg-danger', 'text-white');
+          icon.classList.add('bi', 'bi-exclamation-triangle-fill');
+          break;
+        case 'warning':
+          toastHeader.classList.add('bg-warning', 'text-dark');
+          icon.classList.add('bi', 'bi-exclamation-triangle');
+          break;
+        default:
+          toastHeader.classList.add('bg-primary', 'text-white');
+          icon.classList.add('bi', 'bi-info-circle');
+      }
+      
+      const bsToast = new bootstrap.Toast(toast, {
+        autohide: true,
+        delay: 4000
+      });
+      bsToast.show();
+    }
+    
+    // Валідація та AJAX submission форми
+    document.getElementById('orderForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        console.log('Form submitted');
+        
         const phoneValue = recipientPhoneInput.value;
         const phonePattern = /^\+380[0-9]{9}$/;
         
+        console.log('Phone value:', phoneValue);
+        
         if (!phonePattern.test(phoneValue)) {
-            e.preventDefault();
-            alert('Невірний формат номера телефону отримувача. Використовуйте формат: +380XXXXXXXXX');
+            showToast('Невірний формат номера телефону отримувача. Використовуйте формат: +380XXXXXXXXX', 'error');
             return;
         }
         
-        if (sizeSelect.value === 'Custom' && (!customAmountInput.value || customAmountInput.value <= 0)) {
-            e.preventDefault();
-            alert('Для власного розміру потрібно вказати суму більше 0');
+        if (sizeSelect.value === 'Власний' && (!customAmountInput.value || customAmountInput.value <= 0)) {
+            showToast('Для власного розміру потрібно вказати суму більше 0', 'error');
             return;
+        }
+        
+        console.log('Validation passed, sending request');
+        
+        // AJAX відправка форми
+        try {
+            const formData = new FormData(this);
+            const response = await fetch('/orders/new', {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            });
+            
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                console.log('Success! Showing toast');
+                showToast('Замовлення успішно створено!', 'success');
+                // Перенаправляємо на список замовлень через секунду
+                setTimeout(() => {
+                    window.location.href = '/orders';
+                }, 1000);
+            } else {
+                console.log('Error from server:', data.error);
+                showToast(data.error || 'Помилка створення замовлення', 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showToast('Помилка мережі', 'error');
         }
     });
 });

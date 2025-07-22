@@ -39,8 +39,11 @@ def couriers_list():
     # Статистика для кожного кур'єра
     courier_stats = []
     for courier in couriers:
-        # Базовий запит доставок
-        deliveries_query = Delivery.query.filter(Delivery.courier_id == courier.id)
+        # Базовий запит доставок (тільки доставки, без самовивозу)
+        deliveries_query = Delivery.query.filter(
+            Delivery.courier_id == courier.id,
+            Delivery.is_pickup == False  # Виключаємо самовивіз
+        )
         
         if start_date:
             deliveries_query = deliveries_query.filter(Delivery.delivery_date >= start_date)
@@ -52,9 +55,9 @@ def couriers_list():
         completed = deliveries_query.filter(Delivery.status == 'Доставлено').count()
         in_progress = deliveries_query.filter(Delivery.status == 'Розподілено').count()
         
-        # Доставки за типами
-        pickup_count = deliveries_query.filter(Delivery.is_pickup == True).count()
-        delivery_count = deliveries_query.filter(Delivery.is_pickup == False).count()
+        # Всі доставки - це delivery_count (самовивозу немає)
+        pickup_count = 0  # Кур'єри не займаються самовивозом
+        delivery_count = total_deliveries
         
         # Остання доставка
         last_delivery = deliveries_query.filter(

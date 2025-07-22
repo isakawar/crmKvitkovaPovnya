@@ -269,16 +269,9 @@
   </div>
 </div>
 
-<!-- Toast для повідомлень -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-  <div id="notification-toast" class="toast" role="alert">
-    <div class="toast-header">
-      <strong class="me-auto">Повідомлення</strong>
-      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-    </div>
-    <div class="toast-body"></div>
-  </div>
-</div>
+{% from "macros.html" import render_toast, toast_script %}
+
+{{ render_toast() }}
 
 <style>
 .avatar-circle {
@@ -319,18 +312,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   
-  // Функція показу toast повідомлень
-  function showToast(message, type = 'info') {
-    const toast = document.getElementById('notification-toast');
-    const toastBody = toast.querySelector('.toast-body');
-    const toastHeader = toast.querySelector('.toast-header');
-    
-    toastBody.textContent = message;
-    toastHeader.className = `toast-header bg-${type} text-white`;
-    
-    const bsToast = new bootstrap.Toast(toast);
-    bsToast.show();
-  }
+
   
   // Зміна періоду статистики
   document.getElementById('period-filter').addEventListener('change', function() {
@@ -478,5 +460,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
 });
 </script>
+
+{{ toast_script() }}
 
 {% endblock %} 

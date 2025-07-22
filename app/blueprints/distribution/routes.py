@@ -24,27 +24,32 @@ def distribution_page():
         selected_date = date.today()
     
     # Отримуємо доставки на вибрану дату зі статусом "Очікує" або "Розподілено"
+    # Виключаємо самовивіз (is_pickup=True), бо його не потрібно розподіляти
     deliveries = Delivery.query.join(Client).filter(
         Delivery.delivery_date == selected_date,
-        Delivery.status.in_(['Очікує', 'Розподілено'])
+        Delivery.status.in_(['Очікує', 'Розподілено']),
+        Delivery.is_pickup == False  # Тільки доставки, не самовивіз
     ).order_by(
         Delivery.time_from.asc().nullslast(),
         Delivery.id.asc()
     ).all()
     
-    # Отримуємо всіх активних кур'єрів
-    couriers = Courier.query.all()
+    # Отримуємо всіх активних кур'єрів (не на паузі)
+    couriers = Courier.query.filter_by(active=True).all()
+    active_courier_ids = {courier.id for courier in couriers}
     
     # Групуємо доставки за кур'єрами
     courier_groups = {}
     unassigned_deliveries = []
     
     for delivery in deliveries:
-        if delivery.courier_id:
+        if delivery.courier_id and delivery.courier_id in active_courier_ids:
+            # Доставка призначена активному кур'єру
             if delivery.courier_id not in courier_groups:
                 courier_groups[delivery.courier_id] = []
             courier_groups[delivery.courier_id].append(delivery)
         else:
+            # Доставка не призначена або призначена неактивному кур'єру
             unassigned_deliveries.append(delivery)
     
     logger.info(f'Distribution page: {len(deliveries)} deliveries on {selected_date}')
