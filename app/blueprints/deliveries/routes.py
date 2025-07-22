@@ -214,7 +214,21 @@ def change_delivery_dates(delivery_id):
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>/extend-subscription', methods=['POST'])
 def extend_delivery_subscription(delivery_id):
-    """Продовжити підписку для доставки"""
+    """Продовжити підписку для доставки без форми (для прямого продовження)"""
+    d = get_delivery_by_id(delivery_id)
+    
+    # Перевіряємо, чи це неоплачена доставка підписки
+    if d.status != 'Не оплачена' or d.delivery_type not in ['Weekly', 'Monthly', 'Bi-weekly']:
+        return jsonify({'success': False, 'error': 'Це не неоплачена доставка підписки'}), 400
+    
+    # Знаходимо замовлення цієї доставки
+    order = d.order if hasattr(d, 'order') else None
+    if not order:
+        return jsonify({'success': False, 'error': 'Не знайдено замовлення для доставки'}), 404
+
+@deliveries_bp.route('/deliveries/<int:delivery_id>/extend-subscription-with-form', methods=['POST'])
+def extend_delivery_subscription_with_form(delivery_id):
+    """Продовжити підписку для доставки з оновленими даними з форми"""
     d = get_delivery_by_id(delivery_id)
     
     # Перевіряємо, чи це неоплачена доставка підписки
@@ -226,34 +240,53 @@ def extend_delivery_subscription(delivery_id):
     if not order:
         return jsonify({'success': False, 'error': 'Не знайдено замовлення для доставки'}), 404
     
+    # Отримуємо дані з форми
+    form_data = request.form.to_dict() if request.form else request.get_json() or {}
+    
+    # Валідуємо основні поля (без first_delivery_date!)
+    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'delivery_type', 'size', 'delivery_day', 'for_whom']
+    missing_fields = []
+    for field in required_fields:
+        if not form_data.get(field):
+            missing_fields.append(field)
+    
+    if missing_fields:
+        return jsonify({'success': False, 'error': f'Не всі обов\'язкові поля заповнені: {", ".join(missing_fields)}'}), 400
+    
     try:
+        # Знаходимо або створюємо клієнта за новим Instagram
+        from app.services.order_service import get_or_create_client
+        client, error = get_or_create_client(form_data['client_instagram'])
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
         # Використовуємо ту ж логіку, що й для замовлень
         from app.services.order_service import WEEKDAY_MAP
         import datetime
         import calendar
         
-        # Клонуємо замовлення
+        # Клонуємо замовлення з оновленими даними з форми
         new_order = Order(
-            client_id=order.client_id,
-            recipient_name=order.recipient_name,
-            recipient_phone=order.recipient_phone,
-            recipient_social=order.recipient_social,
-            city=order.city,
-            street=order.street,
-            building_number=order.building_number,
-            floor=order.floor,
-            entrance=order.entrance,
-            is_pickup=order.is_pickup,
-            delivery_type=order.delivery_type,
-            size=order.size,
-            custom_amount=order.custom_amount,
-            first_delivery_date=order.first_delivery_date,
-            delivery_day=order.delivery_day,
-            time_from=order.time_from,
-            time_to=order.time_to,
-            comment=order.comment,
-            preferences=order.preferences,
-            for_whom=order.for_whom,
+            client_id=client.id,  # Використовуємо клієнта з форми
+            recipient_name=form_data['recipient_name'],
+            recipient_phone=form_data['recipient_phone'],
+            recipient_social=form_data.get('recipient_social'),
+            city=form_data['city'],
+            street=form_data.get('street'),
+            building_number=form_data.get('building_number'),
+            floor=form_data.get('floor'),
+            entrance=form_data.get('entrance'),
+            is_pickup=form_data.get('is_pickup') == 'on',
+            delivery_type=form_data['delivery_type'],
+            size=form_data['size'],
+            custom_amount=int(form_data['custom_amount']) if form_data.get('custom_amount') and form_data.get('custom_amount').strip() else None,
+            first_delivery_date=order.first_delivery_date,  # Зберігаємо оригінальну дату
+            delivery_day=form_data['delivery_day'],
+            time_from=form_data.get('time_from'),
+            time_to=form_data.get('time_to'),
+            comment=form_data.get('comment'),
+            preferences=form_data.get('preferences'),
+            for_whom=form_data['for_whom'],
             bouquet_size=order.bouquet_size,
             price_at_order=order.price_at_order,
             periodicity=order.periodicity,

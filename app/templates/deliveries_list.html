@@ -1149,26 +1149,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const newModal = new bootstrap.Modal(document.getElementById('extendOrderModal'));
         newModal.show();
         pendingExtendDeliveryId = null;
-        // Додаємо обробник сабміту після вставки модалки
-        const form = document.getElementById('extendOrderForm');
-        if (form) {
-          form.onsubmit = async function(e) {
-            e.preventDefault();
-            const formData = new FormData(this);
-            const response = await fetch('/orders/new', {
-              method: 'POST',
-              body: formData,
-              headers: {'X-Requested-With': 'XMLHttpRequest'}
-            });
-            const data = await response.json();
-            if (data.success) {
-              bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
-              location.reload();
-            } else {
-              alert(data.error || 'Помилка збереження!');
-            }
-          };
-        }
+        // Обробник сабміту тепер знаходиться в самому шаблоні extend_order_modal.html
+        // Тому тут нічого не робимо - дозволяємо шаблону самому обробляти submit
       });
   });
 
