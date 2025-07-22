@@ -498,6 +498,10 @@ class CourierHandlers:
                 delivery_id = int(data.split("_")[-1])
                 await self._handle_delivery_location_request(query, courier, delivery_id)
             
+            elif data.startswith("delivery_back_"):
+                delivery_id = int(data.split("_")[-1])
+                await self._show_delivery_details(query, courier, delivery_id)
+            
             else:
                 await query.edit_message_text(
                     "❌ Невідома дія з доставкою",
@@ -637,11 +641,30 @@ class CourierHandlers:
             )
     
     async def _cancel_delivery_completion(self, query, courier: Courier, delivery_id: int):
-        """Cancel delivery completion"""
+        """Cancel delivery completion and return to delivery details"""
+        
+        # Повертаємося до деталей доставки замість просто повідомлення
+        await self._show_delivery_details(query, courier, delivery_id)
+    
+    async def _show_delivery_details(self, query, courier: Courier, delivery_id: int):
+        """Show detailed delivery information"""
+        
+        delivery = Delivery.query.filter_by(id=delivery_id, courier_id=courier.id).first()
+        
+        if not delivery:
+            await query.edit_message_text(
+                "❌ Доставку не знайдено або вона не призначена вам",
+                reply_markup=self.keyboards.back_to_main()
+            )
+            return
+        
+        # Використовуємо сервіс для форматування інформації
+        delivery_info = self.telegram_service.format_delivery_info(delivery, detailed=True)
         
         await query.edit_message_text(
-            "↩️ Завершення доставки скасовано",
-            reply_markup=self.keyboards.back_to_main()
+            delivery_info,
+            reply_markup=self.keyboards.delivery_actions(delivery_id),
+            parse_mode='Markdown'
         )
     
     async def _handle_delivery_call_request(self, query, courier: Courier, delivery_id: int):
