@@ -229,6 +229,13 @@
                     </h5>
                     <div class="d-flex align-items-center gap-2">
                       {% if courier_deliveries %}
+                        <button class="btn btn-outline-success btn-sm send-telegram-notifications" 
+                                data-courier-id="{{ courier.id }}"
+                                data-courier-name="{{ courier.name }}"
+                                style="border-color: rgba(255,255,255,0.8); color: white;"
+                                title="Розіслати доставки в Telegram">
+                          <i class="bi bi-telegram me-1" style="font-size: 0.8rem;"></i>Розіслати на телеграм
+                        </button>
                         <button class="btn btn-outline-light btn-sm unassign-all" 
                                 data-courier-id="{{ courier.id }}"
                                 style="border-color: rgba(255,255,255,0.8); color: white;">
@@ -806,6 +813,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.target.classList.contains('delivery-item')) {
       e.target.classList.remove('dragging');
     }
+  });
+
+  // Розсилка в Telegram
+  document.querySelectorAll('.send-telegram-notifications').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const courierName = this.dataset.courierName;
+      
+      if (confirm(`Розіслати доставки кур'єру ${courierName} в Telegram?`)) {
+        
+        // Дезактивуємо кнопку під час відправки
+        this.disabled = true;
+        this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Відправляю...';
+        
+        fetch(`/distribution/send-telegram-notifications/${courierId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+          } else {
+            showToast(data.error || 'Помилка відправки сповіщень', 'danger');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast('Помилка мережі при відправці сповіщень', 'danger');
+        })
+        .finally(() => {
+          // Відновлюємо кнопку
+          this.disabled = false;
+          this.innerHTML = '<i class="bi bi-telegram me-1" style="font-size: 0.8rem;"></i>Розіслати на телеграм';
+        });
+      }
+    });
   });
 
   // Функціональність копіювання адреси

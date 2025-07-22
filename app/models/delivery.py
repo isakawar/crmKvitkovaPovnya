@@ -6,7 +6,7 @@ class Delivery(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
     delivery_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(32), default='Очікує')  # Очікує, Виконано, Скасовано
+    status = db.Column(db.String(32), default='Очікує')  # Очікує, Доставлено, Скасовано
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -43,4 +43,8 @@ class Delivery(db.Model):
     is_subscription = db.Column(db.Boolean, default=False)
     
     # Побажання
-    preferences = db.Column(db.Text) 
+    preferences = db.Column(db.Text)
+    
+    # Telegram integration (commented out for now)
+    # telegram_notification_sent = db.Column(db.Boolean, default=False)
+    # telegram_message_id = db.Column(db.Integer, nullable=True)  # ID повідомлення в Telegram для редагування 

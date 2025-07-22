@@ -259,4 +259,41 @@ def edit_courier(courier_id):
     except Exception as e:
         db.session.rollback()
         logger.error(f'Error updating courier: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@couriers_bp.route('/couriers/<int:courier_id>/reset-telegram', methods=['POST'])
+def reset_courier_telegram(courier_id):
+    """Скинути Telegram прив'язку кур'єра"""
+    
+    try:
+        courier = Courier.query.get_or_404(courier_id)
+        
+        # Зберігаємо дані для логування
+        had_telegram = courier.telegram_registered
+        telegram_username = courier.telegram_username
+        
+        # Скидаємо всі Telegram поля
+        courier.telegram_chat_id = None
+        courier.telegram_username = None
+        courier.telegram_registered = False
+        courier.telegram_notifications_enabled = True  # Увімкнуто по дефолту для наступної реєстрації
+        courier.last_telegram_activity = None
+        
+        db.session.commit()
+        
+        if had_telegram:
+            logger.info(f'Reset Telegram binding for courier {courier.name} (ID: {courier.id}, username: {telegram_username})')
+            message = f'Telegram прив\'язку кур\'єра {courier.name} скинуто. Тепер він може зареєструватися знову.'
+        else:
+            logger.info(f'Attempted to reset Telegram for courier {courier.name} (ID: {courier.id}) - was not linked')
+            message = f'Кур\'єр {courier.name} не був прив\'язаний до Telegram.'
+        
+        return jsonify({
+            'success': True,
+            'message': message
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error resetting Telegram for courier {courier_id}: {str(e)}')
+        return jsonify({'success': False, 'error': 'Помилка скидання Telegram прив\'язки'}), 500 

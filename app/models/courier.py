@@ -7,4 +7,12 @@ class Courier(db.Model):
     active = db.Column(db.Boolean, default=True)
     deliveries_count = db.Column(db.Integer, default=0)
     delivery_rate = db.Column(db.Integer, default=50)  # Рейт за доставку в гривнях
+    
+    # Telegram integration fields
+    telegram_chat_id = db.Column(db.BigInteger, unique=True, nullable=True)
+    telegram_username = db.Column(db.String(64), nullable=True)
+    telegram_registered = db.Column(db.Boolean, default=False)
+    telegram_notifications_enabled = db.Column(db.Boolean, default=True)
+    last_telegram_activity = db.Column(db.DateTime, nullable=True)
+    
     deliveries = db.relationship('Delivery', back_populates='courier') 

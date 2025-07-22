@@ -97,6 +97,7 @@
                     <th class="text-center">Виконано</th>
                     <th class="text-center">В роботі</th>
                     <th class="text-center">Рейт за доставку</th>
+                    <th class="text-center">Telegram</th>
                     <th class="text-center">Остання доставка</th>
                     <th class="text-center">Дії</th>
                   </tr>
@@ -140,6 +141,28 @@
                         <span class="badge bg-success">
                           {{ stats.delivery_rate or 50 }}₴
                         </span>
+                      </td>
+                      <td class="text-center">
+                        {% if stats.courier.telegram_registered %}
+                          <div class="d-flex flex-column align-items-center">
+                            <span class="badge bg-success mb-1">
+                              <i class="bi bi-telegram"></i> Підключено
+                            </span>
+                            {% if stats.courier.telegram_username %}
+                              <small class="text-muted">@{{ stats.courier.telegram_username }}</small>
+                            {% endif %}
+                            <button class="btn btn-outline-warning btn-sm mt-1 reset-telegram" 
+                                    data-courier-id="{{ stats.courier.id }}"
+                                    data-courier-name="{{ stats.courier.name }}"
+                                    title="Скинути прив'язку Telegram">
+                              <i class="bi bi-arrow-clockwise"></i>
+                            </button>
+                          </div>
+                        {% else %}
+                          <span class="badge bg-secondary">
+                            <i class="bi bi-telegram"></i> Не підключено
+                          </span>
+                        {% endif %}
                       </td>
                       <td class="text-center">
                                                  {% if stats.last_delivery and stats.last_delivery.delivered_at %}
@@ -420,6 +443,36 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Error:', error);
         showToast('Помилка мережі', 'danger');
       });
+    });
+  });
+  
+  // Скидання Telegram прив'язки
+  document.querySelectorAll('.reset-telegram').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const courierName = this.dataset.courierName;
+      
+      if (confirm(`Скинути Telegram прив'язку для "${courierName}"?\n\nПісля цього кур'єр зможе знову зареєструватися в боті.`)) {
+        fetch(`/couriers/${courierId}/reset-telegram`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            showToast(data.error, 'danger');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast('Помилка скидання Telegram прив\'язки', 'danger');
+        });
+      }
     });
   });
   

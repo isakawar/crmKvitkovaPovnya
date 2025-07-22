@@ -1,7 +1,12 @@
 import os
 from flask import Flask, render_template, send_file, Response
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 from app.extensions import db, migrate
 from app.config import config_map
+from app.telegram_bot import TelegramBot
 from app.blueprints.orders.routes import orders_bp
 from app.blueprints.clients.routes import clients_bp
 from app.blueprints.deliveries.routes import deliveries_bp
@@ -24,6 +29,11 @@ def create_app(config_name=None):
     app.config.from_object(config_map[config_name])
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Initialize Telegram Bot
+    telegram_bot = TelegramBot()
+    telegram_bot.init_app(app)
+    app.telegram_bot = telegram_bot
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(deliveries_bp)

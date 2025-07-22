@@ -136,4 +136,71 @@ def unassign_deliveries():
     except Exception as e:
         db.session.rollback()
         logger.error(f'Error unassigning deliveries: {str(e)}')
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@distribution_bp.route('/distribution/send-telegram-notifications/<int:courier_id>', methods=['POST'])
+def send_telegram_notifications(courier_id):
+    """Розіслати сповіщення про доставки кур'єру в Telegram"""
+    
+    try:
+        from flask import current_app
+        
+        # Перевіряємо чи є бот в додатку
+        if not hasattr(current_app, 'telegram_bot') or not current_app.telegram_bot.is_initialized():
+            return jsonify({
+                'success': False,
+                'error': 'Telegram бот не ініціалізований'
+            }), 500
+        
+        # Знаходимо кур'єра
+        courier = Courier.query.get_or_404(courier_id)
+        
+        # Перевіряємо чи кур'єр зареєстрований в Telegram
+        if not courier.telegram_registered or not courier.telegram_chat_id:
+            return jsonify({
+                'success': False,
+                'error': f'Кур\'єр {courier.name} не зареєстрований в Telegram боті'
+            }), 400
+        
+        # Отримуємо поточну дату (можна розширити для вибору дати)
+        today = date.today()
+        
+        # Знаходимо доставки кур'єра на сьогодні
+        courier_deliveries = Delivery.query.filter(
+            Delivery.courier_id == courier_id,
+            Delivery.delivery_date == today,
+            Delivery.status.in_(['Очікує', 'Розподілено'])
+        ).all()
+        
+        if not courier_deliveries:
+            return jsonify({
+                'success': False,
+                'error': f'У кур\'єра {courier.name} немає доставок на сьогодні'
+            }), 400
+        
+        # Імпортуємо сервіс для роботи з Telegram
+        from app.telegram_bot.notification_service import TelegramNotificationService
+        
+        # Відправляємо сповіщення
+        service = TelegramNotificationService()
+        success_count = service.send_delivery_notifications(courier, courier_deliveries)
+        
+        if success_count > 0:
+            logger.info(f'Sent {success_count} delivery notifications to courier {courier.name} (chat_id: {courier.telegram_chat_id})')
+            return jsonify({
+                'success': True,
+                'message': f'Надіслано {success_count} сповіщень кур\'єру {courier.name}',
+                'notifications_sent': success_count
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Не вдалося надіслати жодного сповіщення'
+            }), 500
+        
+    except Exception as e:
+        logger.error(f'Error sending Telegram notifications to courier {courier_id}: {str(e)}')
+        return jsonify({
+            'success': False,
+            'error': f'Помилка відправки сповіщень: {str(e)}'
+        }), 500 
