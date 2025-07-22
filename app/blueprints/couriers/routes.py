@@ -55,9 +55,7 @@ def couriers_list():
         completed = deliveries_query.filter(Delivery.status == 'Доставлено').count()
         in_progress = deliveries_query.filter(Delivery.status == 'Розподілено').count()
         
-        # Всі доставки - це delivery_count (самовивозу немає)
-        pickup_count = 0  # Кур'єри не займаються самовивозом
-        delivery_count = total_deliveries
+        # Кур'єри займаються тільки доставками, самовивозу немає
         
         # Остання доставка
         last_delivery = deliveries_query.filter(
@@ -69,21 +67,25 @@ def couriers_list():
             'total_deliveries': total_deliveries,
             'completed': completed,
             'in_progress': in_progress,
-            'pickup_count': pickup_count,
-            'delivery_count': delivery_count,
             'last_delivery': last_delivery,
-            'completion_rate': round((completed / total_deliveries * 100) if total_deliveries > 0 else 0, 1)
+            'delivery_rate': courier.delivery_rate
         })
     
     # Сортуємо за кількістю доставок
     courier_stats.sort(key=lambda x: x['total_deliveries'], reverse=True)
     
     # Загальна статистика
+    active_couriers = [c for c in couriers if c.active]
+    # Враховуємо тільки кур'єрів з встановленим рейтом
+    rates = [c.delivery_rate for c in active_couriers if c.delivery_rate is not None]
+    average_rate = round(sum(rates) / len(rates)) if rates else 50
+    
     total_stats = {
         'total_couriers': len(couriers),
-        'active_couriers': len([c for c in couriers if c.active]),
+        'active_couriers': len(active_couriers),
         'total_deliveries': sum(cs['total_deliveries'] for cs in courier_stats),
         'completed_deliveries': sum(cs['completed'] for cs in courier_stats),
+        'average_rate': average_rate
     }
     
     logger.info(f'Couriers page: {len(couriers)} couriers, period: {period}')
@@ -103,6 +105,10 @@ def create_new_courier():
     data = request.get_json() if request.is_json else request.form
     name = data.get('name', '').strip()
     phone = data.get('phone', '').strip()
+    try:
+        delivery_rate = int(data.get('delivery_rate', 50))
+    except (ValueError, TypeError):
+        delivery_rate = 50
     
     if not name or not phone:
         if request.is_json:
@@ -119,7 +125,7 @@ def create_new_courier():
             flash('Кур\'єр з таким телефоном вже існує', 'error')
             return redirect(url_for('couriers.couriers_list'))
         
-        courier = create_courier(name, phone)
+        courier = create_courier(name, phone, delivery_rate)
         
         logger.info(f'Created new courier: {courier.name} ({courier.phone})')
         
@@ -214,6 +220,10 @@ def edit_courier(courier_id):
     
     name = data.get('name', '').strip()
     phone = data.get('phone', '').strip()
+    try:
+        delivery_rate = int(data.get('delivery_rate', 50))
+    except (ValueError, TypeError):
+        delivery_rate = 50
     
     if not name or not phone:
         return jsonify({'success': False, 'error': 'Ім\'я та телефон обов\'язкові'}), 400
@@ -230,6 +240,7 @@ def edit_courier(courier_id):
         
         courier.name = name
         courier.phone = phone
+        courier.delivery_rate = delivery_rate
         db.session.commit()
         
         logger.info(f'Updated courier: {courier.name} ({courier.phone})')

@@ -52,15 +52,9 @@
         <div class="col-md-3">
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
-              <h5 class="card-title text-warning">📊 Середня ефективність</h5>
-              <h3 class="mb-0">
-                {% if total_stats.total_deliveries > 0 %}
-                  {{ "%.1f"|format((total_stats.completed_deliveries / total_stats.total_deliveries * 100)) }}%
-                {% else %}
-                  0%
-                {% endif %}
-              </h3>
-              <small class="text-muted">Виконання замовлень</small>
+              <h5 class="card-title text-warning">💰 Середній рейт</h5>
+              <h3 class="mb-0">{{ total_stats.average_rate }}₴</h3>
+              <small class="text-muted">За доставку</small>
             </div>
           </div>
         </div>
@@ -102,8 +96,7 @@
                     <th class="text-center">Всього доставок</th>
                     <th class="text-center">Виконано</th>
                     <th class="text-center">В роботі</th>
-                    <th class="text-center">Ефективність</th>
-                    <th class="text-center">Самовивіз / Доставка</th>
+                    <th class="text-center">Рейт за доставку</th>
                     <th class="text-center">Остання доставка</th>
                     <th class="text-center">Дії</th>
                   </tr>
@@ -144,20 +137,9 @@
                         <span class="text-warning">{{ stats.in_progress }}</span>
                       </td>
                       <td class="text-center">
-                        <div class="progress" style="height: 20px; width: 60px;">
-                          <div class="progress-bar bg-success" role="progressbar" 
-                               style="width: {{ stats.completion_rate }}%" 
-                               aria-valuenow="{{ stats.completion_rate }}" 
-                               aria-valuemin="0" aria-valuemax="100">
-                            {{ stats.completion_rate }}%
-                          </div>
-                        </div>
-                      </td>
-                      <td class="text-center">
-                        <div class="d-flex justify-content-center gap-1">
-                          <span class="badge bg-info">{{ stats.pickup_count }} <i class="bi bi-shop"></i></span>
-                          <span class="badge bg-primary">{{ stats.delivery_count }} <i class="bi bi-truck"></i></span>
-                        </div>
+                        <span class="badge bg-success">
+                          {{ stats.delivery_rate or 50 }}₴
+                        </span>
                       </td>
                       <td class="text-center">
                                                  {% if stats.last_delivery and stats.last_delivery.delivered_at %}
@@ -174,6 +156,7 @@
                                   data-courier-id="{{ stats.courier.id }}"
                                   data-courier-name="{{ stats.courier.name }}"
                                   data-courier-phone="{{ stats.courier.phone }}"
+                                  data-courier-rate="{{ stats.courier.delivery_rate or 50 }}"
                                   title="Редагувати">
                             <i class="bi bi-pencil"></i>
                           </button>
@@ -230,6 +213,10 @@
             <label for="courierPhone" class="form-label">Телефон *</label>
             <input type="tel" class="form-control" id="courierPhone" name="phone" required>
           </div>
+          <div class="mb-3">
+            <label for="courierRate" class="form-label">Рейт за доставку (₴) *</label>
+            <input type="number" class="form-control" id="courierRate" name="delivery_rate" value="50" min="1" max="500" required>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
@@ -258,6 +245,10 @@
           <div class="mb-3">
             <label for="editCourierPhone" class="form-label">Телефон *</label>
             <input type="tel" class="form-control" id="editCourierPhone" name="phone" required>
+          </div>
+          <div class="mb-3">
+            <label for="editCourierRate" class="form-label">Рейт за доставку (₴) *</label>
+            <input type="number" class="form-control" id="editCourierRate" name="delivery_rate" min="1" max="500" required>
           </div>
         </div>
         <div class="modal-footer">
@@ -327,7 +318,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const formData = new FormData(this);
     const data = {
       name: formData.get('name'),
-      phone: formData.get('phone')
+      phone: formData.get('phone'),
+      delivery_rate: parseInt(formData.get('delivery_rate'))
     };
     
     fetch('/couriers/new', {
@@ -359,10 +351,12 @@ document.addEventListener('DOMContentLoaded', function() {
       const courierId = this.dataset.courierId;
       const courierName = this.dataset.courierName;
       const courierPhone = this.dataset.courierPhone;
+      const courierRate = this.dataset.courierRate;
       
       document.getElementById('editCourierId').value = courierId;
       document.getElementById('editCourierName').value = courierName;
       document.getElementById('editCourierPhone').value = courierPhone;
+      document.getElementById('editCourierRate').value = courierRate;
       
       new bootstrap.Modal(document.getElementById('editCourierModal')).show();
     });
@@ -375,7 +369,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const formData = new FormData(this);
     const data = {
       name: formData.get('name'),
-      phone: formData.get('phone')
+      phone: formData.get('phone'),
+      delivery_rate: parseInt(formData.get('delivery_rate'))
     };
     
     fetch(`/couriers/${courierId}/edit`, {
