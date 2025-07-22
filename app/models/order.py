@@ -38,8 +38,8 @@ class Order(db.Model):
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())
     
-    # Зв'язки
-    deliveries = db.relationship('Delivery', backref='order', lazy=True)
+    # Зв'язки  
+    deliveries = db.relationship('Delivery', back_populates='order', lazy=True)
     
     # --- denormalized fields ---
     bouquet_size = db.Column(db.String(16))

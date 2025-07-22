@@ -12,7 +12,8 @@
     {% endif %}
     <input type="text" name="client_instagram" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за Instagram клієнта..." value="{{ request.args.get('client_instagram', '') }}">
     <input type="text" name="recipient_phone" class="form-control" style="max-width:160px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Пошук за телефоном отримувача..." value="{{ request.args.get('recipient_phone', '') }}">
-    <input type="date" id="filter-date" name="date" class="form-control" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" value="{{ selected_date }}">
+    <input type="date" id="filter-date-from" name="date_from" class="form-control" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Дата з" value="{{ request.args.get('date_from', '') }}">
+    <input type="date" id="filter-date-to" name="date_to" class="form-control" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" placeholder="Дата до" value="{{ request.args.get('date_to', '') }}">
     <select id="filter-status" name="status" class="form-select" style="max-width:170px; background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
       <option value="" {% if request.args.get('status', '') == '' %}selected{% endif %}>Всі статуси</option>
       <option value="Очікує" {% if request.args.get('status') == 'Очікує' %}selected{% endif %}>Очікує</option>
@@ -111,7 +112,11 @@
             <td data-col="phone">{{ d.phone }}</td>
             <td data-col="size">
               {% set size_val = d.bouquet_size if d.bouquet_size else d.size %}
-              <span class="tag {% if size_val=='M' %}tag-easy{% elif size_val=='L' %}tag-medium{% elif size_val in ['XL','XXL'] %}tag-hard{% endif %}">{{ size_val or '-' }}</span>
+              {% if size_val == 'Власний' and d.order and d.order.custom_amount %}
+                <span class="tag tag-custom">{{ d.order.custom_amount }}₴</span>
+              {% else %}
+                <span class="tag {% if size_val=='M' %}tag-easy{% elif size_val=='L' %}tag-medium{% elif size_val in ['XL','XXL'] %}tag-hard{% endif %}">{{ size_val or '-' }}</span>
+              {% endif %}
             </td>
             <td data-col="delivery_type">
               <span class="tag">{{ d.delivery_type }}</span>
@@ -186,6 +191,9 @@
             <button type="button" class="btn btn-outline-success btn-sm ms-2" id="extendDeliverySubscriptionBtn" style="display:none; border-radius:8px; padding:4px 8px;" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
               <i class="bi bi-arrow-repeat"></i>
             </button>
+            <button type="button" class="btn btn-outline-danger btn-sm" id="deleteDeliveryBtn" style="display:none; border-radius:8px; padding:4px 8px;" data-bs-toggle="tooltip" data-bs-placement="top" title="Видалити доставку">
+              <i class="bi bi-trash"></i>
+            </button>
           </h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
@@ -238,6 +246,9 @@
                     <option disabled>Додайте розміри у налаштуваннях</option>
                 {% endif %}
               </select>
+            </div>
+            <div class="col-12" id="editCustomAmountContainer" style="display: none;">
+              <input type="number" id="editCustomAmount" class="form-control" placeholder="Сума для власного розміру *" min="1" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
             <div class="col-12">
               <input type="date" id="editDeliveryDate" class="form-control" placeholder="Дата доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
@@ -297,6 +308,26 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ні</button>
         <button type="button" class="btn btn-success" id="confirmDeliveredBtn">Так</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteModalLabel">Підтвердження видалення</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <strong>Увага!</strong> Ви дійсно хочете видалити цю доставку?<br>
+        <small class="text-muted">Ця дія незворотна.</small>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Видалити</button>
       </div>
     </div>
   </div>
@@ -464,6 +495,7 @@ tbody tr > td[colspan] > div {
 .tag-hard { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
 .tag-medium { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
 .tag-easy { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+.tag-custom { background: #f0e6ff; color: #7c3aed; border-color: #d4c5f9; font-weight: 600; }
 .table th {
   background: #e0edfa !important;
   color: #1565c0 !important;
@@ -494,37 +526,59 @@ tbody tr > td[colspan] > div {
 document.addEventListener('DOMContentLoaded', function() {
   const filterForm = document.getElementById('delivery-filter-form');
   // --- Фільтрація по статусу та даті (frontend) ---
-  const filterDate = document.getElementById('filter-date');
+  const filterDateFrom = document.getElementById('filter-date-from');
+  const filterDateTo = document.getElementById('filter-date-to');
   const filterStatus = document.getElementById('filter-status');
   const applyBtn = document.getElementById('apply-date-btn');
   const resetBtn = document.getElementById('reset-all-btn');
   const tableRows = document.querySelectorAll('tbody tr');
 
   function filterTable() {
-    const dateVal = filterDate ? filterDate.value : '';
+    const dateFromVal = filterDateFrom ? filterDateFrom.value : '';
+    const dateToVal = filterDateTo ? filterDateTo.value : '';
     const statusVal = filterStatus ? filterStatus.value : '';
+    
     tableRows.forEach(row => {
       let show = true;
-      if (dateVal) {
+      
+      // Фільтрація за діапазоном дат
+      if (dateFromVal || dateToVal) {
         const dateCell = row.querySelector('td:nth-child(9)');
-        // Порівнюємо дати у форматі дд.мм
-        const rowDate = dateCell ? dateCell.textContent.trim() : '';
-        const jsDate = new Date(dateVal);
-        const formatted = jsDate.toLocaleDateString('uk-UA', {day:'2-digit', month:'2-digit'});
-        if (rowDate !== formatted) show = false;
+        const rowDateText = dateCell ? dateCell.textContent.trim() : '';
+        
+        if (rowDateText) {
+          // Парсимо дату з рядка таблиці (формат дд.мм)
+          const [day, month] = rowDateText.split('.');
+          const currentYear = new Date().getFullYear();
+          const rowDate = new Date(currentYear, parseInt(month) - 1, parseInt(day));
+          
+          if (dateFromVal) {
+            const fromDate = new Date(dateFromVal);
+            if (rowDate < fromDate) show = false;
+          }
+          
+          if (dateToVal) {
+            const toDate = new Date(dateToVal);
+            if (rowDate > toDate) show = false;
+          }
+        }
       }
+      
       if (statusVal) {
         if (row.getAttribute('data-status') !== statusVal) show = false;
       }
+      
       row.style.display = show ? '' : 'none';
     });
   }
 
   if (filterStatus) filterStatus.addEventListener('change', filterTable);
-  if (filterDate) filterDate.addEventListener('change', filterTable);
+  if (filterDateFrom) filterDateFrom.addEventListener('change', filterTable);
+  if (filterDateTo) filterDateTo.addEventListener('change', filterTable);
   if (resetBtn) {
     resetBtn.addEventListener('click', function() {
-      if (filterDate) filterDate.value = '';
+      if (filterDateFrom) filterDateFrom.value = '';
+      if (filterDateTo) filterDateTo.value = '';
       if (filterStatus) filterStatus.value = '';
       filterTable();
     });
@@ -557,13 +611,15 @@ document.addEventListener('DOMContentLoaded', function() {
   if (currentWeekBtn) {
     currentWeekBtn.addEventListener('click', function() {
       // Очищаємо інші фільтри
-      if (filterDate) filterDate.value = '';
+      if (filterDateFrom) filterDateFrom.value = '';
+      if (filterDateTo) filterDateTo.value = '';
       if (filterStatus) filterStatus.value = '';
       
       // Перенаправляємо на сторінку з фільтром поточного фінансового тижня
       const url = new URL(window.location);
       url.searchParams.set('financial_week', '0');
-      url.searchParams.delete('date');
+      url.searchParams.delete('date_from');
+      url.searchParams.delete('date_to');
       url.searchParams.delete('status');
       window.location.href = url.toString();
     });
@@ -572,13 +628,15 @@ document.addEventListener('DOMContentLoaded', function() {
   if (nextWeekBtn) {
     nextWeekBtn.addEventListener('click', function() {
       // Очищаємо інші фільтри
-      if (filterDate) filterDate.value = '';
+      if (filterDateFrom) filterDateFrom.value = '';
+      if (filterDateTo) filterDateTo.value = '';
       if (filterStatus) filterStatus.value = '';
       
       // Перенаправляємо на сторінку з фільтром наступного фінансового тижня
       const url = new URL(window.location);
       url.searchParams.set('financial_week', '1');
-      url.searchParams.delete('date');
+      url.searchParams.delete('date_from');
+      url.searchParams.delete('date_to');
       url.searchParams.delete('status');
       window.location.href = url.toString();
     });
@@ -624,8 +682,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // --- Автосабміт при зміні дати ---
-  if (filterDate && filterForm) {
-    filterDate.addEventListener('change', function() {
+  if (filterDateFrom && filterForm) {
+    filterDateFrom.addEventListener('change', function() {
+      filterForm.submit();
+    });
+  }
+  if (filterDateTo && filterForm) {
+    filterDateTo.addEventListener('change', function() {
       filterForm.submit();
     });
   }
@@ -791,23 +854,35 @@ document.addEventListener('DOMContentLoaded', function() {
           document.getElementById('editStreet').value = data.street || '';
           document.getElementById('editDeliveryType').value = data.delivery_type || '';
           document.getElementById('editSize').value = data.size || '';
+          document.getElementById('editCustomAmount').value = data.custom_amount || '';
+          
+          // Показуємо/ховаємо поле власної суми
+          toggleCustomAmountField();
+          
           document.getElementById('editDeliveryDate').value = data.delivery_date || '';
           document.getElementById('editTimeFrom').value = data.time_from || '';
           document.getElementById('editTimeTo').value = data.time_to || '';
           document.getElementById('editStatus').value = data.status || 'Очікує';
           document.getElementById('editComment').value = data.comment || '';
           document.getElementById('editPreferences').value = data.preferences || '';
-          // --- ПОКАЗ/СХОВАТИ КНОПКУ ПРОДОВЖЕННЯ ПІДПИСКИ ---
+          // --- ПОКАЗ/СХОВАТИ КНОПКИ ПРОДОВЖЕННЯ ПІДПИСКИ ТА ВИДАЛЕННЯ ---
           const extendBtn = document.getElementById('extendDeliverySubscriptionBtn');
+          const deleteBtn = document.getElementById('deleteDeliveryBtn');
           const status = document.getElementById('editStatus').value;
           const deliveryType = document.getElementById('editDeliveryType').value;
-          if (
-            status === 'Не оплачена' &&
-            ['Weekly', 'Monthly', 'Bi-weekly'].includes(deliveryType)
-          ) {
-            extendBtn.style.display = '';
+          
+          // Показуємо кнопки тільки для неоплачених доставок
+          if (status === 'Не оплачена') {
+            deleteBtn.style.display = '';
+            // Кнопку продовження показуємо тільки для підписок
+            if (['Weekly', 'Monthly', 'Bi-weekly'].includes(deliveryType)) {
+              extendBtn.style.display = '';
+            } else {
+              extendBtn.style.display = 'none';
+            }
           } else {
             extendBtn.style.display = 'none';
+            deleteBtn.style.display = 'none';
           }
           console.log('Модальне вікно відкривається');
           
@@ -852,6 +927,7 @@ document.addEventListener('DOMContentLoaded', function() {
         street: document.getElementById('editStreet').value,
         delivery_type: document.getElementById('editDeliveryType').value,
         size: document.getElementById('editSize').value,
+        custom_amount: document.getElementById('editCustomAmount').value,
         delivery_date: document.getElementById('editDeliveryDate').value,
         time_from: document.getElementById('editTimeFrom').value,
         time_to: document.getElementById('editTimeTo').value,
@@ -976,6 +1052,25 @@ document.addEventListener('DOMContentLoaded', function() {
       loadFutureDeliveries(deliveryId);
     }
   });
+  
+  // Функція для показу/приховування поля власної суми
+  function toggleCustomAmountField() {
+    const sizeSelect = document.getElementById('editSize');
+    const customAmountContainer = document.getElementById('editCustomAmountContainer');
+    const customAmountInput = document.getElementById('editCustomAmount');
+    
+    if (sizeSelect.value === 'Власний') {
+      customAmountContainer.style.display = 'block';
+      customAmountInput.required = true;
+    } else {
+      customAmountContainer.style.display = 'none';
+      customAmountInput.required = false;
+      customAmountInput.value = '';
+    }
+  }
+  
+  // Обробник зміни розміру в модалці редагування
+  document.getElementById('editSize').addEventListener('change', toggleCustomAmountField);
   
   // Очищення змінених доставок при закритті модалки редагування
   document.getElementById('editDeliveryModal').addEventListener('hidden.bs.modal', function() {
@@ -1152,6 +1247,49 @@ document.addEventListener('DOMContentLoaded', function() {
         // Обробник сабміту тепер знаходиться в самому шаблоні extend_order_modal.html
         // Тому тут нічого не робимо - дозволяємо шаблону самому обробляти submit
       });
+  });
+
+  // === Event listeners для видалення доставки ===
+  let deliveryToDelete = null;
+
+  // Кнопка видалення в модальному вікні редагування
+  document.getElementById('deleteDeliveryBtn').addEventListener('click', function() {
+    deliveryToDelete = document.getElementById('editDeliveryId').value;
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    confirmModal.show();
+  });
+
+  // Підтвердження видалення
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async function() {
+    if (!deliveryToDelete) return;
+
+    try {
+      const response = await fetch(`/deliveries/${deliveryToDelete}/delete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Закриваємо модальні вікна
+        bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+        bootstrap.Modal.getInstance(document.getElementById('editDeliveryModal')).hide();
+        
+        alert('Доставку успішно видалено!');
+        location.reload();
+      } else {
+        alert('Помилка: ' + (data.error || 'Не вдалося видалити доставку'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Помилка зʼєднання з сервером!');
+    }
+
+    deliveryToDelete = null;
   });
 
   // === JS для керування видимістю колонок ===

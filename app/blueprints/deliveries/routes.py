@@ -11,7 +11,8 @@ deliveries_bp = Blueprint('deliveries', __name__)
 
 @deliveries_bp.route('/deliveries', methods=['GET'])
 def deliveries_list():
-    date_str = request.args.get('date')
+    date_from_str = request.args.get('date_from')
+    date_to_str = request.args.get('date_to')
     client_instagram = request.args.get('client_instagram', '').strip()
     recipient_phone = request.args.get('recipient_phone', '').strip()
     client_phone = request.args.get('client_phone', '').strip()  # для сумісності, але не використовується
@@ -23,7 +24,7 @@ def deliveries_list():
     # Додаємо логування для діагностики
     import logging
     logger = logging.getLogger(__name__)
-    logger.info(f'Deliveries route called with: client_instagram="{client_instagram}", recipient_phone="{recipient_phone}", date="{date_str}", status="{status}"')
+    logger.info(f'Deliveries route called with: client_instagram="{client_instagram}", recipient_phone="{recipient_phone}", date_from="{date_from_str}", date_to="{date_to_str}", status="{status}"')
     logger.info(f'All request args: {dict(request.args)}')
     
     # Конвертуємо financial_week в число якщо він є
@@ -33,7 +34,7 @@ def deliveries_list():
         except ValueError:
             financial_week = None
     
-    deliveries, selected_date, grouped_deliveries = get_deliveries(date_str, client_instagram, recipient_phone, financial_week, status)
+    deliveries, selected_date, grouped_deliveries = get_deliveries(date_from_str, date_to_str, client_instagram, recipient_phone, financial_week, status)
     logger.info(f'get_deliveries returned {len(deliveries)} deliveries')
     couriers = get_all_couriers()
     
@@ -63,7 +64,6 @@ def deliveries_list():
     return render_template('deliveries_list.html', 
                          deliveries=deliveries_on_page, 
                          grouped_deliveries=grouped_on_page,
-                         selected_date=selected_date, 
                          couriers=couriers,
                          page=page,
                          prev_page=prev_page,
@@ -88,6 +88,7 @@ def get_delivery(delivery_id):
         'time_to': d.time_to or '',
         'delivery_date': d.delivery_date.strftime('%Y-%m-%d'),
         'size': d.size or (order.size if order else ''),
+        'custom_amount': order.custom_amount if order and hasattr(order, 'custom_amount') else '',
         'delivery_type': d.delivery_type or (order.delivery_type if order else ''),
         'status': d.status,
         'is_pickup': d.is_pickup,
@@ -376,3 +377,28 @@ def extend_delivery_subscription_with_form(delivery_id):
         db.session.rollback()
         logging.error(f'Помилка продовження підписки доставки: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
+
+
+@deliveries_bp.route('/deliveries/<int:delivery_id>/delete', methods=['POST'])
+def delete_delivery(delivery_id):
+    """Видалити доставку"""
+    logger.info(f"Delete delivery called for delivery {delivery_id}")
+    
+    try:
+        d = get_delivery_by_id(delivery_id)
+        
+        # Перевіряємо, чи це неоплачена доставка
+        if d.status != 'Не оплачена':
+            return jsonify({'success': False, 'error': 'Можна видаляти тільки неоплачені доставки'}), 400
+        
+        # Видаляємо доставку
+        db.session.delete(d)
+        db.session.commit()
+        
+        logger.info(f"Delivery {delivery_id} deleted successfully")
+        return jsonify({'success': True, 'message': 'Доставку успішно видалено'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Помилка видалення доставки {delivery_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при видаленні доставки'}), 500
