@@ -26,7 +26,7 @@ def group_deliveries_by_date(deliveries):
         grouped[key].append(d)
     return grouped
 
-def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, financial_week=None, status=None):
+def get_deliveries(date_from_str=None, date_to_str=None, client_instagram=None, recipient_phone=None, financial_week=None, status=None):
     deliveries_query = Delivery.query
     selected_date = None
     start_date = end_date = None
@@ -45,15 +45,27 @@ def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, f
             Delivery.delivery_date >= start_date,
             Delivery.delivery_date <= end_date
         )
-    elif date_str:
-        try:
-            logger.info(f'Парсинг дати: "{date_str}"')
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            logger.info(f'Парсована дата: {selected_date}')
-            deliveries_query = deliveries_query.filter(Delivery.delivery_date == selected_date)
-            logger.info(f'Додано фільтр по даті: {selected_date}')
-        except Exception as e:
-            logger.warning(f'Помилка парсингу дати: {e}')
+    elif date_from_str or date_to_str:
+        # Фільтрація за діапазоном дат
+        if date_from_str:
+            try:
+                logger.info(f'Парсинг дати "з": "{date_from_str}"')
+                date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+                logger.info(f'Парсована дата "з": {date_from}')
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date >= date_from)
+                logger.info(f'Додано фільтр "з" дати: {date_from}')
+            except Exception as e:
+                logger.warning(f'Помилка парсингу дати "з": {e}')
+        
+        if date_to_str:
+            try:
+                logger.info(f'Парсинг дати "до": "{date_to_str}"')
+                date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+                logger.info(f'Парсована дата "до": {date_to}')
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date <= date_to)
+                logger.info(f'Додано фільтр "до" дати: {date_to}')
+            except Exception as e:
+                logger.warning(f'Помилка парсингу дати "до": {e}')
 
     logger.info(f'Фінальний SQL: {str(deliveries_query)}')
     # Сортуємо по даті, потім по time_from (nulls last), потім по id
@@ -72,7 +84,7 @@ def get_deliveries(date_str=None, client_instagram=None, recipient_phone=None, f
                 pass
     grouped = group_deliveries_by_date(result)
     logger.info(f'Кількість доставок після фільтрації: {len(result)}')
-    return result, date_str or '', grouped
+    return result, '', grouped
 
 def get_delivery_by_id(delivery_id):
     return Delivery.query.get_or_404(delivery_id)
@@ -103,6 +115,14 @@ def update_delivery(d, data):
         d.comment = data['comment']
     if 'preferences' in data:
         d.preferences = data['preferences']
+    
+    # Оновлюємо custom_amount в замовленні якщо розмір "Власний"
+    current_size = data.get('size', d.size)
+    if 'custom_amount' in data and current_size == 'Власний':
+        if d.order:
+            d.order.custom_amount = int(data['custom_amount']) if data['custom_amount'] else None
+            logger.info(f'Оновлено custom_amount в замовленні {d.order.id}: {d.order.custom_amount}')
+    
     db.session.commit()
     return d
 

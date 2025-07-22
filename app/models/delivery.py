@@ -30,6 +30,7 @@ class Delivery(db.Model):
     status_changed_at = db.Column(db.DateTime)
     
     # Зв'язки
+    order = db.relationship('Order', back_populates='deliveries')
     client = db.relationship('Client')
     courier = db.relationship('Courier', back_populates='deliveries')
     

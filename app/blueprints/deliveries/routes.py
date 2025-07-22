@@ -6,11 +6,13 @@ from app.extensions import db
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
 deliveries_bp = Blueprint('deliveries', __name__)
 
 @deliveries_bp.route('/deliveries', methods=['GET'])
 def deliveries_list():
-    date_str = request.args.get('date')
+    date_from_str = request.args.get('date_from')
+    date_to_str = request.args.get('date_to')
     client_instagram = request.args.get('client_instagram', '').strip()
     recipient_phone = request.args.get('recipient_phone', '').strip()
     client_phone = request.args.get('client_phone', '').strip()  # для сумісності, але не використовується
@@ -22,7 +24,7 @@ def deliveries_list():
     # Додаємо логування для діагностики
     import logging
     logger = logging.getLogger(__name__)
-    logger.info(f'Deliveries route called with: client_instagram="{client_instagram}", recipient_phone="{recipient_phone}", date="{date_str}", status="{status}"')
+    logger.info(f'Deliveries route called with: client_instagram="{client_instagram}", recipient_phone="{recipient_phone}", date_from="{date_from_str}", date_to="{date_to_str}", status="{status}"')
     logger.info(f'All request args: {dict(request.args)}')
     
     # Конвертуємо financial_week в число якщо він є
@@ -32,7 +34,7 @@ def deliveries_list():
         except ValueError:
             financial_week = None
     
-    deliveries, selected_date, grouped_deliveries = get_deliveries(date_str, client_instagram, recipient_phone, financial_week, status)
+    deliveries, selected_date, grouped_deliveries = get_deliveries(date_from_str, date_to_str, client_instagram, recipient_phone, financial_week, status)
     logger.info(f'get_deliveries returned {len(deliveries)} deliveries')
     couriers = get_all_couriers()
     
@@ -62,7 +64,6 @@ def deliveries_list():
     return render_template('deliveries_list.html', 
                          deliveries=deliveries_on_page, 
                          grouped_deliveries=grouped_on_page,
-                         selected_date=selected_date, 
                          couriers=couriers,
                          page=page,
                          prev_page=prev_page,
@@ -87,6 +88,7 @@ def get_delivery(delivery_id):
         'time_to': d.time_to or '',
         'delivery_date': d.delivery_date.strftime('%Y-%m-%d'),
         'size': d.size or (order.size if order else ''),
+        'custom_amount': order.custom_amount if order and hasattr(order, 'custom_amount') else '',
         'delivery_type': d.delivery_type or (order.delivery_type if order else ''),
         'status': d.status,
         'is_pickup': d.is_pickup,
@@ -214,7 +216,25 @@ def change_delivery_dates(delivery_id):
 
 @deliveries_bp.route('/deliveries/<int:delivery_id>/extend-subscription', methods=['POST'])
 def extend_delivery_subscription(delivery_id):
-    """Продовжити підписку для доставки"""
+    """Продовжити підписку для доставки без форми (для прямого продовження)"""
+    d = get_delivery_by_id(delivery_id)
+    
+    # Перевіряємо, чи це неоплачена доставка підписки
+    if d.status != 'Не оплачена' or d.delivery_type not in ['Weekly', 'Monthly', 'Bi-weekly']:
+        return jsonify({'success': False, 'error': 'Це не неоплачена доставка підписки'}), 400
+    
+    # Знаходимо замовлення цієї доставки
+    order = d.order if hasattr(d, 'order') else None
+    if not order:
+        return jsonify({'success': False, 'error': 'Не знайдено замовлення для доставки'}), 404
+
+@deliveries_bp.route('/deliveries/<int:delivery_id>/extend-subscription-with-form', methods=['POST'])
+def extend_delivery_subscription_with_form(delivery_id):
+    """Продовжити підписку для доставки з оновленими даними з форми"""
+    logger.info(f"Extend subscription with form called for delivery {delivery_id}")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request form data: {request.form.to_dict()}")
+    
     d = get_delivery_by_id(delivery_id)
     
     # Перевіряємо, чи це неоплачена доставка підписки
@@ -226,34 +246,53 @@ def extend_delivery_subscription(delivery_id):
     if not order:
         return jsonify({'success': False, 'error': 'Не знайдено замовлення для доставки'}), 404
     
+    # Отримуємо дані з форми
+    form_data = request.form.to_dict() if request.form else request.get_json() or {}
+    
+    # Валідуємо основні поля (без first_delivery_date!)
+    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'delivery_type', 'size', 'delivery_day', 'for_whom']
+    missing_fields = []
+    for field in required_fields:
+        if not form_data.get(field):
+            missing_fields.append(field)
+    
+    if missing_fields:
+        return jsonify({'success': False, 'error': f'Не всі обов\'язкові поля заповнені: {", ".join(missing_fields)}'}), 400
+    
     try:
+        # Знаходимо або створюємо клієнта за новим Instagram
+        from app.services.order_service import get_or_create_client
+        client, error = get_or_create_client(form_data['client_instagram'])
+        if error:
+            return jsonify({'success': False, 'error': error}), 400
+        
         # Використовуємо ту ж логіку, що й для замовлень
         from app.services.order_service import WEEKDAY_MAP
         import datetime
         import calendar
         
-        # Клонуємо замовлення
+        # Клонуємо замовлення з оновленими даними з форми
         new_order = Order(
-            client_id=order.client_id,
-            recipient_name=order.recipient_name,
-            recipient_phone=order.recipient_phone,
-            recipient_social=order.recipient_social,
-            city=order.city,
-            street=order.street,
-            building_number=order.building_number,
-            floor=order.floor,
-            entrance=order.entrance,
-            is_pickup=order.is_pickup,
-            delivery_type=order.delivery_type,
-            size=order.size,
-            custom_amount=order.custom_amount,
-            first_delivery_date=order.first_delivery_date,
-            delivery_day=order.delivery_day,
-            time_from=order.time_from,
-            time_to=order.time_to,
-            comment=order.comment,
-            preferences=order.preferences,
-            for_whom=order.for_whom,
+            client_id=client.id,  # Використовуємо клієнта з форми
+            recipient_name=form_data['recipient_name'],
+            recipient_phone=form_data['recipient_phone'],
+            recipient_social=form_data.get('recipient_social'),
+            city=form_data['city'],
+            street=form_data.get('street'),
+            building_number=form_data.get('building_number'),
+            floor=form_data.get('floor'),
+            entrance=form_data.get('entrance'),
+            is_pickup=form_data.get('is_pickup') == 'on',
+            delivery_type=form_data['delivery_type'],
+            size=form_data['size'],
+            custom_amount=int(form_data['custom_amount']) if form_data.get('custom_amount') and form_data.get('custom_amount').strip() else None,
+            first_delivery_date=order.first_delivery_date,  # Зберігаємо оригінальну дату
+            delivery_day=form_data['delivery_day'],
+            time_from=form_data.get('time_from'),
+            time_to=form_data.get('time_to'),
+            comment=form_data.get('comment') or '',
+            preferences=form_data.get('preferences') or '',
+            for_whom=form_data['for_whom'],
             bouquet_size=order.bouquet_size,
             price_at_order=order.price_at_order,
             periodicity=order.periodicity,
@@ -280,21 +319,21 @@ def extend_delivery_subscription(delivery_id):
         for deliv in other_unpaid:
             db.session.delete(deliv)
         
-        # Створюємо 4 нові доставки
+        # Створюємо 5 нових доставок (4 оплачені + 1 неоплачена для продовження)
         prev_date = d.delivery_date
-        desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
+        desired_weekday = WEEKDAY_MAP.get(new_order.delivery_day, 0)
         deliveries = []
         
-        for i in range(4):
-            if order.delivery_type == 'Weekly':
+        for i in range(5):
+            if new_order.delivery_type == 'Weekly':
                 next_date = prev_date + datetime.timedelta(days=1)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Bi-weekly':
+            elif new_order.delivery_type == 'Bi-weekly':
                 next_date = prev_date + datetime.timedelta(days=8)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Monthly':
+            elif new_order.delivery_type == 'Monthly':
                 year = prev_date.year + (prev_date.month // 12)
                 month = (prev_date.month % 12) + 1
                 c = calendar.Calendar()
@@ -312,29 +351,54 @@ def extend_delivery_subscription(delivery_id):
             prev_date = next_date
         
         for i, d_date in enumerate(deliveries):
-            is_subscription = i < 3
-            status = 'Очікує' if is_subscription else 'Не оплачена'
+            is_subscription = i < 4  # Перші 4 - підписка, остання - сигнал для продовження
+            status = 'Очікує' if i < 4 else 'Не оплачена'  # Перші 4 оплачені, остання - неоплачена
             delivery = Delivery(
                 order_id=new_order.id,
-                client_id=order.client_id,
+                client_id=new_order.client_id,
                 delivery_date=d_date,
                 status=status,
-                comment=order.comment if i == 0 else None,
-                preferences=order.preferences,
-                street=order.street if not order.is_pickup else None,
-                building_number=order.building_number if not order.is_pickup else None,
-                time_from=order.time_from,
-                time_to=order.time_to,
-                size=order.size,
-                phone=order.recipient_phone,
-                is_pickup=order.is_pickup,
-                delivery_type=order.delivery_type,
+                comment=new_order.comment or '',
+                preferences=new_order.preferences,
+                street=new_order.street if not new_order.is_pickup else None,
+                building_number=new_order.building_number if not new_order.is_pickup else None,
+                time_from=new_order.time_from,
+                time_to=new_order.time_to,
+                size=new_order.size,
+                phone=new_order.recipient_phone,
+                is_pickup=new_order.is_pickup,
+                delivery_type=new_order.delivery_type,
                 is_subscription=is_subscription
             )
             db.session.add(delivery)
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Підписку продовжено для клієнта {order.client.instagram}'})
+        return jsonify({'success': True, 'message': f'Підписку продовжено для клієнта {client.instagram}'})
     except Exception as e:
         db.session.rollback()
         logging.error(f'Помилка продовження підписки доставки: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
+
+
+@deliveries_bp.route('/deliveries/<int:delivery_id>/delete', methods=['POST'])
+def delete_delivery(delivery_id):
+    """Видалити доставку"""
+    logger.info(f"Delete delivery called for delivery {delivery_id}")
+    
+    try:
+        d = get_delivery_by_id(delivery_id)
+        
+        # Перевіряємо, чи це неоплачена доставка
+        if d.status != 'Не оплачена':
+            return jsonify({'success': False, 'error': 'Можна видаляти тільки неоплачені доставки'}), 400
+        
+        # Видаляємо доставку
+        db.session.delete(d)
+        db.session.commit()
+        
+        logger.info(f"Delivery {delivery_id} deleted successfully")
+        return jsonify({'success': True, 'message': 'Доставку успішно видалено'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Помилка видалення доставки {delivery_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при видаленні доставки'}), 500
