@@ -86,39 +86,4 @@
     </div>
   </div>
 </div>
-<script>
-document.getElementById('extendOrderForm').onsubmit = async function(e) {
-  e.preventDefault();
-  
-  // Отримуємо delivery_id з прихованого поля
-  const deliveryId = document.querySelector('input[name="delivery_id"]').value;
-  
-  if (!deliveryId) {
-    alert('Помилка: не вдалося знайти ID доставки');
-    return;
-  }
-  
-  try {
-    // Використовуємо API продовження підписки для доставки
-    const response = await fetch(`/deliveries/${deliveryId}/extend-subscription`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
-      alert('Підписку успішно продовжено!');
-      location.reload();
-    } else {
-      alert('Помилка: ' + (data.error || 'Невідома помилка'));
-    }
-  } catch (error) {
-    alert('Помилка зʼєднання з сервером!');
-  }
-};
-</script> 
+ 

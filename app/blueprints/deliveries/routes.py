@@ -6,6 +6,7 @@ from app.extensions import db
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
 deliveries_bp = Blueprint('deliveries', __name__)
 
 @deliveries_bp.route('/deliveries', methods=['GET'])
@@ -229,6 +230,10 @@ def extend_delivery_subscription(delivery_id):
 @deliveries_bp.route('/deliveries/<int:delivery_id>/extend-subscription-with-form', methods=['POST'])
 def extend_delivery_subscription_with_form(delivery_id):
     """Продовжити підписку для доставки з оновленими даними з форми"""
+    logger.info(f"Extend subscription with form called for delivery {delivery_id}")
+    logger.info(f"Request method: {request.method}")
+    logger.info(f"Request form data: {request.form.to_dict()}")
+    
     d = get_delivery_by_id(delivery_id)
     
     # Перевіряємо, чи це неоплачена доставка підписки
@@ -284,8 +289,8 @@ def extend_delivery_subscription_with_form(delivery_id):
             delivery_day=form_data['delivery_day'],
             time_from=form_data.get('time_from'),
             time_to=form_data.get('time_to'),
-            comment=form_data.get('comment'),
-            preferences=form_data.get('preferences'),
+            comment=form_data.get('comment') or '',
+            preferences=form_data.get('preferences') or '',
             for_whom=form_data['for_whom'],
             bouquet_size=order.bouquet_size,
             price_at_order=order.price_at_order,
@@ -313,21 +318,21 @@ def extend_delivery_subscription_with_form(delivery_id):
         for deliv in other_unpaid:
             db.session.delete(deliv)
         
-        # Створюємо 4 нові доставки
+        # Створюємо 5 нових доставок (4 оплачені + 1 неоплачена для продовження)
         prev_date = d.delivery_date
-        desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
+        desired_weekday = WEEKDAY_MAP.get(new_order.delivery_day, 0)
         deliveries = []
         
-        for i in range(4):
-            if order.delivery_type == 'Weekly':
+        for i in range(5):
+            if new_order.delivery_type == 'Weekly':
                 next_date = prev_date + datetime.timedelta(days=1)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Bi-weekly':
+            elif new_order.delivery_type == 'Bi-weekly':
                 next_date = prev_date + datetime.timedelta(days=8)
                 while next_date.weekday() != desired_weekday:
                     next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Monthly':
+            elif new_order.delivery_type == 'Monthly':
                 year = prev_date.year + (prev_date.month // 12)
                 month = (prev_date.month % 12) + 1
                 c = calendar.Calendar()
@@ -345,28 +350,28 @@ def extend_delivery_subscription_with_form(delivery_id):
             prev_date = next_date
         
         for i, d_date in enumerate(deliveries):
-            is_subscription = i < 3
-            status = 'Очікує' if is_subscription else 'Не оплачена'
+            is_subscription = i < 4  # Перші 4 - підписка, остання - сигнал для продовження
+            status = 'Очікує' if i < 4 else 'Не оплачена'  # Перші 4 оплачені, остання - неоплачена
             delivery = Delivery(
                 order_id=new_order.id,
-                client_id=order.client_id,
+                client_id=new_order.client_id,
                 delivery_date=d_date,
                 status=status,
-                comment=order.comment if i == 0 else None,
-                preferences=order.preferences,
-                street=order.street if not order.is_pickup else None,
-                building_number=order.building_number if not order.is_pickup else None,
-                time_from=order.time_from,
-                time_to=order.time_to,
-                size=order.size,
-                phone=order.recipient_phone,
-                is_pickup=order.is_pickup,
-                delivery_type=order.delivery_type,
+                comment=new_order.comment or '',
+                preferences=new_order.preferences,
+                street=new_order.street if not new_order.is_pickup else None,
+                building_number=new_order.building_number if not new_order.is_pickup else None,
+                time_from=new_order.time_from,
+                time_to=new_order.time_to,
+                size=new_order.size,
+                phone=new_order.recipient_phone,
+                is_pickup=new_order.is_pickup,
+                delivery_type=new_order.delivery_type,
                 is_subscription=is_subscription
             )
             db.session.add(delivery)
         db.session.commit()
-        return jsonify({'success': True, 'message': f'Підписку продовжено для клієнта {order.client.instagram}'})
+        return jsonify({'success': True, 'message': f'Підписку продовжено для клієнта {client.instagram}'})
     except Exception as e:
         db.session.rollback()
         logging.error(f'Помилка продовження підписки доставки: {e}')

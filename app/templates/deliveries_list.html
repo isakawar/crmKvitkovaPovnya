@@ -119,8 +119,8 @@
                 <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
               {% endif %}
             </td>
-            <td data-col="comment">{{ d.comment }}</td>
-            <td data-col="preferences">{{ d.preferences }}</td>
+                            <td data-col="comment">{{ d.comment or '' }}</td>
+                          <td data-col="preferences">{{ d.preferences or '' }}</td>
             <td data-col="time">
               {% if d.time_from and d.time_to %}
                 {{ d.time_from }}-{{ d.time_to }}
@@ -1207,6 +1207,59 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   window.addEventListener('DOMContentLoaded', applyColumnSettings);
   // === /JS для керування видимістю колонок ===
+
+  // === Event delegation для форми продовження підписки ===
+  document.addEventListener('submit', async function(e) {
+    if (e.target.id === 'extendOrderForm') {
+      e.preventDefault();
+      
+      console.log('Form submission intercepted');
+      
+      // Отримуємо delivery_id з прихованого поля
+      const deliveryId = e.target.querySelector('input[name="delivery_id"]').value;
+      
+      if (!deliveryId) {
+        alert('Помилка: не вдалося знайти ID доставки');
+        return;
+      }
+      
+      console.log('Delivery ID:', deliveryId);
+      
+      try {
+        // Збираємо дані з форми
+        const formData = new FormData(e.target);
+        
+        console.log('Form data collected, sending to:', `/deliveries/${deliveryId}/extend-subscription-with-form`);
+        
+        // Використовуємо API продовження підписки з даними форми
+        const response = await fetch(`/deliveries/${deliveryId}/extend-subscription-with-form`, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: formData
+        });
+        
+        console.log('Response status:', response.status);
+        
+        const data = await response.json();
+        
+        console.log('Response data:', data);
+        
+        if (data.success) {
+          bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
+          alert('Підписку успішно продовжено!');
+          location.reload();
+        } else {
+          alert('Помилка: ' + (data.error || 'Невідома помилка'));
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Помилка зʼєднання з сервером!');
+      }
+    }
+  });
+  // === /Event delegation для форми продовження підписки ===
 });
 </script>
 {% endblock %} 
