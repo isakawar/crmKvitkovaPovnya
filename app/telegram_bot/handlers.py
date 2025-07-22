@@ -299,15 +299,26 @@ class CourierHandlers:
     async def handle_callback_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle callback queries from inline keyboards"""
         query = update.callback_query
-        await query.answer()
+        
+        # Перевіряємо чи не застарів callback query
+        try:
+            await query.answer()
+        except Exception as e:
+            if "Query is too old" in str(e) or "query id is invalid" in str(e):
+                logger.warning(f"Received old callback query, ignoring: {e}")
+                return
+            else:
+                logger.error(f"Error answering callback query: {e}")
+                return
         
         chat_id = query.message.chat_id
         courier = await self._get_registered_courier(update, chat_id, query=query)
         if not courier:
             return
-        
+
         data = query.data
-        
+        logger.info(f"Received callback: {data} from courier {courier.name}")
+
         # Route callback to appropriate handler
         if data == "main_menu":
             await self._show_main_menu(query, courier)
@@ -315,11 +326,12 @@ class CourierHandlers:
             await self._handle_deliveries_callback(query, courier, data)
         elif data.startswith("delivery_"):
             await self._handle_delivery_action(query, courier, data)
-        elif data.startswith("confirm_"):
+        elif data.startswith("confirm_") or data.startswith("cancel_"):
             await self._handle_confirmation(query, courier, data)
         elif data.startswith("problem_"):
             await self._handle_problem_report(query, courier, data)
         else:
+            logger.warning(f"Unknown callback command: {data}")
             await query.edit_message_text("❌ Невідома команда")
     
     async def handle_text_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -523,16 +535,21 @@ class CourierHandlers:
     async def _handle_confirmation(self, query, courier: Courier, data: str):
         """Handle confirmation callbacks"""
         
+        logger.info(f"Handling confirmation callback: {data}")
+        
         try:
             if data.startswith("confirm_complete_"):
                 delivery_id = int(data.split("_")[-1])
+                logger.info(f"Confirming delivery completion for delivery {delivery_id}")
                 await self._confirm_delivery_completion(query, courier, delivery_id)
             
             elif data.startswith("cancel_complete_"):
                 delivery_id = int(data.split("_")[-1])
+                logger.info(f"Canceling delivery completion for delivery {delivery_id}")
                 await self._cancel_delivery_completion(query, courier, delivery_id)
             
             else:
+                logger.warning(f"Unknown confirmation command: {data}")
                 await query.edit_message_text(
                     "❌ Невідома команда підтвердження",
                     reply_markup=self.keyboards.back_to_main()
@@ -574,15 +591,17 @@ class CourierHandlers:
             )
             return
         
-        # Показуємо підтвердження
-        confirmation_text = (
-            f"📦 **Доставка #{delivery.id}**\n\n"
-            f"👤 {delivery.order.recipient_name if delivery.order else 'Не вказано'}\n"
-            f"📞 {delivery.order.recipient_phone if delivery.order else delivery.phone}\n\n"
-            f"❓ **Підтвердіть завершення доставки**\n"
-            f"Після підтвердження статус зміниться на \"Доставлено\""
-        )
+        # ЗМІНЮЄМО ТІЛЬКИ КНОПКИ, ЗАЛИШАЄМО ОРИГІНАЛЬНИЙ ТЕКСТ
+        # Отримуємо поточний текст повідомлення
+        current_text = query.message.text
         
+        # Додаємо питання підтвердження до кінця, якщо його ще немає
+        if "❓ **Підтвердіть завершення доставки**" not in current_text:
+            confirmation_text = f"{current_text}\n\n❓ **Підтвердіть завершення доставки**\nПісля підтвердження статус зміниться на \"Доставлено\""
+        else:
+            confirmation_text = current_text
+        
+        # Змінюємо тільки кнопки
         await query.edit_message_text(
             confirmation_text,
             reply_markup=self.keyboards.confirm_delivery_completion(delivery_id),
@@ -641,10 +660,28 @@ class CourierHandlers:
             )
     
     async def _cancel_delivery_completion(self, query, courier: Courier, delivery_id: int):
-        """Cancel delivery completion and return to delivery details"""
+        """Cancel delivery completion and return original buttons"""
         
-        # Повертаємося до деталей доставки замість просто повідомлення
-        await self._show_delivery_details(query, courier, delivery_id)
+        # Отримуємо поточний текст
+        current_text = query.message.text
+        
+        # Видаляємо питання підтвердження, якщо воно є
+        if "❓ **Підтвердіть завершення доставки**" in current_text:
+            # Забираємо все після останнього рядка з підтвердженням
+            lines = current_text.split('\n')
+            # Знаходимо індекс рядка з підтвердженням
+            for i, line in enumerate(lines):
+                if "❓ **Підтвердіть завершення доставки**" in line:
+                    # Забираємо все до цього рядка
+                    current_text = '\n'.join(lines[:i]).strip()
+                    break
+        
+        # Просто змінюємо кнопки назад до оригінальних
+        await query.edit_message_text(
+            current_text,
+            reply_markup=self.keyboards.delivery_actions(delivery_id),
+            parse_mode='Markdown'
+        )
     
     async def _show_delivery_details(self, query, courier: Courier, delivery_id: int):
         """Show detailed delivery information"""
@@ -659,7 +696,7 @@ class CourierHandlers:
             return
         
         # Використовуємо сервіс для форматування інформації
-        delivery_info = self.telegram_service.format_delivery_info(delivery, detailed=True)
+        delivery_info = self.service.format_delivery_info(delivery, detailed=True)
         
         await query.edit_message_text(
             delivery_info,
