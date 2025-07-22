@@ -1,39 +1,482 @@
-{% extends 'layout.html' %}
+{% extends "layout.html" %}
+
+{% block title %}Кур'єри{% endblock %}
+
 {% block content %}
-<h2 class="mb-4">Кур'єри</h2>
-<form method="post" class="row g-3 align-items-end mb-4">
-  <div class="col-md-4">
-    <label class="form-label">Ім'я</label>
-    <input type="text" name="name" class="form-control" required>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      
+      <!-- Заголовок та кнопки -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0" style="color: #2c3e50; font-weight: 600;">
+          🚴 Кур'єри
+          <span class="badge bg-info ms-2">{{ total_stats.total_couriers }} кур'єрів</span>
+        </h2>
+        
+        <div class="d-flex gap-3 align-items-center">
+          <!-- Фільтр періоду -->
+          <select id="period-filter" class="form-select" style="max-width: 200px;">
+            <option value="week" {% if period == 'week' %}selected{% endif %}>За тиждень</option>
+            <option value="month" {% if period == 'month' %}selected{% endif %}>За місяць</option>
+            <option value="year" {% if period == 'year' %}selected{% endif %}>За рік</option>
+            <option value="all" {% if period == 'all' %}selected{% endif %}>За весь час</option>
+          </select>
+          
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourierModal">
+            <i class="bi bi-plus-circle"></i> Додати кур'єра
+          </button>
+        </div>
+      </div>
+
+      <!-- Статистика -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-primary">👥 Всього кур'єрів</h5>
+              <h3 class="mb-0">{{ total_stats.total_couriers }}</h3>
+              <small class="text-muted">Активних: {{ total_stats.active_couriers }}</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-success">📦 Доставок {{ period_title }}</h5>
+              <h3 class="mb-0">{{ total_stats.total_deliveries }}</h3>
+              <small class="text-muted">Виконано: {{ total_stats.completed_deliveries }}</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-warning">📊 Середня ефективність</h5>
+              <h3 class="mb-0">
+                {% if total_stats.total_deliveries > 0 %}
+                  {{ "%.1f"|format((total_stats.completed_deliveries / total_stats.total_deliveries * 100)) }}%
+                {% else %}
+                  0%
+                {% endif %}
+              </h3>
+              <small class="text-muted">Виконання замовлень</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-info">🏆 Топ кур'єр</h5>
+              <h3 class="mb-0">
+                {% if courier_stats %}
+                  {{ courier_stats[0].courier.name }}
+                {% else %}
+                  -
+                {% endif %}
+              </h3>
+              <small class="text-muted">
+                {% if courier_stats %}
+                  {{ courier_stats[0].total_deliveries }} доставок
+                {% endif %}
+              </small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Таблиця кур'єрів -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0">
+          <h5 class="mb-0">Список кур'єрів та статистика {{ period_title }}</h5>
+        </div>
+        <div class="card-body p-0">
+          {% if courier_stats %}
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Кур'єр</th>
+                    <th>Телефон</th>
+                    <th>Статус</th>
+                    <th class="text-center">Всього доставок</th>
+                    <th class="text-center">Виконано</th>
+                    <th class="text-center">В роботі</th>
+                    <th class="text-center">Ефективність</th>
+                    <th class="text-center">Самовивіз / Доставка</th>
+                    <th class="text-center">Остання доставка</th>
+                    <th class="text-center">Дії</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for stats in courier_stats %}
+                    <tr data-courier-id="{{ stats.courier.id }}">
+                      <td>
+                        <div class="d-flex align-items-center">
+                          <div class="avatar-circle me-3">
+                            {{ stats.courier.name[0].upper() }}
+                          </div>
+                          <div>
+                            <strong>{{ stats.courier.name }}</strong>
+                            {% if stats.total_deliveries == 0 %}
+                              <br><small class="text-muted">Новий кур'єр</small>
+                            {% endif %}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <a href="tel:{{ stats.courier.phone }}" class="text-decoration-none">
+                          <i class="bi bi-telephone"></i> {{ stats.courier.phone }}
+                        </a>
+                      </td>
+                      <td>
+                        <span class="badge bg-{{ 'success' if stats.courier.active else 'secondary' }}">
+                          {{ 'Активний' if stats.courier.active else 'Неактивний' }}
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        <strong class="text-primary">{{ stats.total_deliveries }}</strong>
+                      </td>
+                      <td class="text-center">
+                        <span class="text-success">{{ stats.completed }}</span>
+                      </td>
+                      <td class="text-center">
+                        <span class="text-warning">{{ stats.in_progress }}</span>
+                      </td>
+                      <td class="text-center">
+                        <div class="progress" style="height: 20px; width: 60px;">
+                          <div class="progress-bar bg-success" role="progressbar" 
+                               style="width: {{ stats.completion_rate }}%" 
+                               aria-valuenow="{{ stats.completion_rate }}" 
+                               aria-valuemin="0" aria-valuemax="100">
+                            {{ stats.completion_rate }}%
+                          </div>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                        <div class="d-flex justify-content-center gap-1">
+                          <span class="badge bg-info">{{ stats.pickup_count }} <i class="bi bi-shop"></i></span>
+                          <span class="badge bg-primary">{{ stats.delivery_count }} <i class="bi bi-truck"></i></span>
+                        </div>
+                      </td>
+                      <td class="text-center">
+                                                 {% if stats.last_delivery and stats.last_delivery.delivered_at %}
+                           <small class="text-muted">
+                             {{ stats.last_delivery.delivered_at.strftime('%d.%m.%Y') }}
+                           </small>
+                         {% else %}
+                           <small class="text-muted">-</small>
+                         {% endif %}
+                      </td>
+                      <td class="text-center">
+                        <div class="btn-group" role="group">
+                          <button class="btn btn-outline-primary btn-sm edit-courier" 
+                                  data-courier-id="{{ stats.courier.id }}"
+                                  data-courier-name="{{ stats.courier.name }}"
+                                  data-courier-phone="{{ stats.courier.phone }}"
+                                  title="Редагувати">
+                            <i class="bi bi-pencil"></i>
+                          </button>
+                          <button class="btn btn-outline-{{ 'warning' if stats.courier.active else 'success' }} btn-sm toggle-status" 
+                                  data-courier-id="{{ stats.courier.id }}"
+                                  title="{{ 'Деактивувати' if stats.courier.active else 'Активувати' }}">
+                            <i class="bi bi-{{ 'pause' if stats.courier.active else 'play' }}"></i>
+                          </button>
+                          <button class="btn btn-outline-danger btn-sm delete-courier" 
+                                  data-courier-id="{{ stats.courier.id }}"
+                                  data-courier-name="{{ stats.courier.name }}"
+                                  title="Видалити">
+                            <i class="bi bi-trash"></i>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-5">
+              <i class="bi bi-people" style="font-size: 4rem; color: #dee2e6;"></i>
+              <h4 class="mt-3 text-muted">Кур'єрів ще немає</h4>
+              <p class="text-muted">Додайте першого кур'єра для початку роботи</p>
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourierModal">
+                <i class="bi bi-plus-circle"></i> Додати кур'єра
+              </button>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      
+    </div>
   </div>
-  <div class="col-md-4">
-    <label class="form-label">Телефон</label>
-    <input type="text" name="phone" class="form-control" required>
+</div>
+
+<!-- Модальне вікно додавання кур'єра -->
+<div class="modal fade" id="addCourierModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Додати нового кур'єра</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="addCourierForm">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="courierName" class="form-label">Ім'я кур'єра *</label>
+            <input type="text" class="form-control" id="courierName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="courierPhone" class="form-label">Телефон *</label>
+            <input type="tel" class="form-control" id="courierPhone" name="phone" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-primary">Додати кур'єра</button>
+        </div>
+      </form>
+    </div>
   </div>
-  <div class="col-md-2 d-flex align-items-end">
-    <button type="submit" class="btn btn-primary w-100">Додати</button>
+</div>
+
+<!-- Модальне вікно редагування кур'єра -->
+<div class="modal fade" id="editCourierModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Редагувати кур'єра</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="editCourierForm">
+        <div class="modal-body">
+          <input type="hidden" id="editCourierId">
+          <div class="mb-3">
+            <label for="editCourierName" class="form-label">Ім'я кур'єра *</label>
+            <input type="text" class="form-control" id="editCourierName" name="name" required>
+          </div>
+          <div class="mb-3">
+            <label for="editCourierPhone" class="form-label">Телефон *</label>
+            <input type="tel" class="form-control" id="editCourierPhone" name="phone" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="submit" class="btn btn-primary">Зберегти зміни</button>
+        </div>
+      </form>
+    </div>
   </div>
-</form>
-<table class="table table-bordered table-hover align-middle">
-  <thead>
-    <tr>
-      <th>ID</th>
-      <th>Ім'я</th>
-      <th>Телефон</th>
-      <th>Активний</th>
-      <th>Виконано доставок</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for c in couriers %}
-    <tr>
-      <td>{{ c.id }}</td>
-      <td>{{ c.name }}</td>
-      <td>{{ c.phone }}</td>
-      <td>{% if c.active %}Так{% else %}Ні{% endif %}</td>
-      <td>{{ c.deliveries_count }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+</div>
+
+<!-- Toast для повідомлень -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="notification-toast" class="toast" role="alert">
+    <div class="toast-header">
+      <strong class="me-auto">Повідомлення</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body"></div>
+  </div>
+</div>
+
+<style>
+.avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007bff, #28a745);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.progress {
+  border-radius: 10px;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.btn-group .btn {
+  border-radius: 6px !important;
+  margin: 0 2px;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.badge {
+  font-size: 0.85em;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  
+  // Функція показу toast повідомлень
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('notification-toast');
+    const toastBody = toast.querySelector('.toast-body');
+    const toastHeader = toast.querySelector('.toast-header');
+    
+    toastBody.textContent = message;
+    toastHeader.className = `toast-header bg-${type} text-white`;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+  }
+  
+  // Зміна періоду статистики
+  document.getElementById('period-filter').addEventListener('change', function() {
+    const period = this.value;
+    window.location.href = `/couriers?period=${period}`;
+  });
+  
+  // Додавання нового кур'єра
+  document.getElementById('addCourierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+      name: formData.get('name'),
+      phone: formData.get('phone')
+    };
+    
+    fetch('/couriers/new', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('addCourierModal')).hide();
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showToast(data.error, 'danger');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Помилка мережі', 'danger');
+    });
+  });
+  
+  // Редагування кур'єра
+  document.querySelectorAll('.edit-courier').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const courierName = this.dataset.courierName;
+      const courierPhone = this.dataset.courierPhone;
+      
+      document.getElementById('editCourierId').value = courierId;
+      document.getElementById('editCourierName').value = courierName;
+      document.getElementById('editCourierPhone').value = courierPhone;
+      
+      new bootstrap.Modal(document.getElementById('editCourierModal')).show();
+    });
+  });
+  
+  document.getElementById('editCourierForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const courierId = document.getElementById('editCourierId').value;
+    const formData = new FormData(this);
+    const data = {
+      name: formData.get('name'),
+      phone: formData.get('phone')
+    };
+    
+    fetch(`/couriers/${courierId}/edit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        bootstrap.Modal.getInstance(document.getElementById('editCourierModal')).hide();
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        showToast(data.error, 'danger');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Помилка мережі', 'danger');
+    });
+  });
+  
+  // Переключення статусу активності
+  document.querySelectorAll('.toggle-status').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      
+      fetch(`/couriers/${courierId}/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showToast(data.message, 'success');
+          setTimeout(() => window.location.reload(), 1000);
+        } else {
+          showToast(data.error, 'danger');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        showToast('Помилка мережі', 'danger');
+      });
+    });
+  });
+  
+  // Видалення кур'єра
+  document.querySelectorAll('.delete-courier').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const courierName = this.dataset.courierName;
+      
+      if (confirm(`Ви впевнені, що хочете видалити кур'єра "${courierName}"?`)) {
+        fetch(`/couriers/${courierId}/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+            setTimeout(() => window.location.reload(), 1000);
+          } else {
+            showToast(data.error, 'danger');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showToast('Помилка мережі', 'danger');
+        });
+      }
+    });
+  });
+  
+});
+</script>
+
 {% endblock %} 

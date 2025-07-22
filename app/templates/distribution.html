@@ -1,0 +1,532 @@
+{% extends "layout.html" %}
+
+{% block title %}Вивантаження доставок{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      
+      <!-- Заголовок та фільтр по даті -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0" style="color: #2c3e50; font-weight: 600;">
+          📦 Вивантаження доставок
+          <span class="badge bg-info ms-2">{{ unassigned_deliveries|length + courier_groups.values()|map('length')|sum }} доставок</span>
+        </h2>
+        
+        <div class="d-flex gap-3 align-items-center">
+          <label for="distribution-date" class="form-label mb-0 fw-semibold">Дата:</label>
+          <input type="date" id="distribution-date" class="form-control" 
+                 style="max-width: 170px; border-radius: 8px;" 
+                 value="{{ selected_date.strftime('%Y-%m-%d') }}">
+        </div>
+      </div>
+
+      <!-- Статистика -->
+      <div class="row mb-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-warning">⏰ Не розподілені</h5>
+              <h3 class="mb-0">{{ unassigned_deliveries|length }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-success">✅ Розподілені</h5>
+              <h3 class="mb-0">{{ courier_groups.values()|map('length')|sum }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-info">👥 Активні кур'єри</h5>
+              <h3 class="mb-0">{{ courier_groups|length }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <h5 class="card-title text-primary">📋 Всього</h5>
+              <h3 class="mb-0">{{ unassigned_deliveries|length + courier_groups.values()|map('length')|sum }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        
+        <!-- Ліва колонка: Не розподілені доставки -->
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-warning bg-opacity-10 border-0">
+              <h5 class="mb-0 text-warning">⏰ Не розподілені доставки</h5>
+              <small class="text-muted">Перетягніть доставки до кур'єрів →</small>
+            </div>
+            <div class="card-body p-2" style="max-height: 70vh; overflow-y: auto;">
+              
+              {% if unassigned_deliveries %}
+                <div id="unassigned-list" class="delivery-list">
+                  {% for delivery in unassigned_deliveries %}
+                    <div class="delivery-item card mb-2 border-0 shadow-sm" 
+                         data-delivery-id="{{ delivery.id }}" 
+                         draggable="true">
+                      <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                          <strong class="text-primary">#{{ delivery.id }}</strong>
+                          <span class="badge bg-{{ 'success' if delivery.is_pickup else 'info' }}">
+                            {{ 'Самовивіз' if delivery.is_pickup else 'Доставка' }}
+                          </span>
+                        </div>
+                        
+                        <div class="mb-2">
+                          <i class="bi bi-person"></i> {{ delivery.client.instagram }}
+                          <br>
+                          <i class="bi bi-telephone"></i> {{ delivery.phone }}
+                        </div>
+                        
+                        {% if not delivery.is_pickup %}
+                        <div class="mb-2">
+                          <i class="bi bi-geo-alt"></i> {{ delivery.street }}
+                          {% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if delivery.time_from or delivery.time_to %}
+                        <div class="mb-2">
+                          <i class="bi bi-clock"></i> 
+                          {% if delivery.time_from %}{{ delivery.time_from }}{% endif %}
+                          {% if delivery.time_from and delivery.time_to %} - {% endif %}
+                          {% if delivery.time_to %}{{ delivery.time_to }}{% endif %}
+                        </div>
+                        {% endif %}
+                        
+                        {% if delivery.size %}
+                        <div>
+                          <i class="bi bi-flower1"></i> 
+                          {% if delivery.size == 'Власний' and delivery.order and delivery.order.custom_amount %}
+                            {{ delivery.order.custom_amount }}₴
+                          {% else %}
+                            {{ delivery.size }}
+                          {% endif %}
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="text-center text-muted py-4">
+                  <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
+                  <h5 class="mt-2">Всі доставки розподілені!</h5>
+                  <p>Немає доставок, які очікують розподілу</p>
+                </div>
+              {% endif %}
+              
+            </div>
+          </div>
+        </div>
+
+        <!-- Права колонка: Кур'єри та їх доставки -->
+        <div class="col-md-8">
+          
+          <!-- Селект для швидкого призначення -->
+          <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body py-3">
+              <div class="d-flex gap-3 align-items-center">
+                <strong>Швидке призначення:</strong>
+                <select id="quick-courier-select" class="form-select" style="max-width: 200px;">
+                  <option value="">Оберіть кур'єра</option>
+                  {% for courier in couriers %}
+                    <option value="{{ courier.id }}">{{ courier.name }}</option>
+                  {% endfor %}
+                </select>
+                <button id="assign-selected" class="btn btn-success" disabled>
+                  <i class="bi bi-plus-circle"></i> Призначити обрані
+                </button>
+                <button id="select-all-unassigned" class="btn btn-outline-primary">
+                  <i class="bi bi-check2-square"></i> Обрати всі
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Кур'єри та їх доставки -->
+          <div id="couriers-container">
+            {% for courier in couriers %}
+              <div class="card border-0 shadow-sm mb-3 courier-section" data-courier-id="{{ courier.id }}">
+                <div class="card-header bg-success bg-opacity-10 border-0">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-success">
+                      <i class="bi bi-person-badge"></i> {{ courier.name }}
+                      <span class="badge bg-success ms-2">{{ courier_groups.get(courier.id, [])|length }} доставок</span>
+                    </h5>
+                    {% if courier_groups.get(courier.id) %}
+                      <button class="btn btn-outline-danger btn-sm unassign-all" 
+                              data-courier-id="{{ courier.id }}">
+                        <i class="bi bi-x-circle"></i> Зняти всі
+                      </button>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="card-body p-2 courier-drop-zone" 
+                     data-courier-id="{{ courier.id }}"
+                     style="min-height: 100px; max-height: 400px; overflow-y: auto;">
+                  
+                  {% set courier_deliveries = courier_groups.get(courier.id, []) %}
+                  {% if courier_deliveries %}
+                    <div class="delivery-list">
+                      {% for delivery in courier_deliveries %}
+                        <div class="delivery-item card mb-2 border-0 shadow-sm assigned" 
+                             data-delivery-id="{{ delivery.id }}" 
+                             draggable="true">
+                          <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                              <strong class="text-primary">#{{ delivery.id }}</strong>
+                              <div>
+                                <span class="badge bg-{{ 'success' if delivery.is_pickup else 'info' }}">
+                                  {{ 'Самовивіз' if delivery.is_pickup else 'Доставка' }}
+                                </span>
+                                <button class="btn btn-outline-danger btn-sm ms-1 unassign-delivery" 
+                                        data-delivery-id="{{ delivery.id }}" 
+                                        title="Зняти призначення">
+                                  <i class="bi bi-x"></i>
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div class="mb-2">
+                              <i class="bi bi-person"></i> {{ delivery.client.instagram }}
+                              <br>
+                              <i class="bi bi-telephone"></i> {{ delivery.phone }}
+                            </div>
+                            
+                            {% if not delivery.is_pickup %}
+                            <div class="mb-2">
+                              <i class="bi bi-geo-alt"></i> {{ delivery.street }}
+                              {% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if delivery.time_from or delivery.time_to %}
+                            <div class="mb-2">
+                              <i class="bi bi-clock"></i> 
+                              {% if delivery.time_from %}{{ delivery.time_from }}{% endif %}
+                              {% if delivery.time_from and delivery.time_to %} - {% endif %}
+                              {% if delivery.time_to %}{{ delivery.time_to }}{% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            {% if delivery.size %}
+                            <div>
+                              <i class="bi bi-flower1"></i> 
+                              {% if delivery.size == 'Власний' and delivery.order and delivery.order.custom_amount %}
+                                {{ delivery.order.custom_amount }}₴
+                              {% else %}
+                                {{ delivery.size }}
+                              {% endif %}
+                            </div>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endfor %}
+                    </div>
+                  {% else %}
+                    <div class="text-center text-muted py-4 drop-zone-placeholder">
+                      <i class="bi bi-plus-circle-dotted" style="font-size: 2rem;"></i>
+                      <p class="mt-2 mb-0">Перетягніть доставки сюди</p>
+                    </div>
+                  {% endif %}
+                  
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          
+        </div>
+        
+      </div>
+      
+    </div>
+  </div>
+</div>
+
+<!-- Toast для повідомлень -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="notification-toast" class="toast" role="alert">
+    <div class="toast-header">
+      <strong class="me-auto">Повідомлення</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body"></div>
+  </div>
+</div>
+
+<style>
+.delivery-item {
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.delivery-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+}
+
+.delivery-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
+}
+
+.delivery-item.assigned {
+  border-left: 4px solid #28a745 !important;
+}
+
+.courier-drop-zone {
+  border: 2px dashed transparent;
+  transition: all 0.3s ease;
+}
+
+.courier-drop-zone.drag-over {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.drop-zone-placeholder {
+  transition: all 0.3s ease;
+}
+
+.courier-drop-zone.drag-over .drop-zone-placeholder {
+  color: #007bff !important;
+}
+
+.delivery-item input[type="checkbox"] {
+  transform: scale(1.2);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let selectedDeliveries = new Set();
+  let draggedElement = null;
+  
+  // Зміна дати
+  document.getElementById('distribution-date').addEventListener('change', function() {
+    const newDate = this.value;
+    window.location.href = `/distribution?date=${newDate}`;
+  });
+  
+  // Функція показу toast повідомлень
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('notification-toast');
+    const toastBody = toast.querySelector('.toast-body');
+    const toastHeader = toast.querySelector('.toast-header');
+    
+    toastBody.textContent = message;
+    toastHeader.className = `toast-header bg-${type} text-white`;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+  }
+  
+  // Додавання чекбоксів до доставок
+  function addCheckboxes() {
+    const unassignedItems = document.querySelectorAll('#unassigned-list .delivery-item');
+    unassignedItems.forEach(item => {
+      if (!item.querySelector('input[type="checkbox"]')) {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'form-check-input position-absolute';
+        checkbox.style.top = '10px';
+        checkbox.style.right = '10px';
+        checkbox.style.zIndex = '10';
+        
+        const deliveryId = item.dataset.deliveryId;
+        checkbox.addEventListener('change', function() {
+          if (this.checked) {
+            selectedDeliveries.add(deliveryId);
+            item.style.backgroundColor = '#e7f3ff';
+          } else {
+            selectedDeliveries.delete(deliveryId);
+            item.style.backgroundColor = '';
+          }
+          updateAssignButton();
+        });
+        
+        item.style.position = 'relative';
+        item.appendChild(checkbox);
+      }
+    });
+  }
+  
+  function updateAssignButton() {
+    const assignBtn = document.getElementById('assign-selected');
+    const courierSelect = document.getElementById('quick-courier-select');
+    assignBtn.disabled = selectedDeliveries.size === 0 || !courierSelect.value;
+  }
+  
+  // Ініціалізація чекбоксів
+  addCheckboxes();
+  
+  // Обробник вибору кур'єра
+  document.getElementById('quick-courier-select').addEventListener('change', updateAssignButton);
+  
+  // Вибрати всі неприв'язані доставки
+  document.getElementById('select-all-unassigned').addEventListener('click', function() {
+    const checkboxes = document.querySelectorAll('#unassigned-list input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+      cb.checked = !allChecked;
+      const deliveryId = cb.closest('.delivery-item').dataset.deliveryId;
+      if (!allChecked) {
+        selectedDeliveries.add(deliveryId);
+        cb.closest('.delivery-item').style.backgroundColor = '#e7f3ff';
+      } else {
+        selectedDeliveries.delete(deliveryId);
+        cb.closest('.delivery-item').style.backgroundColor = '';
+      }
+    });
+    
+    updateAssignButton();
+    this.innerHTML = allChecked ? 
+      '<i class="bi bi-check2-square"></i> Обрати всі' : 
+      '<i class="bi bi-square"></i> Зняти всі';
+  });
+  
+  // Призначити обрані доставки
+  document.getElementById('assign-selected').addEventListener('click', function() {
+    const courierId = document.getElementById('quick-courier-select').value;
+    if (!courierId || selectedDeliveries.size === 0) return;
+    
+    assignDeliveries(courierId, Array.from(selectedDeliveries));
+  });
+  
+  // Drag & Drop функціональність
+  function initDragAndDrop() {
+    // Зробити всі доставки перетягуваними
+    document.querySelectorAll('.delivery-item').forEach(item => {
+      item.addEventListener('dragstart', function(e) {
+        draggedElement = this;
+        this.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/html', this.outerHTML);
+      });
+      
+      item.addEventListener('dragend', function() {
+        this.classList.remove('dragging');
+        draggedElement = null;
+      });
+    });
+    
+    // Зробити зони кур'єрів приймаючими
+    document.querySelectorAll('.courier-drop-zone').forEach(zone => {
+      zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+      });
+      
+      zone.addEventListener('dragleave', function() {
+        this.classList.remove('drag-over');
+      });
+      
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        if (draggedElement) {
+          const deliveryId = draggedElement.dataset.deliveryId;
+          const courierId = this.dataset.courierId;
+          assignDeliveries(courierId, [deliveryId]);
+        }
+      });
+    });
+  }
+  
+  // Функція призначення доставок
+  function assignDeliveries(courierId, deliveryIds) {
+    fetch('/distribution/assign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        courier_id: parseInt(courierId),
+        delivery_ids: deliveryIds.map(id => parseInt(id))
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        // Оновлюємо сторінку
+        window.location.reload();
+      } else {
+        showToast(data.error || 'Помилка призначення доставок', 'danger');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Помилка мережі', 'danger');
+    });
+  }
+  
+  // Функція зняття призначення
+  function unassignDeliveries(deliveryIds) {
+    fetch('/distribution/unassign', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        delivery_ids: deliveryIds.map(id => parseInt(id))
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        showToast(data.message, 'success');
+        // Оновлюємо сторінку
+        window.location.reload();
+      } else {
+        showToast(data.error || 'Помилка зняття призначення', 'danger');
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Помилка мережі', 'danger');
+    });
+  }
+  
+  // Зняти всі доставки з кур'єра
+  document.querySelectorAll('.unassign-all').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const deliveryIds = Array.from(
+        document.querySelectorAll(`.courier-section[data-courier-id="${courierId}"] .delivery-item`)
+      ).map(item => item.dataset.deliveryId);
+      
+      if (deliveryIds.length > 0) {
+        unassignDeliveries(deliveryIds);
+      }
+    });
+  });
+  
+  // Зняти окрему доставку
+  document.querySelectorAll('.unassign-delivery').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const deliveryId = this.dataset.deliveryId;
+      unassignDeliveries([deliveryId]);
+    });
+  });
+  
+  // Ініціалізація drag & drop
+  initDragAndDrop();
+});
+</script>
+
+{% endblock %} 
