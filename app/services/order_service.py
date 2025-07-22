@@ -45,7 +45,7 @@ def create_order_and_deliveries(client, form):
         is_pickup=is_pickup,
         delivery_type=form['delivery_type'],
         size=form['size'],
-        custom_amount=int(form.get('custom_amount', 0)) if form.get('custom_amount') else None,
+        custom_amount=int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None,
         first_delivery_date=datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date(),
         delivery_day=form['delivery_day'],
         time_from=form.get('time_from'),
@@ -171,7 +171,7 @@ def update_order(order, form):
     order.is_pickup = form.get('is_pickup') == 'on'
     order.delivery_type = form['delivery_type']
     order.size = form['size']
-    order.custom_amount = int(form.get('custom_amount', 0)) if form.get('custom_amount') else None
+    order.custom_amount = int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None
     order.first_delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
     order.delivery_day = form['delivery_day']
     order.time_from = form.get('time_from')

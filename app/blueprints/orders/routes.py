@@ -64,6 +64,31 @@ def order_create():
         flash(msg, 'danger')
         return redirect('/orders/new')
     
+    # Валідація custom_amount для власного розміру
+    size = request.form.get('size')
+    custom_amount = request.form.get('custom_amount')
+    if size == 'Власний':
+        if not custom_amount or custom_amount.strip() == '':
+            error_msg = 'Для власного розміру потрібно вказати суму'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+        try:
+            amount = int(custom_amount)
+            if amount <= 0:
+                error_msg = 'Сума для власного розміру має бути більше 0'
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return jsonify({'success': False, 'error': error_msg}), 400
+                flash(error_msg, 'danger')
+                return redirect('/orders/new')
+        except ValueError:
+            error_msg = 'Сума для власного розміру має бути числом'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+    
     # Отримуємо клієнта
     client_instagram = request.form['client_instagram']
     client, error = get_or_create_client(client_instagram)

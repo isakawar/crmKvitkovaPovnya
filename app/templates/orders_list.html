@@ -370,6 +370,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('clientSearch:', clientSearch);
     console.log('recipientPhoneInput:', recipientPhoneInput);
+    console.log('customAmountDiv:', customAmountDiv);
+    console.log('customAmountInput:', customAmountInput);
 
     if (recipientPhoneInput) {
         recipientPhoneInput.setAttribute('maxlength', '13');
@@ -434,13 +436,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Власний розмір - показ поля суми
     if (sizeSelect) {
         sizeSelect.addEventListener('change', function() {
+            console.log('Size changed to:', this.value);
             if (this.value === 'Власний') {
-                customAmountDiv.style.display = 'block';
-                customAmountInput.required = true;
+                if (customAmountDiv) {
+                    customAmountDiv.style.display = 'block';
+                    console.log('Showing custom amount div');
+                }
+                if (customAmountInput) {
+                    customAmountInput.required = true;
+                    console.log('Made custom amount required');
+                }
             } else {
-                customAmountDiv.style.display = 'none';
-                customAmountInput.required = false;
-                customAmountInput.value = '';
+                if (customAmountDiv) {
+                    customAmountDiv.style.display = 'none';
+                    console.log('Hiding custom amount div');
+                }
+                if (customAmountInput) {
+                    customAmountInput.required = false;
+                    customAmountInput.value = '';
+                    console.log('Cleared custom amount');
+                }
             }
         });
     }
@@ -475,9 +490,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 showOrderError('Вкажіть адресу або оберіть "Самовивіз"');
                 return;
             }
-            if (sizeSelect.value === 'Власний' && (!customAmountInput.value || customAmountInput.value <= 0)) {
-                showOrderError('Для власного розміру потрібно вказати суму більше 0');
-                return;
+            if (sizeSelect.value === 'Власний') {
+                if (!customAmountInput) {
+                    showOrderError('Помилка: поле суми не знайдено. Спробуйте оновити сторінку.');
+                    return;
+                }
+                if (!customAmountInput.value || customAmountInput.value <= 0) {
+                    showOrderError('Для власного розміру потрібно вказати суму більше 0');
+                    return;
+                }
             }
             
             // AJAX submit
@@ -545,6 +566,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (customAmountInput) {
                     customAmountInput.required = false;
+                    customAmountInput.value = '';
                 }
                 // --- Ховаємо кнопку 'Продовжити' ---
                 const extendBtn = document.getElementById('extend-subscription-modal-btn');
