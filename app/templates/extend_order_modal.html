@@ -48,10 +48,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="mb-3">
-            <label>Дата першої доставки</label>
-            <input type="date" class="form-control" name="first_delivery_date" value="{{ order.first_delivery_date }}" required>
-          </div>
+
           <div class="mb-3">
             <label>День тижня</label>
             <select name="delivery_day" class="form-select" required>
@@ -92,18 +89,36 @@
 <script>
 document.getElementById('extendOrderForm').onsubmit = async function(e) {
   e.preventDefault();
-  const formData = new FormData(this);
-  const response = await fetch('/orders/new', {
-    method: 'POST',
-    body: formData,
-    headers: {'X-Requested-With': 'XMLHttpRequest'}
-  });
-  const data = await response.json();
-  if (data.success) {
-    bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
-    location.reload();
-  } else {
-    alert(data.error || 'Помилка збереження!');
+  
+  // Отримуємо delivery_id з прихованого поля
+  const deliveryId = document.querySelector('input[name="delivery_id"]').value;
+  
+  if (!deliveryId) {
+    alert('Помилка: не вдалося знайти ID доставки');
+    return;
+  }
+  
+  try {
+    // Використовуємо API продовження підписки для доставки
+    const response = await fetch(`/deliveries/${deliveryId}/extend-subscription`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      bootstrap.Modal.getInstance(document.getElementById('extendOrderModal')).hide();
+      alert('Підписку успішно продовжено!');
+      location.reload();
+    } else {
+      alert('Помилка: ' + (data.error || 'Невідома помилка'));
+    }
+  } catch (error) {
+    alert('Помилка зʼєднання з сервером!');
   }
 };
 </script> 
