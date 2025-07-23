@@ -55,4 +55,62 @@
     </div>
   {% endif %}
 {% endwith %}
+{% endmacro %}
+
+{% macro render_toast() %}
+<!-- Toast для повідомлень -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="notification-toast" class="toast" role="alert">
+    <div class="toast-header">
+      <i class="bi bi-info-circle text-primary me-2" style="font-size: 1rem;"></i>
+      <strong class="me-auto">Повідомлення</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body"></div>
+  </div>
+</div>
+{% endmacro %}
+
+{% macro toast_script() %}
+<script>
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('notification-toast');
+  if (!toast) return;
+  
+  const toastBody = toast.querySelector('.toast-body');
+  const toastHeader = toast.querySelector('.toast-header');
+  const icon = toast.querySelector('.toast-header i');
+  
+  toastBody.textContent = message;
+  
+  // Змінюємо стилі залежно від типу
+  toastHeader.className = `toast-header`;
+  icon.className = `me-2`;
+  
+  switch(type) {
+    case 'success':
+      toastHeader.classList.add('bg-success', 'text-white');
+      icon.classList.add('bi', 'bi-check-circle-fill');
+      break;
+    case 'danger':
+    case 'error':
+      toastHeader.classList.add('bg-danger', 'text-white');
+      icon.classList.add('bi', 'bi-exclamation-triangle-fill');
+      break;
+    case 'warning':
+      toastHeader.classList.add('bg-warning', 'text-dark');
+      icon.classList.add('bi', 'bi-exclamation-triangle');
+      break;
+    default:
+      toastHeader.classList.add('bg-primary', 'text-white');
+      icon.classList.add('bi', 'bi-info-circle');
+  }
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 4000
+  });
+  bsToast.show();
+}
+</script>
 {% endmacro %} 

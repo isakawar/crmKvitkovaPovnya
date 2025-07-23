@@ -1,4 +1,5 @@
 version: '3.8'
+
 services:
   web:
     build: .
@@ -6,7 +7,25 @@ services:
       - "8000:8000"
     volumes:
       - ./instance:/app/instance
+      - ./logs:/app/logs
     environment:
       - FLASK_APP=run.py
       - FLASK_ENV=production
-    restart: unless-stopped 
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    restart: unless-stopped
+
+  telegram-bot:
+    build: .
+    volumes:
+      - ./instance:/app/instance
+      - ./logs:/app/logs
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+    depends_on:
+      - web
+    restart: unless-stopped
+    entrypoint: ["python3", "scripts/run_telegram_bot.py"]
+
+networks:
+  default:
+    driver: bridge 

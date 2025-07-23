@@ -1,4 +1,6 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
 {% block content %}
 <h2 class="mb-4">Клієнти</h2>
 <div class="mb-2"><strong>Всього клієнтів: {{ clients_count }}</strong></div>
@@ -36,15 +38,36 @@
 </table>
 
 <!-- Пагінація -->
-{% if clients_count > 30 %}
-<div class="d-flex justify-content-center align-items-center gap-2">
-    <form method="get" style="display:inline;">
-        <button class="btn btn-secondary" name="page" value="{{ prev_page }}" {% if page == 1 %}disabled{% endif %}>Назад</button>
-    </form>
-    <span class="mx-2">{{ page }}</span>
-    <form method="get" style="display:inline;">
-        <button class="btn btn-secondary" name="page" value="{{ next_page }}" {% if not has_next %}disabled{% endif %}>Вперед</button>
-    </form>
+{% set total_pages = (clients_count // 30) + (1 if clients_count % 30 else 0) %}
+{% if total_pages > 1 %}
+<div class="bottom-controls mt-3">
+    <nav class="pagination">
+        <ul class="pagination mb-0">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(1) }}">&laquo;</a>
+            </li>
+            {% if page > 3 %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(1) }}">1</a></li>
+                {% if page > 4 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endif %}
+            {% for p in range(page-2, page+3) %}
+                {% if 1 <= p <= total_pages %}
+                    <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="?{{ update_query(p) }}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
+            {% if page < total_pages-2 %}
+                {% if page < total_pages-3 %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+                <li class="page-item"><a class="page-link" href="?{{ update_query(total_pages) }}">{{ total_pages }}</a></li>
+            {% endif %}
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?{{ update_query(total_pages) }}">&raquo;</a>
+            </li>
+        </ul>
+    </nav>
 </div>
 {% endif %}
 
@@ -106,6 +129,9 @@
     </div>
   </div>
 </div>
+
+{{ render_toast() }}
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const addForm = document.getElementById('addClientForm');
@@ -201,6 +227,47 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
+  // Функція для показу toast повідомлень
+  function showToast(message, type = 'info') {
+    const toast = document.getElementById('notification-toast');
+    if (!toast) return;
+    
+    const toastBody = toast.querySelector('.toast-body');
+    const toastHeader = toast.querySelector('.toast-header');
+    const icon = toast.querySelector('.toast-header i');
+    
+    toastBody.textContent = message;
+    
+    // Змінюємо стилі залежно від типу
+    toastHeader.className = 'toast-header';
+    icon.className = 'me-2';
+    
+    switch(type) {
+      case 'success':
+        toastHeader.classList.add('bg-success', 'text-white');
+        icon.classList.add('bi', 'bi-check-circle-fill');
+        break;
+      case 'danger':
+      case 'error':
+        toastHeader.classList.add('bg-danger', 'text-white');
+        icon.classList.add('bi', 'bi-exclamation-triangle-fill');
+        break;
+      case 'warning':
+        toastHeader.classList.add('bg-warning', 'text-dark');
+        icon.classList.add('bi', 'bi-exclamation-triangle');
+        break;
+      default:
+        toastHeader.classList.add('bg-primary', 'text-white');
+        icon.classList.add('bi', 'bi-info-circle');
+    }
+    
+    const bsToast = new bootstrap.Toast(toast, {
+      autohide: true,
+      delay: 4000
+    });
+    bsToast.show();
+  }
+
   // Валідація перед відправкою
   addForm.addEventListener('submit', async function(e) {
     errorDiv.classList.add('d-none');
@@ -222,11 +289,16 @@ document.addEventListener('DOMContentLoaded', function() {
       body: formData
     });
     
-    if (resp.ok) {
-      location.reload();
+    const data = await resp.json();
+    
+    if (resp.ok && data.success) {
+      showToast('Клієнта успішно збережено!', 'success');
+      // Закриваємо модалку
+      bootstrap.Modal.getInstance(modal).hide();
+      // Перезавантажуємо сторінку через секунду
+      setTimeout(() => location.reload(), 1000);
     } else {
-      const data = await resp.json();
-      errorDiv.textContent = data.error || 'Помилка';
+      errorDiv.textContent = data.error || 'Помилка збереження';
       errorDiv.classList.remove('d-none');
     }
   });
@@ -239,4 +311,17 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-{% endblock %} 
+{% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %} 

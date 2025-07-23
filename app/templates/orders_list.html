@@ -1,4 +1,6 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3 w-100">
     <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addOrderModal" style="font-weight:500; font-size:1.05rem;">
@@ -353,10 +355,77 @@
 </style>
 {% endblock %}
 
+{{ render_toast() }}
+
 {% block scripts %}
 <script>
 console.log('JS loaded!');
+
+// Функція для показу toast повідомлень (глобальна)
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('notification-toast');
+  if (!toast) {
+    console.error('Toast element not found!');
+    return;
+  }
+  
+  const toastBody = toast.querySelector('.toast-body');
+  const toastHeader = toast.querySelector('.toast-header');
+  const icon = toast.querySelector('.toast-header i');
+  
+  toastBody.textContent = message;
+  
+  // Змінюємо стилі залежно від типу
+  toastHeader.className = 'toast-header';
+  icon.className = 'me-2';
+  
+  switch(type) {
+    case 'success':
+      toastHeader.classList.add('bg-success', 'text-white');
+      icon.classList.add('bi', 'bi-check-circle-fill');
+      break;
+    case 'danger':
+    case 'error':
+      toastHeader.classList.add('bg-danger', 'text-white');
+      icon.classList.add('bi', 'bi-exclamation-triangle-fill');
+      break;
+    case 'warning':
+      toastHeader.classList.add('bg-warning', 'text-dark');
+      icon.classList.add('bi', 'bi-exclamation-triangle');
+      break;
+    default:
+      toastHeader.classList.add('bg-primary', 'text-white');
+      icon.classList.add('bi', 'bi-info-circle');
+  }
+  
+  const bsToast = new bootstrap.Toast(toast, {
+    autohide: true,
+    delay: 4000
+  });
+  bsToast.show();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Перевіряємо чи існує toast елемент
+    const toastElement = document.getElementById('notification-toast');
+    
+    if (!toastElement) {
+        console.error('Toast element not found! Creating manually...');
+        const toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+        toastContainer.innerHTML = `
+            <div id="notification-toast" class="toast" role="alert">
+                <div class="toast-header">
+                    <i class="bi bi-info-circle text-primary me-2" style="font-size: 1rem;"></i>
+                    <strong class="me-auto">Повідомлення</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body"></div>
+            </div>
+        `;
+        document.body.appendChild(toastContainer);
+    }
+    
     // --- МОДАЛКА СТВОРЕННЯ ЗАМОВЛЕННЯ ---
     const clientSearch = document.getElementById('client-search');
     const clientResults = document.getElementById('client-results');
@@ -515,13 +584,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     headers: {'X-Requested-With': 'XMLHttpRequest'},
                     body: formData
                 });
-                if (response.ok) {
-                    // Успіх: закриваємо модалку, оновлюємо сторінку
+                const data = await response.json();
+                console.log('Order response data:', data);
+                
+                if (response.ok && data.success) {
+                    // Успіх: закриваємо модалку, показуємо toast
                     const modal = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
                     if (modal) modal.hide();
-                    location.reload();
+                    console.log('Showing success toast');
+                    showToast('Замовлення успішно збережено!', 'success');
+                    setTimeout(() => location.reload(), 1000);
                 } else {
-                    const data = await response.json();
+                    console.log('Error from server:', data.error);
                     showOrderError(data.error || 'Помилка збереження замовлення!');
                 }
             } catch (error) {
@@ -705,10 +779,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (data.success) {
                 extendModal.hide();
-                alert('Підписку успішно продовжено!');
-                location.reload(); // Оновлюємо сторінку
+                showToast('Підписку успішно продовжено!', 'success');
+                setTimeout(() => location.reload(), 1000);
             } else {
-                alert('Помилка: ' + (data.error || 'Невідома помилка'));
+                showToast('Помилка: ' + (data.error || 'Невідома помилка'), 'error');
             }
         } catch (error) {
             alert('Помилка зʼєднання з сервером!');
