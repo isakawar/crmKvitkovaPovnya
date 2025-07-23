@@ -677,7 +677,39 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Копіювання адреси
+  // Копіювання адреси з fallback
+  function copyToClipboard(text) {
+    // Спробуємо новий Clipboard API
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    } else {
+      // Fallback для старих браузерів або HTTP
+      return new Promise((resolve, reject) => {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const result = document.execCommand('copy');
+          document.body.removeChild(textArea);
+          if (result) {
+            resolve();
+          } else {
+            reject(new Error('Copy failed'));
+          }
+        } catch (err) {
+          document.body.removeChild(textArea);
+          reject(err);
+        }
+      });
+    }
+  }
+
   document.addEventListener('click', function(e) {
     if (e.target.classList.contains('copy-address-icon')) {
       e.preventDefault();
@@ -686,7 +718,7 @@ document.addEventListener('DOMContentLoaded', function() {
       const icon = e.target;
       const address = icon.dataset.address;
       
-      navigator.clipboard.writeText(address).then(function() {
+      copyToClipboard(address).then(function() {
         const originalClass = icon.className;
         icon.className = 'bi bi-check-lg copy-address-icon ms-2';
         icon.style.color = '#198754';
@@ -697,6 +729,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 1500);
         
         showToast(`Адресу скопійовано: ${address}`, 'success');
+      }).catch(function(err) {
+        console.error('Помилка копіювання:', err);
+        showToast('Не вдалося скопіювати адресу', 'warning');
+        
+        // Показати адресу у prompt як останній варіант
+        prompt('Скопіюйте адресу вручну:', address);
       });
     }
   });

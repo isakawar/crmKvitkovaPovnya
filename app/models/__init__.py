@@ -2,9 +2,11 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from app.models.client import Client
-from app.models.order import Order
-# from app.models.price import Price  # Видалено
-from app.models.delivery import Delivery
-from app.models.courier import Courier
-from .settings import Settings 
+from .client import Client
+from .courier import Courier
+from .delivery import Delivery
+from .order import Order
+from .settings import Settings
+from .user import User, Role
+
+__all__ = ['Client', 'Courier', 'Delivery', 'Order', 'Settings', 'User', 'Role'] 

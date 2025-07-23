@@ -1,138 +1,315 @@
-# 🐳 Розгортання в Docker
-
-Цей документ описує як розгорнути CRM Квіткова Повня з Telegram ботом в Docker контейнерах.
+# 🚀 Розгортання CRM на сервері з Docker та Telegram Bot
 
 ## 📋 Передумови
 
-- [Docker](https://docs.docker.com/get-docker/) встановлений
-- [Docker Compose](https://docs.docker.com/compose/install/) встановлений  
-- Telegram Bot Token від [@BotFather](https://t.me/botfather)
+1. **Сервер з Ubuntu/Debian/CentOS**
+2. **Docker та Docker Compose**
+3. **Git** 
+4. **Telegram Bot токен**
 
-## ⚙️ Налаштування
+## 🔧 Крок 1: Підготовка сервера
 
-1. **Створіть файл `.env`** в корені проекту:
-   ```bash
-   cp env.example .env
-   ```
+### Встановлення Docker
+```bash
+# Ubuntu/Debian
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo usermod -aG docker $USER
 
-2. **Додайте ваш Telegram Bot Token** до файлу `.env`:
-   ```env
-   TELEGRAM_BOT_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz123456789
-   ```
+# Перелогіньтесь або виконайте:
+newgrp docker
 
-## 🚀 Швидкий запуск
+# Встановлення Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
+
+### Альтернативно (новий Docker Compose)
+```bash
+# Для нових версій Docker (включає compose plugin)
+docker compose version
+```
+
+## 📦 Крок 2: Клонування проекту
 
 ```bash
-# Автоматичне розгортання
+# Клонування з GitHub
+git clone https://github.com/isakawar/crmKvitkovaPovnya.git
+cd crmKvitkovaPovnya
+
+# Переключення на потрібну версію
+git checkout v0.0.6
+
+# Або на гілку з найновішими змінами
+git checkout feature/telegram-bot-integration
+```
+
+## 🔑 Крок 3: Налаштування Telegram Bot
+
+### 3.1 Створення Telegram Bot
+1. Відкрийте [@BotFather](https://t.me/botfather) в Telegram
+2. Виконайте команду `/newbot`
+3. Дайте ім'я боту (наприклад: "Kvіtkova Povnya CRM Bot")
+4. Дайте username боту (наприклад: "@kvitkova_crm_bot")
+5. Скопіюйте отриманий токен
+
+### 3.2 Створення .env файлу
+```bash
+# Створіть .env файл у корені проекту
+cp env.example .env
+
+# Відредагуйте файл
+nano .env
+```
+
+**Вміст .env файлу:**
+```env
+TELEGRAM_BOT_TOKEN=1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZ-abcdefg
+```
+
+⚠️ **Важливо:** Замініть значення на ваш реальний токен!
+
+## 🚀 Крок 4: Розгортання
+
+### Автоматичне розгортання (рекомендовано)
+```bash
+# Зробити скрипт виконуваним
+chmod +x scripts/docker-deploy.sh
+
+# Запустити розгортання
 ./scripts/docker-deploy.sh
 ```
 
-## 📝 Ручний запуск
-
+### Ручне розгортання
 ```bash
-# Зупинити існуючі контейнери
-docker-compose down
+# Зупинити існуючі контейнери (якщо є)
+docker compose down
 
-# Збірка образів
-docker-compose build
+# Зібрати образи
+docker compose build
 
-# Запуск всіх сервісів
-docker-compose up -d
+# Запустити сервіси
+docker compose up -d
 ```
 
-## 🔍 Моніторинг
+## 📊 Крок 5: Перевірка стану
 
 ```bash
-# Перевірка стану сервісів
-docker-compose ps
+# Перевірити статус контейнерів
+docker compose ps
 
-# Логи веб сервера
-docker-compose logs web
+# Подивитись логи
+docker compose logs web
+docker compose logs telegram-bot
 
-# Логи Telegram бота
-docker-compose logs telegram-bot
-
-# Всі логи в реальному часі
-docker-compose logs -f
+# Логи в реальному часі
+docker compose logs -f
 ```
 
-## 🏗️ Архітектура
+**Очікуваний результат:**
+```
+NAME                            COMMAND                  SERVICE         STATUS          PORTS
+crmkvitkovapovnya-telegram-bot-1   "python3 scripts/run…"   telegram-bot    running         
+crmkvitkovapovnya-web-1            "/app/docker-entrypo…"   web             running         0.0.0.0:8000->8000/tcp
+```
 
-Система складається з двох сервісів:
+## 🌐 Крок 6: Доступ до додатку
 
-### 🌐 Web Service (`web`)
-- **Порт:** 8000
-- **Функції:** Веб інтерфейс CRM, API
-- **База даних:** SQLite (збережена в `./instance/`)
-- **Логи:** `./logs/`
+- **Web інтерфейс:** `http://your-server-ip:8000`
+- **Telegram Bot:** Відкрийте свого бота і надішліть `/start`
 
-### 🤖 Telegram Bot Service (`telegram-bot`)
-- **Функції:** Обробка повідомлень від кур'єрів
-- **Залежність:** Чекає готовності web сервісу
-- **Логи:** `./logs/telegram_bot.log`
+## 🔧 Налаштування Nginx (Опціонально)
 
-## 🛠️ Корисні команди
+Для продакшену рекомендується встановити Nginx:
 
 ```bash
-# Перезапуск всіх сервісів
-docker-compose restart
+# Встановлення Nginx
+sudo apt update
+sudo apt install nginx
 
-# Перезапуск тільки Telegram бота
-docker-compose restart telegram-bot
-
-# Зупинка всіх сервісів
-docker-compose down
-
-# Зупинка з видаленням volumes
-docker-compose down -v
-
-# Видалення всіх контейнерів і образів
-docker-compose down --rmi all
-
-# Вхід в контейнер web
-docker-compose exec web bash
-
-# Вхід в контейнер telegram-bot
-docker-compose exec telegram-bot bash
+# Створення конфігурації
+sudo nano /etc/nginx/sites-available/crm
 ```
 
-## 🔧 Налагодження
+**Конфігурація Nginx:**
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;  # Замініть на ваш домен
 
-### Перевірка логів
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
 ```bash
-# Якщо web сервіс не запускається
-docker-compose logs web
-
-# Якщо Telegram бот не працює
-docker-compose logs telegram-bot
+# Активувати конфігурацію
+sudo ln -s /etc/nginx/sites-available/crm /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-### Типові проблеми
+## 🔄 Управління сервісами
 
-1. **Telegram бот не запускається:**
-   - Перевірте правильність `TELEGRAM_BOT_TOKEN` в `.env`
-   - Перевірте що токен активний в [@BotFather](https://t.me/botfather)
+### Корисні команди
+```bash
+# Зупинити всі сервіси
+docker compose down
 
-2. **Web сервіс недоступний:**
-   - Перевірте що порт 8000 не зайнятий
-   - Перевірте логи: `docker-compose logs web`
+# Перезапустити сервіси
+docker compose restart
 
-3. **База даних не створюється:**
-   - Перевірте права доступу до папки `./instance/`
-   - Видаліть контейнери і спробуйте знову: `docker-compose down -v && docker-compose up -d`
+# Оновити з GitHub
+git pull origin feature/telegram-bot-integration
+docker compose build
+docker compose up -d
 
-## 🌐 Доступ
+# Переглянути логи конкретного сервісу
+docker compose logs -f web
+docker compose logs -f telegram-bot
 
-Після успішного запуску:
-- **CRM інтерфейс:** http://localhost:8000
-- **Telegram бот:** Працює автоматично, обробляє повідомлення кур'єрів
+# Виконати команди всередині контейнера
+docker compose exec web bash
+docker compose exec web python3 init_db.py
 
-## 📊 Продакшн розгортання
+# Очистити та перестворити БД
+docker compose exec web rm -f instance/kvitkova_crm.db
+docker compose exec web python3 init_db.py
+docker compose exec web python3 scripts/seed_settings.py
+```
 
-Для продакшн використання:
+## 🛡️ Безпека
 
-1. Змініть `FLASK_ENV=production` в `docker-compose.yml`
-2. Використайте зовнішню базу даних замість SQLite
-3. Налаштуйте reverse proxy (nginx)
-4. Додайте HTTPS сертифікати
-5. Налаштуйте моніторинг та бекапи 
+### Firewall налаштування
+```bash
+# Ubuntu/Debian (ufw)
+sudo ufw allow 22    # SSH
+sudo ufw allow 80    # HTTP
+sudo ufw allow 443   # HTTPS (якщо використовуєте SSL)
+sudo ufw allow 8000  # Тимчасово для тестування
+sudo ufw enable
+```
+
+### SSL сертифікат (для продакшену)
+```bash
+# Встановлення Certbot
+sudo apt install certbot python3-certbot-nginx
+
+# Отримання SSL сертифіката
+sudo certbot --nginx -d your-domain.com
+```
+
+## 📝 Моніторинг та логи
+
+### Системні логи
+```bash
+# Логи Docker
+sudo journalctl -u docker.service
+
+# Логи Nginx
+sudo tail -f /var/log/nginx/access.log
+sudo tail -f /var/log/nginx/error.log
+```
+
+### Логи додатку
+```bash
+# Всі логи проекту
+docker compose logs -f
+
+# Окремо веб сервер
+docker compose logs -f web
+
+# Окремо Telegram бот
+docker compose logs -f telegram-bot
+
+# Останні 100 рядків
+docker compose logs --tail=100 web
+```
+
+## 🆘 Усунення неполадок
+
+### Проблема: "Port already in use"
+```bash
+# Знайти процес що використовує порт
+sudo netstat -tulpn | grep :8000
+sudo lsof -i :8000
+
+# Зупинити процес
+sudo kill -9 <PID>
+```
+
+### Проблема: "Telegram bot not responding"
+```bash
+# Перевірити логи бота
+docker compose logs telegram-bot
+
+# Перезапустити тільки бота
+docker compose restart telegram-bot
+
+# Перевірити токен
+docker compose exec telegram-bot env | grep TELEGRAM
+```
+
+### Проблема: "Database locked"
+```bash
+# Перезапустити всі сервіси
+docker compose down
+docker compose up -d
+
+# Або очистити БД
+docker compose exec web rm -f instance/kvitkova_crm.db
+docker compose exec web python3 init_db.py
+```
+
+## 📈 Масштабування
+
+### Для високого навантаження
+```yaml
+# Додати до docker-compose.yml
+version: '3.8'
+services:
+  web:
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+```
+
+### Резервне копіювання
+```bash
+# Створити backup БД
+docker compose exec web cp instance/kvitkova_crm.db instance/backup_$(date +%Y%m%d_%H%M%S).db
+
+# Або скопіювати на хост
+docker cp $(docker compose ps -q web):/app/instance/kvitkova_crm.db ./backup.db
+```
+
+---
+
+## ✅ Checklist розгортання
+
+- [ ] Docker та Docker Compose встановлені
+- [ ] Telegram bot створений в @BotFather
+- [ ] .env файл налаштований з токеном
+- [ ] Проект склонований на сервер
+- [ ] `docker compose up -d` виконано успішно
+- [ ] Обидва контейнери (web + telegram-bot) працюють
+- [ ] Web інтерфейс доступний по http://server-ip:8000
+- [ ] Telegram bot відповідає на команду /start
+- [ ] Firewall налаштований (порти 80, 443, 8000)
+- [ ] Nginx налаштований (опціонально)
+- [ ] SSL сертифікат встановлений (опціонально)
+
+## 🎉 Готово!
+
+Тепер ваша CRM система з Telegram ботом працює на сервері! 🚀
+
+Для підтримки звертайтесь до документації або створюйте Issues в GitHub репозиторії. 

@@ -1,19 +1,42 @@
 from flask import Blueprint, render_template, request, jsonify
-from app.models.settings import Settings
+from flask_login import login_required
+from app.models import Settings
 from app.extensions import db
+from app.utils.decorators import permission_required
 
-settings_bp = Blueprint('settings', __name__)
+bp = Blueprint('settings', __name__)
 
-@settings_bp.route('/settings')
-def settings():
-    return render_template('settings.html')
+@bp.route('/settings')
+@login_required
+@permission_required('view_settings')
+def settings_page():
+    settings = Settings.query.first()
+    return render_template('settings.html', settings=settings)
 
-@settings_bp.route('/settings/cities', methods=['GET'])
+@bp.route('/settings/update', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def update_settings():
+    settings = Settings.query.first()
+    if not settings:
+        settings = Settings()
+        db.session.add(settings)
+    
+    settings.pickup_time_start = request.form.get('pickup_time_start')
+    settings.pickup_time_end = request.form.get('pickup_time_end')
+    settings.delivery_time_start = request.form.get('delivery_time_start')
+    settings.delivery_time_end = request.form.get('delivery_time_end')
+    
+    db.session.commit()
+    
+    return jsonify({'status': 'success'})
+
+@bp.route('/settings/cities', methods=['GET'])
 def get_cities():
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     return jsonify([{'id': c.id, 'value': c.value} for c in cities])
 
-@settings_bp.route('/settings/cities', methods=['POST'])
+@bp.route('/settings/cities', methods=['POST'])
 def add_city():
     data = request.get_json()
     value = (data.get('value') or '').strip()
@@ -26,12 +49,12 @@ def add_city():
     db.session.commit()
     return jsonify({'success': True, 'city': {'id': city.id, 'value': city.value}})
 
-@settings_bp.route('/settings/delivery_types', methods=['GET'])
+@bp.route('/settings/delivery_types', methods=['GET'])
 def get_delivery_types():
     items = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     return jsonify([{'id': i.id, 'value': i.value} for i in items])
 
-@settings_bp.route('/settings/delivery_types', methods=['POST'])
+@bp.route('/settings/delivery_types', methods=['POST'])
 def add_delivery_type():
     data = request.get_json()
     value = (data.get('value') or '').strip()
@@ -44,12 +67,12 @@ def add_delivery_type():
     db.session.commit()
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
-@settings_bp.route('/settings/sizes', methods=['GET'])
+@bp.route('/settings/sizes', methods=['GET'])
 def get_sizes():
     items = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     return jsonify([{'id': i.id, 'value': i.value} for i in items])
 
-@settings_bp.route('/settings/sizes', methods=['POST'])
+@bp.route('/settings/sizes', methods=['POST'])
 def add_size():
     data = request.get_json()
     value = (data.get('value') or '').strip()
@@ -62,12 +85,12 @@ def add_size():
     db.session.commit()
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
-@settings_bp.route('/settings/for_whom', methods=['GET'])
+@bp.route('/settings/for_whom', methods=['GET'])
 def get_for_whom():
     items = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return jsonify([{'id': i.id, 'value': i.value} for i in items])
 
-@settings_bp.route('/settings/for_whom', methods=['POST'])
+@bp.route('/settings/for_whom', methods=['POST'])
 def add_for_whom():
     data = request.get_json()
     value = (data.get('value') or '').strip()
@@ -80,12 +103,12 @@ def add_for_whom():
     db.session.commit()
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
-@settings_bp.route('/settings/marketing_sources', methods=['GET'])
+@bp.route('/settings/marketing_sources', methods=['GET'])
 def get_marketing_sources():
     items = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
     return jsonify([{'id': i.id, 'value': i.value} for i in items])
 
-@settings_bp.route('/settings/marketing_sources', methods=['POST'])
+@bp.route('/settings/marketing_sources', methods=['POST'])
 def add_marketing_source():
     data = request.get_json()
     value = (data.get('value') or '').strip()
