@@ -11,6 +11,32 @@ from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
+@distribution_bp.route('/distribution-test', methods=['GET'])
+def distribution_test():
+    """Тестова сторінка з простою структурою"""
+    from datetime import date
+    
+    # Отримуємо дату з параметрів або беремо сьогоднішню
+    date_str = request.args.get('date', date.today().isoformat())
+    
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = date.today()
+    
+    # Отримуємо доставки на вибрану дату
+    deliveries = Delivery.query.filter(
+        Delivery.delivery_date == selected_date,
+        Delivery.status.in_(['Очікує', 'Розподілено']),
+        Delivery.is_pickup == False
+    ).all()
+    
+    unassigned_deliveries = [d for d in deliveries if not d.courier_id]
+    
+    return render_template('distribution_simple.html', 
+                         unassigned_deliveries=unassigned_deliveries,
+                         selected_date=selected_date)
+
 @distribution_bp.route('/distribution', methods=['GET'])
 def distribution_page():
     """Сторінка розподілу доставок між кур'єрами"""
@@ -41,6 +67,7 @@ def distribution_page():
     # Групуємо доставки за кур'єрами
     courier_groups = {}
     unassigned_deliveries = []
+    telegram_sent_count = 0
     
     for delivery in deliveries:
         if delivery.courier_id and delivery.courier_id in active_courier_ids:
@@ -48,11 +75,14 @@ def distribution_page():
             if delivery.courier_id not in courier_groups:
                 courier_groups[delivery.courier_id] = []
             courier_groups[delivery.courier_id].append(delivery)
+            # Рахуємо надіслані в Telegram
+            if delivery.telegram_notification_sent:
+                telegram_sent_count += 1
         else:
             # Доставка не призначена або призначена неактивному кур'єру
             unassigned_deliveries.append(delivery)
     
-    logger.info(f'Distribution page: {len(deliveries)} deliveries on {selected_date}')
+    logger.info(f'Distribution page: {len(deliveries)} deliveries on {selected_date}, {telegram_sent_count} sent to Telegram')
     
     return render_template(
         'distribution.html',
@@ -60,7 +90,8 @@ def distribution_page():
         unassigned_deliveries=unassigned_deliveries,
         courier_groups=courier_groups,
         couriers=couriers,
-        selected_date=selected_date
+        selected_date=selected_date,
+        telegram_sent_count=telegram_sent_count
     )
 
 @distribution_bp.route('/distribution/assign', methods=['POST'])
@@ -85,6 +116,9 @@ def assign_deliveries():
         for delivery_id in delivery_ids:
             delivery = Delivery.query.get(delivery_id)
             if delivery and delivery.status in ['Очікує', 'Розподілено']:
+                # Якщо кур'єр змінився, скидаємо статус Telegram повідомлення
+                if delivery.courier_id != courier_id:
+                    delivery.telegram_notification_sent = False
                 delivery.courier_id = courier_id
                 delivery.status = 'Розподілено'
                 updated_count += 1
@@ -121,6 +155,8 @@ def unassign_deliveries():
             if delivery and delivery.status == 'Розподілено':
                 delivery.courier_id = None
                 delivery.status = 'Очікує'
+                # Скидаємо статус Telegram повідомлення при знятті призначення
+                delivery.telegram_notification_sent = False
                 updated_count += 1
         
         db.session.commit()
@@ -165,17 +201,18 @@ def send_telegram_notifications(courier_id):
         # Отримуємо поточну дату (можна розширити для вибору дати)
         today = date.today()
         
-        # Знаходимо доставки кур'єра на сьогодні
+        # Знаходимо доставки кур'єра на сьогодні, які ще не були надіслані
         courier_deliveries = Delivery.query.filter(
             Delivery.courier_id == courier_id,
             Delivery.delivery_date == today,
-            Delivery.status.in_(['Очікує', 'Розподілено'])
+            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.telegram_notification_sent == False
         ).all()
         
         if not courier_deliveries:
             return jsonify({
                 'success': False,
-                'error': f'У кур\'єра {courier.name} немає доставок на сьогодні'
+                'error': f'У кур\'єра {courier.name} немає нових доставок для відправки (всі вже надіслані або немає доставок на сьогодні)'
             }), 400
         
         # Імпортуємо сервіс для роботи з Telegram

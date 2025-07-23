@@ -1,116 +1,276 @@
 {% extends "layout.html" %}
 
-{% block title %}Розподіл доставок{% endblock %}
-
 {% block content %}
 <div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">Розподіл доставок</h1>
+    <div class="d-flex align-items-center gap-3">
+      <input type="date" id="distribution-date" class="form-control" value="{{ selected_date }}" style="max-width: 200px;">
+    </div>
+  </div>
+
+  <!-- Статистика -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="text-warning">{{ unassigned_deliveries|length }}</h3>
+          <p class="mb-0">очікують призначення</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="text-primary">{{ couriers|length }}</h3>
+          <p class="mb-0">призначено кур'єрам</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="text-info">{{ courier_groups.values()|list|map('length')|sum|default(0) }}</h3>
+          <p class="mb-0">залучено до роботи</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body text-center">
+          <h3 class="text-success">{{ telegram_sent_count }}</h3>
+          <p class="mb-0">сповіщень відправлено</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="row">
-    <div class="col-12">
+    <!-- Ліва колонка -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light border-0">
+          <h5 class="mb-0 text-warning">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Не розподілені доставки
+          </h5>
+          <small class="text-muted">Перетягніть доставки до кур'єрів</small>
+        </div>
+        <div class="card-body" style="max-height: 80vh; overflow-y: auto; padding: 0.5rem; padding-bottom: 0.25rem !important;">
+          {% if unassigned_deliveries %}
+            <div id="unassigned-list" class="delivery-list">
+              {% for delivery in unassigned_deliveries %}
+                <div class="delivery-item card mb-2 border-0 shadow-sm" 
+                     data-delivery-id="{{ delivery.id }}" 
+                     draggable="true">
+                  <div class="card-body p-2">
+                    
+                                         <!-- Перший рядок: Ім'я + Телефон -->
+                     <div class="mb-1 d-flex align-items-center gap-2">
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-person-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <strong>{{ delivery.order.recipient_name if delivery.order else 'Не вказано' }}</strong>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-telephone-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{{ delivery.order.recipient_phone if delivery.order else delivery.phone }}</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Другий рядок: Місто + Адреса -->
+                    <div class="mb-1 d-flex align-items-center gap-2">
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-building text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{{ delivery.order.city if delivery.order else 'Київ' }}</span>
+                      </div>
+                      <div class="d-flex align-items-center flex-grow-1">
+                        <i class="bi bi-geo-alt-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}</span>
+                        <i class="bi bi-copy copy-address-icon ms-2" 
+                           data-address="{{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}"
+                           title="Копіювати адресу"
+                           style="font-size: 0.75rem; cursor: pointer; color: #6c757d;"></i>
+                      </div>
+                    </div>
+                    
+                    <!-- Третій рядок: Розмір + Час -->
+                    <div class="mb-1 d-flex align-items-center gap-2">
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-flower2 text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{% if delivery.order and delivery.order.size == 'Власний' and delivery.order.custom_amount %}{{ delivery.order.custom_amount }}₴{% else %}{{ delivery.order.size if delivery.order else delivery.size }}{% endif %}</span>
+                      </div>
+                      {% if delivery.order and (delivery.order.time_from or delivery.order.time_to) %}
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-clock-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{% if delivery.order.time_from %}{{ delivery.order.time_from }}{% endif %}{% if delivery.order.time_from and delivery.order.time_to %} - {% endif %}{% if delivery.order.time_to %}{{ delivery.order.time_to }}{% endif %}</span>
+                      </div>
+                      {% elif delivery.time_from or delivery.time_to %}
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-clock-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                        <span>{% if delivery.time_from %}{{ delivery.time_from }}{% endif %}{% if delivery.time_from and delivery.time_to %} - {% endif %}{% if delivery.time_to %}{{ delivery.time_to }}{% endif %}</span>
+                      </div>
+                      {% endif %}
+                    </div>
+                    
+                    <!-- Instagram/Telegram -->
+                    {% if delivery.order and delivery.order.recipient_social %}
+                    <div class="mb-1 d-flex align-items-center">
+                      <i class="bi bi-at text-primary me-1" style="font-size: 0.9rem;"></i>
+                      <span>{{ delivery.order.recipient_social }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Коментар -->
+                    {% if delivery.order and delivery.order.comment %}
+                    <div class="mt-1">
+                      <small class="text-muted">
+                        <i class="bi bi-chat-dots me-1" style="font-size: 0.8rem;"></i>{{ delivery.order.comment|truncate(40) }}
+                      </small>
+                    </div>
+                    {% elif delivery.comment %}
+                    <div class="mt-1">
+                      <small class="text-muted">
+                        <i class="bi bi-chat-dots me-1" style="font-size: 0.8rem;"></i>{{ delivery.comment|truncate(40) }}
+                      </small>
+                    </div>
+                    {% endif %}
+                    
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center text-muted py-4">
+              <i class="bi bi-check-circle-fill text-primary" style="font-size: 3rem;"></i>
+              <h5 class="mt-2 text-primary">Всі доставки розподілені!</h5>
+              <p>Немає доставок, які очікують розподілу</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Права колонка -->
+    <div class="col-md-8">
       
-      <!-- Заголовок та фільтр по даті -->
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0" style="color: #2c3e50; font-weight: 600;">
-          Розподіл доставок
-        </h2>
-        
-        <div class="d-flex gap-3 align-items-center">
-          <div class="d-flex align-items-center">
-            <i class="bi bi-calendar3 text-primary me-2" style="font-size: 1rem;"></i>
-            <label for="distribution-date" class="form-label mb-0 fw-semibold text-primary">
-              Дата:
-            </label>
-          </div>
-          <input type="date" id="distribution-date" class="form-control border-primary" 
-                 style="max-width: 170px; border-radius: 8px; border-width: 2px;" 
-                 value="{{ selected_date.strftime('%Y-%m-%d') }}">
-        </div>
-      </div>
-
-      <!-- Статистика -->
-      <div class="row mb-4">
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-              <div class="mb-3">
-                <i class="bi bi-clock-history text-warning" style="font-size: 2rem;"></i>
-              </div>
-              <h5 class="card-title text-warning fw-bold">Не розподілені</h5>
-              <h3 class="mb-0 text-dark {% if unassigned_deliveries|length > 0 %}unassigned-count{% endif %}">{{ unassigned_deliveries|length }}</h3>
-              <small class="text-muted">очікують призначення</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-              <div class="mb-3">
-                <i class="bi bi-check-circle-fill text-primary" style="font-size: 2rem;"></i>
-              </div>
-              <h5 class="card-title text-primary fw-bold">Розподілені</h5>
-              <h3 class="mb-0 text-dark">{{ courier_groups.values()|map('length')|sum }}</h3>
-              <small class="text-muted">призначено кур'єрам</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-              <div class="mb-3">
-                <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
-              </div>
-              <h5 class="card-title text-primary fw-bold">Активні кур'єри</h5>
-              <h3 class="mb-0 text-dark">{{ courier_groups|length }}</h3>
-              <small class="text-muted">залучено до роботи</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-              <div class="mb-3">
-                <i class="bi bi-box-seam text-primary" style="font-size: 2rem;"></i>
-              </div>
-              <h5 class="card-title text-primary fw-bold">Всього</h5>
-              <h3 class="mb-0 text-dark">{{ unassigned_deliveries|length + courier_groups.values()|map('length')|sum }}</h3>
-              <small class="text-muted">доставок на день</small>
-            </div>
+      <!-- Швидке призначення -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-3">
+          <div class="d-flex gap-3 align-items-center">
+            <strong class="text-primary">
+              <i class="bi bi-lightning-charge-fill me-1"></i>Швидке призначення:
+            </strong>
+            <select id="quick-courier-select" class="form-select border-primary" style="max-width: 200px;">
+              <option value="">Оберіть кур'єра</option>
+              {% for courier in couriers %}
+                <option value="{{ courier.id }}">{{ courier.name }}</option>
+              {% endfor %}
+            </select>
+            <button id="assign-selected" class="btn btn-primary" disabled>
+              <i class="bi bi-plus-circle me-1"></i>Призначити обрані
+            </button>
+            <button id="select-all-unassigned" class="btn btn-outline-primary">
+              <i class="bi bi-check2-square me-1"></i>Обрати всі
+            </button>
           </div>
         </div>
       </div>
-
-      <div class="row">
-        
-        <!-- Ліва колонка: Не розподілені доставки -->
-        <div class="col-md-4">
-          <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-light border-0">
-              <h5 class="mb-0 text-warning">
-                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1rem;"></i>Не розподілені доставки
+      
+      <!-- Кур'єри -->
+      {% for courier in couriers %}
+        {% set courier_deliveries = courier_groups.get(courier.id, []) %}
+        <div class="card border-0 shadow-sm mb-3 courier-section" data-courier-id="{{ courier.id }}">
+          <div class="card-header bg-primary border-0">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="mb-0 text-white">
+                <i class="bi bi-person-badge-fill me-2" style="font-size: 1.2rem;"></i>{{ courier.name }}
               </h5>
-              <small class="text-muted">
-                <i class="bi bi-arrow-right me-1" style="font-size: 0.8rem;"></i>Перетягніть доставки до кур'єрів
-              </small>
+              <div class="d-flex align-items-center gap-2">
+                {% if courier_deliveries %}
+                  {% set telegram_sent = courier_deliveries|selectattr('telegram_notification_sent')|list|length %}
+                  {% set not_sent = courier_deliveries|length - telegram_sent %}
+                  {% if not_sent > 0 %}
+                    <button class="btn btn-outline-success btn-sm send-telegram" 
+                            data-courier-id="{{ courier.id }}"
+                            data-courier-name="{{ courier.name }}"
+                            style="border-color: rgba(255,255,255,0.8); color: white;">
+                      <i class="bi bi-telegram me-1" style="font-size: 0.8rem;"></i>Розіслати ({{ not_sent }})
+                    </button>
+                  {% else %}
+                    <button class="btn btn-success btn-sm" disabled
+                            style="border-color: rgba(255,255,255,0.8); background-color: rgba(255,255,255,0.2);">
+                      <i class="bi bi-check-circle me-1" style="font-size: 0.8rem;"></i>Всі надіслані
+                    </button>
+                  {% endif %}
+                  <button class="btn btn-outline-light btn-sm unassign-all" 
+                          data-courier-id="{{ courier.id }}"
+                          style="border-color: rgba(255,255,255,0.8); color: white;">
+                    <i class="bi bi-x-circle me-1" style="font-size: 0.8rem;"></i>Зняти всі
+                  </button>
+                {% endif %}
+                <button class="btn btn-link p-0 text-white toggle-collapse" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#courier-{{ courier.id }}-deliveries"
+                        style="border: none; background: none;">
+                  <i class="bi bi-chevron-down toggle-icon" style="font-size: 1.2rem; transition: transform 0.3s;"></i>
+                </button>
+              </div>
             </div>
-            <div class="card-body p-2" style="max-height: 70vh; overflow-y: auto;">
-              
-              {% if unassigned_deliveries %}
-                <div id="unassigned-list" class="delivery-list">
-                  {% for delivery in unassigned_deliveries %}
-                    <div class="delivery-item card mb-2 border-0 shadow-sm" 
-                         data-delivery-id="{{ delivery.id }}"
+            <!-- Статистика -->
+            <div class="d-flex gap-2">
+              <span class="badge bg-light text-dark">
+                <i class="bi bi-box me-1" style="font-size: 0.7rem;"></i>{{ courier_deliveries|length }} доставок
+              </span>
+              {% if courier_deliveries %}
+                {% set telegram_sent = courier_deliveries|selectattr('telegram_notification_sent')|list|length %}
+                {% if telegram_sent > 0 %}
+                  <span class="badge bg-success text-white">
+                    <i class="bi bi-telegram me-1" style="font-size: 0.7rem;"></i>{{ telegram_sent }} надіслано
+                  </span>
+                {% endif %}
+                {% set total_time_slots = courier_deliveries|selectattr('time_from')|list|length %}
+                {% if total_time_slots > 0 %}
+                  <span class="badge bg-warning text-dark">
+                    <i class="bi bi-clock me-1" style="font-size: 0.7rem;"></i>{{ total_time_slots }} з часом
+                  </span>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+          
+          <div id="courier-{{ courier.id }}-deliveries" class="collapse show">
+            <div class="card-body p-2 courier-drop-zone" 
+                 data-courier-id="{{ courier.id }}"
+                 style="min-height: 100px; max-height: 400px; overflow-y: auto;">
+              {% if courier_deliveries %}
+                <div class="delivery-list">
+                  {% for delivery in courier_deliveries %}
+                    <div class="delivery-item card mb-2 border-0 shadow-sm assigned{% if delivery.telegram_notification_sent %} telegram-sent{% endif %}" 
+                         data-delivery-id="{{ delivery.id }}" 
                          draggable="true">
                       <div class="card-body p-2">
-                        
-                        <!-- Перший рядок: Ім'я + Телефон -->
-                        <div class="mb-1 d-flex align-items-center gap-3">
-                          <div class="d-flex align-items-center">
-                            <i class="bi bi-person-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                            <strong>{{ delivery.order.recipient_name if delivery.order else 'Не вказано' }}</strong>
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                          <!-- Перший рядок: Ім'я + Телефон + Telegram індикатор -->
+                          <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <div class="d-flex align-items-center">
+                              <i class="bi bi-person-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                              <strong>{{ delivery.order.recipient_name if delivery.order else 'Не вказано' }}</strong>
+                            </div>
+                            <div class="d-flex align-items-center">
+                              <i class="bi bi-telephone-fill text-primary me-1" style="font-size: 0.9rem;"></i>
+                              <span>{{ delivery.order.recipient_phone if delivery.order else delivery.phone }}</span>
+                            </div>
+                            {% if delivery.telegram_notification_sent %}
+                            <div class="d-flex align-items-center">
+                              <i class="bi bi-telegram text-success me-1" style="font-size: 0.9rem;" title="Надіслано в Telegram"></i>
+                              <small class="text-success fw-semibold">Надіслано</small>
+                            </div>
+                            {% endif %}
                           </div>
-                          <div class="d-flex align-items-center">
-                            <i class="bi bi-telephone-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                            <span>{{ delivery.order.recipient_phone if delivery.order else delivery.phone }}</span>
-                          </div>
+                          <button class="btn btn-outline-danger btn-sm unassign-delivery ms-2" 
+                                  data-delivery-id="{{ delivery.id }}" 
+                                  title="Зняти призначення">
+                            <i class="bi bi-x" style="font-size: 0.7rem;"></i>
+                          </button>
                         </div>
                         
                         <!-- Другий рядок: Місто + Адреса -->
@@ -170,208 +330,22 @@
                           </small>
                         </div>
                         {% endif %}
+                        
                       </div>
                     </div>
                   {% endfor %}
                 </div>
               {% else %}
-                <div class="text-center text-muted py-4">
-                  <i class="bi bi-check-circle-fill text-primary" style="font-size: 3rem;"></i>
-                  <h5 class="mt-2 text-primary">Всі доставки розподілені!</h5>
-                  <p>Немає доставок, які очікують розподілу</p>
+                <div class="text-center text-muted py-4 drop-zone-placeholder">
+                  <i class="bi bi-plus-circle-dotted text-primary" style="font-size: 2rem;"></i>
+                  <p class="mt-2 mb-0 text-primary">Перетягніть доставки сюди</p>
                 </div>
               {% endif %}
-              
             </div>
           </div>
         </div>
+      {% endfor %}
 
-        <!-- Права колонка: Кур'єри та їх доставки -->
-        <div class="col-md-8">
-          
-          <!-- Селект для швидкого призначення -->
-          <div class="card border-0 shadow-sm mb-3">
-            <div class="card-body py-3">
-              <div class="d-flex gap-3 align-items-center">
-                <strong class="text-primary">
-                  <i class="bi bi-lightning-charge-fill me-1" style="font-size: 1rem;"></i>Швидке призначення:
-                </strong>
-                <select id="quick-courier-select" class="form-select border-primary" style="max-width: 200px; border-width: 2px;">
-                  <option value="">
-                    Оберіть кур'єра
-                  </option>
-                  {% for courier in couriers %}
-                    <option value="{{ courier.id }}">
-                      {{ courier.name }}
-                    </option>
-                  {% endfor %}
-                </select>
-                <button id="assign-selected" class="btn btn-primary" disabled>
-                  <i class="bi bi-plus-circle me-1" style="font-size: 0.9rem;"></i>Призначити обрані
-                </button>
-                <button id="select-all-unassigned" class="btn btn-outline-primary">
-                  <i class="bi bi-check2-square me-1" style="font-size: 0.9rem;"></i>Обрати всі
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Кур'єри та їх доставки -->
-          <div id="couriers-container">
-            {% for courier in couriers %}
-              {% set courier_deliveries = courier_groups.get(courier.id, []) %}
-              <div class="card border-0 shadow-sm mb-3 courier-section" data-courier-id="{{ courier.id }}">
-                <div class="card-header bg-primary border-0">
-                  <!-- Перший рядок: ім'я та кнопка згортання -->
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="mb-0 text-white">
-                      <i class="bi bi-person-badge-fill me-2" style="font-size: 1.2rem;"></i>{{ courier.name }}
-                    </h5>
-                    <div class="d-flex align-items-center gap-2">
-                      {% if courier_deliveries %}
-                        <button class="btn btn-outline-success btn-sm send-telegram-notifications" 
-                                data-courier-id="{{ courier.id }}"
-                                data-courier-name="{{ courier.name }}"
-                                style="border-color: rgba(255,255,255,0.8); color: white;"
-                                title="Розіслати доставки в Telegram">
-                          <i class="bi bi-telegram me-1" style="font-size: 0.8rem;"></i>Розіслати на телеграм
-                        </button>
-                        <button class="btn btn-outline-light btn-sm unassign-all" 
-                                data-courier-id="{{ courier.id }}"
-                                style="border-color: rgba(255,255,255,0.8); color: white;">
-                          <i class="bi bi-x-circle me-1" style="font-size: 0.8rem;"></i>Зняти всі
-                        </button>
-                      {% endif %}
-                      <button class="btn btn-link p-0 text-white toggle-collapse" 
-                              data-bs-toggle="collapse" 
-                              data-bs-target="#courier-{{ courier.id }}-deliveries"
-                              style="border: none; background: none;">
-                        <i class="bi bi-chevron-down toggle-icon" style="font-size: 1.2rem; transition: transform 0.3s;"></i>
-                      </button>
-                    </div>
-                  </div>
-                  <!-- Другий рядок: статистика -->
-                  <div class="d-flex gap-2">
-                    <span class="badge bg-light text-dark">
-                      <i class="bi bi-box me-1" style="font-size: 0.7rem;"></i>{{ courier_deliveries|length }} доставок
-                    </span>
-                    {% if courier_deliveries %}
-                      {% set total_time_slots = courier_deliveries|selectattr('time_from')|list|length %}
-                      {% if total_time_slots > 0 %}
-                        <span class="badge bg-warning text-dark">
-                          <i class="bi bi-clock me-1" style="font-size: 0.7rem;"></i>{{ total_time_slots }} з часом
-                        </span>
-                      {% endif %}
-                    {% endif %}
-                  </div>
-                </div>
-                <div id="courier-{{ courier.id }}-deliveries" class="collapse show">
-                  <div class="card-body p-2 courier-drop-zone" 
-                       data-courier-id="{{ courier.id }}"
-                       style="min-height: 100px; max-height: 400px; overflow-y: auto;">
-                  {% if courier_deliveries %}
-                    <div class="delivery-list">
-                      {% for delivery in courier_deliveries %}
-                        <div class="delivery-item card mb-2 border-0 shadow-sm assigned" 
-                             data-delivery-id="{{ delivery.id }}" 
-                             draggable="true">
-                          <div class="card-body p-2">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                              <!-- Перший рядок: Ім'я + Телефон -->
-                              <div class="d-flex align-items-center gap-3 flex-grow-1">
-                                <div class="d-flex align-items-center">
-                                  <i class="bi bi-person-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                                  <strong>{{ delivery.order.recipient_name if delivery.order else 'Не вказано' }}</strong>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                  <i class="bi bi-telephone-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                                  <span>{{ delivery.order.recipient_phone if delivery.order else delivery.phone }}</span>
-                                </div>
-                              </div>
-                              <button class="btn btn-outline-danger btn-sm unassign-delivery ms-2" 
-                                      data-delivery-id="{{ delivery.id }}" 
-                                      title="Зняти призначення">
-                                <i class="bi bi-x" style="font-size: 0.7rem;"></i>
-                              </button>
-                            </div>
-                            
-                            <!-- Другий рядок: Місто + Адреса -->
-                            <div class="mb-1 d-flex align-items-center gap-3">
-                              <div class="d-flex align-items-center">
-                                <i class="bi bi-building text-primary me-1" style="font-size: 0.9rem;"></i>
-                                <span>{{ delivery.order.city if delivery.order else 'Київ' }}</span>
-                              </div>
-                              <div class="d-flex align-items-center flex-grow-1">
-                                <i class="bi bi-geo-alt-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                                <span>{{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}</span>
-                                <i class="bi bi-copy copy-address-icon ms-2" 
-                                   data-address="{{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}"
-                                   title="Копіювати адресу"
-                                   style="font-size: 0.75rem; cursor: pointer; color: #6c757d;"></i>
-                              </div>
-                            </div>
-                            
-                            <!-- Третій рядок: Розмір + Час -->
-                            <div class="mb-1 d-flex align-items-center gap-3">
-                              <div class="d-flex align-items-center">
-                                <i class="bi bi-flower2 text-primary me-1" style="font-size: 0.9rem;"></i>
-                                <span>{% if delivery.order and delivery.order.size == 'Власний' and delivery.order.custom_amount %}{{ delivery.order.custom_amount }}₴{% else %}{{ delivery.order.size if delivery.order else delivery.size }}{% endif %}</span>
-                              </div>
-                              {% if delivery.order and (delivery.order.time_from or delivery.order.time_to) %}
-                              <div class="d-flex align-items-center">
-                                <i class="bi bi-clock-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                                <span>{% if delivery.order.time_from %}{{ delivery.order.time_from }}{% endif %}{% if delivery.order.time_from and delivery.order.time_to %} - {% endif %}{% if delivery.order.time_to %}{{ delivery.order.time_to }}{% endif %}</span>
-                              </div>
-                              {% elif delivery.time_from or delivery.time_to %}
-                              <div class="d-flex align-items-center">
-                                <i class="bi bi-clock-fill text-primary me-1" style="font-size: 0.9rem;"></i>
-                                <span>{% if delivery.time_from %}{{ delivery.time_from }}{% endif %}{% if delivery.time_from and delivery.time_to %} - {% endif %}{% if delivery.time_to %}{{ delivery.time_to }}{% endif %}</span>
-                              </div>
-                              {% endif %}
-                            </div>
-                            
-                            <!-- Instagram/Telegram -->
-                            {% if delivery.order and delivery.order.recipient_social %}
-                            <div class="mb-1 d-flex align-items-center">
-                              <i class="bi bi-at text-primary me-1" style="font-size: 0.9rem;"></i>
-                              <span>{{ delivery.order.recipient_social }}</span>
-                            </div>
-                            {% endif %}
-                            
-                            <!-- Коментар -->
-                            {% if delivery.order and delivery.order.comment %}
-                            <div class="mt-1">
-                              <small class="text-muted">
-                                <i class="bi bi-chat-dots me-1" style="font-size: 0.8rem;"></i>{{ delivery.order.comment|truncate(40) }}
-                              </small>
-                            {% elif delivery.comment %}
-                            <div class="mt-1">
-                              <small class="text-muted">
-                                <i class="bi bi-chat-dots me-1" style="font-size: 0.8rem;"></i>{{ delivery.comment|truncate(40) }}
-                              </small>
-                            </div>
-                            {% endif %}
-                          </div>
-                        </div>
-                      {% endfor %}
-                    </div>
-                  {% else %}
-                    <div class="text-center text-muted py-4 drop-zone-placeholder">
-                      <i class="bi bi-plus-circle-dotted text-primary" style="font-size: 2rem;"></i>
-                      <p class="mt-2 mb-0 text-primary">Перетягніть доставки сюди</p>
-                    </div>
-                  {% endif %}
-                  
-                  </div>
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-          
-        </div>
-        
-      </div>
-      
     </div>
   </div>
 </div>
@@ -395,30 +369,14 @@
   border: 2px solid transparent !important;
 }
 
-.cursor-pointer {
-  cursor: pointer;
+.delivery-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
 }
 
-.toggle-collapse {
-  cursor: pointer;
-  user-select: none;
-}
-
-.toggle-collapse:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  border-radius: 50%;
-}
-
-.toggle-icon {
-  transition: transform 0.3s ease;
-}
-
-.collapsed .toggle-icon {
-  transform: rotate(-90deg);
-}
-
-.badge {
-  font-size: 0.75rem;
+.delivery-item.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg);
 }
 
 .courier-drop-zone {
@@ -431,41 +389,13 @@
   background-color: rgba(13, 110, 253, 0.05);
 }
 
-.delivery-item.dragging {
-  opacity: 0.5;
-  transform: rotate(5deg);
+.delivery-item.assigned {
+  border-left: 4px solid #0d6efd !important;
 }
 
-.delivery-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
-}
-
-.unassigned-count {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-
-.unassign-all {
-  white-space: nowrap;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.unassign-all:hover {
-  background-color: rgba(255, 255, 255, 0.1) !important;
-  border-color: white !important;
-  color: white !important;
-}
-
-.card-header h5 {
-  font-weight: 600;
-  font-size: 1.1rem;
+.delivery-item.telegram-sent {
+  border-left: 4px solid #198754 !important;
+  background-color: rgba(25, 135, 84, 0.05) !important;
 }
 
 .copy-address-icon {
@@ -479,93 +409,42 @@
   transform: scale(1.1);
 }
 
-.copy-address-icon.copied {
-  color: #198754 !important;
-  transform: scale(1.2);
+.toggle-icon {
+  transition: transform 0.3s ease;
 }
 
-.delivery-item.assigned {
-  border-left: 4px solid #0d6efd !important;
+.collapsed .toggle-icon {
+  transform: rotate(-90deg);
 }
 
-.courier-drop-zone {
-  border: 2px dashed transparent;
-  transition: all 0.3s ease;
-  border-radius: 8px;
+#unassigned-list .delivery-item {
+  margin-bottom: 0.25rem !important;
 }
 
-.courier-drop-zone.drag-over {
-  border-color: #0d6efd;
-  background-color: rgba(13, 110, 253, 0.05);
+#unassigned-list .delivery-item:last-child {
+  margin-bottom: 0 !important;
 }
 
-.drop-zone-placeholder {
-  transition: all 0.3s ease;
+#unassigned-list .card-body {
+  padding: 0.4rem !important;
+  font-size: 0.9rem;
 }
 
-.courier-drop-zone.drag-over .drop-zone-placeholder {
-  color: #0d6efd !important;
+.card.h-100 {
+  height: calc(100vh - 200px) !important;
 }
 
-.delivery-item input[type="checkbox"] {
-  transform: scale(1.2);
-  accent-color: #0d6efd;
+.card.h-100 .card-body {
+  height: calc(100% - 60px);
+  overflow-y: auto;
 }
 
-.form-control:focus,
-.form-select:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+#unassigned-list {
+  padding-bottom: 0 !important;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #0d6efd, #6610f2);
-  border-color: #0d6efd;
-  box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #0b5ed7, #5a0fcf);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(13, 110, 253, 0.3);
-}
-
-.btn-outline-primary {
-  border-color: #0d6efd;
-  color: #0d6efd;
-  border-width: 2px;
-}
-
-.btn-outline-primary:hover {
-  background-color: #0d6efd;
-  border-color: #0d6efd;
-  transform: translateY(-1px);
-}
-
-.badge {
-  font-size: 0.85em;
-  border-radius: 6px;
-}
-
-.card {
-  border-radius: 12px;
-  border: 1px solid rgba(13, 110, 253, 0.1) !important;
-}
-
-.card-header {
-  border-radius: 12px 12px 0 0 !important;
-}
-
-.text-primary {
-  color: #0d6efd !important;
-}
-
-.border-primary {
-  border-color: #0d6efd !important;
-}
-
-.bg-primary {
-  background-color: #0d6efd !important;
+#unassigned-list .delivery-item .mb-1 {
+  margin-bottom: 0.25rem !important;
 }
 </style>
 
@@ -580,7 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.location.href = `/distribution?date=${newDate}`;
   });
   
-  // Функція показу toast повідомлень
+  // Toast функція
   function showToast(message, type = 'info') {
     const toast = document.getElementById('notification-toast');
     const toastBody = toast.querySelector('.toast-body');
@@ -593,7 +472,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bsToast.show();
   }
   
-  // Додавання чекбоксів до доставок
+  // Додавання чекбоксів до неприв'язаних доставок
   function addCheckboxes() {
     const unassignedItems = document.querySelectorAll('#unassigned-list .delivery-item');
     unassignedItems.forEach(item => {
@@ -631,13 +510,10 @@ document.addEventListener('DOMContentLoaded', function() {
     assignBtn.disabled = selectedDeliveries.size === 0 || !courierSelect.value;
   }
   
-  // Ініціалізація чекбоксів
   addCheckboxes();
-  
-  // Обробник вибору кур'єра
   document.getElementById('quick-courier-select').addEventListener('change', updateAssignButton);
   
-  // Вибрати всі неприв'язані доставки
+  // Вибрати всі
   document.getElementById('select-all-unassigned').addEventListener('click', function() {
     const checkboxes = document.querySelectorAll('#unassigned-list input[type="checkbox"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
@@ -658,11 +534,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateAssignButton();
     this.innerHTML = allChecked ? 
-      '<i class="bi bi-check2-square me-1" style="font-size: 0.9rem;"></i>Обрати всі' : 
-      '<i class="bi bi-square me-1" style="font-size: 0.9rem;"></i>Зняти всі';
+      '<i class="bi bi-check2-square me-1"></i>Обрати всі' : 
+      '<i class="bi bi-square me-1"></i>Зняти всі';
   });
   
-  // Призначити обрані доставки
+  // Призначити обрані
   document.getElementById('assign-selected').addEventListener('click', function() {
     const courierId = document.getElementById('quick-courier-select').value;
     if (!courierId || selectedDeliveries.size === 0) return;
@@ -670,54 +546,47 @@ document.addEventListener('DOMContentLoaded', function() {
     assignDeliveries(courierId, Array.from(selectedDeliveries));
   });
   
-  // Drag & Drop функціональність
-  function initDragAndDrop() {
-    // Зробити всі доставки перетягуваними
-    document.querySelectorAll('.delivery-item').forEach(item => {
-      item.addEventListener('dragstart', function(e) {
-        draggedElement = this;
-        this.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/html', this.outerHTML);
-      });
-      
-      item.addEventListener('dragend', function() {
-        this.classList.remove('dragging');
-        draggedElement = null;
-      });
+  // Drag & Drop
+  document.querySelectorAll('.delivery-item').forEach(item => {
+    item.addEventListener('dragstart', function(e) {
+      draggedElement = this;
+      this.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
     });
     
-    // Зробити зони кур'єрів приймаючими
-    document.querySelectorAll('.courier-drop-zone').forEach(zone => {
-      zone.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        this.classList.add('drag-over');
-      });
-      
-      zone.addEventListener('dragleave', function() {
-        this.classList.remove('drag-over');
-      });
-      
-      zone.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.classList.remove('drag-over');
-        
-        if (draggedElement) {
-          const deliveryId = draggedElement.dataset.deliveryId;
-          const courierId = this.dataset.courierId;
-          assignDeliveries(courierId, [deliveryId]);
-        }
-      });
+    item.addEventListener('dragend', function() {
+      this.classList.remove('dragging');
+      draggedElement = null;
     });
-  }
+  });
   
-  // Функція призначення доставок
+  document.querySelectorAll('.courier-drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      this.classList.add('drag-over');
+    });
+    
+    zone.addEventListener('dragleave', function() {
+      this.classList.remove('drag-over');
+    });
+    
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      
+      if (draggedElement) {
+        const deliveryId = draggedElement.dataset.deliveryId;
+        const courierId = this.dataset.courierId;
+        assignDeliveries(courierId, [deliveryId]);
+      }
+    });
+  });
+  
+  // API функції
   function assignDeliveries(courierId, deliveryIds) {
     fetch('/distribution/assign', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         courier_id: parseInt(courierId),
         delivery_ids: deliveryIds.map(id => parseInt(id))
@@ -727,46 +596,34 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
       if (data.success) {
         showToast(data.message, 'success');
-        // Оновлюємо сторінку
         window.location.reload();
       } else {
         showToast(data.error || 'Помилка призначення доставок', 'danger');
       }
     })
     .catch(error => {
-      console.error('Error:', error);
       showToast('Помилка мережі', 'danger');
     });
   }
   
-  // Функція зняття призначення
   function unassignDeliveries(deliveryIds) {
     fetch('/distribution/unassign', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        delivery_ids: deliveryIds.map(id => parseInt(id))
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ delivery_ids: deliveryIds.map(id => parseInt(id)) })
     })
     .then(response => response.json())
     .then(data => {
       if (data.success) {
         showToast(data.message, 'success');
-        // Оновлюємо сторінку
         window.location.reload();
       } else {
         showToast(data.error || 'Помилка зняття призначення', 'danger');
       }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      showToast('Помилка мережі', 'danger');
     });
   }
   
-  // Зняти всі доставки з кур'єра
+  // Кнопки
   document.querySelectorAll('.unassign-all').forEach(btn => {
     btn.addEventListener('click', function() {
       const courierId = this.dataset.courierId;
@@ -780,7 +637,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Зняти окрему доставку
   document.querySelectorAll('.unassign-delivery').forEach(btn => {
     btn.addEventListener('click', function() {
       const deliveryId = this.dataset.deliveryId;
@@ -788,7 +644,64 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
-  // Обробка згортання секцій кур'єрів
+  document.querySelectorAll('.send-telegram').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const courierId = this.dataset.courierId;
+      const courierName = this.dataset.courierName;
+      
+      if (confirm(`Розіслати доставки кур'єру ${courierName} в Telegram?`)) {
+        this.disabled = true;
+        this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Відправляю...';
+        
+        fetch(`/distribution/send-telegram-notifications/${courierId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showToast(data.message, 'success');
+            window.location.reload();
+          } else {
+            showToast(data.error || 'Помилка відправки сповіщень', 'danger');
+          }
+        })
+        .catch(error => {
+          showToast('Помилка мережі при відправці сповіщень', 'danger');
+        })
+        .finally(() => {
+          this.disabled = false;
+          this.innerHTML = '<i class="bi bi-telegram me-1"></i>Розіслати';
+        });
+      }
+    });
+  });
+  
+  // Копіювання адреси
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('copy-address-icon')) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const icon = e.target;
+      const address = icon.dataset.address;
+      
+      navigator.clipboard.writeText(address).then(function() {
+        const originalClass = icon.className;
+        icon.className = 'bi bi-check-lg copy-address-icon ms-2';
+        icon.style.color = '#198754';
+        
+        setTimeout(() => {
+          icon.className = originalClass;
+          icon.style.color = '#6c757d';
+        }, 1500);
+        
+        showToast(`Адресу скопійовано: ${address}`, 'success');
+      });
+    }
+  });
+  
+  // Згортання
   document.querySelectorAll('.toggle-collapse').forEach(function(element) {
     element.addEventListener('click', function() {
       const icon = this.querySelector('.toggle-icon');
@@ -801,94 +714,6 @@ document.addEventListener('DOMContentLoaded', function() {
       }, 50);
     });
   });
-
-  // Покращення drag & drop
-  document.addEventListener('dragstart', function(e) {
-    if (e.target.classList.contains('delivery-item')) {
-      e.target.classList.add('dragging');
-    }
-  });
-
-  document.addEventListener('dragend', function(e) {
-    if (e.target.classList.contains('delivery-item')) {
-      e.target.classList.remove('dragging');
-    }
-  });
-
-  // Розсилка в Telegram
-  document.querySelectorAll('.send-telegram-notifications').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const courierId = this.dataset.courierId;
-      const courierName = this.dataset.courierName;
-      
-      if (confirm(`Розіслати доставки кур'єру ${courierName} в Telegram?`)) {
-        
-        // Дезактивуємо кнопку під час відправки
-        this.disabled = true;
-        this.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Відправляю...';
-        
-        fetch(`/distribution/send-telegram-notifications/${courierId}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            showToast(data.message, 'success');
-          } else {
-            showToast(data.error || 'Помилка відправки сповіщень', 'danger');
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          showToast('Помилка мережі при відправці сповіщень', 'danger');
-        })
-        .finally(() => {
-          // Відновлюємо кнопку
-          this.disabled = false;
-          this.innerHTML = '<i class="bi bi-telegram me-1" style="font-size: 0.8rem;"></i>Розіслати на телеграм';
-        });
-      }
-    });
-  });
-
-  // Функціональність копіювання адреси
-  document.addEventListener('click', function(e) {
-    if (e.target.classList.contains('copy-address-icon')) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const icon = e.target;
-      const address = icon.dataset.address;
-      
-      // Копіюємо адресу в буфер обміну
-      navigator.clipboard.writeText(address).then(function() {
-        // Зберігаємо оригінальні класи
-        const originalClass = icon.className;
-        
-        // Змінюємо іконку на галочку
-        icon.className = 'bi bi-check-lg copy-address-icon copied ms-2';
-        
-        // Повертаємо оригінальний вигляд через 1.5 секунди
-        setTimeout(() => {
-          icon.className = originalClass;
-          icon.classList.remove('copied');
-        }, 1500);
-        
-        // Показуємо toast
-        showToast(`Адресу скопійовано: ${address}`, 'success');
-      }).catch(function(err) {
-        console.error('Помилка копіювання: ', err);
-        showToast('Помилка копіювання адреси', 'danger');
-      });
-    }
-  });
-
-  // Ініціалізація drag & drop
-  initDragAndDrop();
 });
 </script>
-
 {% endblock %} 

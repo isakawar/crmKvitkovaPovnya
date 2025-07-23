@@ -97,11 +97,18 @@ class TelegramNotificationService:
                 )
                 
                 if message_id:
+                    # Відмічаємо що повідомлення надіслано
+                    delivery.telegram_notification_sent = True
+                    delivery.telegram_message_id = message_id
                     success_count += 1
                     logger.info(f"Sent delivery #{delivery.id} notification to {courier.name}")
                 
             except Exception as e:
                 logger.error(f"Failed to send delivery #{delivery.id} to {courier.name}: {e}")
+        
+        # Зберігаємо зміни в базі даних
+        from app.extensions import db
+        db.session.commit()
         
         # Відправляємо підсумкове повідомлення
         footer_message = (
