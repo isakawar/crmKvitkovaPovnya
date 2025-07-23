@@ -120,6 +120,47 @@ class CourierKeyboards:
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
+    def today_deliveries_menu() -> InlineKeyboardMarkup:
+        """Menu for today's deliveries with send addresses button"""
+        keyboard = [
+            [
+                InlineKeyboardButton("📍 Надіслати адреси", callback_data="send_today_addresses")
+            ],
+            [
+                InlineKeyboardButton("🔙 Головне меню", callback_data="main_menu")
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+    
+    @staticmethod
+    def navigation_options(delivery_id: int, address: str) -> InlineKeyboardMarkup:
+        """Keyboard with navigation app options"""
+        import urllib.parse
+        
+        # Кодуємо адресу для URL
+        encoded_address = urllib.parse.quote(address)
+        
+        # Google Maps URL
+        google_maps_url = f"https://maps.google.com/maps?q={encoded_address}"
+        
+        # Waze URL  
+        waze_url = f"https://waze.com/ul?q={encoded_address}"
+        
+        keyboard = [
+            [
+                InlineKeyboardButton("🗺️ Google Maps", url=google_maps_url),
+                InlineKeyboardButton("🚗 Waze", url=waze_url)
+            ],
+            [
+                InlineKeyboardButton("📱 Apple Maps", url=f"http://maps.apple.com/?q={encoded_address}")
+            ],
+            [
+                InlineKeyboardButton("🔙 До доставки", callback_data=f"delivery_back_{delivery_id}")
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+    
+    @staticmethod
     def delivery_list_navigation(page: int = 0, total_pages: int = 1) -> InlineKeyboardMarkup:
         """Navigation keyboard for delivery lists"""
         keyboard = []

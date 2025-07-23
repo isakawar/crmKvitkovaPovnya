@@ -322,6 +322,8 @@ class CourierHandlers:
         # Route callback to appropriate handler
         if data == "main_menu":
             await self._show_main_menu(query, courier)
+        elif data == "send_today_addresses":
+            await self._send_today_addresses(query, courier)
         elif data.startswith("deliveries_"):
             await self._handle_deliveries_callback(query, courier, data)
         elif data.startswith("delivery_"):
@@ -484,6 +486,94 @@ class CourierHandlers:
         text += f"📦 Всього: {len(deliveries)}\n\n"
         text += "💡 Використовуйте команди для детального перегляду:"
         
+        # Створюємо клавіатуру з кнопкою "Надіслати адреси" для сьогодні
+        if period == "today" and len(deliveries) > 0:
+            keyboard = self.keyboards.today_deliveries_menu()
+        else:
+            keyboard = self.keyboards.back_to_main()
+        
+        await query.edit_message_text(
+            text,
+            parse_mode='Markdown',
+            reply_markup=keyboard
+        )
+
+    async def _send_today_addresses(self, query, courier: Courier):
+        """Send formatted list of today's delivery addresses"""
+        today = datetime.now().date()
+        deliveries = [d for d in courier.deliveries 
+                     if d.delivery_date == today and d.status != 'Скасовано']
+        
+        if not deliveries:
+            await query.edit_message_text(
+                "📍 **Адреси на сьогодні**\n\n🎉 Доставок немає!",
+                reply_markup=self.keyboards.back_to_main()
+            )
+            return
+        
+        # Сортуємо доставки за часом та статусом
+        deliveries.sort(key=lambda x: (x.status == 'Доставлено', x.time_from or '00:00'))
+        
+        text = f"📍 **Адреси доставок на {today.strftime('%d.%m.%Y')}**\n\n"
+        
+        for i, delivery in enumerate(deliveries, 1):
+            status_emoji = "⏳" if delivery.status == "Очікує" else "✅"
+            
+            text += f"{status_emoji} **{i}. Доставка #{delivery.id}**\n"
+            
+            # Ім'я отримувача
+            if delivery.order and delivery.order.recipient_name:
+                text += f"👤 {delivery.order.recipient_name}\n"
+            
+            # Адреса
+            if delivery.is_pickup:
+                text += f"📍 🏪 **Самовивіз**\n"
+            else:
+                address_parts = []
+                if delivery.order and delivery.order.city:
+                    address_parts.append(delivery.order.city)
+                if delivery.street:
+                    address_parts.append(delivery.street)
+                if delivery.building_number:
+                    address_parts.append(delivery.building_number)
+                
+                address = ", ".join(address_parts)
+                text += f"📍 **{address}**\n"
+                
+                # Додаткова інформація
+                if delivery.floor or delivery.entrance:
+                    extra_info = []
+                    if delivery.floor:
+                        extra_info.append(f"поверх {delivery.floor}")
+                    if delivery.entrance:
+                        extra_info.append(f"під'їзд {delivery.entrance}")
+                    text += f"🏢 {', '.join(extra_info)}\n"
+            
+            # Час
+            if delivery.time_from and delivery.time_to:
+                text += f"🕐 {delivery.time_from} - {delivery.time_to}\n"
+            elif delivery.time_from:
+                text += f"🕐 з {delivery.time_from}\n"
+            elif delivery.time_to:
+                text += f"🕐 до {delivery.time_to}\n"
+            
+            # Телефон
+            phone = delivery.order.recipient_phone if delivery.order else delivery.phone
+            if phone:
+                text += f"📞 {phone}\n"
+            
+            # Розмір букета
+            if delivery.bouquet_size:
+                text += f"💐 {delivery.bouquet_size}\n"
+            elif delivery.size:
+                text += f"💐 {delivery.size}\n"
+            
+            text += "\n"
+        
+        text += f"📦 **Всього доставок:** {len(deliveries)}\n"
+        text += f"⏳ **Очікує:** {len([d for d in deliveries if d.status == 'Очікує'])}\n"
+        text += f"✅ **Доставлено:** {len([d for d in deliveries if d.status == 'Доставлено'])}"
+        
         await query.edit_message_text(
             text,
             parse_mode='Markdown',
@@ -512,7 +602,7 @@ class CourierHandlers:
             
             elif data.startswith("delivery_back_"):
                 delivery_id = int(data.split("_")[-1])
-                await self._show_delivery_details(query, courier, delivery_id)
+                await self._return_to_delivery_buttons(query, courier, delivery_id)
             
             else:
                 await query.edit_message_text(
@@ -683,9 +773,10 @@ class CourierHandlers:
             parse_mode='Markdown'
         )
     
-    async def _show_delivery_details(self, query, courier: Courier, delivery_id: int):
-        """Show detailed delivery information"""
+    async def _return_to_delivery_buttons(self, query, courier: Courier, delivery_id: int):
+        """Return to delivery action buttons without changing text"""
         
+        # Перевіряємо що доставка існує та належить кур'єру
         delivery = Delivery.query.filter_by(id=delivery_id, courier_id=courier.id).first()
         
         if not delivery:
@@ -695,11 +786,21 @@ class CourierHandlers:
             )
             return
         
-        # Використовуємо сервіс для форматування інформації
-        delivery_info = self.service.format_delivery_info(delivery, detailed=True)
+        # Отримуємо поточний текст (може містити інформацію про навігацію)
+        current_text = query.message.text
         
+        # Видаляємо текст про навігатор, якщо він є
+        if "🗺️ **Оберіть навігатор:**" in current_text:
+            # Забираємо все до цього рядка
+            lines = current_text.split('\n')
+            for i, line in enumerate(lines):
+                if "🗺️ **Оберіть навігатор:**" in line:
+                    current_text = '\n'.join(lines[:i]).strip()
+                    break
+        
+        # Просто змінюємо кнопки назад до дій з доставкою
         await query.edit_message_text(
-            delivery_info,
+            current_text,
             reply_markup=self.keyboards.delivery_actions(delivery_id),
             parse_mode='Markdown'
         )
@@ -732,7 +833,7 @@ class CourierHandlers:
         )
     
     async def _handle_delivery_location_request(self, query, courier: Courier, delivery_id: int):
-        """Handle location button press"""
+        """Handle location button press with navigation options"""
         
         delivery = Delivery.query.filter_by(id=delivery_id, courier_id=courier.id).first()
         
@@ -745,7 +846,10 @@ class CourierHandlers:
         
         if delivery.is_pickup:
             location_text = "📍 **Самовивіз - адреса магазину**\n\nКлієнт забирає букет самостійно"
+            # Для самовивозу показуємо звичайні кнопки
+            keyboard = self.keyboards.delivery_actions(delivery_id)
         else:
+            # Формуємо адресу для показу
             address_parts = []
             if delivery.order and delivery.order.city:
                 address_parts.append(delivery.order.city)
@@ -762,10 +866,15 @@ class CourierHandlers:
                 location_text += f"\n🏢 Поверх: {delivery.floor}"
             if delivery.entrance:
                 location_text += f"\n🚪 Під'їзд: {delivery.entrance}"
+            
+            location_text += "\n\n🗺️ **Оберіть навігатор:**"
+            
+            # Створюємо клавіатуру з навігаторами
+            keyboard = self.keyboards.navigation_options(delivery_id, address)
         
         await query.edit_message_text(
             location_text,
-            reply_markup=self.keyboards.delivery_actions(delivery_id),
+            reply_markup=keyboard,
             parse_mode='Markdown'
         )
     

@@ -63,60 +63,81 @@ class TelegramService:
         order = delivery.order
         client = delivery.client
         
-        # Status emoji
-        status_emoji = {
-            'Очікує': '⏳',
-            'Доставлено': '✅',
-            'Скасовано': '❌'
-        }.get(delivery.status, '❓')
+        # Ім'я отримувача з емодзі статусу
+        status_emoji = "⏳" if delivery.status == "Очікує" else "✅"
         
-        # Basic info
-        text = f"{status_emoji} **Доставка #{delivery.id}**\n"
-        text += f"📅 {delivery.delivery_date.strftime('%d.%m.%Y')}\n"
-        
-        if delivery.is_pickup:
-            text += f"📍 **Самовивіз**\n"
+        if order and order.recipient_name:
+            text = f"{status_emoji} 👤 {order.recipient_name}\n"
         else:
-            address = f"{delivery.street}"
-            if delivery.building_number:
-                address += f" {delivery.building_number}"
-            if delivery.floor:
-                address += f", {delivery.floor} поверх"
-            if delivery.entrance:
-                address += f", під'їзд {delivery.entrance}"
-            text += f"📍 {address}\n"
+            text = f"{status_emoji} 👤 Не вказано\n"
         
-        # Time
+        # Адреса
+        if delivery.is_pickup:
+            text += f"📍 🏪 Самовивіз\n"
+        else:
+            address_parts = []
+            if order and order.city:
+                address_parts.append(order.city)
+            if delivery.street:
+                address_parts.append(delivery.street)
+            if delivery.building_number:
+                address_parts.append(delivery.building_number)
+            
+            address = ", ".join(address_parts)
+            text += f"📍 {address}\n"
+            
+            # Додаткова інформація про адресу (тільки для детального відображення)
+            if detailed and (delivery.floor or delivery.entrance):
+                extra_info = []
+                if delivery.floor:
+                    extra_info.append(f"поверх {delivery.floor}")
+                if delivery.entrance:
+                    extra_info.append(f"під'їзд {delivery.entrance}")
+                text += f"🏢 {', '.join(extra_info)}\n"
+        
+        # Час
         if delivery.time_from and delivery.time_to:
             text += f"🕐 {delivery.time_from} - {delivery.time_to}\n"
+        elif delivery.time_from:
+            text += f"🕐 після {delivery.time_from}\n"
+        elif delivery.time_to:
+            text += f"🕐 до {delivery.time_to}\n"
         
-        # Contact
-        text += f"👤 {order.recipient_name}\n"
-        text += f"📞 {delivery.phone}\n"
+        # Телефон
+        phone = order.recipient_phone if order else delivery.phone
+        if phone:
+            text += f"📞 {phone}\n"
         
-        # Size and type
-        if delivery.bouquet_size:
-            text += f"💐 {delivery.bouquet_size}\n"
+        # Розмір букета
+        size_info = ""
+        if order:
+            if order.size == 'Власний' and order.custom_amount:
+                size_info = f"{order.custom_amount}₴"
+            elif order.size:
+                size_info = order.size
+        elif delivery.bouquet_size:
+            size_info = delivery.bouquet_size
         
-        if detailed:
-            # Additional details
-            if order.recipient_social:
-                text += f"📱 {order.recipient_social}\n"
-            
-            if delivery.comment:
-                text += f"💬 {delivery.comment}\n"
-            
-            if delivery.preferences:
-                text += f"⭐ {delivery.preferences}\n"
-            
-            # Price
-            if delivery.price_at_delivery:
-                text += f"💰 {delivery.price_at_delivery}₴\n"
-            
-            # Client info
-            text += f"\n👥 **Клієнт:** {client.name}\n"
-            if client.marketing_source:
-                text += f"📢 Джерело: {client.marketing_source}\n"
+        if size_info:
+            text += f"💐 {size_info}\n"
+        
+        # Коментар
+        comment_text = ""
+        if delivery.comment:
+            comment_text = delivery.comment
+        elif order and order.comment:
+            comment_text = order.comment
+        
+        if comment_text:
+            text += f"💬 {comment_text}\n"
+        
+        # Побажання (тільки для детального відображення)
+        if detailed and delivery.preferences:
+            text += f"⭐ {delivery.preferences}\n"
+        
+        # Ціна (тільки для детального відображення)
+        if detailed and delivery.price_at_delivery:
+            text += f"💰 До сплати: {delivery.price_at_delivery}₴\n"
         
         return text
     

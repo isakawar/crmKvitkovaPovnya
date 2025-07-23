@@ -85,9 +85,9 @@ class TelegramNotificationService:
             logger.error(f"Failed to send header message to {courier.name}: {e}")
         
         # Відправляємо кожну доставку окремим повідомленням з кнопкою
-        for delivery in deliveries:
+        for i, delivery in enumerate(deliveries, 1):
             try:
-                delivery_message = self._format_delivery_message(delivery)
+                delivery_message = self._format_delivery_message(delivery, sequence_number=i)
                 keyboard = self.keyboards.delivery_actions(delivery.id)
                 
                 message_id = await bot.send_message(
@@ -124,12 +124,13 @@ class TelegramNotificationService:
         
         return success_count
     
-    def _format_delivery_message(self, delivery: Delivery) -> str:
+    def _format_delivery_message(self, delivery: Delivery, sequence_number: int = None) -> str:
         """
         Format delivery information for telegram message
         
         Args:
             delivery: Delivery object
+            sequence_number: Sequential number for this courier (optional)
             
         Returns:
             Formatted message string
@@ -137,25 +138,21 @@ class TelegramNotificationService:
         
         order = delivery.order
         
-        # Заголовок з номером доставки
-        message = f"📦 **Доставка #{delivery.id}**\n\n"
+        # Використовуємо порядковий номер замість ID, якщо він переданий
+        if sequence_number:
+            header = f"👤{sequence_number}. "
+        else:
+            header = "👤 "
         
         # Ім'я отримувача
         if order and order.recipient_name:
-            message += f"👤 **Отримувач:** {order.recipient_name}\n"
-        
-        # Номер телефону
-        phone = order.recipient_phone if order else delivery.phone
-        if phone:
-            message += f"📞 **Телефон:** {phone}\n"
-        
-        # Instagram/Telegram отримувача
-        if order and order.recipient_social:
-            message += f"📱 **Соцмережа:** {order.recipient_social}\n"
+            message = f"{header}{order.recipient_name}\n"
+        else:
+            message = f"{header}Не вказано\n"
         
         # Адреса
         if delivery.is_pickup:
-            message += f"📍 **Адреса:** 🏪 Самовивіз\n"
+            message += f"📍 🏪 Самовивіз\n"
         else:
             address_parts = []
             if order and order.city:
@@ -166,13 +163,20 @@ class TelegramNotificationService:
                 address_parts.append(delivery.building_number)
             
             address = ", ".join(address_parts)
-            message += f"📍 **Адреса:** {address}\n"
-            
-            # Додаткова інформація про адресу
-            if delivery.floor:
-                message += f"🏢 **Поверх:** {delivery.floor}\n"
-            if delivery.entrance:
-                message += f"🚪 **Під'їзд:** {delivery.entrance}\n"
+            message += f"📍 {address}\n"
+        
+        # Час доставки
+        if delivery.time_from and delivery.time_to:
+            message += f"🕐 {delivery.time_from} - {delivery.time_to}\n"
+        elif delivery.time_from:
+            message += f"🕐 після {delivery.time_from}\n"
+        elif delivery.time_to:
+            message += f"🕐 до {delivery.time_to}\n"
+        
+        # Телефон
+        phone = order.recipient_phone if order else delivery.phone
+        if phone:
+            message += f"📞 {phone}\n"
         
         # Розмір букета
         size_info = ""
@@ -185,15 +189,7 @@ class TelegramNotificationService:
             size_info = delivery.bouquet_size
         
         if size_info:
-            message += f"💐 **Розмір букета:** {size_info}\n"
-        
-        # Бажаний час доставки
-        if delivery.time_from and delivery.time_to:
-            message += f"🕐 **Бажаний час:** {delivery.time_from} - {delivery.time_to}\n"
-        elif delivery.time_from:
-            message += f"🕐 **Бажаний час:** після {delivery.time_from}\n"
-        elif delivery.time_to:
-            message += f"🕐 **Бажаний час:** до {delivery.time_to}\n"
+            message += f"💐 {size_info}\n"
         
         # Коментар
         comment_text = ""
@@ -203,14 +199,6 @@ class TelegramNotificationService:
             comment_text = order.comment
         
         if comment_text:
-            message += f"💬 **Коментар:** {comment_text}\n"
-        
-        # Побажання
-        if delivery.preferences:
-            message += f"⭐ **Побажання:** {delivery.preferences}\n"
-        
-        # Ціна
-        if delivery.price_at_delivery:
-            message += f"💰 **До сплати:** {delivery.price_at_delivery}₴\n"
+            message += f"💬 {comment_text}\n"
         
         return message 
