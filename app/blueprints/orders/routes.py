@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response
+from flask_login import login_required
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.settings import Settings
@@ -10,6 +11,7 @@ from sqlalchemy.orm import joinedload
 orders_bp = Blueprint('orders', __name__)
 
 @orders_bp.route('/orders', methods=['GET'])
+@login_required
 def orders_list():
     phone = request.args.get('phone', '').strip()
     instagram = request.args.get('instagram', '').strip()
@@ -34,6 +36,7 @@ def orders_list():
     return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom, subscription_extensions_count=subscription_extensions_count)
 
 @orders_bp.route('/orders/new', methods=['GET'])
+@login_required
 def order_form():
     clients = Client.query.all()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
@@ -43,6 +46,7 @@ def order_form():
     return render_template('order_form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
 
 @orders_bp.route('/orders/new', methods=['POST'])
+@login_required
 def order_create():
     logging.info('--- ORDER CREATE ---')
     logging.info(f'Form data: {dict(request.form)}')
@@ -108,6 +112,7 @@ def order_create():
     return redirect('/orders')
 
 @orders_bp.route('/orders/<int:order_id>/edit', methods=['GET', 'POST'])
+@login_required
 def order_edit(order_id):
     order = Order.query.get_or_404(order_id)
     if request.method == 'POST':
@@ -151,12 +156,14 @@ def order_edit(order_id):
     })
 
 @orders_bp.route('/orders/<int:order_id>/delete', methods=['POST'])
+@login_required
 def order_delete(order_id):
     order = Order.query.get_or_404(order_id)
     delete_order(order)
     return jsonify({'success': True})
 
 @orders_bp.route('/clients/search', methods=['GET'])
+@login_required
 def search_clients():
     query = request.args.get('q', '').strip()
     if not query:
@@ -166,6 +173,7 @@ def search_clients():
     return jsonify([{'instagram': c.instagram} for c in clients])
 
 @orders_bp.route('/route-generator', methods=['GET', 'POST'])
+@login_required
 def route_generator():
     if request.method == 'POST':
         # Тут можна додати обробку CSV-файлу та розрахунок маршруту
@@ -177,6 +185,7 @@ def route_generator():
     return render_template('route_generator.html')
 
 @orders_bp.route('/orders/<int:order_id>/extend-subscription', methods=['POST'])
+@login_required
 def extend_subscription(order_id):
     """Продовжити підписку для замовлення"""
     order = Order.query.get_or_404(order_id)
@@ -299,6 +308,7 @@ def extend_subscription(order_id):
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500 
 
 @orders_bp.route('/orders/export/csv', methods=['GET'])
+@login_required
 def export_orders_csv():
     orders = Order.query.options(joinedload(Order.client)).order_by(Order.id.desc()).all()
     def generate():
@@ -334,6 +344,7 @@ def export_orders_csv():
     })
 
 @orders_bp.route('/orders/extend-form-from-delivery/<int:delivery_id>')
+@login_required
 def extend_form_from_delivery(delivery_id):
     from app.models import Delivery, Order, Client
     delivery = Delivery.query.get_or_404(delivery_id)

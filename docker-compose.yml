@@ -13,6 +13,12 @@ services:
       - FLASK_ENV=production
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   telegram-bot:
     build: .
@@ -22,7 +28,8 @@ services:
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_bot.py"]
 

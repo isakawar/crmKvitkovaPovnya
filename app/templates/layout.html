@@ -392,7 +392,19 @@
 <div class="main-content">
     <div class="topbar">
         <div class="fw-bold fs-5">CRM Kvitkova Povnya</div>
-        <div>
+        <div class="d-flex align-items-center">
+            {% if current_user.is_authenticated %}
+            <div class="dropdown me-3">
+                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-person"></i> {{ current_user.username }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                        <i class="bi bi-box-arrow-right"></i> Вийти
+                    </a></li>
+                </ul>
+            </div>
+            {% endif %}
             <a href="/" class="btn btn-outline-primary btn-sm"><i class="bi bi-house"></i></a>
         </div>
     </div>

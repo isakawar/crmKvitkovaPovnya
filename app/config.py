@@ -1,4 +1,23 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+class Config:
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Telegram Bot settings
+    TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
+    
+    # Session configuration
+    SESSION_TYPE = 'filesystem'
+    PERMANENT_SESSION_LIFETIME = 86400  # 24 hours in seconds
+    
+    # Login configuration
+    LOGIN_DISABLED = False
+    REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
 
 class DevelopmentConfig:
     DEBUG = True
