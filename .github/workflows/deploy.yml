@@ -14,14 +14,45 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Test SSH connection
+    - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          echo "SSH connection successful"
-          whoami
-          pwd
-          ls -la
+          echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
+          
+          # Переходимо в директорію проекту
+          cd /opt/kvitkova-crm
+          
+          # Отримуємо останні зміни
+          git fetch --tags
+          git pull origin main
+          
+          # Переключаємося на тег
+          git checkout ${{ github.ref_name }}
+          
+          # Створюємо .env файл з секретами
+          echo 'TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}' > .env
+          echo 'FLASK_ENV=production' >> .env
+          echo 'FLASK_APP=run.py' >> .env
+          echo 'PYTHONUNBUFFERED=1' >> .env
+          echo 'VERSION=${{ github.ref_name }}' >> .env
+          
+          echo "📦 Stopping old containers..."
+          docker-compose down || true
+          
+          echo "🔨 Building new containers..."
+          docker-compose build --no-cache
+          
+          echo "🚀 Starting new containers..."
+          docker-compose up -d
+          
+          echo "�� Cleaning up Docker cache..."
+          docker system prune -f
+          
+          echo "✅ Deployment completed successfully!"
+          
+          # Показуємо статус контейнерів
+          docker-compose ps
