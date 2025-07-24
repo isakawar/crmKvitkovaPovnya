@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:  # Додаємо можливість ручного запуску
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -14,11 +14,14 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Setup SSH agent
-      uses: webfactory/ssh-agent@v0.7.0
+    - name: Test SSH connection
+      uses: appleboy/ssh-action@v1.0.3
       with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-    - name: Deploy
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.USERNAME }}@${{ secrets.HOST }} "cd /opt/kvitkova-crm && git pull && echo 'TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}' > .env && echo 'FLASK_ENV=production' >> .env && echo 'FLASK_APP=run.py' >> .env && echo 'PYTHONUNBUFFERED=1' >> .env && docker-compose down || true && docker-compose up -d --build && docker system prune -f"
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "SSH connection successful"
+          whoami
+          pwd
+          ls -la
