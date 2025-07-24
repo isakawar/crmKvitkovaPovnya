@@ -1,18 +1,19 @@
-name: Test SSH Connection
-on: [workflow_dispatch]  # Запуск вручну через GitHub UI
+name: Deploy
+on: [push]
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Install SSH key
+      - uses: actions/checkout@v4
+
+      - name: Add SSH key
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Test connection
+      - name: Execute remote command
         run: |
           ssh -o StrictHostKeyChecking=no \
-              -p ${{ secrets.SSH_PORT || '22' }} \
               ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-              "echo 'Успішне підключення!'"
+              "cd /path/to/app && git pull && docker-compose up -d"
