@@ -29,9 +29,6 @@ jobs:
           echo "📥 Fetching latest changes..."
           git fetch --tags
           git pull origin main
-          
-          # Переключаємося на тег
-          echo "️ Switching to tag: ${{ github.ref_name }}"
           git checkout ${{ github.ref_name }}
           
           # Створюємо .env файл
@@ -44,25 +41,22 @@ jobs:
           VERSION=${{ github.ref_name }}
           EOF
           
-          echo "📦 Stopping old containers..."
-          docker-compose down || true
+          # Перевіряємо .env файл
+          echo " .env file content:"
+          cat .env
           
-          echo "🔨 Building new containers..."
-          docker-compose build --no-cache
+          # Даємо права на виконання скрипту
+          chmod +x scripts/docker-deploy.sh
           
-          echo "🚀 Starting new containers..."
-          docker-compose up -d
+          # Запускаємо скрипт розгортання
+          echo "🔧 Running docker-deploy.sh..."
+          ./scripts/docker-deploy.sh
           
-          # Чекаємо поки контейнери запустяться
-          sleep 15
-          
-          echo "📊 Container status:"
+          # Додаткова перевірка
+          echo "📊 Final container status:"
           docker-compose ps
           
           echo "📋 Recent logs:"
           docker-compose logs --tail=20
-          
-          echo "�� Cleaning up Docker cache..."
-          docker system prune -f
           
           echo "✅ Deployment completed successfully!"
