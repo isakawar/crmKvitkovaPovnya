@@ -46,5 +46,5 @@ class Delivery(db.Model):
     preferences = db.Column(db.Text)
     
     # Telegram integration
-    telegram_notification_sent = db.Column(db.Boolean, default=False)
-    telegram_message_id = db.Column(db.Integer, nullable=True)  # ID повідомлення в Telegram для редагування 
+    # telegram_notification_sent = db.Column(db.Boolean, default=False)
+    # telegram_message_id = db.Column(db.Integer, nullable=True)  # ID повідомлення в Telegram для редагування 

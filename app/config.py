@@ -23,7 +23,14 @@ class DevelopmentConfig:
     DEBUG = True
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_secret')
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, '..', 'instance', 'kvitkova_crm.db')}"
+    
+    # Database configuration
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, '..', 'instance', 'kvitkova_crm.db')}"
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Telegram Bot настройки

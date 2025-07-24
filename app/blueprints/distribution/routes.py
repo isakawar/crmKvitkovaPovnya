@@ -76,8 +76,8 @@ def distribution_page():
                 courier_groups[delivery.courier_id] = []
             courier_groups[delivery.courier_id].append(delivery)
             # Рахуємо надіслані в Telegram
-            if delivery.telegram_notification_sent:
-                telegram_sent_count += 1
+            # if delivery.telegram_notification_sent:
+            #     telegram_sent_count += 1
         else:
             # Доставка не призначена або призначена неактивному кур'єру
             unassigned_deliveries.append(delivery)
@@ -117,8 +117,8 @@ def assign_deliveries():
             delivery = Delivery.query.get(delivery_id)
             if delivery and delivery.status in ['Очікує', 'Розподілено']:
                 # Якщо кур'єр змінився, скидаємо статус Telegram повідомлення
-                if delivery.courier_id != courier_id:
-                    delivery.telegram_notification_sent = False
+                # if delivery.courier_id != courier_id:
+                #     delivery.telegram_notification_sent = False
                 delivery.courier_id = courier_id
                 delivery.status = 'Розподілено'
                 updated_count += 1
@@ -156,7 +156,7 @@ def unassign_deliveries():
                 delivery.courier_id = None
                 delivery.status = 'Очікує'
                 # Скидаємо статус Telegram повідомлення при знятті призначення
-                delivery.telegram_notification_sent = False
+                # delivery.telegram_notification_sent = False
                 updated_count += 1
         
         db.session.commit()
@@ -206,7 +206,7 @@ def send_telegram_notifications(courier_id):
             Delivery.courier_id == courier_id,
             Delivery.delivery_date == today,
             Delivery.status.in_(['Очікує', 'Розподілено']),
-            Delivery.telegram_notification_sent == False
+            # Delivery.telegram_notification_sent == False
         ).all()
         
         if not courier_deliveries:
