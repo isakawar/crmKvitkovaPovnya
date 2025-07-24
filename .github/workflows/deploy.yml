@@ -1,19 +1,31 @@
-name: Deploy
-on: [push]
+name: Deploy to Server
+
+on:
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
+    - name: Setup SSH agent
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add SSH key
-        uses: webfactory/ssh-agent@v0.7.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-      - name: Execute remote command
-        run: |
-          ssh -o StrictHostKeyChecking=no \
-              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-              "cd /path/to/app && git pull && docker-compose up -d"
+    - name: Deploy
+      run: |
+        ssh -o StrictHostKeyChecking=no \
+            -p 22 \
+            ${{ secrets.USERNAME }}@${{ secrets.HOST }} \
+            "cd /opt/kvitkova-crm && \
+             git pull && \
+             echo 'TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}' > .env && \
+             echo 'FLASK_ENV=production' >> .env && \
+             echo 'FLASK_APP=run.py' >> .env && \
+             echo 'PYTHONUNBUFFERED=1' >> .env && \
+             docker-compose down || true && \
+             docker-compose up -d --build && \
+             docker system prune -f" 
