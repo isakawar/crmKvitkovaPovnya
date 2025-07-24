@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -14,28 +14,25 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Deploy to server
+    - name: Deploy application
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
+          set -e
           
-          # Переходимо в правильну директорію
+          echo "🚀 Starting deployment of ${{ github.ref_name }}"
+          
           cd /home/isakawar1/crmKvitkovaPovnya
           
-          # Отримуємо останні зміни
-          echo "📥 Fetching latest changes..."
+          # Оновлення коду
+          echo " Updating code..."
           git fetch --tags
-          git pull origin main
-          
-          # Переключаємося на тег
-          echo "️ Switching to tag: ${{ github.ref_name }}"
           git checkout ${{ github.ref_name }}
           
-          # Створюємо .env файл з секретами
+          # Створення .env файлу
           echo "⚙️ Creating .env file..."
           cat > .env << EOF
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -44,23 +41,26 @@ jobs:
           PYTHONUNBUFFERED=1
           VERSION=${{ github.ref_name }}
           EOF
+          chmod 600 .env
           
-          echo "📦 Stopping old containers..."
+          # Перезапуск контейнерів
+          echo "📦 Stopping containers..."
           docker-compose down || true
           
-          echo "🔨 Building new containers..."
+          echo "🔨 Building containers..."
           docker-compose build --no-cache
           
-          echo "🚀 Starting new containers..."
+          echo "🚀 Starting containers..."
           docker-compose up -d
           
-          # Чекаємо поки контейнери запустяться
-          sleep 10
+          # Перевірка
+          echo "⏳ Waiting for startup..."
+          sleep 25
           
           echo "📊 Container status:"
           docker-compose ps
           
-          echo " Cleaning up Docker cache..."
-          docker system prune -f
+          echo "📋 Recent logs:"
+          docker-compose logs --tail=20
           
           echo "✅ Deployment completed successfully!"
