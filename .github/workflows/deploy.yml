@@ -24,7 +24,7 @@ jobs:
           echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
           
           # Переходимо в директорію проекту
-          cd /opt/kvitkova-crm
+          cd /crmKvitkovaPovnya
           
           # Отримуємо останні зміни
           git fetch --tags
