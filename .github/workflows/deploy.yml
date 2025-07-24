@@ -26,13 +26,11 @@ jobs:
           cd /home/isakawar1/crmKvitkovaPovnya
           
           # Отримуємо останні зміни
-          echo "📥 Fetching latest changes..."
           git fetch --tags
           git pull origin main
           git checkout ${{ github.ref_name }}
           
           # Створюємо .env файл
-          echo "⚙️ Creating .env file..."
           cat > .env << EOF
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
           FLASK_ENV=production
@@ -41,15 +39,14 @@ jobs:
           VERSION=${{ github.ref_name }}
           EOF
           
-          # Перевіряємо .env файл
-          echo " .env file content:"
-          cat .env
-          
-          # Даємо права на виконання скрипту
-          chmod +x scripts/docker-deploy.sh
+          # Повне очищення Docker
+          echo "🧹 Full Docker cleanup..."
+          docker-compose down --volumes --remove-orphans || true
+          docker system prune -af
+          docker volume prune -f
           
           # Запускаємо скрипт розгортання
-          echo "🔧 Running docker-deploy.sh..."
+          chmod +x scripts/docker-deploy.sh
           ./scripts/docker-deploy.sh
           
           # Додаткова перевірка
@@ -57,6 +54,6 @@ jobs:
           docker-compose ps
           
           echo "📋 Recent logs:"
-          docker-compose logs --tail=20
+          docker-compose logs --tail=30
           
-          echo "✅ Deployment completed successfully!"
+          echo "✅ Deployment completed!"

@@ -58,4 +58,9 @@ def get_clients_json():
     clients = get_all_clients()
     return [
         {'id': c.id, 'phone': c.phone, 'instagram': c.instagram} for c in clients
-    ] 
+    ]
+
+# Додаємо функцію get_clients для сумісності
+def get_clients(page=1, per_page=20):
+    """Функція для пагінації клієнтів (alias для get_all_clients)"""
+    return get_all_clients() 
