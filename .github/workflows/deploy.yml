@@ -23,6 +23,7 @@ jobs:
         script: |
           echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
           
+          # Переходимо в правильну директорію
           cd /home/isakawar1/crmKvitkovaPovnya
           
           # Отримуємо останні зміни
@@ -34,7 +35,7 @@ jobs:
           echo "️ Switching to tag: ${{ github.ref_name }}"
           git checkout ${{ github.ref_name }}
           
-          # Створюємо .env файл
+          # Створюємо .env файл з секретами
           echo "⚙️ Creating .env file..."
           cat > .env << EOF
           TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -54,15 +55,12 @@ jobs:
           docker-compose up -d
           
           # Чекаємо поки контейнери запустяться
-          sleep 15
+          sleep 10
           
           echo "📊 Container status:"
           docker-compose ps
           
-          echo "📋 Recent logs:"
-          docker-compose logs --tail=20
-          
-          echo "�� Cleaning up Docker cache..."
+          echo " Cleaning up Docker cache..."
           docker system prune -f
           
           echo "✅ Deployment completed successfully!"
