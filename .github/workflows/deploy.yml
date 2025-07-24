@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     tags:
-      - 'v*'  # Тільки теги, що починаються з v
+      - '*'
   workflow_dispatch:
 
 jobs:
@@ -14,72 +14,55 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Verify tag exists
-      run: |
-        git fetch --tags
-        git show-ref --tags --verify --quiet refs/tags/${{ github.ref_name }} || {
-          echo "Error: Tag ${{ github.ref_name }} does not exist"
-          exit 1
-        }
-      
-    - name: Deploy application
+    - name: Deploy to server
       uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         script: |
-          set -e
+          echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
+          
           cd /home/isakawar1/crmKvitkovaPovnya
           
-          # Оновлення коду
+          # Отримуємо останні зміни
+          echo "📥 Fetching latest changes..."
           git fetch --tags
+          git pull origin main
+          
+          # Переключаємося на тег
+          echo "️ Switching to tag: ${{ github.ref_name }}"
           git checkout ${{ github.ref_name }}
           
-          # Оновлення .env (виправлено - замість >> використовуємо >)
-          echo "Updating .env file..."
-          {
-            echo "TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            echo "FLASK_ENV=production"
-            echo "FLASK_APP=run.py"
-            echo "PYTHONUNBUFFERED=1"
-            echo "VERSION=${{ github.ref_name }}"
-          } > .env
-          chmod 600 .env
+          # Створюємо .env файл
+          echo "⚙️ Creating .env file..."
+          cat > .env << EOF
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          FLASK_ENV=production
+          FLASK_APP=run.py
+          PYTHONUNBUFFERED=1
+          VERSION=${{ github.ref_name }}
+          EOF
           
-          # Перевірка .env файлу
-          echo "Checking .env file:"
-          cat .env
-          
-          # Перезапуск контейнерів
-          echo "Pulling latest images..."
-          docker-compose pull || true
-          
-          echo "Stopping containers..."
+          echo "📦 Stopping old containers..."
           docker-compose down || true
           
-          echo "Building containers..."
+          echo "🔨 Building new containers..."
           docker-compose build --no-cache
           
-          echo "Starting containers..."
+          echo "🚀 Starting new containers..."
           docker-compose up -d
           
-          # Перевірка статусу
-          echo "Waiting for containers to start..."
-          sleep 20
+          # Чекаємо поки контейнери запустяться
+          sleep 15
           
-          echo "Container status:"
+          echo "📊 Container status:"
           docker-compose ps
           
-          echo "Recent logs:"
-          docker-compose logs --tail=30
+          echo "📋 Recent logs:"
+          docker-compose logs --tail=20
           
-          # Додаткова перевірка здоров'я
-          echo "Health check:"
-          if curl -f http://localhost:8000/health 2>/dev/null || curl -f http://localhost:8000/ 2>/dev/null; then
-            echo "✅ Application is running successfully!"
-          else
-            echo "⚠️ Application might have issues, check logs above"
-          fi
+          echo "�� Cleaning up Docker cache..."
+          docker system prune -f
           
-          echo "Deployment of ${{ github.ref_name }} completed!"
+          echo "✅ Deployment completed successfully!"
