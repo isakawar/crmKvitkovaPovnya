@@ -1,0 +1,578 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  /* Full-screen layout: sidebar + map */
+  .rm-wrapper {
+    display: flex;
+    height: calc(100vh - 64px); /* subtract topbar */
+    overflow: hidden;
+  }
+
+  /* Left panel */
+  .rm-panel {
+    width: 380px;
+    min-width: 320px;
+    max-width: 420px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: #f9fafb;
+    border-right: 1.5px solid #e3eafc;
+    overflow: hidden;
+  }
+  .rm-panel-head {
+    padding: 20px 20px 14px;
+    border-bottom: 1.5px solid #e3eafc;
+    flex-shrink: 0;
+    background: #fff;
+  }
+  .rm-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 16px 24px;
+  }
+  .rm-panel-body::-webkit-scrollbar { width: 5px; }
+  .rm-panel-body::-webkit-scrollbar-thumb { background: #d1d9e6; border-radius: 4px; }
+
+  /* Map */
+  .rm-map-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #route-map {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Form controls */
+  .rm-form label {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: #6b7280;
+    margin-bottom: 4px;
+    display: block;
+  }
+  .rm-form .form-control, .rm-form .form-select {
+    font-size: 0.93rem;
+    border: 1.5px solid #e3eafc;
+    border-radius: 8px;
+    background: #f7f8fa;
+    padding: 7px 10px;
+    height: 36px;
+  }
+  .rm-form .form-control:focus {
+    border-color: #007bff;
+    background: #f0f5ff;
+    outline: none;
+    box-shadow: none;
+  }
+
+  /* Stats bar */
+  .rm-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .rm-stat {
+    background: #fff;
+    border: 1.5px solid #e3eafc;
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .rm-stat .label { font-size: 0.78rem; color: #8b909a; }
+  .rm-stat .value { font-size: 1.3rem; font-weight: 700; color: #007bff; }
+
+  /* Route cards */
+  .rm-route-card {
+    background: #fff;
+    border: 1.5px solid #e3eafc;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .rm-route-card .card-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 0;
+    transition: background 0.15s;
+  }
+  .rm-route-card .card-head:hover { background: #f7f9ff; }
+  .rm-route-card .card-head.open { border-bottom: 1.5px solid #e3eafc; }
+  .rm-route-card .card-body { display: none; }
+  .rm-route-card .card-body.open { display: block; }
+  .rm-color-dot {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .stop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 7px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+  }
+  .stop-row:last-child { border-bottom: none; }
+  .stop-row:hover { background: #f7f9ff; }
+  .stop-num-badge {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .stop-addr { font-size: 0.87rem; font-weight: 500; line-height: 1.3; }
+  .stop-meta { font-size: 0.78rem; color: #9ca3af; margin-top: 2px; }
+
+  /* Map overlay buttons */
+  .map-overlay-btn {
+    position: absolute;
+    z-index: 900;
+    background: #fff;
+    border: 1.5px solid #e3eafc;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+    padding: 7px 14px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #23272f;
+    transition: background 0.15s;
+  }
+  .map-overlay-btn:hover { background: #eaf1fb; color: #007bff; }
+
+  /* Loading overlay */
+  #rm-loading {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(249,250,251,0.88);
+    z-index: 800;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+  #rm-loading.active { display: flex; }
+  .spinner-ring {
+    width: 48px; height: 48px;
+    border: 4px solid #e3eafc;
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 0.85s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Error banner */
+  #rm-error {
+    display: none;
+    position: absolute;
+    bottom: 20px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 900;
+    background: #fff;
+    border: 1.5px solid #e3eafc;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    padding: 14px 20px;
+    min-width: 320px;
+    max-width: 560px;
+  }
+  #rm-error.active { display: block; }
+
+  /* Depot popup icon */
+  .depot-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #007bff;
+    box-shadow: 0 2px 10px rgba(0,123,255,0.3);
+    font-size: 17px;
+  }
+  .stop-marker-icon {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    font-weight: 700;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.9);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    line-height: 1;
+  }
+
+  /* Override container padding for this page */
+  .main-content > .container-fluid {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  @media (max-width: 800px) {
+    .rm-wrapper { flex-direction: column; }
+    .rm-panel { width: 100%; max-width: 100%; height: 280px; border-right: none; border-bottom: 1.5px solid #e3eafc; }
+    .rm-map-wrap { flex: 1; min-height: 320px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="rm-wrapper">
+
+  <!-- ───────── LEFT PANEL ───────── -->
+  <div class="rm-panel">
+    <div class="rm-panel-head">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <i class="bi bi-map text-primary fs-5"></i>
+        <span class="fw-600" style="font-size:1.05rem;font-weight:600;">Карта маршрутів</span>
+      </div>
+
+      <div class="rm-form">
+        <div class="row g-2 mb-2">
+          <div class="col-12">
+            <label>Дата доставок</label>
+            <input type="date" id="f-date" class="form-control" value="{{ today }}">
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <label>Кур'єрів</label>
+            <input type="number" id="f-couriers" class="form-control" min="1" value="1">
+          </div>
+          <div class="col-4">
+            <label>Старт</label>
+            <input type="time" id="f-start" class="form-control" value="09:00">
+          </div>
+          <div class="col-4">
+            <label>Місткість</label>
+            <input type="number" id="f-capacity" class="form-control" min="1" placeholder="∞">
+          </div>
+        </div>
+        <button id="btn-optimize" class="btn btn-primary w-100" style="border-radius:8px;">
+          <i class="bi bi-magic me-1"></i> Оптимізувати
+        </button>
+      </div>
+    </div>
+
+    <div class="rm-panel-body" id="panel-results">
+      <div id="empty-hint" class="text-center text-muted py-5" style="font-size:0.93rem;">
+        <i class="bi bi-map" style="font-size:2.5rem;opacity:0.25;display:block;margin-bottom:10px;"></i>
+        Оберіть параметри і натисніть «Оптимізувати»
+      </div>
+      <div id="rm-stats" class="rm-stats" style="display:none!important;"></div>
+      <div id="rm-routes"></div>
+    </div>
+  </div>
+
+  <!-- ───────── MAP ───────── -->
+  <div class="rm-map-wrap">
+    <div id="route-map"></div>
+
+    <!-- Loading -->
+    <div id="rm-loading">
+      <div class="spinner-ring"></div>
+      <div style="font-size:0.97rem;color:#007bff;font-weight:500;text-align:center;">
+        Оптимізація маршрутів…<br>
+        <small style="color:#9ca3af;font-weight:400;">Зазвичай 15–90 секунд</small>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="rm-error">
+      <div class="d-flex align-items-start gap-2">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0 mt-1"></i>
+        <div>
+          <div id="rm-error-title" class="fw-600 mb-1" style="font-weight:600;"></div>
+          <div id="rm-error-body" style="font-size:0.9rem;color:#6b7280;"></div>
+        </div>
+        <button onclick="document.getElementById('rm-error').classList.remove('active')"
+                style="margin-left:auto;background:none;border:none;color:#9ca3af;font-size:1.2rem;cursor:pointer;">✕</button>
+      </div>
+    </div>
+
+    <!-- Fit-bounds button (shown after result) -->
+    <button id="btn-fit" class="map-overlay-btn" style="top:14px;right:14px;display:none;"
+            onclick="fitAll()">
+      <i class="bi bi-arrows-fullscreen"></i> Вмістити всі
+    </button>
+
+    <!-- Export CSV button -->
+    <div id="btn-export-wrap" style="top:58px;right:14px;display:none;position:absolute;z-index:900;">
+      <button class="map-overlay-btn" onclick="exportCsv()">
+        <i class="bi bi-download"></i> Експорт CSV
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
+
+// ── Map init ────────────────────────────────────────────────────────────────
+const map = L.map('route-map', { zoomControl: false }).setView([50.4501, 30.5234], 11);
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
+
+let mapLayers = [];
+let allPoints = [];
+let lastResult = null;
+
+function clearMap() {
+  mapLayers.forEach(l => map.removeLayer(l));
+  mapLayers = [];
+  allPoints = [];
+}
+
+function fitAll() {
+  if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [40, 40] });
+}
+
+// ── Optimize ────────────────────────────────────────────────────────────────
+document.getElementById('btn-optimize').addEventListener('click', runOptimize);
+
+async function runOptimize() {
+  hideError();
+  showLoading(true);
+  document.getElementById('btn-fit').style.display = 'none';
+  document.getElementById('btn-export-wrap').style.display = 'none';
+  document.getElementById('empty-hint').style.display = 'none';
+  document.getElementById('rm-routes').innerHTML = '';
+  document.getElementById('rm-stats').style.setProperty('display', 'none', 'important');
+
+  const capacity = parseInt(document.getElementById('f-capacity').value);
+
+  const body = {
+    delivery_date: document.getElementById('f-date').value,
+    start_time: document.getElementById('f-start').value,
+    num_couriers: parseInt(document.getElementById('f-couriers').value) || 1,
+    capacity: isNaN(capacity) || capacity <= 0 ? null : capacity,
+  };
+
+  try {
+    const resp = await fetch('/route-map/optimize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      if (data.error === 'INFEASIBLE') {
+        showError(
+          'Недостатньо кур\'єрів',
+          data.message + (data.minimum_couriers_required
+            ? ' Мінімум потрібно: <b>' + data.minimum_couriers_required + '</b>.'
+            : '')
+        );
+      } else if (data.error === 'NO_DELIVERIES') {
+        showError('Немає доставок', data.message);
+      } else {
+        showError('Помилка оптимізатора', data.message || 'Невідома помилка');
+      }
+      return;
+    }
+
+    lastResult = data;
+    renderResult(data);
+  } catch (e) {
+    showError('Помилка з\'єднання', 'Не вдалось зв\'язатись з сервером. ' + e.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ── Render result ────────────────────────────────────────────────────────────
+function renderResult(data) {
+  clearMap();
+
+  // Stats
+  const stats = data.stats || {};
+  const statsEl = document.getElementById('rm-stats');
+  statsEl.innerHTML = `
+    <div class="rm-stat"><div class="label">Доставок</div><div class="value">${stats.totalDeliveries ?? '—'}</div></div>
+    <div class="rm-stat"><div class="label">Кур'єрів</div><div class="value">${stats.numCouriers ?? '—'}</div></div>
+    <div class="rm-stat"><div class="label">Відстань</div><div class="value" style="font-size:1.1rem;">${stats.totalDistanceKm ?? '—'} <span style="font-size:0.8rem;font-weight:400;">км</span></div></div>
+    <div class="rm-stat"><div class="label">В дорозі</div><div class="value" style="font-size:1.1rem;">${stats.totalDriveMin ?? '—'} <span style="font-size:0.8rem;font-weight:400;">хв</span></div></div>
+  `;
+  statsEl.style.setProperty('display', 'grid', 'important');
+
+  // Depot
+  if (data.depot && data.depot.lat && data.depot.lng) {
+    const icon = L.divIcon({
+      html: '<div class="depot-icon">🏭</div>',
+      iconSize: [32, 32], iconAnchor: [16, 16], className: ''
+    });
+    const m = L.marker([data.depot.lat, data.depot.lng], { icon })
+      .addTo(map)
+      .bindPopup('<b>Склад (депо)</b>');
+    mapLayers.push(m);
+    allPoints.push([data.depot.lat, data.depot.lng]);
+  }
+
+  const routesEl = document.getElementById('rm-routes');
+  routesEl.innerHTML = '';
+
+  (data.routes || []).forEach((route, idx) => {
+    const color = COLORS[idx % COLORS.length];
+
+    // Polyline
+    const geometry = route.geometry;
+    if (geometry && geometry.length > 1) {
+      const pl = L.polyline(geometry.map(p => [p[0], p[1]]), {
+        color, weight: 4, opacity: 0.85
+      }).addTo(map);
+      mapLayers.push(pl);
+    } else {
+      const coords = (route.stops || [])
+        .filter(s => s.lat && s.lng)
+        .map(s => [s.lat, s.lng]);
+      if (coords.length > 1) {
+        const pl = L.polyline(coords, { color, weight: 4, opacity: 0.85, dashArray: '6 6' }).addTo(map);
+        mapLayers.push(pl);
+      }
+    }
+
+    // Stop markers
+    const markers = [];
+    (route.stops || []).forEach((stop, si) => {
+      if (!stop.lat || !stop.lng) return;
+      const sz = si < 9 ? 22 : 26;
+      const icon = L.divIcon({
+        html: `<div class="stop-marker-icon" style="background:${color};width:${sz}px;height:${sz}px;font-size:${si < 9 ? 11 : 10}px;">${si + 1}</div>`,
+        iconSize: [sz, sz], iconAnchor: [sz / 2, sz / 2], className: ''
+      });
+      let popup = `<b>${stop.address}</b><br>ETA: <b>${stop.eta}</b>`;
+      if (stop.timeStart || stop.timeEnd) popup += `<br>Вікно: ${stop.timeStart || '?'} – ${stop.timeEnd || '?'}`;
+      if (stop.driveMin != null) popup += `<br>Дорога: ${stop.driveMin} хв`;
+      if (stop.waitMin) popup += `<br>Очікування: ${stop.waitMin} хв`;
+      const m = L.marker([stop.lat, stop.lng], { icon }).addTo(map).bindPopup(popup);
+      mapLayers.push(m);
+      markers.push(m);
+      allPoints.push([stop.lat, stop.lng]);
+    });
+
+    // Route card in sidebar
+    const card = document.createElement('div');
+    card.className = 'rm-route-card';
+    const stopsHtml = (route.stops || []).map((stop, si) => `
+      <div class="stop-row" data-idx="${idx}" data-si="${si}">
+        <div class="stop-num-badge" style="background:${color};">${si + 1}</div>
+        <div>
+          <div class="stop-addr">${stop.address}</div>
+          <div class="stop-meta">
+            ETA ${stop.eta}
+            ${stop.timeStart || stop.timeEnd ? ` · ${stop.timeStart || '?'}–${stop.timeEnd || '?'}` : ''}
+            ${stop.driveMin ? ` · ${stop.driveMin} хв` : ''}
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="card-head" data-card="${idx}">
+        <div class="rm-color-dot" style="background:${color};"></div>
+        <span style="font-weight:600;font-size:0.93rem;">Кур'єр ${route.courierId}</span>
+        <span style="margin-left:auto;font-size:0.8rem;color:#9ca3af;">
+          ${route.stops.length} зуп · ${route.totalDistanceKm} км · ${route.totalDriveMin} хв
+        </span>
+        <i class="bi bi-chevron-down" style="font-size:0.8rem;color:#9ca3af;margin-left:4px;transition:transform 0.2s;"></i>
+      </div>
+      <div class="card-body" data-body="${idx}">${stopsHtml}</div>
+    `;
+    routesEl.appendChild(card);
+
+    // Toggle card
+    card.querySelector('.card-head').addEventListener('click', function() {
+      const body = card.querySelector('.card-body');
+      const chevron = card.querySelector('.bi-chevron-down');
+      const open = body.classList.toggle('open');
+      this.classList.toggle('open', open);
+      chevron.style.transform = open ? 'rotate(180deg)' : '';
+    });
+
+    // Click stop → fly to marker
+    card.querySelectorAll('.stop-row').forEach((row, si) => {
+      if (!markers[si]) return;
+      row.addEventListener('click', () => {
+        const stop = route.stops[si];
+        if (stop.lat && stop.lng) {
+          map.flyTo([stop.lat, stop.lng], 16, { duration: 0.8 });
+          markers[si].openPopup();
+        }
+      });
+    });
+
+    // Open first card by default
+    if (idx === 0) {
+      card.querySelector('.card-head').click();
+    }
+  });
+
+  fitAll();
+  document.getElementById('btn-fit').style.display = 'flex';
+  document.getElementById('btn-export-wrap').style.display = 'block';
+}
+
+// ── Export CSV ───────────────────────────────────────────────────────────────
+function exportCsv() {
+  if (!lastResult) return;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/route-generator/export-csv';
+
+  const fDate = document.getElementById('f-date').value;
+  [
+    ['result_json', JSON.stringify(lastResult)],
+    ['selected_date', fDate],
+  ].forEach(([n, v]) => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = n;
+    inp.value = v;
+    form.appendChild(inp);
+  });
+  document.body.appendChild(form);
+  form.submit();
+  document.body.removeChild(form);
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function showLoading(on) {
+  document.getElementById('rm-loading').classList.toggle('active', on);
+}
+function showError(title, body) {
+  document.getElementById('rm-error-title').textContent = title;
+  document.getElementById('rm-error-body').innerHTML = body;
+  document.getElementById('rm-error').classList.add('active');
+}
+function hideError() {
+  document.getElementById('rm-error').classList.remove('active');
+}
+
+// Enter key on inputs
+document.querySelectorAll('.rm-form input').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') runOptimize(); });
+});
+</script>
+{% endblock %}

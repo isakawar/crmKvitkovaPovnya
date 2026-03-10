@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: kvitkova_user
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kvitkova_password}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
@@ -58,8 +58,7 @@ services:
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_bot.py"]
 
-volumes:
-  postgres_data:
+# Volumes are now managed via local directories
 
 networks:
   default:

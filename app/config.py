@@ -5,7 +5,7 @@ load_dotenv()
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///app.db'
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://kvitkova_user:kvitkova_password@localhost:5432/kvitkova_crm'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Telegram Bot settings
@@ -18,6 +18,7 @@ class Config:
     # Login configuration
     LOGIN_DISABLED = False
     REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
+    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
 
 class DevelopmentConfig:
     DEBUG = True
@@ -29,7 +30,7 @@ class DevelopmentConfig:
     if DATABASE_URL:
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
     else:
-        SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(BASE_DIR, '..', 'instance', 'kvitkova_crm.db')}"
+        SQLALCHEMY_DATABASE_URI = 'postgresql://kvitkova_user:kvitkova_password@localhost:5432/kvitkova_crm'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
@@ -38,6 +39,7 @@ class DevelopmentConfig:
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
     TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', 'webhook_secret')
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
+    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

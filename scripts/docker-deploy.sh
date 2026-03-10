@@ -139,6 +139,21 @@ EOF
 echo "✅ Docker та Docker Compose знайдені ($DOCKER_COMPOSE)"
 echo
 
+# Створення backup перед деплоєм
+echo "💾 Створення backup бази даних..."
+if $DOCKER_COMPOSE ps postgres | grep -q "Up"; then
+    mkdir -p backups
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    backup_file="backups/pre_deploy_backup_${timestamp}.sql"
+    if $DOCKER_COMPOSE exec -T postgres pg_dump -U kvitkova_user kvitkova_crm > "$backup_file" 2>/dev/null; then
+        echo "✅ Backup створено: $backup_file"
+    else
+        echo "⚠️  Не вдалося створити backup"
+    fi
+else
+    echo "ℹ️  PostgreSQL не запущений, backup не потрібен"
+fi
+
 # Зупинення старих контейнерів
 echo "🛑 Зупинення існуючих контейнерів..."
 $DOCKER_COMPOSE down
