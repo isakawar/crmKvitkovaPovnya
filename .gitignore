@@ -149,7 +149,12 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-instance/kvitkova_crm.db
+
+# PostgreSQL data directory
+data/postgres/
+
+# Backup files
+backups/
 
 # Logs
 logs/

@@ -1,23 +1,856 @@
 {% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #route-map {
+    height: 520px;
+    border-radius: 16px;
+    border: 1.5px solid #e3eafc;
+    overflow: hidden;
+  }
+  .stop-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 12px;
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.85);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  .depot-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid #007bff;
+    box-shadow: 0 2px 10px rgba(0,123,255,0.4);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .route-card .stop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f4f8;
+  }
+  .route-card .stop-row:last-child { border-bottom: none; }
+  .stop-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  #loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255,255,255,0.82);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  #loading-overlay.active { display: flex; }
+  .spinner-ring {
+    width: 56px;
+    height: 56px;
+    border: 5px solid #e3eafc;
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Drag-and-drop routes */
+  .route-stops-list { padding: 4px 0; min-height: 48px; }
+  .stop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f4f8;
+    cursor: default;
+    transition: background 0.1s;
+  }
+  .stop-row:last-child { border-bottom: none; }
+  .stop-row:hover { background: #f7f9ff; }
+  .stop-row.sortable-ghost { opacity: 0.4; background: #eaf1fb; }
+  .stop-row.sortable-chosen { background: #eaf1fb; box-shadow: 0 2px 12px rgba(0,123,255,0.13); }
+  .drag-handle {
+    color: #c0c7d4;
+    cursor: grab;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: color 0.15s;
+  }
+  .drag-handle:hover { color: #007bff; }
+  .drag-handle:active { cursor: grabbing; }
+  .route-stops-list.drag-over { background: #f0f5ff; border-radius: 8px; }
+
+  /* Changes banner */
+  #changes-banner {
+    display: none;
+    position: sticky;
+    bottom: 20px;
+    z-index: 100;
+    margin-top: 16px;
+  }
+  #changes-banner.visible { display: block; }
+
+  /* Delivery picker rows */
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 24px;
+    border-bottom: 1px solid #f0f4f8;
+    cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .picker-row:last-child { border-bottom: none; }
+  .picker-row:hover { background: #f7f9ff; }
+  .picker-row.unchecked { opacity: 0.45; }
+  .picker-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; accent-color: #007bff; }
+  .picker-time { font-size: 0.88rem; font-weight: 700; color: #007bff; min-width: 90px; flex-shrink: 0; }
+  .picker-addr { font-size: 0.93rem; font-weight: 500; flex: 1; }
+  .picker-meta { font-size: 0.8rem; color: #9ca3af; margin-top: 2px; }
+  .picker-badge {
+    font-size: 0.75rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; background: #eaf1fb; color: #3373cc;
+    flex-shrink: 0;
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2 class="mb-4">Генератор оптимального маршруту</h2>
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <form method="post" enctype="multipart/form-data" class="p-4 border rounded bg-white shadow-sm">
-      <div class="mb-3">
-        <label class="form-label">Завантажте CSV-файл із замовленнями (<a href="#">приклад</a>)</label>
-        <input type="file" name="csv_file" class="form-control">
+<div id="loading-overlay">
+  <div class="spinner-ring"></div>
+  <div style="font-size:1.1rem;color:#007bff;font-weight:500;">Оптимізація маршрутів…<br><small style="color:#8b909a;font-weight:400;">Зазвичай займає 15–90 секунд</small></div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2 class="mb-0">Оптимізатор маршрутів</h2>
+  <div class="text-muted small">Джерело: доставки CRM зі статусом «Очікує» / «Розподілено»</div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body">
+    <form method="post" id="optimizer-form" class="row g-3 align-items-end">
+      <input type="hidden" name="num_couriers" id="form-num-couriers" value="{{ num_couriers }}">
+      <input type="hidden" name="start_time" id="form-start-time" value="{{ start_time }}">
+      <input type="hidden" name="capacity" id="form-capacity" value="{{ capacity }}">
+      <div class="col-md-9">
+        <label class="form-label">Дата доставок</label>
+        <input type="date" name="delivery_date" class="form-control" value="{{ selected_date }}">
       </div>
-      <div class="mb-3">
-        <label class="form-label">Кількість кур'єрів</label>
-        <input type="number" name="couriers" class="form-control" min="1" value="1">
+      <div class="col-md-3 d-grid">
+        <label class="form-label d-none d-md-block">&nbsp;</label>
+        <button type="button" id="btn-open-picker" class="btn btn-primary">
+          <i class="bi bi-magic me-1"></i> Побудувати маршрут
+        </button>
       </div>
-      <div class="mb-3">
-        <label class="form-label">Час відправлення кур'єрів</label>
-        <input type="time" name="start_time" class="form-control" value="08:00">
-      </div>
-      <button type="submit" class="btn btn-primary w-100">Розрахувати маршрут</button>
     </form>
   </div>
 </div>
-{% endblock %} 
+
+{% if infeasible_error %}
+  <div class="alert border-0 mb-4" style="background:#fff7e0;border-left:4px solid #ffc107 !important;border-radius:12px;padding:18px 24px;">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+      <strong>Недостатньо кур'єрів для виконання всіх доставок</strong>
+    </div>
+    <div style="color:#5a4a00;">{{ infeasible_error.message }}</div>
+    {% if infeasible_error.minimum_couriers_required %}
+    <div class="mt-2">
+      Мінімум потрібно: <strong>{{ infeasible_error.minimum_couriers_required }}</strong> кур'єр(ів).
+      Збільш кількість кур'єрів або місткість.
+    </div>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if general_error %}
+  <div class="alert border-0 mb-4" style="background:#ffeae5;border-left:4px solid #dc3545 !important;border-radius:12px;padding:18px 24px;">
+    <div class="d-flex align-items-center gap-2 mb-1">
+      <i class="bi bi-x-circle-fill text-danger fs-5"></i>
+      <strong>Помилка оптимізатора</strong>
+    </div>
+    <div style="color:#7a1a1a;">{{ general_error }}</div>
+  </div>
+{% endif %}
+
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body p-0" style="border-radius:16px;overflow:hidden;">
+    <div id="route-map"></div>
+  </div>
+</div>
+
+{% if optimizer_result %}
+  <div class="d-flex flex-wrap gap-3 mb-4">
+    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
+      <div class="stat-title">Доставок</div>
+      <div class="stat-value">{{ optimizer_result.stats.totalDeliveries }}</div>
+    </div>
+    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
+      <div class="stat-title">Кур'єрів</div>
+      <div class="stat-value">{{ optimizer_result.stats.numCouriers }}</div>
+    </div>
+    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
+      <div class="stat-title">Відстань</div>
+      <div class="stat-value">{{ optimizer_result.stats.totalDistanceKm }} <small style="font-size:1rem;font-weight:400;">км</small></div>
+    </div>
+    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
+      <div class="stat-title">В дорозі</div>
+      <div class="stat-value">{{ optimizer_result.stats.totalDriveMin }} <small style="font-size:1rem;font-weight:400;">хв</small></div>
+    </div>
+    {% if optimizer_result.droppedOrders %}
+    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;background:#fff7e0;border-color:#f7e7b3;">
+      <div class="stat-title" style="color:#bfa14a;">Пропущено</div>
+      <div class="stat-value" style="color:#bfa14a;">{{ optimizer_result.droppedOrders }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <form method="post" action="{{ url_for('orders.route_generator_export_csv') }}">
+      <input type="hidden" name="result_json" value="{{ result_json|e }}">
+      <input type="hidden" name="selected_date" value="{{ selected_date }}">
+      <button type="submit" class="btn btn-outline-primary">
+        <i class="bi bi-download me-1"></i> Експорт CSV
+      </button>
+    </form>
+    <a href="{{ url_for('distribution.distribution_page', date=selected_date) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-box-seam me-1"></i> Розподілити між кур'єрами
+    </a>
+  </div>
+
+  <div id="routes-container"></div>
+
+  <!-- Changes banner -->
+  <div id="changes-banner">
+    <div class="d-flex align-items-center gap-3 p-3 px-4"
+         style="background:#fff;border:1.5px solid #007bff;border-radius:14px;box-shadow:0 4px 20px rgba(0,123,255,0.15);">
+      <i class="bi bi-pencil-square text-primary fs-5"></i>
+      <span style="font-weight:500;">Маршрут відредаговано вручну</span>
+      <span class="text-muted small">ETA та час у дорозі потребуватимуть перерахунку</span>
+      <div class="ms-auto d-flex gap-2">
+        <button id="btn-reset-routes" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Скинути
+        </button>
+        <button id="btn-recalculate" class="btn btn-success btn-sm">
+          <i class="bi bi-arrow-repeat me-1"></i>Перерахувати
+        </button>
+        <button id="btn-export-modified" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download me-1"></i>Експорт CSV
+        </button>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<!-- ── Delivery picker modal ─────────────────────────────────────────────── -->
+<div class="modal fade" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:16px;border:1.5px solid #e3eafc;">
+      <div class="modal-header" style="border-bottom:1.5px solid #e3eafc;padding:18px 24px;">
+        <div>
+          <h5 class="modal-title mb-0">Доставки для оптимізації</h5>
+          <div id="picker-date-label" class="text-muted small mt-1"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Route params -->
+        <div class="row g-2 px-4 py-3" style="border-bottom:1.5px solid #e3eafc;background:#f9fafb;">
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Кур'єрів</label>
+            <input type="number" id="picker-num-couriers" class="form-control form-control-sm" min="1" value="{{ num_couriers }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Старт</label>
+            <input type="time" id="picker-start-time" class="form-control form-control-sm" value="{{ start_time }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Місткість</label>
+            <input type="number" id="picker-capacity" class="form-control form-control-sm" min="1" value="{{ capacity }}" placeholder="∞">
+          </div>
+        </div>
+        <!-- Toolbar -->
+        <div class="d-flex align-items-center gap-3 px-4 py-2" style="border-bottom:1px solid #f0f4f8;background:#fff;">
+          <span id="picker-count" class="text-muted small"></span>
+          <button type="button" id="picker-select-all" class="btn btn-link btn-sm p-0 text-primary">Обрати всі</button>
+          <button type="button" id="picker-deselect-all" class="btn btn-link btn-sm p-0 text-secondary">Зняти всі</button>
+        </div>
+        <!-- List -->
+        <div id="picker-list" style="max-height:420px;overflow-y:auto;">
+          <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
+            <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
+            Немає доставок на вибрану дату
+          </div>
+          <div id="picker-loading" class="text-center py-5">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span class="ms-2 text-muted">Завантаження…</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1.5px solid #e3eafc;padding:14px 24px;">
+        <span id="picker-selected-count" class="text-muted small me-auto"></span>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" id="btn-run-optimizer" class="btn btn-primary" disabled>
+          <i class="bi bi-magic me-1"></i> Розрахувати
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+// ── Delivery picker ───────────────────────────────────────────────────────────
+const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+let pickerDeliveries = [];
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function updatePickerFooter() {
+  const checked = document.querySelectorAll('#picker-list input[type=checkbox]:checked').length;
+  document.getElementById('picker-selected-count').textContent = `Обрано: ${checked} з ${pickerDeliveries.length}`;
+  document.getElementById('btn-run-optimizer').disabled = checked === 0;
+}
+
+function renderPickerList(deliveries) {
+  const list = document.getElementById('picker-list');
+  document.getElementById('picker-loading').style.display = 'none';
+
+  if (deliveries.length === 0) {
+    document.getElementById('picker-empty').style.display = 'block';
+    updatePickerFooter();
+    return;
+  }
+
+  deliveries.forEach(function(d) {
+    const timeLabel = d.time_from
+      ? (d.time_to ? `${d.time_from}–${d.time_to}` : d.time_from)
+      : 'Час не вказано';
+
+    const addrParts = [d.city, d.street, d.building_number].filter(Boolean);
+    const addr = addrParts.join(', ');
+    const meta = [d.recipient_name, d.phone, d.instagram].filter(Boolean).join(' · ');
+
+    const row = document.createElement('label');
+    row.className = 'picker-row';
+    row.innerHTML = `
+      <input type="checkbox" value="${d.id}" checked>
+      <span class="picker-time">${timeLabel}</span>
+      <span style="flex:1;">
+        <div class="picker-addr">${addr || '—'}</div>
+        ${meta ? `<div class="picker-meta">${meta}</div>` : ''}
+      </span>
+      <span class="picker-badge">${d.size || '—'}</span>
+    `;
+    row.querySelector('input').addEventListener('change', function() {
+      row.classList.toggle('unchecked', !this.checked);
+      updatePickerFooter();
+    });
+    list.appendChild(row);
+  });
+
+  updatePickerFooter();
+}
+
+document.getElementById('btn-open-picker').addEventListener('click', async function() {
+  const dateVal = document.querySelector('[name=delivery_date]').value;
+  document.getElementById('picker-date-label').textContent = formatDate(dateVal);
+  document.getElementById('picker-count').textContent = '';
+  document.getElementById('picker-selected-count').textContent = '';
+  document.getElementById('btn-run-optimizer').disabled = true;
+
+  // Reset list
+  const list = document.getElementById('picker-list');
+  list.innerHTML = `
+    <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
+      <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
+      Немає доставок на вибрану дату
+    </div>
+    <div id="picker-loading" class="text-center py-5">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+      <span class="ms-2 text-muted">Завантаження…</span>
+    </div>
+  `;
+
+  pickerModal.show();
+
+  try {
+    const resp = await fetch(`/route-generator/deliveries?date=${dateVal}`);
+    pickerDeliveries = await resp.json();
+    document.getElementById('picker-count').textContent = `Всього доставок: ${pickerDeliveries.length}`;
+    renderPickerList(pickerDeliveries);
+  } catch(e) {
+    document.getElementById('picker-loading').innerHTML = '<span class="text-danger">Помилка завантаження</span>';
+  }
+});
+
+document.getElementById('picker-select-all').addEventListener('click', function() {
+  document.querySelectorAll('#picker-list input[type=checkbox]').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.picker-row').classList.remove('unchecked');
+  });
+  updatePickerFooter();
+});
+
+document.getElementById('picker-deselect-all').addEventListener('click', function() {
+  document.querySelectorAll('#picker-list input[type=checkbox]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.picker-row').classList.add('unchecked');
+  });
+  updatePickerFooter();
+});
+
+document.getElementById('btn-run-optimizer').addEventListener('click', function() {
+  const form = document.getElementById('optimizer-form');
+
+  // Copy route params from modal to hidden form inputs
+  document.getElementById('form-num-couriers').value = document.getElementById('picker-num-couriers').value || 1;
+  document.getElementById('form-start-time').value = document.getElementById('picker-start-time').value || '09:00';
+  document.getElementById('form-capacity').value = document.getElementById('picker-capacity').value || '';
+
+  // Remove previously added delivery_ids inputs
+  form.querySelectorAll('input[name=delivery_ids]').forEach(el => el.remove());
+
+  // Add selected IDs
+  document.querySelectorAll('#picker-list input[type=checkbox]:checked').forEach(cb => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'delivery_ids';
+    inp.value = cb.value;
+    form.appendChild(inp);
+  });
+
+  pickerModal.hide();
+  document.getElementById('loading-overlay').classList.add('active');
+  form.submit();
+});
+
+const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
+
+// ── Map always initialized ────────────────────────────────────────────────────
+const map = L.map('route-map').setView([50.4501, 30.5234], 11);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
+
+// ── Routes + depot from optimizer result ─────────────────────────────────────
+{% if optimizer_result %}
+(function() {
+  const result = {{ result_json | safe }};
+  const allPoints = [];
+
+  if (result.depot && result.depot.lat && result.depot.lng) {
+    const depotIcon = L.divIcon({
+      html: '<div class="depot-icon">🏭</div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+      className: ''
+    });
+    L.marker([result.depot.lat, result.depot.lng], { icon: depotIcon })
+      .addTo(map)
+      .bindPopup('<b>Склад (депо)</b>');
+    allPoints.push([result.depot.lat, result.depot.lng]);
+  }
+
+  (result.routes || []).forEach(function(route, idx) {
+    const color = COLORS[idx % COLORS.length];
+
+    const geometry = route.geometry;
+    if (geometry && geometry.length > 1) {
+      L.polyline(geometry.map(function(p) { return [p[0], p[1]]; }), {
+        color: color,
+        weight: 4,
+        opacity: 0.85
+      }).addTo(map);
+    } else {
+      const coords = (route.stops || [])
+        .filter(function(s) { return s.lat && s.lng; })
+        .map(function(s) { return [s.lat, s.lng]; });
+      if (coords.length > 1) {
+        L.polyline(coords, { color: color, weight: 4, opacity: 0.85, dashArray: '6 6' }).addTo(map);
+      }
+    }
+
+    (route.stops || []).forEach(function(stop, stopIdx) {
+      if (!stop.lat || !stop.lng) return;
+
+      const icon = L.divIcon({
+        html: '<div class="stop-marker" style="background:' + color + ';">' + (stopIdx + 1) + '</div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+        className: ''
+      });
+
+      let popup = '<b>' + stop.address + '</b><br>ETA: <b>' + stop.eta + '</b>';
+      if (stop.timeStart || stop.timeEnd) {
+        popup += '<br>Вікно: ' + (stop.timeStart || '?') + ' – ' + (stop.timeEnd || '?');
+      }
+      if (stop.driveMin != null) popup += '<br>Дорога: ' + stop.driveMin + ' хв';
+      if (stop.waitMin) popup += '<br>Очікування: ' + stop.waitMin + ' хв';
+
+      L.marker([stop.lat, stop.lng], { icon: icon })
+        .addTo(map)
+        .bindPopup(popup);
+
+      allPoints.push([stop.lat, stop.lng]);
+    });
+  });
+
+  if (allPoints.length > 0) {
+    map.fitBounds(allPoints, { padding: [36, 36] });
+  }
+})();
+{% endif %}
+
+// ── Route cards render + drag-and-drop ───────────────────────────────────────
+{% if optimizer_result %}
+(function() {
+  const ROUTE_COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
+  const originalResult = {{ result_json | safe }};
+
+  // Deep-copy routes state for tracking changes
+  let currentRoutes = JSON.parse(JSON.stringify(originalResult.routes || []));
+  let hasChanges = false;
+
+  // ── Render all route cards ──────────────────────────────────────────────────
+  function renderRoutes(routes) {
+    const container = document.getElementById('routes-container');
+    container.innerHTML = '';
+
+    routes.forEach(function(route, idx) {
+      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+      const card = document.createElement('div');
+      card.className = 'card shadow-sm border-0 mb-3';
+      card.dataset.routeIdx = idx;
+
+      const stopsCount = route.stops.length;
+      const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
+      const driveMin = route.totalDriveMin != null ? route.totalDriveMin + ' хв' : '—';
+
+      card.innerHTML = `
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
+          <div class="d-flex align-items-center gap-2">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+            <strong>Кур'єр ${route.courierId}</strong>
+          </div>
+          <span class="route-meta text-muted small">
+            <span class="stops-count">${stopsCount}</span> зупинок &nbsp;·&nbsp; ${distKm} &nbsp;·&nbsp; ${driveMin}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="route-stops-list list-unstyled mb-0"
+              id="stop-list-${idx}"
+              data-route-idx="${idx}"
+              data-color="${color}"></ul>
+        </div>
+      `;
+      container.appendChild(card);
+
+      const list = card.querySelector('.route-stops-list');
+      renderStops(list, route.stops, color);
+      initSortable(list);
+    });
+  }
+
+  // ── Render stops inside a list ─────────────────────────────────────────────
+  function renderStops(listEl, stops, color) {
+    listEl.innerHTML = '';
+    stops.forEach(function(stop, si) {
+      listEl.appendChild(createStopRow(stop, si + 1, color));
+    });
+  }
+
+  function createStopRow(stop, num, color) {
+    const li = document.createElement('li');
+    li.className = 'stop-row';
+    li.dataset.stopId = stop.id || '';
+    li.dataset.stopJson = JSON.stringify(stop);
+
+    const timePart = stop.timeStart || stop.timeEnd
+      ? `<span><i class="bi bi-calendar-event me-1"></i>${stop.timeStart || '?'} – ${stop.timeEnd || '?'}</span>`
+      : '';
+    const drivePart = stop.driveMin
+      ? `<span><i class="bi bi-car-front me-1"></i>${stop.driveMin} хв дороги</span>`
+      : '';
+    const waitPart = stop.waitMin
+      ? `<span><i class="bi bi-hourglass-split me-1"></i>${stop.waitMin} хв очікування</span>`
+      : '';
+
+    li.innerHTML = `
+      <i class="bi bi-grip-vertical drag-handle"></i>
+      <span class="stop-num" style="background:${color};">${num}</span>
+      <div style="flex:1;">
+        <div style="font-weight:500;font-size:0.97rem;">${stop.address || '—'}</div>
+        <div class="d-flex flex-wrap gap-3 mt-1" style="font-size:0.88rem;color:#6b7280;">
+          <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
+          ${timePart}${drivePart}${waitPart}
+        </div>
+      </div>
+    `;
+    return li;
+  }
+
+  // ── Renumber stops after drag ──────────────────────────────────────────────
+  function renumberList(listEl) {
+    const color = listEl.dataset.color;
+    listEl.querySelectorAll('.stop-num').forEach(function(badge, i) {
+      badge.textContent = i + 1;
+      badge.style.background = color;
+    });
+    // Update stops-count in card header
+    const card = listEl.closest('.card');
+    const countEl = card && card.querySelector('.stops-count');
+    if (countEl) countEl.textContent = listEl.children.length;
+  }
+
+  // ── Sync currentRoutes from DOM ────────────────────────────────────────────
+  function syncRoutesFromDOM() {
+    document.querySelectorAll('.route-stops-list').forEach(function(listEl) {
+      const routeIdx = parseInt(listEl.dataset.routeIdx);
+      const stops = [];
+      listEl.querySelectorAll('.stop-row').forEach(function(row) {
+        try { stops.push(JSON.parse(row.dataset.stopJson)); } catch(e) {}
+      });
+      if (currentRoutes[routeIdx]) currentRoutes[routeIdx].stops = stops;
+    });
+  }
+
+  // ── Init SortableJS ────────────────────────────────────────────────────────
+  function initSortable(listEl) {
+    Sortable.create(listEl, {
+      group: 'routes',          // enable cross-list dragging
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragoverBubble: true,
+      onEnd: function(evt) {
+        // Renumber both source and destination lists
+        renumberList(evt.from);
+        if (evt.from !== evt.to) renumberList(evt.to);
+
+        // Mark as changed
+        hasChanges = true;
+        document.getElementById('changes-banner').classList.add('visible');
+
+        syncRoutesFromDOM();
+      }
+    });
+  }
+
+  // ── Reset to original ──────────────────────────────────────────────────────
+  document.getElementById('btn-reset-routes').addEventListener('click', function() {
+    currentRoutes = JSON.parse(JSON.stringify(originalResult.routes || []));
+    hasChanges = false;
+    document.getElementById('changes-banner').classList.remove('visible');
+    renderRoutes(currentRoutes);
+  });
+
+  // ── Export modified as CSV ─────────────────────────────────────────────────
+  document.getElementById('btn-export-modified').addEventListener('click', function() {
+    syncRoutesFromDOM();
+    const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("orders.route_generator_export_csv") }}';
+
+    [['result_json', JSON.stringify(modifiedResult)],
+     ['selected_date', '{{ selected_date }}']].forEach(function([n, v]) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = n; inp.value = v;
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  });
+
+  // ── Recalculate ────────────────────────────────────────────────────────────
+  document.getElementById('btn-recalculate').addEventListener('click', async function() {
+    syncRoutesFromDOM();
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Перераховую…';
+
+    // Build recalculate payload
+    const recalcRoutes = currentRoutes.map(function(route) {
+      return {
+        courierId: route.courierId,
+        stops: (route.stops || [])
+          .filter(function(s) { return s.lat && s.lng; })
+          .map(function(s) {
+            return {
+              lat: s.lat,
+              lng: s.lng,
+              address: s.address || '',
+              timeStart: s.timeStart || null,
+              timeEnd: s.timeEnd || null,
+            };
+          }),
+      };
+    });
+
+    const payload = {
+      routes: recalcRoutes,
+      depot: originalResult.depot || null,
+      startTime: document.getElementById('form-start-time').value || '09:00',
+    };
+
+    try {
+      const resp = await fetch('/route-generator/recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        alert('Помилка перерахунку: ' + (data.error || data.message || resp.status));
+        return;
+      }
+
+      // Apply recalculated result
+      currentRoutes = data.routes || currentRoutes;
+      hasChanges = false;
+      document.getElementById('changes-banner').classList.remove('visible');
+
+      // Re-render route cards with updated data
+      renderRoutes(currentRoutes);
+
+      // Update map
+      updateMap(data);
+
+      // Update stats
+      const stats = data.stats || {};
+      if (stats.totalDeliveries != null) {
+        document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = stats.totalDeliveries;
+        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = stats.numCouriers ?? '—';
+        const distEl = document.querySelector('.stat-card:nth-child(3) .stat-value');
+        if (distEl) distEl.innerHTML = (stats.totalDistanceKm ?? '—') + ' <small style="font-size:1rem;font-weight:400;">км</small>';
+        const driveEl = document.querySelector('.stat-card:nth-child(4) .stat-value');
+        if (driveEl) driveEl.innerHTML = (stats.totalDriveMin ?? '—') + ' <small style="font-size:1rem;font-weight:400;">хв</small>';
+      }
+
+    } catch(e) {
+      alert('Помилка з\'єднання: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перерахувати';
+    }
+  });
+
+  // ── Also hook existing export CSV button to include modifications ──────────
+  const origExportForm = document.querySelector('form[action*="export-csv"]');
+  if (origExportForm) {
+    origExportForm.addEventListener('submit', function(e) {
+      if (!hasChanges) return;
+      e.preventDefault();
+      syncRoutesFromDOM();
+      const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
+      origExportForm.querySelector('[name=result_json]').value = JSON.stringify(modifiedResult);
+      origExportForm.submit();
+    });
+  }
+
+  // ── Update map with new result ────────────────────────────────────────────
+  function updateMap(result) {
+    // Remove old route layers (keep tile layer and depot)
+    map.eachLayer(function(layer) {
+      if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+        map.removeLayer(layer);
+      }
+    });
+
+    const allPoints = [];
+
+    if (result.depot && result.depot.lat && result.depot.lng) {
+      const depotIcon = L.divIcon({
+        html: '<div class="depot-icon">🏭</div>',
+        iconSize: [34, 34], iconAnchor: [17, 17], className: ''
+      });
+      L.marker([result.depot.lat, result.depot.lng], { icon: depotIcon })
+        .addTo(map).bindPopup('<b>Склад (депо)</b>');
+      allPoints.push([result.depot.lat, result.depot.lng]);
+    }
+
+    (result.routes || []).forEach(function(route, idx) {
+      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+
+      const geometry = route.geometry;
+      if (geometry && geometry.length > 1) {
+        L.polyline(geometry.map(function(p) { return [p[0], p[1]]; }), {
+          color, weight: 4, opacity: 0.85
+        }).addTo(map);
+      } else {
+        const coords = (route.stops || [])
+          .filter(function(s) { return s.lat && s.lng; })
+          .map(function(s) { return [s.lat, s.lng]; });
+        if (coords.length > 1) {
+          L.polyline(coords, { color, weight: 4, opacity: 0.85, dashArray: '6 6' }).addTo(map);
+        }
+      }
+
+      (route.stops || []).forEach(function(stop, si) {
+        if (!stop.lat || !stop.lng) return;
+        const icon = L.divIcon({
+          html: `<div class="stop-marker" style="background:${color};">${si + 1}</div>`,
+          iconSize: [26, 26], iconAnchor: [13, 13], className: ''
+        });
+        let popup = `<b>${stop.address}</b><br>ETA: <b>${stop.eta}</b>`;
+        if (stop.timeStart || stop.timeEnd) popup += `<br>Вікно: ${stop.timeStart || '?'} – ${stop.timeEnd || '?'}`;
+        if (stop.driveMin != null) popup += `<br>Дорога: ${stop.driveMin} хв`;
+        if (stop.waitMin) popup += `<br>Очікування: ${stop.waitMin} хв`;
+        L.marker([stop.lat, stop.lng], { icon }).addTo(map).bindPopup(popup);
+        allPoints.push([stop.lat, stop.lng]);
+      });
+    });
+
+    if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [36, 36] });
+  }
+
+  // ── Initial render ─────────────────────────────────────────────────────────
+  renderRoutes(currentRoutes);
+})();
+{% endif %}
+</script>
+{% endblock %}

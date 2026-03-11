@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: kvitkova_crm
+      POSTGRES_USER: kvitkova_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-kvitkova_password}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kvitkova_user -d kvitkova_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
   web:
     build: .
     ports:
@@ -12,6 +30,10 @@ services:
       - FLASK_APP=run.py
       - FLASK_ENV=production
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:-kvitkova_password}@postgres:5432/kvitkova_crm
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -27,11 +49,16 @@ services:
       - ./logs:/app/logs
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:-kvitkova_password}@postgres:5432/kvitkova_crm
     depends_on:
+      postgres:
+        condition: service_healthy
       web:
         condition: service_healthy
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_bot.py"]
+
+# Volumes are now managed via local directories
 
 networks:
   default:

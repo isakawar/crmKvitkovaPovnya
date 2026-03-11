@@ -98,8 +98,8 @@ class TelegramNotificationService:
                 
                 if message_id:
                     # Відмічаємо що повідомлення надіслано
-                    delivery.telegram_notification_sent = True
-                    delivery.telegram_message_id = message_id
+                            # delivery.telegram_notification_sent = True
+        # delivery.telegram_message_id = message_id
                     success_count += 1
                     logger.info(f"Sent delivery #{delivery.id} notification to {courier.name}")
                 

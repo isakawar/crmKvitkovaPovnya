@@ -29,12 +29,12 @@ ROLE_PERMISSIONS = {
 
 # Association table for user roles
 user_roles = db.Table('user_roles',
-    db.Column('user_id', db.Integer, db.ForeignKey('users.id'), primary_key=True),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('role_id', db.Integer, db.ForeignKey('roles.id'), primary_key=True)
 )
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'users'
+    __tablename__ = 'user'
     
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -47,7 +47,7 @@ class User(UserMixin, db.Model):
     
     # Relationships
     roles = db.relationship('Role', secondary=user_roles, lazy='subquery',
-                          backref=db.backref('users', lazy=True))
+                          backref=db.backref('user', lazy=True))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

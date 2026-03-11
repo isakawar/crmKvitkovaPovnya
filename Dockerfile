@@ -20,7 +20,7 @@ COPY . .
 # Create logs directory
 RUN mkdir -p /app/logs && chmod 777 /app/logs
 
-# Create instance directory for SQLite database
+# Create instance directory for application data
 RUN mkdir -p /app/instance && chmod 777 /app/instance
 
 # Set environment variables
@@ -31,4 +31,4 @@ ENV FLASK_APP=run.py
 EXPOSE 8000
 
 # Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "run:app"] 
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "140", "run:app"] 

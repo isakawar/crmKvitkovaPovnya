@@ -305,9 +305,9 @@ class TelegramService:
                 logger.error(f"Delivery {delivery_id} not found")
                 return False
             
-            delivery.telegram_notification_sent = sent
-            if message_id:
-                delivery.telegram_message_id = message_id
+            # delivery.telegram_notification_sent = sent
+            # if message_id:
+            #     delivery.telegram_message_id = message_id
             
             db.session.commit()
             return True

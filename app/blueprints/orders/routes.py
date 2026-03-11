@@ -1,10 +1,19 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response, current_app
 from flask_login import login_required
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.settings import Settings
 import logging
+import json
+import requests
+from datetime import date, datetime
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+from app.services.route_optimizer_service import (
+    optimize_deliveries,
+    routes_result_to_csv,
+    RouteOptimizerError,
+    RouteOptimizerInfeasibleError,
+)
 import csv
 from sqlalchemy.orm import joinedload
 
@@ -175,14 +184,229 @@ def search_clients():
 @orders_bp.route('/route-generator', methods=['GET', 'POST'])
 @login_required
 def route_generator():
+    selected_date_str = request.form.get('delivery_date') if request.method == 'POST' else request.args.get('delivery_date')
+    if not selected_date_str:
+        selected_date_str = date.today().isoformat()
+
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = date.today()
+        selected_date_str = selected_date.isoformat()
+
+    start_time = request.form.get('start_time', '09:00')
+    num_couriers = max(int(request.form.get('num_couriers', 1) or 1), 1) if request.method == 'POST' else 1
+    capacity_raw = request.form.get('capacity', '').strip() if request.method == 'POST' else ''
+    capacity = int(capacity_raw) if capacity_raw.isdigit() and int(capacity_raw) > 0 else None
+
+    optimizer_result = None
+    result_json = ''
+    deliveries = []
+    infeasible_error = None
+    general_error = None
+
     if request.method == 'POST':
-        # Тут можна додати обробку CSV-файлу та розрахунок маршруту
-        # file = request.files.get('csv_file')
-        # couriers = request.form.get('couriers')
-        # start_time = request.form.get('start_time')
-        # TODO: Додати логіку обробки
-        return render_template('route_generator.html', result='(Тут буде результат)')
-    return render_template('route_generator.html')
+        delivery_ids_raw = request.form.getlist('delivery_ids')
+        delivery_ids = [int(x) for x in delivery_ids_raw if x.isdigit()]
+
+        base_query = (
+            Delivery.query
+            .options(joinedload(Delivery.order), joinedload(Delivery.client))
+            .filter(
+                Delivery.delivery_date == selected_date,
+                Delivery.is_pickup == False,
+                Delivery.status.in_(['Очікує', 'Розподілено'])
+            )
+            .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        )
+
+        if delivery_ids:
+            deliveries = base_query.filter(Delivery.id.in_(delivery_ids)).all()
+        else:
+            deliveries = base_query.all()
+
+        if not deliveries:
+            flash('На вибрану дату немає доставок для оптимізації.', 'warning')
+        else:
+            try:
+                optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+                optimizer_result = optimize_deliveries(
+                    deliveries=deliveries,
+                    optimizer_url=optimizer_url,
+                    start_time=start_time,
+                    num_couriers=num_couriers,
+                    capacity=capacity,
+                )
+                result_json = json.dumps(optimizer_result, ensure_ascii=False)
+            except RouteOptimizerInfeasibleError as exc:
+                infeasible_error = {
+                    'message': str(exc),
+                    'minimum_couriers_required': exc.minimum_couriers_required,
+                }
+            except RouteOptimizerError as exc:
+                general_error = str(exc)
+
+    return render_template(
+        'route_generator.html',
+        selected_date=selected_date_str,
+        start_time=start_time,
+        num_couriers=num_couriers,
+        capacity=capacity_raw,
+        optimizer_result=optimizer_result,
+        result_json=result_json,
+        infeasible_error=infeasible_error,
+        general_error=general_error,
+    )
+
+
+@orders_bp.route('/route-generator/recalculate', methods=['POST'])
+@login_required
+def route_generator_recalculate():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({'error': 'invalid payload'}), 400
+
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    url = f"{optimizer_url.rstrip('/')}/api/recalculate"
+    headers = {'Content-Type': 'application/json'}
+    api_key = current_app.config.get('OPTIMIZER_API_KEY') or ''
+    if api_key:
+        headers['X-API-Key'] = api_key
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=120)
+    except requests.RequestException as exc:
+        return jsonify({'error': str(exc)}), 502
+
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {}
+
+    return jsonify(body), resp.status_code
+
+
+@orders_bp.route('/route-generator/deliveries', methods=['GET'])
+@login_required
+def route_generator_deliveries():
+    date_str = request.args.get('date', date.today().isoformat())
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+
+    deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == selected_date,
+            Delivery.is_pickup == False,
+            Delivery.status.in_(['Очікує', 'Розподілено'])
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    result = []
+    for d in deliveries:
+        order = d.order
+        client = d.client
+        result.append({
+            'id': d.id,
+            'time_from': d.time_from or '',
+            'time_to': d.time_to or '',
+            'street': d.street or (order.street if order else '') or '',
+            'building_number': d.building_number or (order.building_number if order else '') or '',
+            'city': order.city if order else '',
+            'size': d.bouquet_size or d.size or '',
+            'recipient_name': order.recipient_name if order else '',
+            'phone': d.phone or '',
+            'instagram': client.instagram if client else '',
+            'status': d.status or '',
+        })
+
+    return jsonify(result)
+
+
+@orders_bp.route('/route-map', methods=['GET'])
+@login_required
+def route_map():
+    return render_template('route_map.html', today=date.today().isoformat())
+
+
+@orders_bp.route('/route-map/optimize', methods=['POST'])
+@login_required
+def route_map_optimize():
+    data = request.get_json(silent=True) or {}
+    selected_date_str = data.get('delivery_date', date.today().isoformat())
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Невірний формат дати'}), 400
+
+    start_time = data.get('start_time', '09:00')
+    num_couriers = max(int(data.get('num_couriers', 1) or 1), 1)
+    capacity_raw = data.get('capacity')
+    capacity = int(capacity_raw) if capacity_raw and str(capacity_raw).isdigit() and int(capacity_raw) > 0 else None
+
+    deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == selected_date,
+            Delivery.is_pickup == False,
+            Delivery.status.in_(['Очікує', 'Розподілено'])
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    if not deliveries:
+        return jsonify({'error': 'NO_DELIVERIES', 'message': 'На вибрану дату немає доставок для оптимізації.'}), 404
+
+    try:
+        optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
+        result = optimize_deliveries(
+            deliveries=deliveries,
+            optimizer_url=optimizer_url,
+            start_time=start_time,
+            num_couriers=num_couriers,
+            capacity=capacity,
+        )
+        result['_deliveries_count'] = len(deliveries)
+        return jsonify(result)
+    except RouteOptimizerInfeasibleError as exc:
+        return jsonify({
+            'error': 'INFEASIBLE',
+            'message': str(exc),
+            'minimum_couriers_required': exc.minimum_couriers_required,
+        }), 422
+    except RouteOptimizerError as exc:
+        return jsonify({'error': 'OPTIMIZER_ERROR', 'message': str(exc)}), 500
+
+
+@orders_bp.route('/route-generator/export-csv', methods=['POST'])
+@login_required
+def route_generator_export_csv():
+    result_json = request.form.get('result_json', '').strip()
+    selected_date = request.form.get('selected_date', '').strip()
+    if not result_json:
+        flash('Немає результату для експорту.', 'warning')
+        return redirect(url_for('orders.route_generator', delivery_date=selected_date or date.today().isoformat()))
+
+    try:
+        result = json.loads(result_json)
+    except json.JSONDecodeError:
+        flash('Некоректні дані маршруту для експорту.', 'danger')
+        return redirect(url_for('orders.route_generator', delivery_date=selected_date or date.today().isoformat()))
+
+    csv_body = routes_result_to_csv(result)
+    filename_date = selected_date or date.today().isoformat()
+    return Response(
+        csv_body,
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename=optimized_routes_{filename_date}.csv'}
+    )
 
 @orders_bp.route('/orders/<int:order_id>/extend-subscription', methods=['POST'])
 @login_required
