@@ -146,6 +146,12 @@
   </div>
 {% endif %}
 
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body p-0" style="border-radius:16px;overflow:hidden;">
+    <div id="route-map"></div>
+  </div>
+</div>
+
 {% if optimizer_result %}
   <div class="d-flex flex-wrap gap-3 mb-4">
     <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
@@ -183,12 +189,6 @@
     <a href="{{ url_for('distribution.distribution_page', date=selected_date) }}" class="btn btn-outline-secondary">
       <i class="bi bi-box-seam me-1"></i> Розподілити між кур'єрами
     </a>
-  </div>
-
-  <div class="card shadow-sm border-0 mb-4">
-    <div class="card-body p-0" style="border-radius:16px;overflow:hidden;">
-      <div id="route-map"></div>
-    </div>
   </div>
 
   {% set courier_colors = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'] %}
@@ -238,19 +238,21 @@ document.getElementById('optimizer-form').addEventListener('submit', function() 
   document.getElementById('loading-overlay').classList.add('active');
 });
 
+const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
+
+// ── Map always initialized ────────────────────────────────────────────────────
+const map = L.map('route-map').setView([50.4501, 30.5234], 11);
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  subdomains: 'abcd',
+  maxZoom: 20
+}).addTo(map);
+
+// ── Routes + depot from optimizer result ─────────────────────────────────────
 {% if optimizer_result %}
 (function() {
   const result = {{ result_json | safe }};
-  const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
-
-  const map = L.map('route-map');
-
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 20
-  }).addTo(map);
-
   const allPoints = [];
 
   if (result.depot && result.depot.lat && result.depot.lng) {
@@ -312,8 +314,6 @@ document.getElementById('optimizer-form').addEventListener('submit', function() 
 
   if (allPoints.length > 0) {
     map.fitBounds(allPoints, { padding: [36, 36] });
-  } else {
-    map.setView([50.4501, 30.5234], 11);
   }
 })();
 {% endif %}
