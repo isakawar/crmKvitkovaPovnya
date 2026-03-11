@@ -5,6 +5,7 @@ from app.models import Order, Client, Delivery
 from app.models.settings import Settings
 import logging
 import json
+import requests
 from datetime import date, datetime
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
 from app.services.route_optimizer_service import (
