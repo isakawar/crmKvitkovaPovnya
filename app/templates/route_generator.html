@@ -78,6 +78,30 @@
     animation: spin 0.9s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Delivery picker rows */
+  .picker-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 24px;
+    border-bottom: 1px solid #f0f4f8;
+    cursor: pointer;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .picker-row:last-child { border-bottom: none; }
+  .picker-row:hover { background: #f7f9ff; }
+  .picker-row.unchecked { opacity: 0.45; }
+  .picker-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; accent-color: #007bff; }
+  .picker-time { font-size: 0.88rem; font-weight: 700; color: #007bff; min-width: 90px; flex-shrink: 0; }
+  .picker-addr { font-size: 0.93rem; font-weight: 500; flex: 1; }
+  .picker-meta { font-size: 0.8rem; color: #9ca3af; margin-top: 2px; }
+  .picker-badge {
+    font-size: 0.75rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; background: #eaf1fb; color: #3373cc;
+    flex-shrink: 0;
+  }
 </style>
 {% endblock %}
 
@@ -95,24 +119,16 @@
 <div class="card shadow-sm border-0 mb-4">
   <div class="card-body">
     <form method="post" id="optimizer-form" class="row g-3 align-items-end">
-      <div class="col-md-3">
+      <input type="hidden" name="num_couriers" id="form-num-couriers" value="{{ num_couriers }}">
+      <input type="hidden" name="start_time" id="form-start-time" value="{{ start_time }}">
+      <input type="hidden" name="capacity" id="form-capacity" value="{{ capacity }}">
+      <div class="col-md-9">
         <label class="form-label">Дата доставок</label>
         <input type="date" name="delivery_date" class="form-control" value="{{ selected_date }}">
       </div>
-      <div class="col-md-2">
-        <label class="form-label">Кур'єрів</label>
-        <input type="number" name="num_couriers" class="form-control" min="1" value="{{ num_couriers }}">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Старт</label>
-        <input type="time" name="start_time" class="form-control" value="{{ start_time }}">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Місткість кур'єра</label>
-        <input type="number" name="capacity" class="form-control" min="1" value="{{ capacity }}" placeholder="без ліміту">
-      </div>
       <div class="col-md-3 d-grid">
-        <button type="submit" class="btn btn-primary">
+        <label class="form-label d-none d-md-block">&nbsp;</label>
+        <button type="button" id="btn-open-picker" class="btn btn-primary">
           <i class="bi bi-magic me-1"></i> Побудувати маршрут
         </button>
       </div>
@@ -229,13 +245,194 @@
     </div>
   {% endfor %}
 {% endif %}
+
+<!-- ── Delivery picker modal ─────────────────────────────────────────────── -->
+<div class="modal fade" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:16px;border:1.5px solid #e3eafc;">
+      <div class="modal-header" style="border-bottom:1.5px solid #e3eafc;padding:18px 24px;">
+        <div>
+          <h5 class="modal-title mb-0">Доставки для оптимізації</h5>
+          <div id="picker-date-label" class="text-muted small mt-1"></div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Route params -->
+        <div class="row g-2 px-4 py-3" style="border-bottom:1.5px solid #e3eafc;background:#f9fafb;">
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Кур'єрів</label>
+            <input type="number" id="picker-num-couriers" class="form-control form-control-sm" min="1" value="{{ num_couriers }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Старт</label>
+            <input type="time" id="picker-start-time" class="form-control form-control-sm" value="{{ start_time }}">
+          </div>
+          <div class="col-4">
+            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Місткість</label>
+            <input type="number" id="picker-capacity" class="form-control form-control-sm" min="1" value="{{ capacity }}" placeholder="∞">
+          </div>
+        </div>
+        <!-- Toolbar -->
+        <div class="d-flex align-items-center gap-3 px-4 py-2" style="border-bottom:1px solid #f0f4f8;background:#fff;">
+          <span id="picker-count" class="text-muted small"></span>
+          <button type="button" id="picker-select-all" class="btn btn-link btn-sm p-0 text-primary">Обрати всі</button>
+          <button type="button" id="picker-deselect-all" class="btn btn-link btn-sm p-0 text-secondary">Зняти всі</button>
+        </div>
+        <!-- List -->
+        <div id="picker-list" style="max-height:420px;overflow-y:auto;">
+          <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
+            <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
+            Немає доставок на вибрану дату
+          </div>
+          <div id="picker-loading" class="text-center py-5">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+            <span class="ms-2 text-muted">Завантаження…</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="border-top:1.5px solid #e3eafc;padding:14px 24px;">
+        <span id="picker-selected-count" class="text-muted small me-auto"></span>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" id="btn-run-optimizer" class="btn btn-primary" disabled>
+          <i class="bi bi-magic me-1"></i> Розрахувати
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-document.getElementById('optimizer-form').addEventListener('submit', function() {
+// ── Delivery picker ───────────────────────────────────────────────────────────
+const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+let pickerDeliveries = [];
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function updatePickerFooter() {
+  const checked = document.querySelectorAll('#picker-list input[type=checkbox]:checked').length;
+  document.getElementById('picker-selected-count').textContent = `Обрано: ${checked} з ${pickerDeliveries.length}`;
+  document.getElementById('btn-run-optimizer').disabled = checked === 0;
+}
+
+function renderPickerList(deliveries) {
+  const list = document.getElementById('picker-list');
+  document.getElementById('picker-loading').style.display = 'none';
+
+  if (deliveries.length === 0) {
+    document.getElementById('picker-empty').style.display = 'block';
+    updatePickerFooter();
+    return;
+  }
+
+  deliveries.forEach(function(d) {
+    const timeLabel = d.time_from
+      ? (d.time_to ? `${d.time_from}–${d.time_to}` : d.time_from)
+      : 'Час не вказано';
+
+    const addrParts = [d.city, d.street, d.building_number].filter(Boolean);
+    const addr = addrParts.join(', ');
+    const meta = [d.recipient_name, d.phone, d.instagram].filter(Boolean).join(' · ');
+
+    const row = document.createElement('label');
+    row.className = 'picker-row';
+    row.innerHTML = `
+      <input type="checkbox" value="${d.id}" checked>
+      <span class="picker-time">${timeLabel}</span>
+      <span style="flex:1;">
+        <div class="picker-addr">${addr || '—'}</div>
+        ${meta ? `<div class="picker-meta">${meta}</div>` : ''}
+      </span>
+      <span class="picker-badge">${d.size || '—'}</span>
+    `;
+    row.querySelector('input').addEventListener('change', function() {
+      row.classList.toggle('unchecked', !this.checked);
+      updatePickerFooter();
+    });
+    list.appendChild(row);
+  });
+
+  updatePickerFooter();
+}
+
+document.getElementById('btn-open-picker').addEventListener('click', async function() {
+  const dateVal = document.querySelector('[name=delivery_date]').value;
+  document.getElementById('picker-date-label').textContent = formatDate(dateVal);
+  document.getElementById('picker-count').textContent = '';
+  document.getElementById('picker-selected-count').textContent = '';
+  document.getElementById('btn-run-optimizer').disabled = true;
+
+  // Reset list
+  const list = document.getElementById('picker-list');
+  list.innerHTML = `
+    <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
+      <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
+      Немає доставок на вибрану дату
+    </div>
+    <div id="picker-loading" class="text-center py-5">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+      <span class="ms-2 text-muted">Завантаження…</span>
+    </div>
+  `;
+
+  pickerModal.show();
+
+  try {
+    const resp = await fetch(`/route-generator/deliveries?date=${dateVal}`);
+    pickerDeliveries = await resp.json();
+    document.getElementById('picker-count').textContent = `Всього доставок: ${pickerDeliveries.length}`;
+    renderPickerList(pickerDeliveries);
+  } catch(e) {
+    document.getElementById('picker-loading').innerHTML = '<span class="text-danger">Помилка завантаження</span>';
+  }
+});
+
+document.getElementById('picker-select-all').addEventListener('click', function() {
+  document.querySelectorAll('#picker-list input[type=checkbox]').forEach(cb => {
+    cb.checked = true;
+    cb.closest('.picker-row').classList.remove('unchecked');
+  });
+  updatePickerFooter();
+});
+
+document.getElementById('picker-deselect-all').addEventListener('click', function() {
+  document.querySelectorAll('#picker-list input[type=checkbox]').forEach(cb => {
+    cb.checked = false;
+    cb.closest('.picker-row').classList.add('unchecked');
+  });
+  updatePickerFooter();
+});
+
+document.getElementById('btn-run-optimizer').addEventListener('click', function() {
+  const form = document.getElementById('optimizer-form');
+
+  // Copy route params from modal to hidden form inputs
+  document.getElementById('form-num-couriers').value = document.getElementById('picker-num-couriers').value || 1;
+  document.getElementById('form-start-time').value = document.getElementById('picker-start-time').value || '09:00';
+  document.getElementById('form-capacity').value = document.getElementById('picker-capacity').value || '';
+
+  // Remove previously added delivery_ids inputs
+  form.querySelectorAll('input[name=delivery_ids]').forEach(el => el.remove());
+
+  // Add selected IDs
+  document.querySelectorAll('#picker-list input[type=checkbox]:checked').forEach(cb => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'delivery_ids';
+    inp.value = cb.value;
+    form.appendChild(inp);
+  });
+
+  pickerModal.hide();
   document.getElementById('loading-overlay').classList.add('active');
+  form.submit();
 });
 
 const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];

@@ -205,7 +205,10 @@ def route_generator():
     general_error = None
 
     if request.method == 'POST':
-        deliveries = (
+        delivery_ids_raw = request.form.getlist('delivery_ids')
+        delivery_ids = [int(x) for x in delivery_ids_raw if x.isdigit()]
+
+        base_query = (
             Delivery.query
             .options(joinedload(Delivery.order), joinedload(Delivery.client))
             .filter(
@@ -214,8 +217,12 @@ def route_generator():
                 Delivery.status.in_(['Очікує', 'Розподілено'])
             )
             .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
-            .all()
         )
+
+        if delivery_ids:
+            deliveries = base_query.filter(Delivery.id.in_(delivery_ids)).all()
+        else:
+            deliveries = base_query.all()
 
         if not deliveries:
             flash('На вибрану дату немає доставок для оптимізації.', 'warning')
@@ -249,6 +256,48 @@ def route_generator():
         infeasible_error=infeasible_error,
         general_error=general_error,
     )
+
+
+@orders_bp.route('/route-generator/deliveries', methods=['GET'])
+@login_required
+def route_generator_deliveries():
+    date_str = request.args.get('date', date.today().isoformat())
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'invalid date'}), 400
+
+    deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == selected_date,
+            Delivery.is_pickup == False,
+            Delivery.status.in_(['Очікує', 'Розподілено'])
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    result = []
+    for d in deliveries:
+        order = d.order
+        client = d.client
+        result.append({
+            'id': d.id,
+            'time_from': d.time_from or '',
+            'time_to': d.time_to or '',
+            'street': d.street or (order.street if order else '') or '',
+            'building_number': d.building_number or (order.building_number if order else '') or '',
+            'city': order.city if order else '',
+            'size': d.bouquet_size or d.size or '',
+            'recipient_name': order.recipient_name if order else '',
+            'phone': d.phone or '',
+            'instagram': client.instagram if client else '',
+            'status': d.status or '',
+        })
+
+    return jsonify(result)
 
 
 @orders_bp.route('/route-map', methods=['GET'])
