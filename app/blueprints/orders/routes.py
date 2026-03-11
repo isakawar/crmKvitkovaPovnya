@@ -258,6 +258,33 @@ def route_generator():
     )
 
 
+@orders_bp.route('/route-generator/recalculate', methods=['POST'])
+@login_required
+def route_generator_recalculate():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({'error': 'invalid payload'}), 400
+
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    url = f"{optimizer_url.rstrip('/')}/api/recalculate"
+    headers = {'Content-Type': 'application/json'}
+    api_key = current_app.config.get('OPTIMIZER_API_KEY') or ''
+    if api_key:
+        headers['X-API-Key'] = api_key
+
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=120)
+    except requests.RequestException as exc:
+        return jsonify({'error': str(exc)}), 502
+
+    try:
+        body = resp.json()
+    except ValueError:
+        body = {}
+
+    return jsonify(body), resp.status_code
+
+
 @orders_bp.route('/route-generator/deliveries', methods=['GET'])
 @login_required
 def route_generator_deliveries():

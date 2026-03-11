@@ -79,6 +79,43 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Drag-and-drop routes */
+  .route-stops-list { padding: 4px 0; min-height: 48px; }
+  .stop-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f4f8;
+    cursor: default;
+    transition: background 0.1s;
+  }
+  .stop-row:last-child { border-bottom: none; }
+  .stop-row:hover { background: #f7f9ff; }
+  .stop-row.sortable-ghost { opacity: 0.4; background: #eaf1fb; }
+  .stop-row.sortable-chosen { background: #eaf1fb; box-shadow: 0 2px 12px rgba(0,123,255,0.13); }
+  .drag-handle {
+    color: #c0c7d4;
+    cursor: grab;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+    transition: color 0.15s;
+  }
+  .drag-handle:hover { color: #007bff; }
+  .drag-handle:active { cursor: grabbing; }
+  .route-stops-list.drag-over { background: #f0f5ff; border-radius: 8px; }
+
+  /* Changes banner */
+  #changes-banner {
+    display: none;
+    position: sticky;
+    bottom: 20px;
+    z-index: 100;
+    margin-top: 16px;
+  }
+  #changes-banner.visible { display: block; }
+
   /* Delivery picker rows */
   .picker-row {
     display: flex;
@@ -207,43 +244,28 @@
     </a>
   </div>
 
-  {% set courier_colors = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'] %}
-  {% for route in optimizer_result.routes %}
-    {% set color = courier_colors[loop.index0 % courier_colors|length] %}
-    <div class="card shadow-sm border-0 mb-3 route-card">
-      <div class="card-header d-flex justify-content-between align-items-center" style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
-        <div class="d-flex align-items-center gap-2">
-          <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ color }};flex-shrink:0;"></span>
-          <strong>Кур'єр {{ route.courierId }}</strong>
-        </div>
-        <span class="text-muted small">
-          {{ route.stops|length }} зупинок &nbsp;·&nbsp; {{ route.totalDistanceKm }} км &nbsp;·&nbsp; {{ route.totalDriveMin }} хв
-        </span>
-      </div>
-      <div class="card-body" style="padding:12px 20px;">
-        {% for stop in route.stops %}
-        <div class="stop-row">
-          <span class="stop-num" style="background:{{ color }};">{{ loop.index }}</span>
-          <div style="flex:1;">
-            <div style="font-weight:500;font-size:0.97rem;">{{ stop.address }}</div>
-            <div class="d-flex flex-wrap gap-3 mt-1" style="font-size:0.88rem;color:#6b7280;">
-              <span><i class="bi bi-clock me-1"></i>ETA {{ stop.eta }}</span>
-              {% if stop.timeStart or stop.timeEnd %}
-              <span><i class="bi bi-calendar-event me-1"></i>{{ stop.timeStart or '?' }} – {{ stop.timeEnd or '?' }}</span>
-              {% endif %}
-              {% if stop.driveMin %}
-              <span><i class="bi bi-car-front me-1"></i>{{ stop.driveMin }} хв дороги</span>
-              {% endif %}
-              {% if stop.waitMin %}
-              <span><i class="bi bi-hourglass-split me-1"></i>{{ stop.waitMin }} хв очікування</span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        {% endfor %}
+  <div id="routes-container"></div>
+
+  <!-- Changes banner -->
+  <div id="changes-banner">
+    <div class="d-flex align-items-center gap-3 p-3 px-4"
+         style="background:#fff;border:1.5px solid #007bff;border-radius:14px;box-shadow:0 4px 20px rgba(0,123,255,0.15);">
+      <i class="bi bi-pencil-square text-primary fs-5"></i>
+      <span style="font-weight:500;">Маршрут відредаговано вручну</span>
+      <span class="text-muted small">ETA та час у дорозі потребуватимуть перерахунку</span>
+      <div class="ms-auto d-flex gap-2">
+        <button id="btn-reset-routes" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-counterclockwise me-1"></i>Скинути
+        </button>
+        <button id="btn-recalculate" class="btn btn-success btn-sm">
+          <i class="bi bi-arrow-repeat me-1"></i>Перерахувати
+        </button>
+        <button id="btn-export-modified" class="btn btn-outline-primary btn-sm">
+          <i class="bi bi-download me-1"></i>Експорт CSV
+        </button>
       </div>
     </div>
-  {% endfor %}
+  </div>
 {% endif %}
 
 <!-- ── Delivery picker modal ─────────────────────────────────────────────── -->
@@ -305,6 +327,7 @@
 
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
 // ── Delivery picker ───────────────────────────────────────────────────────────
 const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
@@ -512,6 +535,321 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   if (allPoints.length > 0) {
     map.fitBounds(allPoints, { padding: [36, 36] });
   }
+})();
+{% endif %}
+
+// ── Route cards render + drag-and-drop ───────────────────────────────────────
+{% if optimizer_result %}
+(function() {
+  const ROUTE_COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
+  const originalResult = {{ result_json | safe }};
+
+  // Deep-copy routes state for tracking changes
+  let currentRoutes = JSON.parse(JSON.stringify(originalResult.routes || []));
+  let hasChanges = false;
+
+  // ── Render all route cards ──────────────────────────────────────────────────
+  function renderRoutes(routes) {
+    const container = document.getElementById('routes-container');
+    container.innerHTML = '';
+
+    routes.forEach(function(route, idx) {
+      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+      const card = document.createElement('div');
+      card.className = 'card shadow-sm border-0 mb-3';
+      card.dataset.routeIdx = idx;
+
+      const stopsCount = route.stops.length;
+      const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
+      const driveMin = route.totalDriveMin != null ? route.totalDriveMin + ' хв' : '—';
+
+      card.innerHTML = `
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
+          <div class="d-flex align-items-center gap-2">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+            <strong>Кур'єр ${route.courierId}</strong>
+          </div>
+          <span class="route-meta text-muted small">
+            <span class="stops-count">${stopsCount}</span> зупинок &nbsp;·&nbsp; ${distKm} &nbsp;·&nbsp; ${driveMin}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <ul class="route-stops-list list-unstyled mb-0"
+              id="stop-list-${idx}"
+              data-route-idx="${idx}"
+              data-color="${color}"></ul>
+        </div>
+      `;
+      container.appendChild(card);
+
+      const list = card.querySelector('.route-stops-list');
+      renderStops(list, route.stops, color);
+      initSortable(list);
+    });
+  }
+
+  // ── Render stops inside a list ─────────────────────────────────────────────
+  function renderStops(listEl, stops, color) {
+    listEl.innerHTML = '';
+    stops.forEach(function(stop, si) {
+      listEl.appendChild(createStopRow(stop, si + 1, color));
+    });
+  }
+
+  function createStopRow(stop, num, color) {
+    const li = document.createElement('li');
+    li.className = 'stop-row';
+    li.dataset.stopId = stop.id || '';
+    li.dataset.stopJson = JSON.stringify(stop);
+
+    const timePart = stop.timeStart || stop.timeEnd
+      ? `<span><i class="bi bi-calendar-event me-1"></i>${stop.timeStart || '?'} – ${stop.timeEnd || '?'}</span>`
+      : '';
+    const drivePart = stop.driveMin
+      ? `<span><i class="bi bi-car-front me-1"></i>${stop.driveMin} хв дороги</span>`
+      : '';
+    const waitPart = stop.waitMin
+      ? `<span><i class="bi bi-hourglass-split me-1"></i>${stop.waitMin} хв очікування</span>`
+      : '';
+
+    li.innerHTML = `
+      <i class="bi bi-grip-vertical drag-handle"></i>
+      <span class="stop-num" style="background:${color};">${num}</span>
+      <div style="flex:1;">
+        <div style="font-weight:500;font-size:0.97rem;">${stop.address || '—'}</div>
+        <div class="d-flex flex-wrap gap-3 mt-1" style="font-size:0.88rem;color:#6b7280;">
+          <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
+          ${timePart}${drivePart}${waitPart}
+        </div>
+      </div>
+    `;
+    return li;
+  }
+
+  // ── Renumber stops after drag ──────────────────────────────────────────────
+  function renumberList(listEl) {
+    const color = listEl.dataset.color;
+    listEl.querySelectorAll('.stop-num').forEach(function(badge, i) {
+      badge.textContent = i + 1;
+      badge.style.background = color;
+    });
+    // Update stops-count in card header
+    const card = listEl.closest('.card');
+    const countEl = card && card.querySelector('.stops-count');
+    if (countEl) countEl.textContent = listEl.children.length;
+  }
+
+  // ── Sync currentRoutes from DOM ────────────────────────────────────────────
+  function syncRoutesFromDOM() {
+    document.querySelectorAll('.route-stops-list').forEach(function(listEl) {
+      const routeIdx = parseInt(listEl.dataset.routeIdx);
+      const stops = [];
+      listEl.querySelectorAll('.stop-row').forEach(function(row) {
+        try { stops.push(JSON.parse(row.dataset.stopJson)); } catch(e) {}
+      });
+      if (currentRoutes[routeIdx]) currentRoutes[routeIdx].stops = stops;
+    });
+  }
+
+  // ── Init SortableJS ────────────────────────────────────────────────────────
+  function initSortable(listEl) {
+    Sortable.create(listEl, {
+      group: 'routes',          // enable cross-list dragging
+      handle: '.drag-handle',
+      animation: 150,
+      ghostClass: 'sortable-ghost',
+      chosenClass: 'sortable-chosen',
+      dragoverBubble: true,
+      onEnd: function(evt) {
+        // Renumber both source and destination lists
+        renumberList(evt.from);
+        if (evt.from !== evt.to) renumberList(evt.to);
+
+        // Mark as changed
+        hasChanges = true;
+        document.getElementById('changes-banner').classList.add('visible');
+
+        syncRoutesFromDOM();
+      }
+    });
+  }
+
+  // ── Reset to original ──────────────────────────────────────────────────────
+  document.getElementById('btn-reset-routes').addEventListener('click', function() {
+    currentRoutes = JSON.parse(JSON.stringify(originalResult.routes || []));
+    hasChanges = false;
+    document.getElementById('changes-banner').classList.remove('visible');
+    renderRoutes(currentRoutes);
+  });
+
+  // ── Export modified as CSV ─────────────────────────────────────────────────
+  document.getElementById('btn-export-modified').addEventListener('click', function() {
+    syncRoutesFromDOM();
+    const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{{ url_for("orders.route_generator_export_csv") }}';
+
+    [['result_json', JSON.stringify(modifiedResult)],
+     ['selected_date', '{{ selected_date }}']].forEach(function([n, v]) {
+      const inp = document.createElement('input');
+      inp.type = 'hidden'; inp.name = n; inp.value = v;
+      form.appendChild(inp);
+    });
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+  });
+
+  // ── Recalculate ────────────────────────────────────────────────────────────
+  document.getElementById('btn-recalculate').addEventListener('click', async function() {
+    syncRoutesFromDOM();
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Перераховую…';
+
+    // Build recalculate payload
+    const recalcRoutes = currentRoutes.map(function(route) {
+      return {
+        courierId: route.courierId,
+        stops: (route.stops || [])
+          .filter(function(s) { return s.lat && s.lng; })
+          .map(function(s) {
+            return {
+              lat: s.lat,
+              lng: s.lng,
+              address: s.address || '',
+              timeStart: s.timeStart || null,
+              timeEnd: s.timeEnd || null,
+            };
+          }),
+      };
+    });
+
+    const payload = {
+      routes: recalcRoutes,
+      depot: originalResult.depot || null,
+      startTime: document.getElementById('form-start-time').value || '09:00',
+    };
+
+    try {
+      const resp = await fetch('/route-generator/recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        alert('Помилка перерахунку: ' + (data.error || data.message || resp.status));
+        return;
+      }
+
+      // Apply recalculated result
+      currentRoutes = data.routes || currentRoutes;
+      hasChanges = false;
+      document.getElementById('changes-banner').classList.remove('visible');
+
+      // Re-render route cards with updated data
+      renderRoutes(currentRoutes);
+
+      // Update map
+      updateMap(data);
+
+      // Update stats
+      const stats = data.stats || {};
+      if (stats.totalDeliveries != null) {
+        document.querySelector('.stat-card:nth-child(1) .stat-value').textContent = stats.totalDeliveries;
+        document.querySelector('.stat-card:nth-child(2) .stat-value').textContent = stats.numCouriers ?? '—';
+        const distEl = document.querySelector('.stat-card:nth-child(3) .stat-value');
+        if (distEl) distEl.innerHTML = (stats.totalDistanceKm ?? '—') + ' <small style="font-size:1rem;font-weight:400;">км</small>';
+        const driveEl = document.querySelector('.stat-card:nth-child(4) .stat-value');
+        if (driveEl) driveEl.innerHTML = (stats.totalDriveMin ?? '—') + ' <small style="font-size:1rem;font-weight:400;">хв</small>';
+      }
+
+    } catch(e) {
+      alert('Помилка з\'єднання: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перерахувати';
+    }
+  });
+
+  // ── Also hook existing export CSV button to include modifications ──────────
+  const origExportForm = document.querySelector('form[action*="export-csv"]');
+  if (origExportForm) {
+    origExportForm.addEventListener('submit', function(e) {
+      if (!hasChanges) return;
+      e.preventDefault();
+      syncRoutesFromDOM();
+      const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
+      origExportForm.querySelector('[name=result_json]').value = JSON.stringify(modifiedResult);
+      origExportForm.submit();
+    });
+  }
+
+  // ── Update map with new result ────────────────────────────────────────────
+  function updateMap(result) {
+    // Remove old route layers (keep tile layer and depot)
+    map.eachLayer(function(layer) {
+      if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+        map.removeLayer(layer);
+      }
+    });
+
+    const allPoints = [];
+
+    if (result.depot && result.depot.lat && result.depot.lng) {
+      const depotIcon = L.divIcon({
+        html: '<div class="depot-icon">🏭</div>',
+        iconSize: [34, 34], iconAnchor: [17, 17], className: ''
+      });
+      L.marker([result.depot.lat, result.depot.lng], { icon: depotIcon })
+        .addTo(map).bindPopup('<b>Склад (депо)</b>');
+      allPoints.push([result.depot.lat, result.depot.lng]);
+    }
+
+    (result.routes || []).forEach(function(route, idx) {
+      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+
+      const geometry = route.geometry;
+      if (geometry && geometry.length > 1) {
+        L.polyline(geometry.map(function(p) { return [p[0], p[1]]; }), {
+          color, weight: 4, opacity: 0.85
+        }).addTo(map);
+      } else {
+        const coords = (route.stops || [])
+          .filter(function(s) { return s.lat && s.lng; })
+          .map(function(s) { return [s.lat, s.lng]; });
+        if (coords.length > 1) {
+          L.polyline(coords, { color, weight: 4, opacity: 0.85, dashArray: '6 6' }).addTo(map);
+        }
+      }
+
+      (route.stops || []).forEach(function(stop, si) {
+        if (!stop.lat || !stop.lng) return;
+        const icon = L.divIcon({
+          html: `<div class="stop-marker" style="background:${color};">${si + 1}</div>`,
+          iconSize: [26, 26], iconAnchor: [13, 13], className: ''
+        });
+        let popup = `<b>${stop.address}</b><br>ETA: <b>${stop.eta}</b>`;
+        if (stop.timeStart || stop.timeEnd) popup += `<br>Вікно: ${stop.timeStart || '?'} – ${stop.timeEnd || '?'}`;
+        if (stop.driveMin != null) popup += `<br>Дорога: ${stop.driveMin} хв`;
+        if (stop.waitMin) popup += `<br>Очікування: ${stop.waitMin} хв`;
+        L.marker([stop.lat, stop.lng], { icon }).addTo(map).bindPopup(popup);
+        allPoints.push([stop.lat, stop.lng]);
+      });
+    });
+
+    if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [36, 36] });
+  }
+
+  // ── Initial render ─────────────────────────────────────────────────────────
+  renderRoutes(currentRoutes);
 })();
 {% endif %}
 </script>
