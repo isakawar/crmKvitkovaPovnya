@@ -930,27 +930,61 @@ class CourierHandlers:
         if accepted:
             route.status = 'accepted'
             route.accepted_at = datetime.utcnow()
-            # Assign courier to all deliveries in this route
-            for stop in RouteDelivery.query.filter_by(route_id=route_id).all():
+            stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+            for stop in stops:
                 if stop.delivery:
                     stop.delivery.courier_id = courier.id
                     stop.delivery.status = 'Розподілено'
             db.session.commit()
 
-            h, m = divmod(route.estimated_duration_min or 0, 60)
-            duration_str = f"{h} год {m} хв" if h else f"{m} хв"
-            text = (
-                f"✅ <b>Маршрут прийнято!</b>\n\n"
-                f"📅 Дата: <b>{route.route_date.strftime('%d.%m.%Y')}</b>\n"
-                f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
-            )
-            if route.total_distance_km:
-                text += f"📍 Відстань: <b>~{route.total_distance_km:.1f} км</b>\n"
-            if route.estimated_duration_min:
-                text += f"⏱ Час у дорозі: <b>~{duration_str}</b>\n"
+            num_emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+            text = f"✅ <b>Доставки {route.route_date.strftime('%d.%m.%Y')}</b>\n"
             if route.delivery_price:
-                text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
-            text += "\nДеталі маршруту з'являться у розділі 'Сьогодні' в день доставки."
+                text += f"💰 Вартість = {route.delivery_price}₴\n"
+            text += "\n"
+
+            for stop in stops:
+                d = stop.delivery
+                order = d.order if d else None
+                idx = stop.stop_order - 1
+                num = num_emojis[idx] if idx < len(num_emojis) else f"{stop.stop_order}."
+
+                # Address
+                addr_parts = []
+                city = (order.city if order else '') or ''
+                street = (d.street or (order.street if order else '')) or ''
+                building = (d.building_number or (order.building_number if order else '')) or ''
+                if city: addr_parts.append(city)
+                if street: addr_parts.append(street)
+                if building: addr_parts.append(building)
+                addr = ', '.join(addr_parts) or '—'
+                floor = (d.floor or (order.floor if order else '')) or ''
+                entrance = (d.entrance or (order.entrance if order else '')) or ''
+                addr_extra = ''
+                if floor: addr_extra += f', {floor} поверх'
+                if entrance: addr_extra += f', під\'їзд {entrance}'
+
+                recipient = (order.recipient_name if order else '') or ''
+                phone = (d.phone or (order.recipient_phone if order else '')) or ''
+                size = d.bouquet_size or d.size or (order.size if order else '') or ''
+
+                if stop.planned_arrival:
+                    time_str = stop.planned_arrival.strftime('%H:%M')
+                elif d and (d.time_from or d.time_to):
+                    time_str = f"{d.time_from or '?'}–{d.time_to or '?'}"
+                else:
+                    time_str = ''
+
+                comment = d.comment or (order.comment if order else '') or ''
+
+                text += f"{num}\n"
+                text += f"📍 {addr}{addr_extra}\n"
+                if recipient: text += f"👤 {recipient}\n"
+                if phone: text += f"📞 {phone}\n"
+                if size: text += f"📦 {size}\n"
+                if time_str: text += f"⏰ {time_str}\n"
+                if comment: text += f"💬 {comment}\n"
+                text += "\n"
         else:
             route.status = 'rejected'
             route.rejected_at = datetime.utcnow()
