@@ -1,45 +1,121 @@
-# Kvitkova CRM
+# CRM Kvіtkova Povnya
+
+CRM-система для квіткового магазину. Управління замовленнями, доставками, кур'єрами та маршрутами.
+
+## Стек
+
+- **Backend:** Python 3.12, Flask, SQLAlchemy, Alembic
+- **Database:** PostgreSQL 15
+- **Frontend:** Jinja2, Bootstrap 5, Leaflet.js
+- **Telegram Bot:** python-telegram-bot
+- **Route Optimizer:** зовнішній сервіс (REST API)
+- **Deploy:** Docker Compose
+
+---
 
 ## Структура проекту
 
-- app.py — точка входу
-- config.py — налаштування
-- models/ — SQLAlchemy моделі
-- routes/ — Flask Blueprints (orders, clients, deliveries, prices)
-- services/ — бізнес-логіка (order_service.py)
-- utils/ — допоміжні функції (date_utils.py)
-- templates/ — Jinja2 шаблони
-- static/ — CSS, JS, зображення
-- migrations/ — Alembic міграції
-- tests/ — автотести
+```
+app/
+├── blueprints/
+│   ├── auth/          # Авторизація
+│   ├── clients/       # Клієнти
+│   ├── couriers/      # Кур'єри
+│   ├── deliveries/    # Доставки
+│   ├── florist/       # Сторінка флориста (/florist)
+│   ├── orders/        # Замовлення + оптимізатор маршрутів
+│   ├── reports/       # Звіти
+│   ├── routes/        # Збережені маршрути (/routes)
+│   └── settings/      # Налаштування
+├── models/            # SQLAlchemy моделі
+├── services/          # Бізнес-логіка, route optimizer
+├── telegram_bot/      # Telegram бот (handlers, keyboards, bot)
+├── templates/         # Jinja2 шаблони
+├── static/            # Статика
+└── utils/             # Допоміжні утиліти
 
-## Запуск
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-flask db upgrade
-python3 app.py
+migrations/            # Alembic міграції
+scripts/               # Утиліти для адміністрування
+docs/                  # Документація
 ```
 
-## Тестування
+## Сторінки
+
+| URL | Опис |
+|-----|------|
+| `/orders` | Список замовлень |
+| `/deliveries` | Список доставок |
+| `/clients` | Клієнти |
+| `/couriers` | Кур'єри |
+| `/route-generator` | Оптимізатор маршрутів |
+| `/routes` | Збережені маршрути (призначення кур'єрів, відправка в Telegram) |
+| `/reports` | Звіти |
+| `/florist` | Сторінка флориста (тільки для user_type=florist) |
+| `/settings` | Налаштування |
+
+---
+
+## Запуск (Docker)
 
 ```bash
-pytest
+# 1. Скопіюй env
+cp env.example .env
+# Заповни .env: TELEGRAM_BOT_TOKEN, POSTGRES_PASSWORD, ROUTE_OPTIMIZER_URL
+
+# 2. Запуск
+docker compose up -d
+
+# 3. Створити адміна
+docker compose exec web python scripts/create_admin.py
 ```
 
-## Додавання бізнес-логіки
-- Всі складні операції (створення замовлення, доставок, перевірка кредитів) — у services/order_service.py
-- Для роботи з датами — utils/date_utils.py
-
-## Міграції
+### Команди для розробки
 
 ```bash
-flask db migrate -m "comment"
-flask db upgrade
+# Застосувати зміни в коді (Python/HTML/CSS)
+docker compose restart web
+
+# Перебілдити (після змін у requirements.txt або Dockerfile)
+docker compose build web && docker compose up -d
+
+# Логи
+docker compose logs -f web
+
+# Міграція вручну
+docker compose exec web flask db upgrade
 ```
 
-## Logging
-- Весь лог — через logging (info/warning/error)
-- Для production можна додати логування у файл logs/app.log 
+---
+
+## Основні таблиці БД
+
+| Таблиця | Опис |
+|---------|------|
+| `user` | Користувачі (admin, manager, florist) |
+| `client` | Клієнти (instagram, телефон) |
+| `courier` | Кур'єри + telegram_chat_id |
+| `order` | Замовлення (отримувач, адреса, розмір) |
+| `delivery` | Доставки (дата, статус, кур'єр) |
+| `delivery_routes` | Збережені маршрути |
+| `route_deliveries` | Зупинки маршруту |
+
+---
+
+## Telegram бот
+
+Кур'єр отримує пропозицію маршруту з кнопками **Прийняти / Відхилити**.
+Після прийняття — отримує повний маршрут: адреси, отримувачі, телефони, час.
+
+---
+
+## Змінні середовища
+
+```env
+TELEGRAM_BOT_TOKEN=...
+POSTGRES_PASSWORD=...
+ROUTE_OPTIMIZER_URL=http://...
+OPTIMIZER_API_KEY=
+SECRET_KEY=...
+```
+
+Детально: [docs/ENV_SETUP.md](docs/ENV_SETUP.md)
