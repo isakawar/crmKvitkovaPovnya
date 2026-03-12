@@ -143,8 +143,21 @@ def build_delivery_calendar(year: int, month: int) -> list[datetime.date]:
     return schedule
 
 
+def clear_all():
+    from app.models.delivery_route import DeliveryRoute, RouteDelivery
+    print("Очищення бази даних...")
+    RouteDelivery.query.delete()
+    DeliveryRoute.query.delete()
+    Delivery.query.delete()
+    Order.query.delete()
+    Client.query.delete()
+    db.session.commit()
+    print("✓ База очищена")
+
+
 def seed():
     with app.app_context():
+        clear_all()
         today = datetime.date.today()
         year, month = today.year, today.month
 
