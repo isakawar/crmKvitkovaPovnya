@@ -14,20 +14,9 @@ class CourierKeyboards:
     
     @staticmethod
     def main_menu() -> InlineKeyboardMarkup:
-        """Main menu keyboard"""
+        """Main menu keyboard — minimal, routes come from admin"""
         keyboard = [
-            [
-                InlineKeyboardButton("📦 Мої доставки сьогодні", callback_data="deliveries_today"),
-                InlineKeyboardButton("📅 Доставки завтра", callback_data="deliveries_tomorrow")
-            ],
-            [
-                InlineKeyboardButton("📋 Всі доставки", callback_data="deliveries_all"),
-                InlineKeyboardButton("👤 Мій профіль", callback_data="profile")
-            ],
-            [
-                InlineKeyboardButton("📊 Статистика", callback_data="statistics"),
-                InlineKeyboardButton("❓ Допомога", callback_data="help")
-            ]
+            [InlineKeyboardButton("ℹ️ Мій профіль", callback_data="profile")]
         ]
         return InlineKeyboardMarkup(keyboard)
     
@@ -188,6 +177,20 @@ class CourierKeyboards:
         
         return InlineKeyboardMarkup(keyboard)
     
+    @staticmethod
+    def route_accepted_menu(gmaps_url: str, route_id: int) -> InlineKeyboardMarkup:
+        """Keyboard shown after courier accepts a route"""
+        keyboard = [
+            [
+                InlineKeyboardButton("🗺 Відкрити маршрут", url=gmaps_url),
+                InlineKeyboardButton("📋 Адреси по одному", callback_data=f"route_copy_addresses_{route_id}"),
+            ],
+            [
+                InlineKeyboardButton("✅ Маршрут завершено", callback_data=f"route_done_{route_id}"),
+            ]
+        ]
+        return InlineKeyboardMarkup(keyboard)
+
     @staticmethod
     def custom_keyboard(buttons: List[List[dict]]) -> InlineKeyboardMarkup:
         """

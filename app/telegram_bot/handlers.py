@@ -4,6 +4,7 @@ Telegram Bot Command Handlers for Kvitkova Povnya CRM
 """
 
 import logging
+import urllib.parse
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -33,30 +34,20 @@ class CourierHandlers:
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
         chat_id = update.effective_chat.id
-        user = update.effective_user
-        
-        # Check if courier is already registered
         courier = Courier.query.filter_by(telegram_chat_id=chat_id).first()
-        
+
         if courier:
-            # Update last activity
             courier.last_telegram_activity = datetime.utcnow()
             db.session.commit()
-            
             await update.message.reply_text(
                 f"🌸 Привіт, {courier.name}!\n\n"
-                f"Ласкаво просимо назад до бота Квіткової Повні!\n"
-                f"Оберіть дію з меню нижче:",
-                reply_markup=self.keyboards.main_menu()
+                f"Ви зареєстровані як кур'єр. Чекайте на пропозиції маршрутів від адміністратора."
             )
         else:
             await update.message.reply_text(
                 "🌸 Ласкаво просимо до Квіткової Повні!\n\n"
-                "Цей бот допоможе вам управляти доставками.\n"
-                "Для початку роботи вам потрібно зареєструватися.\n\n"
-                "Використайте команду /register з вашим номером телефону:\n"
-                "Приклад: /register +380501234567",
-                reply_markup=self.keyboards.back_to_main()
+                "Для реєстрації надішліть ваш номер телефону:\n"
+                "/register +380501234567"
             )
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -198,20 +189,10 @@ class CourierHandlers:
         courier.last_telegram_activity = datetime.utcnow()
         db.session.commit()
         
-        # Success message with onboarding info
         await update.message.reply_text(
-            f"🎉 **Вітаємо, {courier.name}!**\n\n"
-            f"✅ Ви успішно зареєстровані в боті **Квіткової Повні**\n\n"
-            f"👤 **Ваші дані:**\n"
-            f"• Ім'я: {courier.name}\n"
-            f"• Телефон: {courier.phone}\n"
-            f"• Рейт: {courier.delivery_rate}₴ за доставку\n\n"
-            f"🔔 **Тепер ви будете отримувати:**\n"
-            f"• Сповіщення про нові доставки\n"
-            f"• Оновлення статусів замовлень\n"
-            f"• Важливі повідомлення від адміністрації\n\n"
-            f"💡 **Оберіть дію з меню нижче:**",
-            reply_markup=self.keyboards.main_menu(),
+            f"✅ Реєстрація успішна, {courier.name}!\n\n"
+            f"Чекайте на пропозиції маршрутів від адміністратора. "
+            f"Ви отримаєте повідомлення із деталями і зможете прийняти або відхилити маршрут.",
             parse_mode='Markdown'
         )
         
@@ -334,6 +315,10 @@ class CourierHandlers:
             await self._handle_problem_report(query, courier, data)
         elif data.startswith("route_accept_") or data.startswith("route_reject_"):
             await self._handle_route_response(query, courier, data)
+        elif data.startswith("route_copy_addresses_"):
+            await self._send_route_addresses(query, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_done_"):
+            await self._handle_route_done(query, courier, route_id=int(data.split("_")[-1]))
         else:
             logger.warning(f"Unknown callback command: {data}")
             await query.edit_message_text("❌ Невідома команда")
@@ -903,6 +888,51 @@ class CourierHandlers:
             parse_mode='Markdown'
         )
 
+    async def _send_route_addresses(self, query, route_id: int):
+        """Send each address as a separate message for easy copying into a navigator"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        if not route:
+            return
+        stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+        await query.message.reply_text(f"📍 Адреси маршруту {route.route_date.strftime('%d.%m.%Y')} — копіюйте по одному:")
+        for stop in stops:
+            d = stop.delivery
+            order = d.order if d else None
+            parts = []
+            city = (order.city if order else '') or ''
+            street = (d.street or (order.street if order else '')) or ''
+            building = (d.building_number or (order.building_number if order else '')) or ''
+            if city: parts.append(city)
+            if street: parts.append(street)
+            if building: parts.append(building)
+            await query.message.reply_text(f"{stop.stop_order}. {', '.join(parts) or '—'}")
+
+    async def _handle_route_done(self, query, courier: Courier, route_id: int):
+        """Mark entire route as completed"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        if not route:
+            await query.edit_message_text("❌ Маршрут не знайдено")
+            return
+        if route.status == 'completed':
+            await query.answer("Маршрут вже позначено як завершений ✅", show_alert=True)
+            return
+        route.status = 'completed'
+        stops = RouteDelivery.query.filter_by(route_id=route_id).all()
+        for stop in stops:
+            if stop.delivery:
+                stop.delivery.status = 'Доставлено'
+        db.session.commit()
+        await query.edit_message_text(
+            f"✅ <b>Маршрут завершено!</b>\n\n"
+            f"📅 {route.route_date.strftime('%d.%m.%Y')} · {route.deliveries_count} доставок\n\n"
+            f"Дякуємо за роботу! 🌸",
+            parse_mode='HTML'
+        )
+
     async def _handle_route_response(self, query, courier: Courier, data: str):
         """Handle courier accept/reject for a delivery route proposal"""
         from app.models.delivery_route import DeliveryRoute, RouteDelivery
@@ -985,6 +1015,22 @@ class CourierHandlers:
                 if time_str: text += f"⏰ {time_str}\n"
                 if comment: text += f"💬 {comment}\n"
                 text += "\n"
+
+            # Build Google Maps multi-stop URL
+            gmaps_stops = []
+            for stop in stops:
+                d = stop.delivery
+                order = d.order if d else None
+                parts = []
+                city = (order.city if order else '') or ''
+                street = (d.street or (order.street if order else '')) or ''
+                building = (d.building_number or (order.building_number if order else '')) or ''
+                if city: parts.append(city)
+                if street: parts.append(street)
+                if building: parts.append(building)
+                if parts:
+                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+            gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
         else:
             route.status = 'rejected'
             route.rejected_at = datetime.utcnow()
@@ -996,5 +1042,8 @@ class CourierHandlers:
                 f"Менеджер отримає сповіщення та призначить іншого кур'єра."
             )
 
-        await query.edit_message_text(text, parse_mode='HTML',
-                                      reply_markup=self.keyboards.back_to_main()) 
+        if accepted:
+            keyboard = self.keyboards.route_accepted_menu(gmaps_url, route_id)
+        else:
+            keyboard = self.keyboards.back_to_main()
+        await query.edit_message_text(text, parse_mode='HTML', reply_markup=keyboard)
