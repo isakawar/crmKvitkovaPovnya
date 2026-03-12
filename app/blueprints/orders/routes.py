@@ -328,61 +328,6 @@ def route_generator_deliveries():
     return jsonify(result)
 
 
-@orders_bp.route('/route-map', methods=['GET'])
-@login_required
-def route_map():
-    return render_template('route_map.html', today=date.today().isoformat())
-
-
-@orders_bp.route('/route-map/optimize', methods=['POST'])
-@login_required
-def route_map_optimize():
-    data = request.get_json(silent=True) or {}
-    selected_date_str = data.get('delivery_date', date.today().isoformat())
-    try:
-        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'error': 'Невірний формат дати'}), 400
-
-    start_time = data.get('start_time', '09:00')
-    num_couriers = max(int(data.get('num_couriers', 1) or 1), 1)
-    capacity_raw = data.get('capacity')
-    capacity = int(capacity_raw) if capacity_raw and str(capacity_raw).isdigit() and int(capacity_raw) > 0 else None
-
-    deliveries = (
-        Delivery.query
-        .options(joinedload(Delivery.order), joinedload(Delivery.client))
-        .filter(
-            Delivery.delivery_date == selected_date,
-            Delivery.is_pickup == False,
-            Delivery.status.in_(['Очікує', 'Розподілено'])
-        )
-        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
-        .all()
-    )
-
-    if not deliveries:
-        return jsonify({'error': 'NO_DELIVERIES', 'message': 'На вибрану дату немає доставок для оптимізації.'}), 404
-
-    try:
-        optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
-        result = optimize_deliveries(
-            deliveries=deliveries,
-            optimizer_url=optimizer_url,
-            start_time=start_time,
-            num_couriers=num_couriers,
-            capacity=capacity,
-        )
-        result['_deliveries_count'] = len(deliveries)
-        return jsonify(result)
-    except RouteOptimizerInfeasibleError as exc:
-        return jsonify({
-            'error': 'INFEASIBLE',
-            'message': str(exc),
-            'minimum_couriers_required': exc.minimum_couriers_required,
-        }), 422
-    except RouteOptimizerError as exc:
-        return jsonify({'error': 'OPTIMIZER_ERROR', 'message': str(exc)}), 500
 
 
 @orders_bp.route('/route-generator/export-csv', methods=['POST'])
