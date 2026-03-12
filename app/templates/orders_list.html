@@ -207,6 +207,12 @@
               <input type="text" name="street" id="address-input" class="form-control" required placeholder="Адреса доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
             </div>
             <div class="col-12">
+              <select name="delivery_method" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
+                <option value="courier">Кур'єр</option>
+                <option value="nova_poshta">Нова Пошта</option>
+              </select>
+            </div>
+            <div class="col-12">
               <select name="delivery_type" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
                 <option value="">Тип доставки *</option>
                 {% if delivery_types and delivery_types|length > 0 %}
@@ -670,6 +676,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
                 addOrderForm.querySelector('[name="city"]').value = orderData.city;
                 addOrderForm.querySelector('[name="street"]').value = orderData.street;
+                addOrderForm.querySelector('[name="delivery_method"]').value = orderData.delivery_method || 'courier';
                 addOrderForm.querySelector('[name="delivery_type"]').value = orderData.delivery_type;
                 addOrderForm.querySelector('[name="size"]').value = orderData.size;
                 addOrderForm.querySelector('[name="custom_amount"]').value = orderData.custom_amount || '';

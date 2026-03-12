@@ -53,6 +53,7 @@ def saved_routes():
     from app.models.delivery import Delivery
     from app.models.order import Order
     from app.models.client import Client
+    from datetime import date as date_type
     routes = query.options(
         joinedload(DeliveryRoute.stops)
             .joinedload(RouteDelivery.delivery)
@@ -62,7 +63,47 @@ def saved_routes():
             .joinedload(Delivery.client),
     ).all()
     couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
-    return render_template('saved_routes.html', routes=routes, couriers=couriers, date_filter=date_filter)
+
+    # Nova Poshta deliveries for selected date
+    np_date = None
+    if date_filter:
+        try:
+            np_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+        except ValueError:
+            pass
+    if np_date is None:
+        np_date = date_type.today()
+    nova_poshta_deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == np_date,
+            Delivery.delivery_method == 'nova_poshta'
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    pickup_deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == np_date,
+            Delivery.is_pickup == True
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    return render_template(
+        'saved_routes.html',
+        routes=routes,
+        couriers=couriers,
+        date_filter=date_filter,
+        nova_poshta_deliveries=nova_poshta_deliveries,
+        pickup_deliveries=pickup_deliveries,
+        np_date=np_date,
+    )
 
 
 @routes_bp.route('/routes/<int:route_id>/assign', methods=['POST'])

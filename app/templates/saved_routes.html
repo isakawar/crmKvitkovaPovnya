@@ -86,6 +86,45 @@
 {% endblock %}
 
 {% block content %}
+{% macro delivery_table(deliveries) %}
+<table class="table stops-tbl mb-0">
+  <thead>
+    <tr>
+      <th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for d in deliveries %}
+  {% set order = d.order %}
+  {% set client = d.client %}
+  <tr>
+    <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+    <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+    <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+    <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+    <td>
+      {% if order %}
+        {% set parts = [] %}
+        {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+        {% set street = d.street or order.street %}
+        {% if street %}{% set _ = parts.append(street) %}{% endif %}
+        {% set build = d.building_number or order.building_number %}
+        {% if build %}{% set _ = parts.append(build) %}{% endif %}
+        {{ parts | join(', ') or '—' }}
+      {% else %}—{% endif %}
+    </td>
+    <td style="white-space:nowrap;">
+      {% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}
+    </td>
+    <td style="max-width:180px; color:#64748b;">
+      {% set comment = d.comment or (order.comment if order else '') %}
+      {% if comment %}<span title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
 <div class="rp-wrap">
 
 <div class="rp-topbar">
@@ -293,6 +332,55 @@
 </div>
 
 {% endif %}
+
+{% if nova_poshta_deliveries or pickup_deliveries %}
+<div class="mt-4">
+  <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">{{ np_date.strftime('%d.%m.%Y') }}</div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs" id="extraDelivTabs" role="tablist" style="border-bottom:1px solid #e8edf4;">
+    {% if nova_poshta_deliveries %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="np-tab" data-bs-toggle="tab" data-bs-target="#np-pane" type="button" role="tab"
+              style="font-size:0.8rem; padding:6px 14px; color:#e65c00; border-color:#e8edf4 #e8edf4 #fff;">
+        <i class="bi bi-truck me-1"></i>Нова Пошта
+        <span class="badge rounded-pill ms-1" style="background:#fff3e0; color:#e65c00; font-size:0.68rem;">{{ nova_poshta_deliveries|length }}</span>
+      </button>
+    </li>
+    {% endif %}
+    {% if pickup_deliveries %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if not nova_poshta_deliveries %}active{% endif %}" id="pickup-tab" data-bs-toggle="tab" data-bs-target="#pickup-pane" type="button" role="tab"
+              style="font-size:0.8rem; padding:6px 14px; color:#7c3aed; border-color:#e8edf4 #e8edf4 #fff;">
+        <i class="bi bi-bag-check me-1"></i>Самовивіз
+        <span class="badge rounded-pill ms-1" style="background:#f5f3ff; color:#7c3aed; font-size:0.68rem;">{{ pickup_deliveries|length }}</span>
+      </button>
+    </li>
+    {% endif %}
+  </ul>
+
+  <div class="tab-content" id="extraDelivTabContent">
+
+    {% if nova_poshta_deliveries %}
+    <div class="tab-pane fade show active" id="np-pane" role="tabpanel">
+      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #e65c00;">
+        {{ delivery_table(nova_poshta_deliveries) }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if pickup_deliveries %}
+    <div class="tab-pane fade {% if not nova_poshta_deliveries %}show active{% endif %}" id="pickup-pane" role="tabpanel">
+      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #7c3aed;">
+        {{ delivery_table(pickup_deliveries) }}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
 </div>
 {% endblock %}
 

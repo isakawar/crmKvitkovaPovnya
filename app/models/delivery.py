@@ -39,6 +39,9 @@ class Delivery(db.Model):
     delivery_type = db.Column(db.String(32))
     price_at_delivery = db.Column(db.Integer)
     
+    # Метод доставки: 'courier' | 'nova_poshta'
+    delivery_method = db.Column(db.String(32), default='courier', nullable=False)
+
     # Подписка
     is_subscription = db.Column(db.Boolean, default=False)
     

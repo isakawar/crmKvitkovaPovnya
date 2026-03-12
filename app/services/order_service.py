@@ -52,7 +52,8 @@ def create_order_and_deliveries(client, form):
         time_to=form.get('time_to'),
         comment=form.get('comment'),
         preferences=form.get('preferences'),
-        for_whom=form['for_whom']
+        for_whom=form['for_whom'],
+        delivery_method=form.get('delivery_method', 'courier')
     )
     db.session.add(order)
     db.session.commit()
@@ -126,7 +127,8 @@ def create_order_and_deliveries(client, form):
             phone=order.recipient_phone,
             is_pickup=order.is_pickup,
             delivery_type=order.delivery_type,
-            is_subscription=is_subscription
+            is_subscription=is_subscription,
+            delivery_method=order.delivery_method
         )
         db.session.add(delivery)
     db.session.commit()
@@ -179,6 +181,8 @@ def update_order(order, form):
     order.comment = form.get('comment')
     order.preferences = form.get('preferences')
     order.for_whom = form['for_whom']
+    if form.get('delivery_method'):
+        order.delivery_method = form.get('delivery_method')
     db.session.commit()
     return order
 

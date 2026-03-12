@@ -2,27 +2,78 @@
 {% block content %}
 <h2 class="mb-4">Налаштування</h2>
 <div class="d-flex flex-wrap gap-4">
-    <div class="city-sticker card p-4 d-flex align-items-center justify-content-center" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#citiesModal">
+
+    <div class="position-relative" style="width:180px; height:120px;">
+      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#citiesModal">
         <i class="bi bi-geo-alt-fill" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Міста</div>
+      </div>
+      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+            title="Список міст для вибору в замовленні.<br><b>Приклади:</b> Київ, Бровари, Ірпінь, Буча">
+        <i class="bi bi-info-circle-fill"></i>
+      </span>
     </div>
-    <div class="delivery-type-sticker card p-4 d-flex align-items-center justify-content-center" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
+
+    <div class="position-relative" style="width:180px; height:120px;">
+      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
         <i class="bi bi-truck" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Тип доставки</div>
+      </div>
+      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+            title="Тип підписки або разовості доставки.<br><b>Приклади:</b> Weekly, Monthly, Bi-weekly, One-Time">
+        <i class="bi bi-info-circle-fill"></i>
+      </span>
     </div>
-    <div class="size-sticker card p-4 d-flex align-items-center justify-content-center" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#sizesModal">
+
+    <div class="position-relative" style="width:180px; height:120px;">
+      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#sizesModal">
         <i class="bi bi-arrows-angle-expand" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Розмір</div>
+      </div>
+      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+            title="Розміри букетів для замовлень.<br><b>Приклади:</b> M, L, XL, XXL, Власний">
+        <i class="bi bi-info-circle-fill"></i>
+      </span>
     </div>
-    <div class="for-whom-sticker card p-4 d-flex align-items-center justify-content-center" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#forWhomModal">
+
+    <div class="position-relative" style="width:180px; height:120px;">
+      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#forWhomModal">
         <i class="bi bi-people" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Для кого</div>
+      </div>
+      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+            title="Кому призначений букет. Відображається в замовленні.<br><b>Приклади:</b> Дружина, Мама, Подруга, Сестра, Сам(а)">
+        <i class="bi bi-info-circle-fill"></i>
+      </span>
     </div>
-    <div class="marketing-source-sticker card p-4 d-flex align-items-center justify-content-center flex-column" style="width:180px; height:120px; cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
+
+    <div class="position-relative" style="width:180px; height:120px;">
+      <div class="card p-4 d-flex align-items-center justify-content-center flex-column h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
         <i class="bi bi-bullseye" style="font-size:2.2rem; color:#007bff;"></i>
         <div class="mt-2 fw-bold w-100 text-center" style="font-size:1.1rem; color:#007bff;">Звідки дізнались</div>
+      </div>
+      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+            title="Джерело залучення клієнта. Використовується для аналітики.<br><b>Приклади:</b> Instagram, TikTok, Telegram, Google, Рекомендація">
+        <i class="bi bi-info-circle-fill"></i>
+      </span>
     </div>
+
 </div>
+
+<style>
+.settings-hint {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: #90b8e8;
+  font-size: 0.95rem;
+  cursor: default;
+  z-index: 10;
+  line-height: 1;
+  transition: color .15s;
+}
+.settings-hint:hover { color: #007bff; }
+</style>
 
 <!-- Модалки для кожного довідника -->
 {% macro settings_modal(id, label, endpoint) %}
@@ -73,6 +124,11 @@ function loadSettings(modalId, endpoint) {
         });
 }
 document.addEventListener('DOMContentLoaded', function() {
+    // Ініціалізація підказок
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        new bootstrap.Tooltip(el, { trigger: 'hover' });
+    });
+
     // Для кожної модалки підключаємо завантаження та додавання
     [
         {id: 'citiesModal', endpoint: '/settings/cities'},

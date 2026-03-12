@@ -161,6 +161,7 @@ def order_edit(order_id):
         'comment': order.comment,
         'preferences': order.preferences,
         'for_whom': order.for_whom,
+        'delivery_method': order.delivery_method or 'courier',
         'can_extend_subscription': can_extend_subscription
     })
 
@@ -215,7 +216,8 @@ def route_generator():
             .filter(
                 Delivery.delivery_date == selected_date,
                 Delivery.is_pickup == False,
-                Delivery.status.in_(['Очікує', 'Розподілено'])
+                Delivery.status.in_(['Очікує', 'Розподілено']),
+                Delivery.delivery_method != 'nova_poshta'
             )
             .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         )
@@ -301,7 +303,8 @@ def route_generator_deliveries():
         .filter(
             Delivery.delivery_date == selected_date,
             Delivery.is_pickup == False,
-            Delivery.status.in_(['Очікує', 'Розподілено'])
+            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.delivery_method != 'nova_poshta'
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         .all()
