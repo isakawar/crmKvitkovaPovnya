@@ -66,7 +66,7 @@ cp env.example .env
 docker compose up -d
 
 # 3. Створити адміна
-docker compose exec web python scripts/create_admin.py
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py"
 ```
 
 ### Команди для розробки
@@ -83,6 +83,57 @@ docker compose logs -f web
 
 # Міграція вручну
 docker compose exec web flask db upgrade
+```
+
+---
+
+## Повне скидання та ініціалізація БД
+
+Якщо потрібно почати з чистої БД (наприклад, після додавання нових міграцій або при розгортанні на новому сервері):
+
+### 1. Зупинити контейнери та видалити дані БД
+
+```bash
+docker compose down
+rm -rf data/postgres
+```
+
+> Папка `data/postgres` — це volume PostgreSQL. Видалення очищає всі таблиці та дані.
+
+### 2. Запустити контейнери (міграції застосуються автоматично)
+
+```bash
+docker compose up -d
+```
+
+Контейнер `web` при старті автоматично виконує `flask db upgrade` через `entrypoint.sh`.
+
+### 3. Наповнити початковими даними
+
+```bash
+# Створити адміністратора (логін: admin, пароль: admin)
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py"
+
+# Заповнити довідники (міста, розміри, типи доставки, тощо)
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_settings.py"
+```
+
+### 4. Опційно: тестові дані
+
+```bash
+# Додати тестових клієнтів та доставки
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_test_data.py"
+```
+
+### Повна команда одним блоком
+
+```bash
+docker compose down && \
+rm -rf data/postgres && \
+docker compose up -d && \
+sleep 10 && \
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py" && \
+docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_settings.py"
 ```
 
 ---
