@@ -161,6 +161,7 @@ def order_edit(order_id):
         'comment': order.comment,
         'preferences': order.preferences,
         'for_whom': order.for_whom,
+        'delivery_method': order.delivery_method or 'courier',
         'can_extend_subscription': can_extend_subscription
     })
 
@@ -215,7 +216,8 @@ def route_generator():
             .filter(
                 Delivery.delivery_date == selected_date,
                 Delivery.is_pickup == False,
-                Delivery.status.in_(['Очікує', 'Розподілено'])
+                Delivery.status.in_(['Очікує', 'Розподілено']),
+                Delivery.delivery_method != 'nova_poshta'
             )
             .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         )
@@ -301,7 +303,8 @@ def route_generator_deliveries():
         .filter(
             Delivery.delivery_date == selected_date,
             Delivery.is_pickup == False,
-            Delivery.status.in_(['Очікує', 'Розподілено'])
+            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.delivery_method != 'nova_poshta'
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         .all()
@@ -328,6 +331,104 @@ def route_generator_deliveries():
     return jsonify(result)
 
 
+
+
+@orders_bp.route('/route-generator/save', methods=['POST'])
+@login_required
+def route_generator_save():
+    data = request.get_json(silent=True) or {}
+    result_json = data.get('result_json', '')
+    selected_date_str = data.get('selected_date', date.today().isoformat())
+
+    try:
+        result = json.loads(result_json) if isinstance(result_json, str) else result_json
+    except (json.JSONDecodeError, ValueError):
+        return jsonify({'error': 'Некоректний JSON'}), 400
+
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Некоректна дата'}), 400
+
+    routes = result.get('routes', [])
+    if not routes:
+        return jsonify({'error': 'Немає маршрутів для збереження'}), 400
+
+    from app.models.delivery_route import DeliveryRoute, RouteDelivery
+
+    # Build address → delivery_id map (optimizer doesn't echo IDs back in stops)
+    day_deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order))
+        .filter(Delivery.delivery_date == selected_date)
+        .all()
+    )
+    addr_to_delivery_id = {}
+    for d in day_deliveries:
+        order = d.order
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or ''
+        house = (d.building_number or (order.building_number if order else '')) or ''
+        parts = []
+        if city:
+            parts.append(city)
+        if street:
+            parts.append(street + (' ' + house if house else ''))
+        key = ', '.join(parts).lower().strip()
+        if key:
+            addr_to_delivery_id[key] = d.id
+
+    saved_route_ids = []
+    for route_data in routes:
+        stops = route_data.get('stops', [])
+        if not stops:
+            continue
+
+        dr = DeliveryRoute(
+            route_date=selected_date,
+            status='draft',
+            deliveries_count=len(stops),
+            total_distance_km=route_data.get('totalDistanceKm'),
+            estimated_duration_min=route_data.get('totalDriveMin'),
+        )
+        db.session.add(dr)
+        db.session.flush()
+
+        for i, stop in enumerate(stops):
+            # Try direct id first, fall back to address matching
+            delivery_id = stop.get('id')
+            if not delivery_id:
+                stop_addr = (stop.get('address') or '').lower().strip()
+                delivery_id = addr_to_delivery_id.get(stop_addr)
+            if not delivery_id:
+                continue
+
+            planned_arrival = None
+            if stop.get('eta'):
+                try:
+                    planned_arrival = datetime.strptime(
+                        f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
+                    )
+                except ValueError:
+                    pass
+
+            rd = RouteDelivery(
+                route_id=dr.id,
+                delivery_id=delivery_id,
+                stop_order=i + 1,
+                duration_from_previous_min=stop.get('driveMin'),
+                planned_arrival=planned_arrival,
+            )
+            db.session.add(rd)
+
+            delivery = Delivery.query.get(delivery_id)
+            if delivery and delivery.status == 'Очікує':
+                delivery.status = 'Розподілено'
+
+        saved_route_ids.append(dr.id)
+
+    db.session.commit()
+    return jsonify({'success': True, 'route_ids': saved_route_ids, 'count': len(saved_route_ids)})
 
 
 @orders_bp.route('/route-generator/export-csv', methods=['POST'])

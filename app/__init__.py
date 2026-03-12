@@ -35,19 +35,21 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.clients.routes import clients_bp
     from app.blueprints.couriers.routes import couriers_bp
     from app.blueprints.deliveries.routes import deliveries_bp
-    from app.blueprints.distribution.routes import distribution_bp
     from app.blueprints.reports.routes import reports_bp
     from app.blueprints.settings.routes import bp as settings_bp
     from app.blueprints.auth import bp as auth_bp
+    from app.blueprints.routes.routes import routes_bp
+    from app.blueprints.florist.routes import florist_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(couriers_bp)
     app.register_blueprint(deliveries_bp)
-    app.register_blueprint(distribution_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(auth_bp)
+    app.register_blueprint(routes_bp)
+    app.register_blueprint(florist_bp)
 
     # Захист всіх маршрутів за замовчуванням
     @app.before_request
@@ -56,11 +58,31 @@ def create_app(config_class=DevelopmentConfig):
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
                 return redirect(url_for('auth.login'))
+        # Флорист може заходити тільки на сторінку флориста
+        if (current_user.is_authenticated
+                and getattr(current_user, 'user_type', None) == 'florist'
+                and request.endpoint
+                and not request.endpoint.startswith('florist.')
+                and not request.endpoint.startswith('auth.')
+                and request.endpoint != 'static'):
+            return redirect(url_for('florist.florist_routes'))
 
     # Головна сторінка перенаправляє на список замовлень
     @app.route('/')
     def index():
         return redirect(url_for('orders.orders_list'))
+
+    from zoneinfo import ZoneInfo
+    _kyiv_tz = ZoneInfo('Europe/Kyiv')
+
+    @app.template_filter('kyiv_time')
+    def kyiv_time_filter(dt):
+        if dt is None:
+            return ''
+        import datetime as _dt
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt.astimezone(_kyiv_tz).strftime('%d.%m.%Y %H:%M')
 
     version = get_version()
     @app.context_processor

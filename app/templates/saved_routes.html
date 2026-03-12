@@ -1,0 +1,401 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+/* ── Page ────────────────────────────────────────────── */
+.rp-wrap   { max-width: 1100px; }
+.rp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.rp-title  { font-size: 1.05rem; font-weight: 700; color: #0f172a; letter-spacing: -.01em; margin: 0; }
+
+/* ── Filter ──────────────────────────────────────────── */
+.rp-filter { display: flex; gap: 6px; align-items: center; }
+.rp-filter input[type=date] { height: 32px; font-size: 0.8rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 10px; color: #334155; background: #fff; }
+.rp-filter .btn { height: 32px; font-size: 0.8rem; padding: 0 12px; border-radius: 7px; line-height: 1; }
+
+/* ── Route list container ────────────────────────────── */
+.rl-wrap { display: flex; flex-direction: column; gap: 4px; }
+
+/* ── Single route item ───────────────────────────────── */
+.rl-item { background: #fff; border: 1px solid #e8edf4; border-radius: 10px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
+.rl-item:hover { border-color: #c7d2e6; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+
+/* ── Status accent strip ─────────────────────────────── */
+.rl-header { display: flex; align-items: center; gap: 0; cursor: pointer; user-select: none; min-height: 48px; }
+.rl-accent { width: 4px; align-self: stretch; flex-shrink: 0; border-radius: 10px 0 0 10px; }
+.accent-draft     { background: #cbd5e1; }
+.accent-sent      { background: #60a5fa; }
+.accent-accepted  { background: #34d399; }
+.accent-rejected  { background: #f87171; }
+.accent-completed { background: #38bdf8; }
+
+.rl-body { display: flex; align-items: center; gap: 10px; flex: 1; padding: 10px 14px; flex-wrap: wrap; min-width: 0; }
+
+/* ── Date block ──────────────────────────────────────── */
+.rl-date  { min-width: 90px; }
+.rl-date-main { font-size: 0.85rem; font-weight: 600; color: #0f172a; white-space: nowrap; }
+.rl-date-id   { font-size: 0.72rem; color: #94a3b8; }
+
+/* ── Status pill ─────────────────────────────────────── */
+.spill { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 99px; font-size: 0.71rem; font-weight: 600; white-space: nowrap; cursor: default; }
+.spill-draft     { background: #f1f5f9; color: #64748b; }
+.spill-sent      { background: #eff6ff; color: #2563eb; }
+.spill-accepted  { background: #f0fdf4; color: #16a34a; }
+.spill-rejected  { background: #fef2f2; color: #dc2626; }
+.spill-completed { background: #f0f9ff; color: #0284c7; }
+
+/* ── Meta chips ──────────────────────────────────────── */
+.rl-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+.chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.77rem; color: #64748b; white-space: nowrap; }
+.chip i { font-size: 0.72rem; opacity: .75; }
+.chip-price { color: #15803d; font-weight: 600; }
+.chip-courier { color: #334155; }
+
+/* ── Actions area ────────────────────────────────────── */
+.rl-actions { display: flex; align-items: center; gap: 6px; padding-right: 10px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.assign-row { display: flex; gap: 4px; align-items: center; }
+.assign-row select { height: 30px; font-size: 0.78rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 8px; background: #fff; max-width: 130px; }
+.assign-row input  { height: 30px; font-size: 0.78rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 8px; background: #fff; width: 78px; }
+.bxs { height: 30px; font-size: 0.77rem; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1; }
+.status-label { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+
+/* ── Chevron ─────────────────────────────────────────── */
+.rl-chevron { font-size: 0.65rem; color: #94a3b8; margin-right: 10px; transition: transform .2s; flex-shrink: 0; }
+.rl-header.open .rl-chevron { transform: rotate(90deg); }
+
+/* ── Stops panel ─────────────────────────────────────── */
+.rl-stops { border-top: 1px solid #f1f5f9; }
+.stops-tbl { font-size: 0.78rem; margin: 0; }
+.stops-tbl thead th {
+  background: #f8fafc;
+  color: #94a3b8;
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 7px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  border-top: none;
+}
+.stops-tbl tbody td { padding: 8px 12px; border-color: #f8fafc; color: #334155; vertical-align: middle; }
+.stops-tbl tbody tr:last-child td { border-bottom: none; }
+.snum { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #6366f1; color: #fff; font-size: 0.66rem; font-weight: 700; }
+.ig-link { color: #6366f1; font-size: 0.77rem; }
+.addr-sub { font-size: 0.71rem; color: #94a3b8; margin-top: 1px; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% macro delivery_table(deliveries) %}
+<table class="table stops-tbl mb-0">
+  <thead>
+    <tr>
+      <th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for d in deliveries %}
+  {% set order = d.order %}
+  {% set client = d.client %}
+  <tr>
+    <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+    <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+    <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+    <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+    <td>
+      {% if order %}
+        {% set parts = [] %}
+        {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+        {% set street = d.street or order.street %}
+        {% if street %}{% set _ = parts.append(street) %}{% endif %}
+        {% set build = d.building_number or order.building_number %}
+        {% if build %}{% set _ = parts.append(build) %}{% endif %}
+        {{ parts | join(', ') or '—' }}
+      {% else %}—{% endif %}
+    </td>
+    <td style="white-space:nowrap;">
+      {% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}
+    </td>
+    <td style="max-width:180px; color:#64748b;">
+      {% set comment = d.comment or (order.comment if order else '') %}
+      {% if comment %}<span title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endmacro %}
+<div class="rp-wrap">
+
+<div class="rp-topbar">
+  <h1 class="rp-title">Маршрути</h1>
+  <form method="get" class="rp-filter">
+    <input type="date" name="date" value="{{ date_filter }}">
+    <button type="submit" class="btn btn-sm btn-outline-primary">Фільтр</button>
+    {% if date_filter %}
+    <a href="{{ url_for('routes.saved_routes') }}" class="btn btn-sm btn-outline-secondary">Скинути</a>
+    {% endif %}
+  </form>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ 'success' if cat == 'success' else 'danger' if cat == 'danger' else 'warning' }} alert-dismissible fade show py-2 mb-3" style="border-radius:8px;font-size:0.85rem;">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not routes %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-signpost-2" style="font-size:2.2rem;opacity:.4;"></i>
+  <div class="mt-2" style="font-size:0.9rem;">Маршрутів немає</div>
+  <a href="{{ url_for('orders.route_generator') }}" class="btn btn-sm btn-primary mt-3">
+    <i class="bi bi-signpost-split me-1"></i>Побудувати маршрут
+  </a>
+</div>
+{% else %}
+
+{% set status_labels = {
+  'draft': 'Чернетка',
+  'sent': 'Надіслано',
+  'accepted': 'Прийнято',
+  'rejected': 'Відхилено',
+  'completed': 'Завершено'
+} %}
+
+<div class="rl-wrap">
+{% for route in routes %}
+<div class="rl-item">
+
+  <div class="rl-header" data-bs-toggle="collapse" data-bs-target="#stops-{{ route.id }}" id="hdr-{{ route.id }}">
+    <div class="rl-accent accent-{{ route.status }}"></div>
+    <div class="rl-body">
+
+      <!-- Date + ID -->
+      <div class="rl-date">
+        <div class="rl-date-main">{{ route.route_date.strftime('%d.%m.%Y') }}</div>
+        <div class="rl-date-id">#{{ route.id }}</div>
+      </div>
+
+      <!-- Status pill -->
+      {% set status_time = route.sent_at if route.status == 'sent' else
+                           route.accepted_at if route.status == 'accepted' else
+                           route.rejected_at if route.status == 'rejected' else none %}
+      <span class="spill spill-{{ route.status }}"
+            {% if status_time %}title="{{ status_time|kyiv_time }}" data-bs-toggle="tooltip"{% endif %}>
+        {% if route.status == 'accepted' %}<i class="bi bi-check-circle-fill"></i>
+        {% elif route.status == 'rejected' %}<i class="bi bi-x-circle-fill"></i>
+        {% elif route.status == 'sent' %}<i class="bi bi-send-fill"></i>
+        {% elif route.status == 'completed' %}<i class="bi bi-check2-all"></i>
+        {% endif %}
+        {{ status_labels.get(route.status, route.status) }}
+      </span>
+
+      <!-- Meta chips -->
+      <div class="rl-meta">
+        <span class="chip"><i class="bi bi-box-seam"></i>{{ route.deliveries_count }} дост.</span>
+        {% if route.total_distance_km %}
+        <span class="chip"><i class="bi bi-geo-alt"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+        {% endif %}
+        {% if route.estimated_duration_min %}
+        {% set h = route.estimated_duration_min // 60 %}
+        {% set m = route.estimated_duration_min % 60 %}
+        <span class="chip"><i class="bi bi-clock"></i>{% if h %}{{ h }}г {% endif %}{{ m }}хв</span>
+        {% endif %}
+        {% if route.courier %}
+        <span class="chip chip-courier"><i class="bi bi-person-badge"></i>{{ route.courier.name }}</span>
+        {% endif %}
+        {% if route.delivery_price %}
+        <span class="chip chip-price">{{ route.delivery_price }}₴</span>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Actions (stop propagation handled in JS) -->
+    <div class="rl-actions">
+      {% if route.status in ['draft', 'rejected'] %}
+      <form method="post" action="{{ url_for('routes.assign_route', route_id=route.id) }}" class="assign-row">
+        <select name="courier_id">
+          <option value="">— Кур'єр —</option>
+          {% for c in couriers %}
+          <option value="{{ c.id }}" {% if route.courier_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <input type="number" name="delivery_price" placeholder="Ціна ₴" value="{{ route.delivery_price or '' }}" min="0">
+        <button type="submit" class="bxs btn btn-outline-secondary"><i class="bi bi-check2"></i></button>
+      </form>
+      {% if route.courier_id %}
+      <form method="post" action="{{ url_for('routes.send_route', route_id=route.id) }}">
+        <button type="submit" class="bxs btn btn-primary">
+          <i class="bi bi-telegram"></i>Надіслати
+        </button>
+      </form>
+      {% endif %}
+      {% endif %}
+
+      {% if route.status == 'sent' %}
+      <span class="status-label"><i class="bi bi-hourglass-split"></i>Очікує</span>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
+            onsubmit="return confirm('Видалити маршрут?')">
+        <button type="submit" class="bxs btn btn-outline-danger" style="padding:0 8px;">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+
+    <i class="bi bi-chevron-right rl-chevron"></i>
+  </div>
+
+  <!-- Stops -->
+  <div class="collapse rl-stops" id="stops-{{ route.id }}">
+    {% if route.stops %}
+    <table class="table stops-tbl">
+      <thead>
+        <tr>
+          <th style="width:26px;">#</th>
+          <th>Клієнт</th>
+          <th>Букет</th>
+          <th>Отримувач</th>
+          <th>Адреса</th>
+          <th>Телефон</th>
+          <th>Час</th>
+          <th>Коментар</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for stop in route.stops %}
+      {% set d = stop.delivery %}
+      {% set order = d.order if d else none %}
+      {% set client = d.client if d else none %}
+      <tr>
+        <td><span class="snum">{{ stop.stop_order }}</span></td>
+
+        <td style="white-space:nowrap;">
+          {% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
+          {{ size or '—' }}
+        </td>
+
+        <td style="white-space:nowrap;">{{ (order.recipient_name if order else '') or '—' }}</td>
+
+        <td>
+          {% if d and d.is_pickup %}
+            <span style="color:#94a3b8;">Самовивіз</span>
+          {% elif order %}
+            {% set parts = [] %}
+            {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+            {% set street = d.street or order.street %}
+            {% if street %}{% set _ = parts.append(street) %}{% endif %}
+            {% set build = d.building_number or order.building_number %}
+            {% if build %}{% set _ = parts.append(build) %}{% endif %}
+            {{ parts | join(', ') }}
+            {% set floor = d.floor or order.floor %}
+            {% set ent = d.entrance or order.entrance %}
+            {% if floor or ent %}
+            <div class="addr-sub">{% if floor %}пов.{{ floor }}{% endif %}{% if ent %} під.{{ ent }}{% endif %}</div>
+            {% endif %}
+          {% else %}—{% endif %}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
+          {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
+          {% else %}—{% endif %}
+        </td>
+
+        <td style="max-width:180px; color:#64748b;">
+          {% set comment = d.comment or (order.comment if order else '') %}
+          {% if comment %}<span title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="padding:12px 16px; font-size:0.8rem; color:#94a3b8;">Зупинок немає</div>
+    {% endif %}
+  </div>
+
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+
+{% if nova_poshta_deliveries or pickup_deliveries %}
+<div class="mt-4">
+  <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">{{ np_date.strftime('%d.%m.%Y') }}</div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs" id="extraDelivTabs" role="tablist" style="border-bottom:1px solid #e8edf4;">
+    {% if nova_poshta_deliveries %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="np-tab" data-bs-toggle="tab" data-bs-target="#np-pane" type="button" role="tab"
+              style="font-size:0.8rem; padding:6px 14px; color:#e65c00; border-color:#e8edf4 #e8edf4 #fff;">
+        <i class="bi bi-truck me-1"></i>Нова Пошта
+        <span class="badge rounded-pill ms-1" style="background:#fff3e0; color:#e65c00; font-size:0.68rem;">{{ nova_poshta_deliveries|length }}</span>
+      </button>
+    </li>
+    {% endif %}
+    {% if pickup_deliveries %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link {% if not nova_poshta_deliveries %}active{% endif %}" id="pickup-tab" data-bs-toggle="tab" data-bs-target="#pickup-pane" type="button" role="tab"
+              style="font-size:0.8rem; padding:6px 14px; color:#7c3aed; border-color:#e8edf4 #e8edf4 #fff;">
+        <i class="bi bi-bag-check me-1"></i>Самовивіз
+        <span class="badge rounded-pill ms-1" style="background:#f5f3ff; color:#7c3aed; font-size:0.68rem;">{{ pickup_deliveries|length }}</span>
+      </button>
+    </li>
+    {% endif %}
+  </ul>
+
+  <div class="tab-content" id="extraDelivTabContent">
+
+    {% if nova_poshta_deliveries %}
+    <div class="tab-pane fade show active" id="np-pane" role="tabpanel">
+      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #e65c00;">
+        {{ delivery_table(nova_poshta_deliveries) }}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if pickup_deliveries %}
+    <div class="tab-pane fade {% if not nova_poshta_deliveries %}show active{% endif %}" id="pickup-pane" role="tabpanel">
+      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #7c3aed;">
+        {{ delivery_table(pickup_deliveries) }}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.rl-actions button, .rl-actions form, .rl-actions select, .rl-actions input').forEach(function(el) {
+  el.addEventListener('click', function(e) { e.stopPropagation(); });
+});
+document.querySelectorAll('.rl-stops').forEach(function(el) {
+  const hdr = document.getElementById('hdr-' + el.id.replace('stops-', ''));
+  el.addEventListener('show.bs.collapse', function() { if (hdr) hdr.classList.add('open'); });
+  el.addEventListener('hide.bs.collapse', function() { if (hdr) hdr.classList.remove('open'); });
+});
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+  new bootstrap.Tooltip(el);
+});
+</script>
+{% endblock %}

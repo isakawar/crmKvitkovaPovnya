@@ -120,6 +120,9 @@
             </td>
             <td data-col="delivery_type">
               <span class="tag">{{ d.delivery_type }}</span>
+              {% if d.delivery_method == 'nova_poshta' %}
+                <span class="badge ms-1" style="background:#e65c00; color:#fff;">НП</span>
+              {% endif %}
               {% if not d.is_subscription and d.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
                 <span class="badge bg-warning text-dark ms-1" title="Не оплачена доставка - потрібно запропонувати продовжити підписку">!</span>
               {% endif %}

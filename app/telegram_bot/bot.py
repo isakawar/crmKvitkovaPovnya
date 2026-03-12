@@ -60,13 +60,7 @@ class TelegramBot:
         
         # Command handlers
         self.application.add_handler(CommandHandler("start", self.handlers.start_command))
-        self.application.add_handler(CommandHandler("help", self.handlers.help_command))
         self.application.add_handler(CommandHandler("register", self.handlers.register_command))
-        self.application.add_handler(CommandHandler("profile", self.handlers.profile_command))
-        self.application.add_handler(CommandHandler("deliveries", self.handlers.deliveries_command))
-        self.application.add_handler(CommandHandler("today", self.handlers.today_command))
-        self.application.add_handler(CommandHandler("tomorrow", self.handlers.tomorrow_command))
-        self.application.add_handler(CommandHandler("week", self.handlers.week_command))
         
         # Callback query handlers (for inline keyboard buttons)
         self.application.add_handler(CallbackQueryHandler(self.handlers.handle_callback_query))

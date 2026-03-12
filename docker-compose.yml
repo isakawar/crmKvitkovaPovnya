@@ -24,6 +24,9 @@ services:
     ports:
       - "8000:8000"
     volumes:
+      - ./app:/app/app
+      - ./migrations:/app/migrations
+      - ./scripts:/app/scripts
       - ./instance:/app/instance
       - ./logs:/app/logs
     environment:
@@ -45,6 +48,7 @@ services:
   telegram-bot:
     build: .
     volumes:
+      - ./app:/app/app
       - ./instance:/app/instance
       - ./logs:/app/logs
     environment:

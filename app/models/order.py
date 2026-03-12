@@ -46,4 +46,7 @@ class Order(db.Model):
     price_at_order = db.Column(db.Integer)
     periodicity = db.Column(db.String(8))
     preferred_days = db.Column(db.String(64))
-    is_subscription_extended = db.Column(db.Boolean, default=False)  # Чи вже продовжено підписку 
+    is_subscription_extended = db.Column(db.Boolean, default=False)  # Чи вже продовжено підписку
+
+    # Метод доставки: 'courier' | 'nova_poshta'
+    delivery_method = db.Column(db.String(32), default='courier', nullable=False)
