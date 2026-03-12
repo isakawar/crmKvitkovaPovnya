@@ -1,0 +1,138 @@
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
+from flask_login import login_required
+from app.extensions import db
+from app.models.delivery_route import DeliveryRoute, RouteDelivery
+from app.models.courier import Courier
+from datetime import datetime
+import json
+import requests as http_requests
+
+routes_bp = Blueprint('routes', __name__)
+
+
+def _telegram_send(bot_token, chat_id, text, reply_markup=None):
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {'chat_id': chat_id, 'text': text, 'parse_mode': 'HTML'}
+    if reply_markup:
+        payload['reply_markup'] = json.dumps(reply_markup)
+    try:
+        resp = http_requests.post(url, json=payload, timeout=30)
+        data = resp.json()
+        if data.get('ok'):
+            return data['result']['message_id']
+    except Exception:
+        pass
+    return None
+
+
+def _telegram_edit(bot_token, chat_id, message_id, text, reply_markup=None):
+    url = f"https://api.telegram.org/bot{bot_token}/editMessageText"
+    payload = {'chat_id': chat_id, 'message_id': message_id, 'text': text, 'parse_mode': 'HTML'}
+    if reply_markup:
+        payload['reply_markup'] = json.dumps(reply_markup)
+    try:
+        http_requests.post(url, json=payload, timeout=30)
+    except Exception:
+        pass
+
+
+@routes_bp.route('/routes', methods=['GET'])
+@login_required
+def saved_routes():
+    date_filter = request.args.get('date', '')
+    query = DeliveryRoute.query.order_by(
+        DeliveryRoute.route_date.desc(), DeliveryRoute.created_at.desc()
+    )
+    if date_filter:
+        try:
+            d = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            query = query.filter_by(route_date=d)
+        except ValueError:
+            pass
+    routes = query.all()
+    couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
+    return render_template('saved_routes.html', routes=routes, couriers=couriers, date_filter=date_filter)
+
+
+@routes_bp.route('/routes/<int:route_id>/assign', methods=['POST'])
+@login_required
+def assign_route(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    courier_id = request.form.get('courier_id', type=int)
+    delivery_price = request.form.get('delivery_price', type=int)
+    route.courier_id = courier_id or None
+    if delivery_price is not None:
+        route.delivery_price = delivery_price
+    db.session.commit()
+    return redirect(url_for('routes.saved_routes'))
+
+
+@routes_bp.route('/routes/<int:route_id>/send', methods=['POST'])
+@login_required
+def send_route(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+
+    if not route.courier_id:
+        flash('Спочатку призначте кур\'єра та вкажіть ціну', 'warning')
+        return redirect(url_for('routes.saved_routes'))
+
+    courier = Courier.query.get(route.courier_id)
+    if not courier or not courier.telegram_chat_id:
+        flash('Кур\'єр не зареєстрований в Telegram', 'danger')
+        return redirect(url_for('routes.saved_routes'))
+
+    stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+
+    text = f"🌸 <b>Пропозиція маршруту на {route.route_date.strftime('%d.%m.%Y')}</b>\n\n"
+    text += f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
+    if route.total_distance_km:
+        text += f"📍 Відстань: <b>~{route.total_distance_km:.1f} км</b>\n"
+    if route.estimated_duration_min:
+        h, m = divmod(route.estimated_duration_min, 60)
+        duration_str = f"{h} год {m} хв" if h else f"{m} хв"
+        text += f"⏱ Час у дорозі: <b>~{duration_str}</b>\n"
+    if route.delivery_price:
+        text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
+
+    text += "\n<b>Маршрут:</b>\n"
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or '—'
+        build = (d.building_number or (order.building_number if order else '')) or ''
+        arrival = stop.planned_arrival.strftime('%H:%M') if stop.planned_arrival else '—'
+        addr_parts = [p for p in [city, street, build] if p]
+        text += f"\n{stop.stop_order}. {', '.join(addr_parts)} — {arrival}"
+
+    reply_markup = {
+        'inline_keyboard': [[
+            {'text': '✅ Прийняти', 'callback_data': f'route_accept_{route_id}'},
+            {'text': '❌ Відхилити', 'callback_data': f'route_reject_{route_id}'},
+        ]]
+    }
+
+    bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+    msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, reply_markup)
+
+    if not msg_id:
+        flash('Помилка надсилання в Telegram. Перевірте токен та chat_id кур\'єра.', 'danger')
+        return redirect(url_for('routes.saved_routes'))
+
+    route.status = 'sent'
+    route.telegram_message_id = msg_id
+    route.sent_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(f'Маршрут надіслано кур\'єру {courier.name}', 'success')
+    return redirect(url_for('routes.saved_routes'))
+
+
+@routes_bp.route('/routes/<int:route_id>/delete', methods=['POST'])
+@login_required
+def delete_route(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    db.session.delete(route)
+    db.session.commit()
+    flash('Маршрут видалено', 'success')
+    return redirect(url_for('routes.saved_routes'))

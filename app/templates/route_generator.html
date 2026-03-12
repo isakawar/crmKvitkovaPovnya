@@ -234,7 +234,7 @@
     {% endif %}
   </div>
 
-  <div class="d-flex gap-2 mb-4">
+  <div class="d-flex gap-2 mb-4 flex-wrap">
     <form method="post" action="{{ url_for('orders.route_generator_export_csv') }}">
       <input type="hidden" name="result_json" value="{{ result_json|e }}">
       <input type="hidden" name="selected_date" value="{{ selected_date }}">
@@ -245,6 +245,9 @@
     <a href="{{ url_for('distribution.distribution_page', date=selected_date) }}" class="btn btn-outline-secondary">
       <i class="bi bi-box-seam me-1"></i> Розподілити між кур'єрами
     </a>
+    <button id="btn-save-routes" class="btn btn-success">
+      <i class="bi bi-floppy me-1"></i> Зберегти маршрути
+    </button>
   </div>
 
   <div id="routes-container"></div>
@@ -780,6 +783,42 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перерахувати';
+    }
+  });
+
+  // ── Save routes ────────────────────────────────────────────────────────────
+  document.getElementById('btn-save-routes').addEventListener('click', async function() {
+    syncRoutesFromDOM();
+    const resultToSave = Object.assign({}, originalResult, { routes: currentRoutes });
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Збереження…';
+
+    try {
+      const resp = await fetch('{{ url_for("orders.route_generator_save") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          result_json: JSON.stringify(resultToSave),
+          selected_date: '{{ selected_date }}',
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || data.error) {
+        alert('Помилка збереження: ' + (data.error || resp.status));
+        return;
+      }
+      btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Збережено!';
+      btn.classList.replace('btn-success', 'btn-outline-success');
+      setTimeout(function() {
+        btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
+        btn.classList.replace('btn-outline-success', 'btn-success');
+        btn.disabled = false;
+      }, 3000);
+    } catch(e) {
+      alert('Помилка з\'єднання: ' + e.message);
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
     }
   });
 

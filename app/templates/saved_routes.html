@@ -1,0 +1,194 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+.status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+.status-draft     { background: #f1f3f5; color: #6b7280; }
+.status-sent      { background: #e0f0ff; color: #1a73e8; }
+.status-accepted  { background: #e6f9ee; color: #1a7f4b; }
+.status-rejected  { background: #ffeae5; color: #c0392b; }
+.status-completed { background: #f0f9ff; color: #0e6fa7; }
+.route-card { border-radius: 14px; border: 1.5px solid #e3eafc; margin-bottom: 18px; background: #fff; }
+.route-card-header { padding: 16px 20px; border-bottom: 1px solid #f0f2f7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stop-list { list-style: none; padding: 0; margin: 0; }
+.stop-list li { padding: 8px 20px; border-bottom: 1px solid #f5f6fa; font-size: 0.9rem; display: flex; gap: 10px; align-items: flex-start; }
+.stop-list li:last-child { border-bottom: none; }
+.stop-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #3388ff; color: #fff; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.assign-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.assign-form select, .assign-form input[type=number] { border-radius: 8px; border: 1.5px solid #e3eafc; padding: 5px 10px; font-size: 0.88rem; height: 34px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <h2 class="mb-0" style="font-weight:700;">Збережені маршрути</h2>
+  <form method="get" class="d-flex gap-2 align-items-center">
+    <input type="date" name="date" value="{{ date_filter }}"
+           class="form-control form-control-sm" style="width:160px;border-radius:8px;">
+    <button type="submit" class="btn btn-sm btn-outline-primary">Фільтр</button>
+    {% if date_filter %}
+    <a href="{{ url_for('routes.saved_routes') }}" class="btn btn-sm btn-outline-secondary">Скинути</a>
+    {% endif %}
+  </form>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% for cat, msg in messages %}
+  <div class="alert alert-{{ 'success' if cat == 'success' else 'danger' if cat == 'danger' else 'warning' }} alert-dismissible fade show" role="alert" style="border-radius:10px;">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endwith %}
+
+{% if not routes %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-signpost-2" style="font-size:3rem;"></i>
+  <div class="mt-3">Збережених маршрутів немає</div>
+  <a href="{{ url_for('orders.route_generator') }}" class="btn btn-primary mt-3">
+    <i class="bi bi-signpost-split me-1"></i>Побудувати маршрут
+  </a>
+</div>
+{% else %}
+
+{% set status_labels = {
+  'draft': 'Чернетка',
+  'sent': 'Надіслано',
+  'accepted': 'Прийнято',
+  'rejected': 'Відхилено',
+  'completed': 'Завершено'
+} %}
+
+{% for route in routes %}
+<div class="route-card shadow-sm">
+  <div class="route-card-header">
+    <div>
+      <span class="fw-bold" style="font-size:1.05rem;">
+        {{ route.route_date.strftime('%d.%m.%Y') }}
+      </span>
+      <span class="text-muted ms-2" style="font-size:0.9rem;">#{{ route.id }}</span>
+    </div>
+
+    <span class="status-badge status-{{ route.status }}">
+      {{ status_labels.get(route.status, route.status) }}
+    </span>
+
+    <div class="d-flex gap-3 text-muted small ms-2">
+      <span><i class="bi bi-box-seam me-1"></i>{{ route.deliveries_count }} доставок</span>
+      {% if route.total_distance_km %}
+      <span><i class="bi bi-geo me-1"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+      {% endif %}
+      {% if route.estimated_duration_min %}
+      {% set h = (route.estimated_duration_min // 60) %}
+      {% set m = (route.estimated_duration_min % 60) %}
+      <span><i class="bi bi-clock me-1"></i>~{% if h %}{{ h }} год {% endif %}{{ m }} хв</span>
+      {% endif %}
+    </div>
+
+    {% if route.courier %}
+    <span class="text-muted small">
+      <i class="bi bi-person-badge me-1"></i>{{ route.courier.name }}
+    </span>
+    {% endif %}
+    {% if route.delivery_price %}
+    <span class="fw-semibold" style="color:#1a7f4b;">{{ route.delivery_price }}₴</span>
+    {% endif %}
+
+    <div class="ms-auto d-flex gap-2 flex-wrap">
+      {% if route.status in ['draft', 'rejected'] %}
+      <!-- Assign courier + price form -->
+      <form method="post" action="{{ url_for('routes.assign_route', route_id=route.id) }}"
+            class="assign-form">
+        <select name="courier_id" class="form-select form-select-sm" style="width:auto;">
+          <option value="">— Кур'єр —</option>
+          {% for c in couriers %}
+          <option value="{{ c.id }}" {% if route.courier_id == c.id %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+          {% endfor %}
+        </select>
+        <input type="number" name="delivery_price" placeholder="Ціна ₴"
+               value="{{ route.delivery_price or '' }}" min="0" style="width:100px;">
+        <button type="submit" class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-check2"></i>
+        </button>
+      </form>
+
+      {% if route.courier_id %}
+      <form method="post" action="{{ url_for('routes.send_route', route_id=route.id) }}">
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-telegram me-1"></i>Надіслати кур'єру
+        </button>
+      </form>
+      {% endif %}
+      {% endif %}
+
+      {% if route.status == 'sent' %}
+      <span class="text-muted small align-self-center">
+        <i class="bi bi-clock me-1"></i>Очікує відповіді
+        {% if route.sent_at %}· {{ route.sent_at.strftime('%d.%m %H:%M') }}{% endif %}
+      </span>
+      {% endif %}
+
+      {% if route.status == 'accepted' %}
+      <span style="color:#1a7f4b;" class="small align-self-center">
+        <i class="bi bi-check-circle-fill me-1"></i>Прийнято
+        {% if route.accepted_at %}· {{ route.accepted_at.strftime('%d.%m %H:%M') }}{% endif %}
+      </span>
+      {% endif %}
+
+      {% if route.status == 'rejected' %}
+      <span style="color:#c0392b;" class="small align-self-center">
+        <i class="bi bi-x-circle-fill me-1"></i>Відхилено
+        {% if route.rejected_at %}· {{ route.rejected_at.strftime('%d.%m %H:%M') }}{% endif %}
+      </span>
+      {% endif %}
+
+      <button class="btn btn-sm btn-outline-secondary" type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#stops-{{ route.id }}">
+        <i class="bi bi-list-ul me-1"></i>Зупинки
+      </button>
+
+      <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
+            onsubmit="return confirm('Видалити маршрут?')">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="collapse" id="stops-{{ route.id }}">
+    <ul class="stop-list">
+      {% for stop in route.stops %}
+      {% set d = stop.delivery %}
+      {% set order = d.order if d else none %}
+      <li>
+        <span class="stop-num">{{ stop.stop_order }}</span>
+        <div style="flex:1;">
+          <div style="font-weight:500;">
+            {% if order %}
+              {% if order.city %}{{ order.city }}, {% endif %}
+              {{ d.street or order.street or '—' }}
+              {% if d.building_number or order.building_number %}
+                {{ d.building_number or order.building_number }}
+              {% endif %}
+            {% else %}—{% endif %}
+          </div>
+          <div class="text-muted" style="font-size:0.82rem;">
+            {% if stop.planned_arrival %}
+            <span><i class="bi bi-clock me-1"></i>{{ stop.planned_arrival.strftime('%H:%M') }}</span>
+            {% endif %}
+            {% if d and d.size %}<span class="ms-2">{{ d.size }}</span>{% endif %}
+            {% if d and d.phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>{% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

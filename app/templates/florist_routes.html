@@ -1,0 +1,116 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+body { background: #f8f9fc; }
+.florist-header { background: linear-gradient(135deg, #ff6b9d 0%, #c44dff 100%); color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; }
+.route-block { border-radius: 14px; border: 1.5px solid #e3eafc; background: #fff; margin-bottom: 24px; overflow: hidden; }
+.route-block-header { padding: 14px 20px; background: #f7f9fc; border-bottom: 1.5px solid #e3eafc; display: flex; align-items: center; gap: 12px; }
+.courier-badge { background: #e0f0ff; color: #1a73e8; border-radius: 20px; padding: 3px 12px; font-size: 0.82rem; font-weight: 600; }
+.stop-card { padding: 14px 20px; border-bottom: 1px solid #f0f2f7; display: flex; gap: 14px; align-items: flex-start; }
+.stop-card:last-child { border-bottom: none; }
+.stop-num-big { width: 36px; height: 36px; border-radius: 50%; background: #3388ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
+.bouquet-tag { display: inline-block; background: #fff0f6; color: #c0286b; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; margin-top: 4px; }
+.pref-tag { display: inline-block; background: #f5f0ff; color: #7c3aed; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; margin-top: 4px; margin-left: 4px; }
+.time-tag { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="florist-header">
+  <div style="font-size:1.5rem;font-weight:700;">🌸 Маршрути на сьогодні</div>
+  <div style="opacity:.85;margin-top:4px;">{{ today.strftime('%d.%m.%Y') }} · Послідовність збирання букетів</div>
+</div>
+
+{% if not routes %}
+<div class="text-center py-5 text-muted">
+  <i class="bi bi-flower1" style="font-size:3rem;color:#ff6b9d;"></i>
+  <div class="mt-3 fs-5">На сьогодні маршрутів немає</div>
+</div>
+{% else %}
+
+{% for route in routes %}
+<div class="route-block shadow-sm">
+  <div class="route-block-header">
+    <div style="font-weight:700;font-size:1rem;">
+      Маршрут #{{ loop.index }}
+    </div>
+    {% if route.courier %}
+    <span class="courier-badge">
+      <i class="bi bi-person-badge me-1"></i>{{ route.courier.name }}
+    </span>
+    {% endif %}
+    <div class="text-muted small ms-auto d-flex gap-3">
+      <span><i class="bi bi-box-seam me-1"></i>{{ route.deliveries_count }} доставок</span>
+      {% if route.total_distance_km %}
+      <span><i class="bi bi-geo me-1"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% for stop in route.stops %}
+  {% set d = stop.delivery %}
+  {% set order = d.order if d else none %}
+  {% set client = d.client if d else none %}
+  <div class="stop-card">
+    <div class="stop-num-big">{{ stop.stop_order }}</div>
+    <div style="flex:1;">
+
+      <!-- Address & time -->
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span style="font-weight:600;font-size:0.97rem;">
+          {% if order %}
+            {% if order.city %}{{ order.city }}, {% endif %}
+            {{ d.street or order.street or '—' }}
+            {% if d.building_number or order.building_number %}
+              {{ d.building_number or order.building_number }}
+            {% endif %}
+            {% if d.floor or order.floor %}, пов. {{ d.floor or order.floor }}{% endif %}
+            {% if d.entrance or order.entrance %}, п/їзд {{ d.entrance or order.entrance }}{% endif %}
+          {% else %}—{% endif %}
+        </span>
+        {% if stop.planned_arrival %}
+        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ stop.planned_arrival.strftime('%H:%M') }}</span>
+        {% elif d and (d.time_from or d.time_to) %}
+        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ d.time_from or '?' }}–{{ d.time_to or '?' }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Bouquet info -->
+      <div class="mt-1">
+        {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
+        {% if size %}
+        <span class="bouquet-tag">🌷 {{ size }}</span>
+        {% endif %}
+
+        {% set prefs = d.preferences or (order.preferences if order else '') %}
+        {% if prefs %}
+        {% for p in prefs.split(',') %}
+        <span class="pref-tag">{{ p.strip() }}</span>
+        {% endfor %}
+        {% endif %}
+      </div>
+
+      <!-- Recipient info -->
+      <div class="mt-2 text-muted" style="font-size:0.85rem;">
+        {% if order and order.recipient_name %}
+        <span><i class="bi bi-person me-1"></i>{{ order.recipient_name }}</span>
+        {% endif %}
+        {% if d and d.phone %}
+        <span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>
+        {% elif order and order.recipient_phone %}
+        <span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ order.recipient_phone }}</span>
+        {% endif %}
+        {% if order and order.comment %}
+        <div class="mt-1"><i class="bi bi-chat-text me-1"></i><i>{{ order.comment }}</i></div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endif %}
+{% endblock %}

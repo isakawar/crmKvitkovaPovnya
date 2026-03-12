@@ -375,8 +375,11 @@
     <a href="/distribution" class="nav-link {% if request.path.startswith('/distribution') %}active{% endif %}" title="Вивантаження">
         <i class="bi bi-geo-alt"></i>
     </a>
-    <a href="/route-generator" class="nav-link {% if request.path.startswith('/route-generator') %}active{% endif %}" title="Оптимізатор">
+    <a href="/route-generator" class="nav-link {% if request.path.startswith('/route-generator') %}active{% endif %}" title="Оптимізатор маршрутів">
         <i class="bi bi-signpost-split"></i>
+    </a>
+    <a href="/routes" class="nav-link {% if request.path.startswith('/routes') %}active{% endif %}" title="Збережені маршрути">
+        <i class="bi bi-journals"></i>
     </a>
     <a href="/couriers" class="nav-link {% if request.path.startswith('/couriers') %}active{% endif %}" title="Кур'єри">
         <i class="bi bi-person-badge"></i>

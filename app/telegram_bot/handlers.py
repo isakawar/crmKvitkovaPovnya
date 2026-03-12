@@ -332,6 +332,8 @@ class CourierHandlers:
             await self._handle_confirmation(query, courier, data)
         elif data.startswith("problem_"):
             await self._handle_problem_report(query, courier, data)
+        elif data.startswith("route_accept_") or data.startswith("route_reject_"):
+            await self._handle_route_response(query, courier, data)
         else:
             logger.warning(f"Unknown callback command: {data}")
             await query.edit_message_text("❌ Невідома команда")
@@ -899,4 +901,66 @@ class CourierHandlers:
             problem_text,
             reply_markup=self.keyboards.problem_types(delivery_id),
             parse_mode='Markdown'
-        ) 
+        )
+
+    async def _handle_route_response(self, query, courier: Courier, data: str):
+        """Handle courier accept/reject for a delivery route proposal"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+
+        try:
+            action, route_id_str = data.rsplit('_', 1)
+            route_id = int(route_id_str)
+        except (ValueError, AttributeError):
+            await query.edit_message_text("❌ Помилка обробки відповіді")
+            return
+
+        route = DeliveryRoute.query.get(route_id)
+        if not route:
+            await query.edit_message_text("❌ Маршрут не знайдено або вже видалено")
+            return
+
+        if route.status not in ('sent', 'draft'):
+            status_map = {'accepted': 'вже прийнято', 'rejected': 'вже відхилено', 'completed': 'завершено'}
+            label = status_map.get(route.status, route.status)
+            await query.edit_message_text(f"ℹ️ Цей маршрут {label}.")
+            return
+
+        accepted = data.startswith('route_accept_')
+
+        if accepted:
+            route.status = 'accepted'
+            route.accepted_at = datetime.utcnow()
+            # Assign courier to all deliveries in this route
+            for stop in RouteDelivery.query.filter_by(route_id=route_id).all():
+                if stop.delivery:
+                    stop.delivery.courier_id = courier.id
+                    stop.delivery.status = 'Розподілено'
+            db.session.commit()
+
+            h, m = divmod(route.estimated_duration_min or 0, 60)
+            duration_str = f"{h} год {m} хв" if h else f"{m} хв"
+            text = (
+                f"✅ <b>Маршрут прийнято!</b>\n\n"
+                f"📅 Дата: <b>{route.route_date.strftime('%d.%m.%Y')}</b>\n"
+                f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
+            )
+            if route.total_distance_km:
+                text += f"📍 Відстань: <b>~{route.total_distance_km:.1f} км</b>\n"
+            if route.estimated_duration_min:
+                text += f"⏱ Час у дорозі: <b>~{duration_str}</b>\n"
+            if route.delivery_price:
+                text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
+            text += "\nДеталі маршруту з'являться у розділі 'Сьогодні' в день доставки."
+        else:
+            route.status = 'rejected'
+            route.rejected_at = datetime.utcnow()
+            db.session.commit()
+            text = (
+                f"❌ <b>Маршрут відхилено</b>\n\n"
+                f"📅 {route.route_date.strftime('%d.%m.%Y')} · "
+                f"{route.deliveries_count} доставок\n\n"
+                f"Менеджер отримає сповіщення та призначить іншого кур'єра."
+            )
+
+        await query.edit_message_text(text, parse_mode='HTML',
+                                      reply_markup=self.keyboards.back_to_main()) 
