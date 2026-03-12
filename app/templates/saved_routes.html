@@ -10,7 +10,8 @@
 .status-rejected  { background: #ffeae5; color: #c0392b; }
 .status-completed { background: #f0f9ff; color: #0e6fa7; }
 .route-card { border-radius: 14px; border: 1.5px solid #e3eafc; margin-bottom: 18px; background: #fff; }
-.route-card-header { padding: 16px 20px; border-bottom: 1px solid #f0f2f7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.route-card-header { padding: 16px 20px; border-bottom: 1px solid #f0f2f7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; cursor: pointer; user-select: none; }
+.route-card-header:hover { background: #f7f9fc; }
 .stop-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #3388ff; color: #fff; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
 .route-card .table thead th { font-size: 0.78rem; color: #6b7280; font-weight: 600; border-bottom: 1.5px solid #e3eafc; padding: 8px 10px; }
 .route-card .table td { padding: 8px 10px; vertical-align: middle; border-color: #f0f2f7; }
@@ -60,7 +61,7 @@
 
 {% for route in routes %}
 <div class="route-card shadow-sm">
-  <div class="route-card-header">
+  <div class="route-card-header" data-bs-toggle="collapse" data-bs-target="#stops-{{ route.id }}">
     <div>
       <span class="fw-bold" style="font-size:1.05rem;">
         {{ route.route_date.strftime('%d.%m.%Y') }}
@@ -68,7 +69,11 @@
       <span class="text-muted ms-2" style="font-size:0.9rem;">#{{ route.id }}</span>
     </div>
 
-    <span class="status-badge status-{{ route.status }}">
+    {% set status_time = route.sent_at if route.status == 'sent' else
+                         route.accepted_at if route.status == 'accepted' else
+                         route.rejected_at if route.status == 'rejected' else none %}
+    <span class="status-badge status-{{ route.status }}"
+          {% if status_time %}title="{{ status_time|kyiv_time }}" data-bs-toggle="tooltip"{% endif %}>
       {{ status_labels.get(route.status, route.status) }}
     </span>
 
@@ -125,29 +130,20 @@
       {% if route.status == 'sent' %}
       <span class="text-muted small align-self-center">
         <i class="bi bi-clock me-1"></i>Очікує відповіді
-        {% if route.sent_at %}· {{ route.sent_at.strftime('%d.%m %H:%M') }}{% endif %}
       </span>
       {% endif %}
 
       {% if route.status == 'accepted' %}
       <span style="color:#1a7f4b;" class="small align-self-center">
         <i class="bi bi-check-circle-fill me-1"></i>Прийнято
-        {% if route.accepted_at %}· {{ route.accepted_at.strftime('%d.%m %H:%M') }}{% endif %}
       </span>
       {% endif %}
 
       {% if route.status == 'rejected' %}
       <span style="color:#c0392b;" class="small align-self-center">
         <i class="bi bi-x-circle-fill me-1"></i>Відхилено
-        {% if route.rejected_at %}· {{ route.rejected_at.strftime('%d.%m %H:%M') }}{% endif %}
       </span>
       {% endif %}
-
-      <button class="btn btn-sm btn-outline-secondary" type="button"
-              data-bs-toggle="collapse"
-              data-bs-target="#stops-{{ route.id }}">
-        <i class="bi bi-list-ul me-1"></i>Зупинки
-      </button>
 
       <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
             onsubmit="return confirm('Видалити маршрут?')">
@@ -239,4 +235,15 @@
 </div>
 {% endfor %}
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('.route-card-header button, .route-card-header form, .route-card-header select, .route-card-header input').forEach(function(el) {
+  el.addEventListener('click', function(e) { e.stopPropagation(); });
+});
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+  new bootstrap.Tooltip(el);
+});
+</script>
 {% endblock %}

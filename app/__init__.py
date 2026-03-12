@@ -35,7 +35,6 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.clients.routes import clients_bp
     from app.blueprints.couriers.routes import couriers_bp
     from app.blueprints.deliveries.routes import deliveries_bp
-    from app.blueprints.distribution.routes import distribution_bp
     from app.blueprints.reports.routes import reports_bp
     from app.blueprints.settings.routes import bp as settings_bp
     from app.blueprints.auth import bp as auth_bp
@@ -46,7 +45,6 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(clients_bp)
     app.register_blueprint(couriers_bp)
     app.register_blueprint(deliveries_bp)
-    app.register_blueprint(distribution_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(auth_bp)
@@ -73,6 +71,18 @@ def create_app(config_class=DevelopmentConfig):
     @app.route('/')
     def index():
         return redirect(url_for('orders.orders_list'))
+
+    from zoneinfo import ZoneInfo
+    _kyiv_tz = ZoneInfo('Europe/Kyiv')
+
+    @app.template_filter('kyiv_time')
+    def kyiv_time_filter(dt):
+        if dt is None:
+            return ''
+        import datetime as _dt
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=_dt.timezone.utc)
+        return dt.astimezone(_kyiv_tz).strftime('%d.%m.%Y %H:%M')
 
     version = get_version()
     @app.context_processor
