@@ -11,10 +11,9 @@
 .status-completed { background: #f0f9ff; color: #0e6fa7; }
 .route-card { border-radius: 14px; border: 1.5px solid #e3eafc; margin-bottom: 18px; background: #fff; }
 .route-card-header { padding: 16px 20px; border-bottom: 1px solid #f0f2f7; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.stop-list { list-style: none; padding: 0; margin: 0; }
-.stop-list li { padding: 8px 20px; border-bottom: 1px solid #f5f6fa; font-size: 0.9rem; display: flex; gap: 10px; align-items: flex-start; }
-.stop-list li:last-child { border-bottom: none; }
-.stop-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #3388ff; color: #fff; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.stop-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #3388ff; color: #fff; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.route-card .table thead th { font-size: 0.78rem; color: #6b7280; font-weight: 600; border-bottom: 1.5px solid #e3eafc; padding: 8px 10px; }
+.route-card .table td { padding: 8px 10px; vertical-align: middle; border-color: #f0f2f7; }
 .assign-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .assign-form select, .assign-form input[type=number] { border-radius: 8px; border: 1.5px solid #e3eafc; padding: 5px 10px; font-size: 0.88rem; height: 34px; }
 </style>
@@ -160,33 +159,82 @@
   </div>
 
   <div class="collapse" id="stops-{{ route.id }}">
-    <ul class="stop-list">
+    <table class="table table-sm mb-0" style="font-size:0.88rem;">
+      <thead style="background:#f7f9fc;">
+        <tr>
+          <th style="width:32px;">#</th>
+          <th>Клієнт</th>
+          <th>Букет</th>
+          <th>Отримувач</th>
+          <th>Адреса</th>
+          <th>Телефон</th>
+          <th>Час</th>
+          <th>Коментар</th>
+        </tr>
+      </thead>
+      <tbody>
       {% for stop in route.stops %}
       {% set d = stop.delivery %}
       {% set order = d.order if d else none %}
-      <li>
-        <span class="stop-num">{{ stop.stop_order }}</span>
-        <div style="flex:1;">
-          <div style="font-weight:500;">
-            {% if order %}
-              {% if order.city %}{{ order.city }}, {% endif %}
-              {{ d.street or order.street or '—' }}
-              {% if d.building_number or order.building_number %}
-                {{ d.building_number or order.building_number }}
-              {% endif %}
-            {% else %}—{% endif %}
-          </div>
-          <div class="text-muted" style="font-size:0.82rem;">
-            {% if stop.planned_arrival %}
-            <span><i class="bi bi-clock me-1"></i>{{ stop.planned_arrival.strftime('%H:%M') }}</span>
+      {% set client = d.client if d else none %}
+      <tr>
+        <td><span class="stop-num">{{ stop.stop_order }}</span></td>
+
+        <td style="white-space:nowrap;">
+          {% if client %}@{{ client.instagram }}{% else %}—{% endif %}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
+          {{ size or '—' }}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {{ (order.recipient_name if order else '') or '—' }}
+        </td>
+
+        <td>
+          {% if d and d.is_pickup %}
+            <span class="text-muted">Самовивіз</span>
+          {% elif order %}
+            {% set parts = [] %}
+            {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+            {% set street = d.street or order.street %}
+            {% if street %}{% set _ = parts.append(street) %}{% endif %}
+            {% set build = d.building_number or order.building_number %}
+            {% if build %}{% set _ = parts.append(build) %}{% endif %}
+            {{ parts | join(', ') }}
+            {% set floor = d.floor or order.floor %}
+            {% set ent = d.entrance or order.entrance %}
+            {% if floor or ent %}
+            <div class="text-muted" style="font-size:0.8rem;">
+              {% if floor %}пов. {{ floor }}{% endif %}
+              {% if ent %} п/їзд {{ ent }}{% endif %}
+            </div>
             {% endif %}
-            {% if d and d.size %}<span class="ms-2">{{ d.size }}</span>{% endif %}
-            {% if d and d.phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>{% endif %}
-          </div>
-        </div>
-      </li>
+          {% else %}—{% endif %}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}
+        </td>
+
+        <td style="white-space:nowrap;">
+          {% if stop.planned_arrival %}
+            {{ stop.planned_arrival.strftime('%H:%M') }}
+          {% elif d and (d.time_from or d.time_to) %}
+            {{ d.time_from or '?' }}–{{ d.time_to or '?' }}
+          {% else %}—{% endif %}
+        </td>
+
+        <td style="max-width:200px;">
+          {% set comment = d.comment or (order.comment if order else '') %}
+          {% if comment %}<span title="{{ comment }}">{{ comment | truncate(60) }}</span>{% else %}—{% endif %}
+        </td>
+      </tr>
       {% endfor %}
-    </ul>
+      </tbody>
+    </table>
   </div>
 </div>
 {% endfor %}

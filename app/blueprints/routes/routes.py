@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required
+from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.courier import Courier
@@ -49,7 +50,17 @@ def saved_routes():
             query = query.filter_by(route_date=d)
         except ValueError:
             pass
-    routes = query.all()
+    from app.models.delivery import Delivery
+    from app.models.order import Order
+    from app.models.client import Client
+    routes = query.options(
+        joinedload(DeliveryRoute.stops)
+            .joinedload(RouteDelivery.delivery)
+            .joinedload(Delivery.order),
+        joinedload(DeliveryRoute.stops)
+            .joinedload(RouteDelivery.delivery)
+            .joinedload(Delivery.client),
+    ).all()
     couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
     return render_template('saved_routes.html', routes=routes, couriers=couriers, date_filter=date_filter)
 

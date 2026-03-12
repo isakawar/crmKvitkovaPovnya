@@ -353,6 +353,28 @@ def route_generator_save():
 
     from app.models.delivery_route import DeliveryRoute, RouteDelivery
 
+    # Build address → delivery_id map (optimizer doesn't echo IDs back in stops)
+    day_deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order))
+        .filter(Delivery.delivery_date == selected_date)
+        .all()
+    )
+    addr_to_delivery_id = {}
+    for d in day_deliveries:
+        order = d.order
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or ''
+        house = (d.building_number or (order.building_number if order else '')) or ''
+        parts = []
+        if city:
+            parts.append(city)
+        if street:
+            parts.append(street + (' ' + house if house else ''))
+        key = ', '.join(parts).lower().strip()
+        if key:
+            addr_to_delivery_id[key] = d.id
+
     saved_route_ids = []
     for route_data in routes:
         stops = route_data.get('stops', [])
@@ -370,7 +392,11 @@ def route_generator_save():
         db.session.flush()
 
         for i, stop in enumerate(stops):
+            # Try direct id first, fall back to address matching
             delivery_id = stop.get('id')
+            if not delivery_id:
+                stop_addr = (stop.get('address') or '').lower().strip()
+                delivery_id = addr_to_delivery_id.get(stop_addr)
             if not delivery_id:
                 continue
 
