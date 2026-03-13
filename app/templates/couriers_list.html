@@ -52,15 +52,6 @@
         <div class="col-md-3">
           <div class="card border-0 shadow-sm">
             <div class="card-body text-center">
-              <h5 class="card-title text-warning">💰 Середній рейт</h5>
-              <h3 class="mb-0">{{ total_stats.average_rate }}₴</h3>
-              <small class="text-muted">За доставку</small>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
               <h5 class="card-title text-info">🏆 Топ кур'єр</h5>
               <h3 class="mb-0">
                 {% if courier_stats %}
@@ -96,7 +87,6 @@
                     <th class="text-center">Всього доставок</th>
                     <th class="text-center">Виконано</th>
                     <th class="text-center">В роботі</th>
-                    <th class="text-center">Рейт за доставку</th>
                     <th class="text-center">Telegram</th>
                     <th class="text-center">Остання доставка</th>
                     <th class="text-center">Дії</th>
@@ -138,11 +128,6 @@
                         <span class="text-warning">{{ stats.in_progress }}</span>
                       </td>
                       <td class="text-center">
-                        <span class="badge bg-success">
-                          {{ stats.delivery_rate or 50 }}₴
-                        </span>
-                      </td>
-                      <td class="text-center">
                         {% if stats.courier.telegram_registered %}
                           <div class="d-flex flex-column align-items-center">
                             <span class="badge bg-success mb-1">
@@ -179,8 +164,7 @@
                                   data-courier-id="{{ stats.courier.id }}"
                                   data-courier-name="{{ stats.courier.name }}"
                                   data-courier-phone="{{ stats.courier.phone }}"
-                                  data-courier-rate="{{ stats.courier.delivery_rate or 50 }}"
-                                  title="Редагувати">
+                                          title="Редагувати">
                             <i class="bi bi-pencil"></i>
                           </button>
                           <button class="btn btn-outline-{{ 'warning' if stats.courier.active else 'success' }} btn-sm toggle-status" 
@@ -234,11 +218,7 @@
           </div>
           <div class="mb-3">
             <label for="courierPhone" class="form-label">Телефон *</label>
-            <input type="tel" class="form-control" id="courierPhone" name="phone" required>
-          </div>
-          <div class="mb-3">
-            <label for="courierRate" class="form-label">Рейт за доставку (₴) *</label>
-            <input type="number" class="form-control" id="courierRate" name="delivery_rate" value="50" min="1" max="500" required>
+            <input type="tel" class="form-control" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
           </div>
         </div>
         <div class="modal-footer">
@@ -267,11 +247,7 @@
           </div>
           <div class="mb-3">
             <label for="editCourierPhone" class="form-label">Телефон *</label>
-            <input type="tel" class="form-control" id="editCourierPhone" name="phone" required>
-          </div>
-          <div class="mb-3">
-            <label for="editCourierRate" class="form-label">Рейт за доставку (₴) *</label>
-            <input type="number" class="form-control" id="editCourierRate" name="delivery_rate" min="1" max="500" required>
+            <input type="tel" class="form-control" id="editCourierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
           </div>
         </div>
         <div class="modal-footer">
@@ -324,8 +300,35 @@
 </style>
 
 <script>
+function applyPhoneMask(input) {
+  input.addEventListener('focus', function() {
+    if (!this.value) this.value = '+38';
+  });
+  input.addEventListener('input', function() {
+    let digits = this.value.replace(/\D/g, '');
+    if (digits.startsWith('380')) {
+      digits = digits.slice(0, 12);
+    } else if (digits.startsWith('38')) {
+      digits = digits.slice(0, 12);
+    } else if (digits.startsWith('0')) {
+      digits = '38' + digits.slice(0, 10);
+    } else {
+      digits = digits.slice(0, 12);
+    }
+    this.value = '+' + digits;
+  });
+  input.addEventListener('keydown', function(e) {
+    // prevent deleting the +38 prefix
+    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 3) {
+      e.preventDefault();
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-  
+  applyPhoneMask(document.getElementById('courierPhone'));
+  applyPhoneMask(document.getElementById('editCourierPhone'));
+
 
   
   // Зміна періоду статистики
@@ -342,9 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
       name: formData.get('name'),
       phone: formData.get('phone'),
-      delivery_rate: parseInt(formData.get('delivery_rate'))
     };
-    
+
     fetch('/couriers/new', {
       method: 'POST',
       headers: {
@@ -374,12 +376,10 @@ document.addEventListener('DOMContentLoaded', function() {
       const courierId = this.dataset.courierId;
       const courierName = this.dataset.courierName;
       const courierPhone = this.dataset.courierPhone;
-      const courierRate = this.dataset.courierRate;
-      
+
       document.getElementById('editCourierId').value = courierId;
       document.getElementById('editCourierName').value = courierName;
       document.getElementById('editCourierPhone').value = courierPhone;
-      document.getElementById('editCourierRate').value = courierRate;
       
       new bootstrap.Modal(document.getElementById('editCourierModal')).show();
     });
@@ -393,9 +393,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const data = {
       name: formData.get('name'),
       phone: formData.get('phone'),
-      delivery_rate: parseInt(formData.get('delivery_rate'))
     };
-    
+
     fetch(`/couriers/${courierId}/edit`, {
       method: 'POST',
       headers: {

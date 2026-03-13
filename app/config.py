@@ -19,6 +19,7 @@ class Config:
     LOGIN_DISABLED = False
     REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
+    DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
 
 class DevelopmentConfig:
     DEBUG = True
@@ -40,6 +41,7 @@ class DevelopmentConfig:
     TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', 'webhook_secret')
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
+    DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

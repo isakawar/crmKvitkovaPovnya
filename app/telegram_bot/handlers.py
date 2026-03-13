@@ -8,7 +8,7 @@ import urllib.parse
 from datetime import datetime, timedelta
 from typing import Optional
 
-from telegram import Update
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes
 from flask import current_app
 
@@ -44,10 +44,15 @@ class CourierHandlers:
                 f"Ви зареєстровані як кур'єр. Чекайте на пропозиції маршрутів від адміністратора."
             )
         else:
+            keyboard = ReplyKeyboardMarkup(
+                [[KeyboardButton("📱 Поділитися номером телефону", request_contact=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            )
             await update.message.reply_text(
                 "🌸 Ласкаво просимо до Квіткової Повні!\n\n"
-                "Для реєстрації надішліть ваш номер телефону:\n"
-                "/register +380501234567"
+                "Для реєстрації натисніть кнопку нижче — Telegram надішле ваш підтверджений номер телефону.",
+                reply_markup=keyboard,
             )
     
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -197,7 +202,79 @@ class CourierHandlers:
         )
         
         logger.info(f"Courier {courier.name} (ID: {courier.id}) successfully registered with Telegram chat_id {chat_id}")
-    
+
+    async def handle_contact(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle contact sharing — verify phone and register courier"""
+        chat_id = update.effective_chat.id
+        user = update.effective_user
+        contact = update.message.contact
+
+        # Telegram guarantees the contact belongs to the sender only when user_id matches
+        if contact.user_id != user.id:
+            await update.message.reply_text(
+                "❌ Будь ласка, надішліть свій власний номер телефону, а не чужий.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        # Already registered?
+        existing = Courier.query.filter_by(telegram_chat_id=chat_id).first()
+        if existing:
+            await update.message.reply_text(
+                f"✅ Ви вже зареєстровані як {existing.name}.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        # Normalize phone: Telegram may omit leading '+'
+        raw_phone = contact.phone_number
+        phone = raw_phone if raw_phone.startswith('+') else f'+{raw_phone}'
+
+        courier = Courier.query.filter_by(phone=phone).first()
+
+        if not courier:
+            keyboard = ReplyKeyboardMarkup(
+                [[KeyboardButton("📱 Поділитися номером телефону", request_contact=True)]],
+                resize_keyboard=True,
+                one_time_keyboard=True,
+            )
+            await update.message.reply_text(
+                f"❌ Номер <b>{phone}</b> не знайдено в системі.\n\n"
+                "Переконайтеся, що адміністратор додав вас до CRM з саме цим номером.",
+                parse_mode='HTML',
+                reply_markup=keyboard,
+            )
+            return
+
+        if not courier.active:
+            await update.message.reply_text(
+                "❌ Ваш акаунт деактивований. Зверніться до адміністратора.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        if courier.telegram_chat_id and courier.telegram_chat_id != chat_id:
+            await update.message.reply_text(
+                "❌ Цей акаунт вже прив'язаний до іншого Telegram.\n"
+                "Зверніться до адміністратора для скидання прив'язки.",
+                reply_markup=ReplyKeyboardRemove(),
+            )
+            return
+
+        courier.telegram_chat_id = chat_id
+        courier.telegram_username = user.username if user.username else None
+        courier.telegram_registered = True
+        courier.last_telegram_activity = datetime.utcnow()
+        db.session.commit()
+
+        await update.message.reply_text(
+            f"✅ Реєстрація успішна, {courier.name}!\n\n"
+            "Чекайте на пропозиції маршрутів від адміністратора. "
+            "Ви отримаєте повідомлення із деталями і зможете прийняти або відхилити маршрут.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        logger.info(f"Courier {courier.name} (ID: {courier.id}) registered via contact sharing, chat_id={chat_id}")
+
     async def profile_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /profile command"""
         chat_id = update.effective_chat.id
@@ -221,7 +298,6 @@ class CourierHandlers:
 • Ім'я: {courier.name}
 • Телефон: {courier.phone}
 • Статус: {'🟢 Активний' if courier.active else '🔴 Неактивний'}
-• Рейт за доставку: {courier.delivery_rate}₴
 
 **Статистика:**
 • Всього доставок: {total_deliveries}
