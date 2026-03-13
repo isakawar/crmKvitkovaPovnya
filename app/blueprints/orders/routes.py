@@ -196,11 +196,6 @@ def route_generator():
         selected_date = date.today()
         selected_date_str = selected_date.isoformat()
 
-    start_time = request.form.get('start_time', '09:00')
-    num_couriers = max(int(request.form.get('num_couriers', 1) or 1), 1) if request.method == 'POST' else 1
-    capacity_raw = request.form.get('capacity', '').strip() if request.method == 'POST' else ''
-    capacity = int(capacity_raw) if capacity_raw.isdigit() and int(capacity_raw) > 0 else None
-
     optimizer_result = None
     result_json = ''
     deliveries = []
@@ -239,9 +234,6 @@ def route_generator():
                 optimizer_result = optimize_deliveries(
                     deliveries=deliveries,
                     optimizer_url=optimizer_url,
-                    start_time=start_time,
-                    num_couriers=num_couriers,
-                    capacity=capacity,
                 )
                 result_json = json.dumps(optimizer_result, ensure_ascii=False)
             except RouteOptimizerInfeasibleError as exc:
@@ -255,9 +247,6 @@ def route_generator():
     return render_template(
         'route_generator.html',
         selected_date=selected_date_str,
-        start_time=start_time,
-        num_couriers=num_couriers,
-        capacity=capacity_raw,
         optimizer_result=optimizer_result,
         result_json=result_json,
         infeasible_error=infeasible_error,
@@ -290,6 +279,63 @@ def route_generator_recalculate():
         body = {}
 
     return jsonify(body), resp.status_code
+
+
+@orders_bp.route('/route-generator/optimize-csv', methods=['POST'])
+@login_required
+def route_generator_optimize_csv():
+    csv_file = request.files.get('file')
+    if not csv_file or not csv_file.filename:
+        flash('Оберіть CSV файл.', 'warning')
+        return redirect(url_for('orders.route_generator'))
+
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    url = f"{optimizer_url.rstrip('/')}/api/optimize"
+    api_key = current_app.config.get('OPTIMIZER_API_KEY') or ''
+    headers = {}
+    if api_key:
+        headers['X-API-Key'] = api_key
+
+    optimizer_result = None
+    result_json = ''
+    infeasible_error = None
+    general_error = None
+
+    try:
+        resp = requests.post(
+            url,
+            files={'file': (csv_file.filename, csv_file.stream, csv_file.content_type or 'text/csv')},
+            headers=headers,
+            timeout=120,
+        )
+        body = {}
+        try:
+            body = resp.json()
+        except ValueError:
+            pass
+
+        if resp.status_code == 200:
+            optimizer_result = body
+            result_json = json.dumps(optimizer_result, ensure_ascii=False)
+        elif resp.status_code == 422 and body.get('error') == 'INFEASIBLE':
+            infeasible_error = {
+                'message': body.get('message', 'Неможливо побудувати маршрут'),
+                'minimum_couriers_required': body.get('minimum_couriers_required'),
+            }
+        else:
+            general_error = body.get('detail') or f'Оптимізатор повернув помилку HTTP {resp.status_code}'
+    except requests.RequestException as exc:
+        general_error = f"Немає з'єднання з route optimizer: {exc}"
+
+    return render_template(
+        'route_generator.html',
+        selected_date=date.today().isoformat(),
+        optimizer_result=optimizer_result,
+        result_json=result_json,
+        infeasible_error=infeasible_error,
+        general_error=general_error,
+        csv_mode=True,
+    )
 
 
 @orders_bp.route('/route-generator/deliveries', methods=['GET'])

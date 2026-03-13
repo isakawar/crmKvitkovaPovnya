@@ -142,6 +142,7 @@
     border-radius: 20px; background: #eaf1fb; color: #3373cc;
     flex-shrink: 0;
   }
+  .btn-remove-stop:hover { color: #dc3545 !important; }
 </style>
 {% endblock %}
 
@@ -153,26 +154,59 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
   <h2 class="mb-0">Оптимізатор маршрутів</h2>
-  <div class="text-muted small">Джерело: доставки CRM зі статусом «Очікує» / «Розподілено»</div>
 </div>
 
-<div class="card shadow-sm border-0 mb-4">
+<!-- Mode tabs -->
+<ul class="nav nav-tabs mb-0" id="optimizer-tabs" style="border-bottom:none;">
+  <li class="nav-item">
+    <button class="nav-link {% if not csv_mode %}active{% endif %}" id="tab-crm" type="button">
+      <i class="bi bi-database me-1"></i> З CRM
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link {% if csv_mode %}active{% endif %}" id="tab-csv" type="button">
+      <i class="bi bi-filetype-csv me-1"></i> Завантажити CSV
+    </button>
+  </li>
+</ul>
+
+<div class="card shadow-sm border-0 mb-4" style="border-top-left-radius:0;">
   <div class="card-body">
-    <form method="post" id="optimizer-form" class="row g-3 align-items-end">
-      <input type="hidden" name="num_couriers" id="form-num-couriers" value="{{ num_couriers }}">
-      <input type="hidden" name="start_time" id="form-start-time" value="{{ start_time }}">
-      <input type="hidden" name="capacity" id="form-capacity" value="{{ capacity }}">
-      <div class="col-md-9">
-        <label class="form-label">Дата доставок</label>
-        <input type="date" name="delivery_date" class="form-control" value="{{ selected_date }}">
-      </div>
-      <div class="col-md-3 d-grid">
-        <label class="form-label d-none d-md-block">&nbsp;</label>
-        <button type="button" id="btn-open-picker" class="btn btn-primary">
-          <i class="bi bi-magic me-1"></i> Побудувати маршрут
-        </button>
-      </div>
-    </form>
+
+    <!-- CRM mode -->
+    <div id="panel-crm" {% if csv_mode %}style="display:none;"{% endif %}>
+      <form method="post" id="optimizer-form" class="row g-3 align-items-end">
+        <div class="col-md-9">
+          <label class="form-label">Дата доставок</label>
+          <input type="date" name="delivery_date" class="form-control" value="{{ selected_date }}">
+        </div>
+        <div class="col-md-3 d-grid">
+          <label class="form-label d-none d-md-block">&nbsp;</label>
+          <button type="button" id="btn-open-picker" class="btn btn-primary">
+            <i class="bi bi-magic me-1"></i> Побудувати маршрут
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- CSV mode -->
+    <div id="panel-csv" {% if not csv_mode %}style="display:none;"{% endif %}>
+      <form method="post" action="{{ url_for('orders.route_generator_optimize_csv') }}"
+            enctype="multipart/form-data" class="row g-3 align-items-end" id="csv-form">
+        <div class="col-md-9">
+          <label class="form-label">CSV файл з замовленнями</label>
+          <input type="file" name="file" class="form-control" accept=".csv" id="csv-file-input">
+          <div class="form-text">Файл у форматі, який підтримує оптимізатор (колонки: city, address, house, delivery_window_start, delivery_window_end)</div>
+        </div>
+        <div class="col-md-3 d-grid">
+          <label class="form-label d-none d-md-block">&nbsp;</label>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-magic me-1"></i> Розрахувати
+          </button>
+        </div>
+      </form>
+    </div>
+
   </div>
 </div>
 
@@ -243,9 +277,15 @@
       </button>
     </form>
 
+    <button id="btn-add-courier" class="btn btn-outline-secondary">
+      <i class="bi bi-person-plus me-1"></i> Додати кур'єра
+    </button>
+
+    {% if not csv_mode %}
     <button id="btn-save-routes" class="btn btn-success">
       <i class="bi bi-floppy me-1"></i> Зберегти маршрути
     </button>
+    {% endif %}
   </div>
 
   <div id="routes-container"></div>
@@ -284,21 +324,6 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-0">
-        <!-- Route params -->
-        <div class="row g-2 px-4 py-3" style="border-bottom:1.5px solid #e3eafc;background:#f9fafb;">
-          <div class="col-4">
-            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Кур'єрів</label>
-            <input type="number" id="picker-num-couriers" class="form-control form-control-sm" min="1" value="{{ num_couriers }}">
-          </div>
-          <div class="col-4">
-            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Старт</label>
-            <input type="time" id="picker-start-time" class="form-control form-control-sm" value="{{ start_time }}">
-          </div>
-          <div class="col-4">
-            <label class="form-label mb-1" style="font-size:0.82rem;font-weight:500;color:#6b7280;">Місткість</label>
-            <input type="number" id="picker-capacity" class="form-control form-control-sm" min="1" value="{{ capacity }}" placeholder="∞">
-          </div>
-        </div>
         <!-- Toolbar -->
         <div class="d-flex align-items-center gap-3 px-4 py-2" style="border-bottom:1px solid #f0f4f8;background:#fff;">
           <span id="picker-count" class="text-muted small"></span>
@@ -333,6 +358,31 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
+// ── CSV form spinner ──────────────────────────────────────────────────────────
+const csvForm = document.getElementById('csv-form');
+if (csvForm) {
+  csvForm.addEventListener('submit', function() {
+    const fileInput = document.getElementById('csv-file-input');
+    if (fileInput && fileInput.files.length > 0) {
+      document.getElementById('loading-overlay').classList.add('active');
+    }
+  });
+}
+
+// ── Mode tab switching ────────────────────────────────────────────────────────
+document.getElementById('tab-crm').addEventListener('click', function() {
+  this.classList.add('active');
+  document.getElementById('tab-csv').classList.remove('active');
+  document.getElementById('panel-crm').style.display = '';
+  document.getElementById('panel-csv').style.display = 'none';
+});
+document.getElementById('tab-csv').addEventListener('click', function() {
+  this.classList.add('active');
+  document.getElementById('tab-crm').classList.remove('active');
+  document.getElementById('panel-csv').style.display = '';
+  document.getElementById('panel-crm').style.display = 'none';
+});
+
 // ── Delivery picker ───────────────────────────────────────────────────────────
 const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
 let pickerDeliveries = [];
@@ -439,11 +489,6 @@ document.getElementById('picker-deselect-all').addEventListener('click', functio
 
 document.getElementById('btn-run-optimizer').addEventListener('click', function() {
   const form = document.getElementById('optimizer-form');
-
-  // Copy route params from modal to hidden form inputs
-  document.getElementById('form-num-couriers').value = document.getElementById('picker-num-couriers').value || 1;
-  document.getElementById('form-start-time').value = document.getElementById('picker-start-time').value || '09:00';
-  document.getElementById('form-capacity').value = document.getElementById('picker-capacity').value || '';
 
   // Remove previously added delivery_ids inputs
   form.querySelectorAll('input[name=delivery_ids]').forEach(el => el.remove());
@@ -628,7 +673,22 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
           ${timePart}${drivePart}${waitPart}
         </div>
       </div>
+      <button type="button" class="btn-remove-stop btn btn-link p-0 ms-2"
+              title="Зняти з маршруту"
+              style="color:#adb5bd;font-size:1.1rem;line-height:1;flex-shrink:0;">
+        <i class="bi bi-x-lg"></i>
+      </button>
     `;
+    li.querySelector('.btn-remove-stop').addEventListener('click', function(e) {
+      e.stopPropagation();
+      const listEl = li.closest('.route-stops-list');
+      li.remove();
+      renumberList(listEl);
+      syncRoutesFromDOM();
+      updateEmptyHints();
+      hasChanges = true;
+      document.getElementById('changes-banner').classList.add('visible');
+    });
     return li;
   }
 
@@ -657,6 +717,15 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     });
   }
 
+  // ── Empty hint visibility ──────────────────────────────────────────────────
+  function updateEmptyHints() {
+    document.querySelectorAll('.route-stops-list').forEach(function(listEl) {
+      const hint = listEl.querySelector('.empty-hint');
+      if (!hint) return;
+      hint.style.display = listEl.querySelectorAll('.stop-row').length > 0 ? 'none' : '';
+    });
+  }
+
   // ── Init SortableJS ────────────────────────────────────────────────────────
   function initSortable(listEl) {
     Sortable.create(listEl, {
@@ -676,6 +745,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         document.getElementById('changes-banner').classList.add('visible');
 
         syncRoutesFromDOM();
+        updateEmptyHints();
       }
     });
   }
@@ -737,7 +807,6 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
     const payload = {
       routes: recalcRoutes,
       depot: originalResult.depot || null,
-      startTime: document.getElementById('form-start-time').value || '09:00',
     };
 
     try {
@@ -785,7 +854,8 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   });
 
   // ── Save routes ────────────────────────────────────────────────────────────
-  document.getElementById('btn-save-routes').addEventListener('click', async function() {
+  const btnSaveRoutes = document.getElementById('btn-save-routes');
+  if (btnSaveRoutes) btnSaveRoutes.addEventListener('click', async function() {
     syncRoutesFromDOM();
     const resultToSave = Object.assign({}, originalResult, { routes: currentRoutes });
     const btn = this;
@@ -888,6 +958,59 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 
     if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [36, 36] });
   }
+
+  // ── Add empty courier ──────────────────────────────────────────────────────
+  document.getElementById('btn-add-courier').addEventListener('click', function() {
+    const maxId = currentRoutes.reduce(function(acc, r) {
+      return Math.max(acc, typeof r.courierId === 'number' ? r.courierId : 0);
+    }, 0);
+    const newRoute = {
+      courierId: maxId + 1,
+      stops: [],
+      totalDistanceKm: null,
+      totalDriveMin: null,
+    };
+    currentRoutes.push(newRoute);
+
+    const container = document.getElementById('routes-container');
+    const idx = currentRoutes.length - 1;
+    const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+    const card = document.createElement('div');
+    card.className = 'card shadow-sm border-0 mb-3';
+    card.dataset.routeIdx = idx;
+    card.innerHTML = `
+      <div class="card-header d-flex justify-content-between align-items-center"
+           style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
+        <div class="d-flex align-items-center gap-2">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <strong>Кур'єр ${newRoute.courierId}</strong>
+          <span class="badge bg-secondary ms-1" style="font-size:0.72rem;">новий</span>
+        </div>
+        <span class="route-meta text-muted small">
+          <span class="stops-count">0</span> зупинок
+        </span>
+      </div>
+      <div class="card-body p-0">
+        <ul class="route-stops-list list-unstyled mb-0"
+            id="stop-list-${idx}"
+            data-route-idx="${idx}"
+            data-color="${color}">
+          <li class="text-center text-muted py-3 empty-hint" style="font-size:0.88rem;pointer-events:none;">
+            <i class="bi bi-arrow-left-right me-1"></i>Перетягніть сюди доставки
+          </li>
+        </ul>
+      </div>
+    `;
+    container.appendChild(card);
+
+    const list = card.querySelector('.route-stops-list');
+    initSortable(list);
+
+    hasChanges = true;
+    document.getElementById('changes-banner').classList.add('visible');
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 
   // ── Initial render ─────────────────────────────────────────────────────────
   renderRoutes(currentRoutes);

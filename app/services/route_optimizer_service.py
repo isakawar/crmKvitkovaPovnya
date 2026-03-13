@@ -37,15 +37,9 @@ def _delivery_to_order_json(delivery) -> dict:
     return item
 
 
-def optimize_deliveries(deliveries: Iterable, optimizer_url: str, start_time: str, num_couriers: int, capacity: int | None):
+def optimize_deliveries(deliveries: Iterable, optimizer_url: str):
     orders = [_delivery_to_order_json(d) for d in deliveries]
-    payload = {
-        "orders": orders,
-        "start_time": start_time,
-        "num_couriers": num_couriers,
-    }
-    if capacity is not None:
-        payload["capacity"] = capacity
+    payload = {"orders": orders}
 
     url = f"{optimizer_url.rstrip('/')}/api/optimize/json"
     headers = {"Content-Type": "application/json"}
