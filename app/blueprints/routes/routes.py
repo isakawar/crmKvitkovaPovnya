@@ -6,6 +6,7 @@ from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.courier import Courier
 from datetime import datetime
 import json
+import urllib.parse
 import requests as http_requests
 
 routes_bp = Blueprint('routes', __name__)
@@ -137,12 +138,6 @@ def send_route(route_id):
 
     text = f"🌸 <b>Пропозиція маршруту на {route.route_date.strftime('%d.%m.%Y')}</b>\n\n"
     text += f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
-    if route.total_distance_km:
-        text += f"📍 Відстань: <b>~{route.total_distance_km:.1f} км</b>\n"
-    if route.estimated_duration_min:
-        h, m = divmod(route.estimated_duration_min, 60)
-        duration_str = f"{h} год {m} хв" if h else f"{m} хв"
-        text += f"⏱ Час у дорозі: <b>~{duration_str}</b>\n"
     if route.delivery_price:
         text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
 
@@ -157,12 +152,33 @@ def send_route(route_id):
         addr_parts = [p for p in [city, street, build] if p]
         text += f"\n{stop.stop_order}. {', '.join(addr_parts)} — {arrival}"
 
-    reply_markup = {
-        'inline_keyboard': [[
-            {'text': '✅ Прийняти', 'callback_data': f'route_accept_{route_id}'},
-            {'text': '❌ Відхилити', 'callback_data': f'route_reject_{route_id}'},
-        ]]
-    }
+    # Build Google Maps multi-stop URL
+    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
+    gmaps_parts = []
+    if depot_address:
+        gmaps_parts.append(urllib.parse.quote(depot_address))
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        parts = [p for p in [
+            (order.city if order else '') or '',
+            (d.street or (order.street if order else '')) or '',
+            (d.building_number or (order.building_number if order else '')) or '',
+        ] if p]
+        if parts:
+            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+    gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts) if gmaps_parts else None
+
+    inline_keyboard = []
+    if gmaps_url:
+        inline_keyboard.append([
+            {'text': '🗺 Переглянути маршрут на Google Maps', 'url': gmaps_url}
+        ])
+    inline_keyboard.append([
+        {'text': '✅ Прийняти', 'callback_data': f'route_accept_{route_id}'},
+        {'text': '❌ Відхилити', 'callback_data': f'route_reject_{route_id}'},
+    ])
+    reply_markup = {'inline_keyboard': inline_keyboard}
 
     bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
     msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, reply_markup)

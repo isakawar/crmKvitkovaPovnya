@@ -34,6 +34,7 @@ services:
       - FLASK_ENV=production
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:-kvitkova_password}@postgres:5432/kvitkova_crm
+      - DEPOT_ADDRESS=${DEPOT_ADDRESS:-}
     depends_on:
       postgres:
         condition: service_healthy

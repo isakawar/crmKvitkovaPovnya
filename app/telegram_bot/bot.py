@@ -65,6 +65,9 @@ class TelegramBot:
         # Callback query handlers (for inline keyboard buttons)
         self.application.add_handler(CallbackQueryHandler(self.handlers.handle_callback_query))
         
+        # Contact sharing handler (courier verification)
+        self.application.add_handler(MessageHandler(filters.CONTACT, self.handlers.handle_contact))
+
         # Message handlers (for text messages)
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handlers.handle_text_message))
         
