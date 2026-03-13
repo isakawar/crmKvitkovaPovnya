@@ -1,6 +1,8 @@
 """
-Seed script: 50 test clients + 50 subscriptions with deliveries for current month.
-Delivery distribution: most days have 1-5 deliveries, some days have 10-30.
+Seed script: 100 test orders for future March dates.
+- Kyiv + Kyiv region only
+- ~85% courier, ~15% nova_poshta
+- ~60% deliveries have preferred time window, ~40% without
 """
 import sys
 import random
@@ -25,9 +27,10 @@ KYIV_STREETS = [
     "вул. Олеся Гончара", "вул. Гетьмана", "просп. Перемоги",
     "просп. Бандери", "вул. Дорогожицька", "вул. Кирилівська",
     "вул. Глибочицька", "вул. Артема", "вул. Жилянська",
-    "вул. Димитрова", "вул. Боженка", "вул. Ямська",
-    "вул. Борщагівська", "просп. Науки", "вул. Академіка Вернадського",
-    "вул. Солом'янська", "вул. Авіаконструктора Антонова",
+    "вул. Боженка", "вул. Ямська", "вул. Борщагівська",
+    "просп. Науки", "вул. Академіка Вернадського", "вул. Солом'янська",
+    "вул. Авіаконструктора Антонова", "вул. Польова", "вул. Теліги",
+    "вул. Щусєва", "вул. Ярославська", "вул. Воздвиженська",
 ]
 
 KYIV_OBLAST_ADDRESSES = [
@@ -45,6 +48,20 @@ KYIV_OBLAST_ADDRESSES = [
     ("Фастів", "вул. Центральна"),
     ("Васильків", "вул. Соборна"),
     ("Обухів", "вул. Київська"),
+    ("Вишгород", "вул. Набережна"),
+    ("Вишгород", "вул. Шкільна"),
+]
+
+NOVA_POSHTA_BRANCHES = [
+    ("Київ", "Нова Пошта, відд. №1 (вул. Хрещатик, 22)"),
+    ("Київ", "Нова Пошта, відд. №5 (вул. Велика Васильківська, 45)"),
+    ("Київ", "Нова Пошта, відд. №12 (просп. Перемоги, 67)"),
+    ("Київ", "Нова Пошта, відд. №18 (вул. Борщагівська, 154)"),
+    ("Київ", "Нова Пошта, відд. №24 (вул. Лесі Українки, 30)"),
+    ("Бровари", "Нова Пошта, відд. №3 (вул. Гагаріна, 15)"),
+    ("Ірпінь", "Нова Пошта, відд. №2 (вул. Університетська, 8)"),
+    ("Буча", "Нова Пошта, відд. №1 (вул. Яблунська, 20)"),
+    ("Бориспіль", "Нова Пошта, відд. №4 (вул. Запорізька, 11)"),
 ]
 
 INSTAGRAM_NAMES = [
@@ -60,7 +77,19 @@ INSTAGRAM_NAMES = [
     "snapdragon_ua", "verbena_girl", "heather_bloom", "clover_life",
     "hyacinth_ua", "narcissus_dream", "cornflower_ua", "anemone_kyiv",
     "primrose_girl", "foxglove_ua", "larkspur_love", "delphinium_ua",
-    "buttercup_ua", "columbine_kyiv",
+    "buttercup_ua", "columbine_kyiv", "sunflower_ua", "pansy_girl",
+    "forget_me_not", "bluebell_ua", "candytuft_kyiv", "wallflower_ua",
+    "catchfly_girl", "flax_bloom", "spurge_ua", "celandine_kyiv",
+    "yarrow_girl", "chamomile_ua", "tansy_bloom", "clary_kyiv",
+    "wormwood_ua", "hyssop_girl", "catnip_bloom", "betony_ua",
+    "motherwort_kyiv", "selfheal_ua", "agrimony_girl", "vervain_bloom",
+    "meadowsweet_ua", "spirea_kyiv", "hawthorn_girl", "elderflower_ua",
+    "linden_bloom", "acacia_kyiv", "chestnut_girl", "robinia_ua",
+    "wisteria_bloom", "clematis_kyiv", "honeysuckle_ua", "jasmine_girl",
+    "mock_orange_ua", "forsythia_kyiv", "deutzia_girl", "weigela_ua",
+    "buddleia_bloom", "caryopteris_kyiv", "callicarpa_ua", "vitex_girl",
+    "lespedeza_bloom", "indigofera_kyiv", "genista_ua", "cytisus_girl",
+    "spartium_bloom", "halimium_kyiv", "cistus_ua", "helianthemum_girl",
 ]
 
 FIRST_NAMES = [
@@ -79,16 +108,17 @@ LAST_NAMES = [
 ]
 
 MARKETING_SOURCES = ["Instagram", "TikTok", "Telegram", "Рекомендація", "Google", "Viber"]
-DISCOUNTS = [None, "5%", "10%", "15%"]
-PERIODICITIES = ["Weekly", "Monthly", "Bi-week"]
-SIZES = ["M", "L", "XL"]
-SIZE_PRICES = {"M": 600, "L": 900, "XL": 1200}
+DISCOUNTS = [None, None, None, "5%", "10%", "15%"]
+PERIODICITIES = ["Weekly", "Monthly", "Bi-week", "One-Time"]
+SIZES = ["M", "L", "XL", "XXL"]
+SIZE_PRICES = {"M": 600, "L": 900, "XL": 1200, "XXL": 1600}
 DAYS_UA = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
-FOR_WHOM = ["Дружина", "Мама", "Подруга", "Сестра", "Колега", "Сам(а)", "Бабуся"]
+FOR_WHOM = ["Дружина", "Мама", "Подруга", "Сестра", "Колега", "Сам(а)", "Бабуся", "Дочка"]
 PREFERENCES = [
     "Без тюльпанів", "Більше зелені", "Пастельні кольори",
     "Яскраві кольори", "Без алергенів", "Улюблені — піони",
-    None, None, None,
+    "Тільки білі квіти", "Без троянд",
+    None, None, None, None, None,
 ]
 
 TIME_SLOTS = [
@@ -98,56 +128,46 @@ TIME_SLOTS = [
     ("14:00", "17:00"),
     ("15:00", "18:00"),
     ("16:00", "19:00"),
+    ("18:00", "21:00"),
 ]
 
 
 def random_phone():
-    return f"+380{random.randint(50,99)}{random.randint(1000000,9999999)}"
+    return f"+380{random.randint(50, 99)}{random.randint(1000000, 9999999)}"
 
 
-def build_delivery_calendar(year: int, month: int) -> list[datetime.date]:
-    """
-    Returns a list of dates for the current month.
-    Some days get heavy load (10-30), rest get 1-5.
-    Total ≈ 50.
-    """
-    import calendar
-    _, days_in_month = calendar.monthrange(year, month)
-    all_days = [datetime.date(year, month, d) for d in range(1, days_in_month + 1)]
+def future_march_dates(n: int) -> list[datetime.date]:
+    """Returns n dates spread across remaining March days (tomorrow → Mar 31)."""
+    today = datetime.date.today()
+    start = today + datetime.timedelta(days=1)
+    end = datetime.date(today.year, 3, 31)
 
-    # Pick 2-3 heavy days
-    heavy_days = random.sample(all_days, k=3)
-    heavy_counts = {d: random.randint(10, 30) for d in heavy_days}
+    if start > end:
+        # March already over — use whole month
+        start = datetime.date(today.year, 3, 1)
 
-    # Fill remaining from other days to reach exactly 50
-    total_heavy = sum(heavy_counts.values())
-    remaining = max(50 - total_heavy, 0)
+    all_days = []
+    d = start
+    while d <= end:
+        all_days.append(d)
+        d += datetime.timedelta(days=1)
 
-    other_days = [d for d in all_days if d not in heavy_days]
-    light_days = random.sample(other_days, k=min(remaining, len(other_days)))
-    # distribute 1-5 per light day, cap at remaining
-    light_schedule = []
-    left = remaining
-    for d in light_days:
-        if left <= 0:
-            break
-        count = min(random.randint(1, 5), left)
-        light_schedule.extend([d] * count)
-        left -= count
+    if not all_days:
+        all_days = [today + datetime.timedelta(days=i) for i in range(1, n + 1)]
 
-    schedule = []
-    for d, cnt in heavy_counts.items():
-        schedule.extend([d] * cnt)
-    schedule.extend(light_schedule)
-
-    return schedule
+    # Weighted: weekends get 2x more deliveries
+    weights = [2 if d.weekday() >= 5 else 1 for d in all_days]
+    return random.choices(all_days, weights=weights, k=n)
 
 
 def clear_all():
-    from app.models.delivery_route import DeliveryRoute, RouteDelivery
+    try:
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        RouteDelivery.query.delete()
+        DeliveryRoute.query.delete()
+    except Exception:
+        pass
     print("Очищення бази даних...")
-    RouteDelivery.query.delete()
-    DeliveryRoute.query.delete()
     Delivery.query.delete()
     Order.query.delete()
     Client.query.delete()
@@ -158,61 +178,82 @@ def clear_all():
 def seed():
     with app.app_context():
         clear_all()
-        today = datetime.date.today()
-        year, month = today.year, today.month
 
-        delivery_dates = build_delivery_calendar(year, month)
-        random.shuffle(delivery_dates)
-        # Trim or pad to exactly 50
-        if len(delivery_dates) > 50:
-            delivery_dates = delivery_dates[:50]
-        while len(delivery_dates) < 50:
-            delivery_dates.append(datetime.date(year, month, random.randint(1, today.day)))
+        total = 100
+        nova_poshta_count = random.randint(12, 18)   # ~15%
+        courier_count = total - nova_poshta_count
 
-        print(f"Створюємо 50 клієнтів та 50 підписок...")
+        # Shuffle methods: courier or nova_poshta per order
+        methods = ['courier'] * courier_count + ['nova_poshta'] * nova_poshta_count
+        random.shuffle(methods)
 
-        for i in range(50):
-            instagram = INSTAGRAM_NAMES[i]
+        delivery_dates = future_march_dates(total)
+
+        print(f"Створюємо {total} клієнтів та замовлень...")
+        print(f"  Кур'єр: {courier_count}, Нова Пошта: {nova_poshta_count}")
+
+        instagram_pool = INSTAGRAM_NAMES[:total]
+        random.shuffle(instagram_pool)
+
+        courier_count_actual = 0
+        np_count_actual = 0
+
+        for i in range(total):
+            instagram = instagram_pool[i]
             phone = random_phone()
             first = random.choice(FIRST_NAMES)
             last = random.choice(LAST_NAMES)
             recipient_name = f"{first} {last}"
+            method = methods[i]
+            delivery_date = delivery_dates[i]
+            day_of_week = DAYS_UA[delivery_date.weekday()]
 
-            # Client
             client = Client(
                 instagram=f"@{instagram}",
                 phone=phone,
-                telegram=f"@{instagram}_tg" if random.random() > 0.4 else None,
-                credits=random.randint(0, 3),
+                telegram=f"@{instagram}_tg" if random.random() > 0.5 else None,
+                credits=random.randint(0, 2),
                 marketing_source=random.choice(MARKETING_SOURCES),
                 personal_discount=random.choice(DISCOUNTS),
             )
             db.session.add(client)
-            db.session.flush()  # get client.id
-
-            # Address: 70% Kyiv, 30% oblast
-            if random.random() < 0.7:
-                city = "Київ"
-                street = random.choice(KYIV_STREETS)
-            else:
-                city, street = random.choice(KYIV_OBLAST_ADDRESSES)
-
-            building = str(random.randint(1, 150))
-            floor = str(random.randint(1, 25)) if random.random() > 0.3 else None
-            entrance = str(random.randint(1, 8)) if floor else None
+            db.session.flush()
 
             size = random.choice(SIZES)
             price = SIZE_PRICES[size]
             periodicity = random.choice(PERIODICITIES)
-            delivery_date = delivery_dates[i]
-            day_of_week = DAYS_UA[delivery_date.weekday()]
-            slot = random.choice(TIME_SLOTS)
+
+            if method == 'nova_poshta':
+                city, street = random.choice(NOVA_POSHTA_BRANCHES)
+                building = None
+                floor = None
+                entrance = None
+                np_count_actual += 1
+            else:
+                # 70% Kyiv, 30% oblast
+                if random.random() < 0.7:
+                    city = "Київ"
+                    street = random.choice(KYIV_STREETS)
+                else:
+                    city, street = random.choice(KYIV_OBLAST_ADDRESSES)
+                building = str(random.randint(1, 200))
+                floor = str(random.randint(1, 25)) if random.random() > 0.35 else None
+                entrance = str(random.randint(1, 8)) if floor else None
+                courier_count_actual += 1
+
+            # ~60% of deliveries have preferred time window
+            has_time = random.random() < 0.60
+            if has_time:
+                slot = random.choice(TIME_SLOTS)
+                time_from, time_to = slot
+            else:
+                time_from, time_to = None, None
 
             order = Order(
                 client_id=client.id,
                 recipient_name=recipient_name,
                 recipient_phone=random_phone(),
-                recipient_social=f"@{instagram}_recv" if random.random() > 0.5 else None,
+                recipient_social=f"@{instagram}_recv" if random.random() > 0.6 else None,
                 city=city,
                 street=street,
                 building_number=building,
@@ -224,14 +265,15 @@ def seed():
                 bouquet_size=size,
                 first_delivery_date=delivery_date,
                 delivery_day=day_of_week,
-                time_from=slot[0],
-                time_to=slot[1],
+                time_from=time_from,
+                time_to=time_to,
                 comment=None,
                 preferences=random.choice(PREFERENCES),
                 for_whom=random.choice(FOR_WHOM),
                 periodicity=periodicity,
                 price_at_order=price,
                 is_subscription_extended=False,
+                delivery_method=method,
             )
             db.session.add(order)
             db.session.flush()
@@ -240,21 +282,22 @@ def seed():
                 order_id=order.id,
                 client_id=client.id,
                 delivery_date=delivery_date,
-                status="Очікує" if delivery_date >= today else random.choice(["Доставлено", "Доставлено", "Скасовано"]),
+                status="Очікує",
                 street=street,
                 building_number=building,
                 floor=floor,
                 entrance=entrance,
                 is_pickup=False,
-                time_from=slot[0],
-                time_to=slot[1],
+                time_from=time_from,
+                time_to=time_to,
                 size=size,
                 bouquet_size=size,
                 phone=phone,
                 delivery_type=periodicity,
                 price_at_delivery=price,
-                is_subscription=True,
+                is_subscription=(periodicity != "One-Time"),
                 preferences=order.preferences,
+                delivery_method=method,
             )
             db.session.add(delivery)
 
@@ -268,7 +311,8 @@ def seed():
             bar = "█" * date_counts[d]
             print(f"  {d.strftime('%d.%m')} ({DAYS_UA[d.weekday()]}): {date_counts[d]:2d}  {bar}")
 
-        print(f"\n✓ Створено 50 клієнтів, 50 замовлень, 50 доставок")
+        print(f"\n✓ Створено {total} клієнтів, {total} замовлень, {total} доставок")
+        print(f"  Кур'єр: {courier_count_actual}, Нова Пошта: {np_count_actual}")
 
 
 if __name__ == '__main__':

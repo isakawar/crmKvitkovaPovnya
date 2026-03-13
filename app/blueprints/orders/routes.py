@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, jsonif
 from flask_login import login_required
 from app.extensions import db
 from app.models import Order, Client, Delivery
+from app.models.delivery_route import RouteDelivery
 from app.models.settings import Settings
 import logging
 import json
@@ -210,6 +211,8 @@ def route_generator():
         delivery_ids_raw = request.form.getlist('delivery_ids')
         delivery_ids = [int(x) for x in delivery_ids_raw if x.isdigit()]
 
+        already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+
         base_query = (
             Delivery.query
             .options(joinedload(Delivery.order), joinedload(Delivery.client))
@@ -217,7 +220,8 @@ def route_generator():
                 Delivery.delivery_date == selected_date,
                 Delivery.is_pickup == False,
                 Delivery.status.in_(['Очікує', 'Розподілено']),
-                Delivery.delivery_method != 'nova_poshta'
+                Delivery.delivery_method != 'nova_poshta',
+                ~Delivery.id.in_(already_routed)
             )
             .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         )
@@ -297,6 +301,8 @@ def route_generator_deliveries():
     except ValueError:
         return jsonify({'error': 'invalid date'}), 400
 
+    already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+
     deliveries = (
         Delivery.query
         .options(joinedload(Delivery.order), joinedload(Delivery.client))
@@ -304,7 +310,8 @@ def route_generator_deliveries():
             Delivery.delivery_date == selected_date,
             Delivery.is_pickup == False,
             Delivery.status.in_(['Очікує', 'Розподілено']),
-            Delivery.delivery_method != 'nova_poshta'
+            Delivery.delivery_method != 'nova_poshta',
+            ~Delivery.id.in_(already_routed)
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         .all()
