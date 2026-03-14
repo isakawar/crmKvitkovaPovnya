@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = 'add_test_delivery_type'
-down_revision = 'add_delivery_method'
+down_revision = 'drop_delivery_rate'
 branch_labels = None
 depends_on = None
 
