@@ -40,6 +40,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.auth import bp as auth_bp
     from app.blueprints.routes.routes import routes_bp
     from app.blueprints.florist.routes import florist_bp
+    from app.blueprints.import_csv.routes import import_csv_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -50,6 +51,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(auth_bp)
     app.register_blueprint(routes_bp)
     app.register_blueprint(florist_bp)
+    app.register_blueprint(import_csv_bp)
 
     # Захист всіх маршрутів за замовчуванням
     @app.before_request

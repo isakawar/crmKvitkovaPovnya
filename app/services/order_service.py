@@ -43,6 +43,7 @@ def create_order_and_deliveries(client, form):
         floor=form.get('floor'),
         entrance=form.get('entrance'),
         is_pickup=is_pickup,
+        address_comment=form.get('address_comment'),
         delivery_type=form['delivery_type'],
         size=form['size'],
         custom_amount=int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None,
@@ -52,8 +53,10 @@ def create_order_and_deliveries(client, form):
         time_to=form.get('time_to'),
         comment=form.get('comment'),
         preferences=form.get('preferences'),
-        for_whom=form['for_whom'],
-        delivery_method=form.get('delivery_method', 'courier')
+        for_whom=form.get('for_whom') or '',
+        delivery_method=form.get('delivery_method', 'courier'),
+        bouquet_type=form.get('bouquet_type'),
+        composition_type=form.get('composition_type'),
     )
     db.session.add(order)
     db.session.commit()
@@ -66,7 +69,8 @@ def create_order_and_deliveries(client, form):
     # Перша доставка — це дата, яку ввів користувач
     deliveries.append(first_date)
 
-    if delivery_type != 'One-Time':
+    SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
+    if delivery_type in SUBSCRIPTION_TYPES:
         count = 5  # Змінено з 4 на 5 для підписок
         prev_date = first_date
         for i in range(1, count):
@@ -95,7 +99,7 @@ def create_order_and_deliveries(client, form):
 
     for i, d_date in enumerate(deliveries):
         # Визначаємо статус залежно від типу доставки та порядкового номера
-        if delivery_type == 'One-Time':
+        if delivery_type in ('One-Time', 'One-time', 'Test'):
             status = 'Очікує'
         elif delivery_type in ['Weekly', 'Monthly', 'Bi-weekly']:
             # Перші 4 доставки - статус 'Очікує', 5-та - 'Не оплачена'
@@ -128,7 +132,10 @@ def create_order_and_deliveries(client, form):
             is_pickup=order.is_pickup,
             delivery_type=order.delivery_type,
             is_subscription=is_subscription,
-            delivery_method=order.delivery_method
+            delivery_method=order.delivery_method,
+            address_comment=order.address_comment,
+            bouquet_type=order.bouquet_type,
+            composition_type=order.composition_type,
         )
         db.session.add(delivery)
     db.session.commit()
@@ -171,6 +178,9 @@ def update_order(order, form):
     order.floor = form.get('floor')
     order.entrance = form.get('entrance')
     order.is_pickup = form.get('is_pickup') == 'on'
+    order.address_comment = form.get('address_comment')
+    order.bouquet_type = form.get('bouquet_type')
+    order.composition_type = form.get('composition_type')
     order.delivery_type = form['delivery_type']
     order.size = form['size']
     order.custom_amount = int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None

@@ -50,3 +50,12 @@ class Order(db.Model):
 
     # Метод доставки: 'courier' | 'nova_poshta'
     delivery_method = db.Column(db.String(32), default='courier', nullable=False)
+
+    # Коментар до адреси (підʼїзд, квартира, поверх і тд)
+    address_comment = db.Column(db.Text, nullable=True)
+
+    # Тип пакування: 'коробка 📦', 'букет 🌸', 'коробка 📦 + пакет 🌸', тощо
+    bouquet_type = db.Column(db.String(64), nullable=True)
+
+    # Тип композиції: 'Весняний', 'Білосніжний', 'Екзотичний', 'Інший', тощо
+    composition_type = db.Column(db.String(64), nullable=True)

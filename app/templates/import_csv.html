@@ -1,0 +1,322 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <h2 class="mb-0">Імпорт клієнтів з CSV</h2>
+  <span class="badge bg-secondary">Технічна сторінка</span>
+</div>
+
+<!-- Step 1: Upload -->
+<div class="card p-4 mb-4" style="max-width: 640px; border-radius: 16px;">
+  <h5 class="mb-3">Крок 1 — Завантажте CSV файл</h5>
+  <div class="mb-3">
+    <label class="form-label fw-semibold">CSV файл</label>
+    <input type="file" class="form-control" id="csvFile" accept=".csv">
+    <div class="form-text">Очікуваний формат: Клієнт, Тип підписки, Розмір, Коробка/Букет, Тип композиції, Загальні побажання клієнта, Коментарі, Час доставки, Імʼя отримувача, Адреса, Телефон отримувача</div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6">
+      <label class="form-label fw-semibold">Дата першої доставки</label>
+      <input type="date" class="form-control" id="firstDeliveryDate" value="{{ today }}">
+    </div>
+    <div class="col-sm-6">
+      <label class="form-label fw-semibold">День доставки</label>
+      <select class="form-select" id="deliveryDay">
+        <option value="ПН">ПН — Понеділок</option>
+        <option value="ВТ">ВТ — Вівторок</option>
+        <option value="СР">СР — Середа</option>
+        <option value="ЧТ">ЧТ — Четвер</option>
+        <option value="ПТ">ПТ — Пʼятниця</option>
+        <option value="СБ">СБ — Субота</option>
+        <option value="НД">НД — Неділя</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn btn-primary" id="previewBtn">
+    <i class="bi bi-eye me-1"></i>Переглянути
+  </button>
+  <div id="previewError" class="text-danger mt-2" style="display:none;"></div>
+</div>
+
+<!-- Step 2: Preview -->
+<div id="previewSection" style="display:none;">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h5 class="mb-0">Крок 2 — Перевірте дані</h5>
+    <div id="summaryBadges" class="d-flex gap-2"></div>
+  </div>
+
+  <div class="table-responsive mb-3" style="max-height: 520px; overflow-y: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
+    <table class="table table-sm mb-0" style="font-size: 0.82rem;">
+      <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 1;">
+        <tr>
+          <th>#</th>
+          <th>Клієнт (сирий)</th>
+          <th>Тип</th>
+          <th>Ідентифікатор</th>
+          <th>Підписка</th>
+          <th>Розмір</th>
+          <th>Коробка/Букет</th>
+          <th>Композиція</th>
+          <th>Отримувач</th>
+          <th>Тел. отримувача</th>
+          <th>Місто</th>
+          <th>Вулиця</th>
+          <th>Коментар до адреси</th>
+          <th>Метод</th>
+          <th>Час</th>
+          <th>Статус</th>
+          <th>Попередження</th>
+        </tr>
+      </thead>
+      <tbody id="previewTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="d-flex gap-3 align-items-center">
+    <button class="btn btn-success" id="importBtn">
+      <i class="bi bi-cloud-upload me-1"></i>Імпортувати
+    </button>
+    <button class="btn btn-outline-secondary" id="resetBtn">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Скинути
+    </button>
+    <div id="importSpinner" class="spinner-border spinner-border-sm text-primary ms-2" role="status" style="display:none;"></div>
+  </div>
+  <div id="importError" class="text-danger mt-2" style="display:none;"></div>
+</div>
+
+<!-- Step 3: Result -->
+<div id="resultSection" style="display:none;">
+  <div class="card p-4" style="max-width: 520px; border-radius: 16px; border: 1.5px solid #b6f5c8; background: #f0fdf4;">
+    <h5 class="mb-3 text-success"><i class="bi bi-check-circle-fill me-2"></i>Імпорт завершено</h5>
+    <div id="resultBody"></div>
+    <div class="mt-3 d-flex gap-2">
+      <a href="/orders" class="btn btn-primary btn-sm">Перейти до замовлень</a>
+      <button class="btn btn-outline-secondary btn-sm" id="importAgainBtn">Імпортувати ще</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.tr-new td { background: #eff6ff !important; }
+.tr-exists td { background: #f0fdf4 !important; }
+.tr-warn td { background: #fffbeb !important; }
+.tr-error td { background: #fef2f2 !important; }
+
+.badge-client-type {
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.badge-instagram { background: #f3e8ff; color: #7c3aed; }
+.badge-telegram  { background: #e0f2fe; color: #0369a1; }
+.badge-phone     { background: #fce7f3; color: #be185d; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let parsedRows = [];
+
+// Set today's date as default
+document.getElementById('firstDeliveryDate').value = new Date().toISOString().slice(0, 10);
+
+// ---- Preview ----
+document.getElementById('previewBtn').addEventListener('click', async function () {
+  const file = document.getElementById('csvFile').files[0];
+  const errEl = document.getElementById('previewError');
+  errEl.style.display = 'none';
+
+  if (!file) {
+    errEl.textContent = 'Виберіть CSV файл';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Завантаження...';
+
+  try {
+    const res = await fetch('/import/preview', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Помилка';
+      errEl.style.display = 'block';
+      return;
+    }
+    parsedRows = data.rows;
+    renderPreview(data.rows, data.summary);
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    errEl.textContent = 'Помилка з\'єднання';
+    errEl.style.display = 'block';
+  } finally {
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-eye me-1"></i>Переглянути';
+  }
+});
+
+function renderPreview(rows, summary) {
+  // Summary badges
+  const sb = document.getElementById('summaryBadges');
+  sb.innerHTML = `
+    <span class="badge bg-primary">${summary.total} рядків</span>
+    <span class="badge" style="background:#3b82f6; color:#fff;">${summary.new_clients} нових клієнтів</span>
+    <span class="badge bg-success">${summary.existing_clients} існуючих</span>
+    ${summary.warnings > 0 ? `<span class="badge bg-warning text-dark">${summary.warnings} з попередженнями</span>` : ''}
+  `;
+
+  const tbody = document.getElementById('previewTableBody');
+  tbody.innerHTML = '';
+
+  rows.forEach(function (row) {
+    const hasWarn = row.warnings && row.warnings.length > 0;
+    let trClass = '';
+    if (row.client_status === 'exists') trClass = 'tr-exists';
+    else if (hasWarn) trClass = 'tr-warn';
+    else trClass = 'tr-new';
+
+    const typeLabels = {
+      instagram: '<span class="badge-client-type badge-instagram">Instagram</span>',
+      telegram:  '<span class="badge-client-type badge-telegram">Telegram</span>',
+      phone:     '<span class="badge-client-type badge-phone">Телефон</span>',
+    };
+    const clientTypeBadge = typeLabels[row.client_type] || '';
+
+    const statusBadge = row.client_status === 'exists'
+      ? '<span class="badge bg-success">Існує</span>'
+      : '<span class="badge" style="background:#3b82f6;color:#fff;">Новий</span>';
+
+    const methodLabel = row.delivery_method === 'nova_poshta' ? '📦 НП' : (row.is_pickup ? '🏠 Самовивіз' : '🚗 Кур\'єр');
+    const timeLabel = (row.time_from && row.time_to) ? `${row.time_from}–${row.time_to}` : '—';
+    const warnHtml = hasWarn
+      ? row.warnings.map(w => `<div style="color:#b45309; font-size:0.75rem; white-space:nowrap;">⚠ ${escHtml(w)}</div>`).join('')
+      : '<span class="text-muted">—</span>';
+
+    const identifier = row.instagram || row.phone || row.telegram || '—';
+    const streetShort = (row.street || '').slice(0, 45);
+    const commentShort = (row.address_comment || '').slice(0, 45);
+
+    const tr = document.createElement('tr');
+    tr.className = trClass;
+    tr.innerHTML = `
+      <td class="text-muted">${row.row_num}</td>
+      <td style="max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.raw_client)}">${escHtml(row.raw_client)}</td>
+      <td>${clientTypeBadge}</td>
+      <td style="max-width:110px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(identifier)}">${escHtml(identifier)}</td>
+      <td><span class="badge bg-light text-dark border">${row.delivery_type}</span></td>
+      <td>${row.size}</td>
+      <td style="max-width:100px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.bouquet_type || '')}">${escHtml(row.bouquet_type || '—')}</td>
+      <td style="max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.composition_type || '')}">${escHtml(row.composition_type || '—')}</td>
+      <td style="max-width:80px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.recipient_name)}">${escHtml(row.recipient_name)}</td>
+      <td style="white-space:nowrap;">${escHtml(row.recipient_phone || '—')}</td>
+      <td>${escHtml(row.city || 'Київ')}</td>
+      <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.street || '')}">${escHtml(streetShort)}</td>
+      <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(row.address_comment || '')}">${escHtml(commentShort) || '<span class="text-muted">—</span>'}</td>
+      <td>${methodLabel}</td>
+      <td>${timeLabel}</td>
+      <td>${statusBadge}</td>
+      <td>${warnHtml}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function escHtml(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Import ----
+document.getElementById('importBtn').addEventListener('click', async function () {
+  const errEl = document.getElementById('importError');
+  errEl.style.display = 'none';
+
+  const firstDeliveryDate = document.getElementById('firstDeliveryDate').value;
+  const deliveryDay = document.getElementById('deliveryDay').value;
+
+  if (!firstDeliveryDate) {
+    errEl.textContent = 'Вкажіть дату першої доставки';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  this.disabled = true;
+  document.getElementById('importSpinner').style.display = 'inline-block';
+
+  try {
+    const res = await fetch('/import/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        rows: parsedRows,
+        first_delivery_date: firstDeliveryDate,
+        delivery_day: deliveryDay,
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Помилка імпорту';
+      errEl.style.display = 'block';
+      return;
+    }
+    showResult(data);
+  } catch (e) {
+    errEl.textContent = 'Помилка з\'єднання';
+    errEl.style.display = 'block';
+  } finally {
+    this.disabled = false;
+    document.getElementById('importSpinner').style.display = 'none';
+  }
+});
+
+function showResult(data) {
+  document.getElementById('previewSection').style.display = 'none';
+  const rs = document.getElementById('resultSection');
+  rs.style.display = 'block';
+
+  let html = `
+    <div class="row g-3 mb-3">
+      <div class="col-6"><div class="p-3 rounded-3 text-center" style="background:#dbeafe;">
+        <div style="font-size:1.7rem;font-weight:700;color:#1d4ed8;">${data.created_clients}</div>
+        <div class="text-muted" style="font-size:0.82rem;">нових клієнтів</div>
+      </div></div>
+      <div class="col-6"><div class="p-3 rounded-3 text-center" style="background:#dcfce7;">
+        <div style="font-size:1.7rem;font-weight:700;color:#15803d;">${data.existing_clients}</div>
+        <div class="text-muted" style="font-size:0.82rem;">існуючих клієнтів</div>
+      </div></div>
+      <div class="col-6"><div class="p-3 rounded-3 text-center" style="background:#fef9c3;">
+        <div style="font-size:1.7rem;font-weight:700;color:#a16207;">${data.created_orders}</div>
+        <div class="text-muted" style="font-size:0.82rem;">замовлень створено</div>
+      </div></div>
+    </div>
+  `;
+  if (data.errors && data.errors.length > 0) {
+    html += `<div class="alert alert-danger py-2 px-3" style="font-size:0.82rem;">
+      <strong>Помилки (${data.errors.length}):</strong><ul class="mb-0 mt-1">
+      ${data.errors.map(e => `<li>${escHtml(e)}</li>`).join('')}
+      </ul></div>`;
+  }
+  document.getElementById('resultBody').innerHTML = html;
+  rs.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ---- Reset ----
+document.getElementById('resetBtn').addEventListener('click', function () {
+  parsedRows = [];
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+});
+
+document.getElementById('importAgainBtn').addEventListener('click', function () {
+  parsedRows = [];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+{% endblock %}
