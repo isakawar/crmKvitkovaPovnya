@@ -57,10 +57,10 @@
     <h5 class="mb-0">Крок 2 — Перевірте та відредагуйте дані</h5>
     <div id="summaryBadges" class="d-flex gap-2 flex-wrap"></div>
   </div>
-  <p class="text-muted mb-3" style="font-size:0.82rem;">Усі поля редагуються прямо в таблиці. Зміни автоматично збережуться при імпорті.</p>
+  <p class="text-muted mb-3" style="font-size:0.88rem;"><i class="bi bi-pencil-square me-1"></i>Усі поля редагуються прямо в таблиці. Зміни збережуться при імпорті.</p>
 
   <div class="table-responsive mb-3" style="max-height: 560px; overflow-y: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
-    <table class="table table-sm table-bordered mb-0 import-table">
+    <table class="table table-bordered mb-0 import-table">
       <thead style="position: sticky; top: 0; background: #f1f5f9; z-index: 5;">
         <tr>
           <th style="width:36px">#</th>
@@ -114,10 +114,29 @@
 </div>
 
 <style>
-.import-table td { padding: 4px 5px !important; vertical-align: middle; }
-.import-table th { padding: 6px 5px !important; font-size: 0.78rem; white-space: nowrap; }
-.import-table input, .import-table select { font-size: 0.78rem !important; padding: 2px 5px !important; height: 26px !important; border-radius: 4px !important; }
-.import-table select { height: 26px !important; }
+.import-table { font-size: 1rem; }
+.import-table td { padding: 6px 8px !important; vertical-align: middle; }
+.import-table th { padding: 10px 8px !important; font-size: 0.95rem !important; font-weight: 600; white-space: nowrap; color: #1e293b; background: #f1f5f9; }
+.import-table input.form-control,
+.import-table select.form-select {
+  font-size: 1rem !important;
+  padding: 5px 9px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #f8faff !important;
+  color: #1e293b !important;
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+  min-width: 0;
+}
+.import-table input.form-control:focus,
+.import-table select.form-select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 2px rgba(99,102,241,.18) !important;
+  outline: none !important;
+  background: #fff !important;
+}
 .tr-new   td { background: #eff6ff !important; }
 .tr-exists td { background: #f0fdf4 !important; }
 .tr-warn  td { background: #fffbeb !important; }
@@ -141,11 +160,10 @@ function upd(i, field, value) {
 }
 
 function inp(i, field, value, opts = {}) {
-  const w   = opts.width  ? `width:${opts.width};` : 'width:100%;';
   const type = opts.type || 'text';
   const list = opts.list  ? `list="${opts.list}"` : '';
-  return `<input type="${type}" class="form-control form-control-sm"
-    style="${w}" value="${esc(value ?? '')}" ${list}
+  return `<input type="${type}" class="form-control"
+    value="${esc(value ?? '')}" ${list}
     oninput="upd(${i},'${field}',this.value)">`;
 }
 
@@ -155,7 +173,7 @@ function sel(i, field, options, value) {
     const l = Array.isArray(o) ? o[1] : o;
     return `<option value="${esc(v)}" ${v === value ? 'selected' : ''}>${esc(l)}</option>`;
   }).join('');
-  return `<select class="form-select form-select-sm" style="width:100%"
+  return `<select class="form-select"
     onchange="upd(${i},'${field}',this.value)">${opts}</select>`;
 }
 
@@ -166,13 +184,12 @@ function clientTypeSel(i, row) {
   const opts = types.map(([v,l]) =>
     `<option value="${v}" ${row.client_type === v ? 'selected':''}>${l}</option>`
   ).join('');
-  return `<select class="form-select form-select-sm" style="width:100%"
-    onchange="changeClientType(${i},this.value)">${opts}</select>`;
+  return `<select class="form-select" onchange="changeClientType(${i},this.value)">${opts}</select>`;
 }
 
 function clientIdentifierInp(i, row) {
   const val = row.instagram || row.phone || row.telegram || '';
-  return `<input type="text" class="form-control form-control-sm" style="width:100%"
+  return `<input type="text" class="form-control"
     value="${esc(val)}" oninput="changeClientId(${i},this.value)">`;
 }
 
@@ -201,8 +218,7 @@ function methodSel(i, row) {
     ['nova_poshta', '📦 Нова Пошта'],
     ['pickup',      '🏠 Самовивіз'],
   ].map(([v,l]) => `<option value="${v}" ${cur===v?'selected':''}>${l}</option>`).join('');
-  return `<select class="form-select form-select-sm" style="width:100%"
-    onchange="changeMethod(${i},this.value)">${opts}</select>`;
+  return `<select class="form-select" onchange="changeMethod(${i},this.value)">${opts}</select>`;
 }
 
 function changeMethod(i, val) {
@@ -220,10 +236,10 @@ function changeMethod(i, val) {
 function renderPreview(rows, summary) {
   const sb = document.getElementById('summaryBadges');
   sb.innerHTML = `
-    <span class="badge bg-primary">${summary.total} рядків</span>
-    <span class="badge" style="background:#3b82f6;color:#fff;">${summary.new_clients} нових</span>
-    <span class="badge bg-success">${summary.existing_clients} існуючих</span>
-    ${summary.warnings > 0 ? `<span class="badge bg-warning text-dark">${summary.warnings} ⚠</span>` : ''}
+    <span class="badge bg-secondary" style="font-size:.82rem;padding:5px 10px">${summary.total} рядків</span>
+    <span class="badge bg-primary" style="font-size:.82rem;padding:5px 10px">${summary.new_clients} нових клієнтів</span>
+    <span class="badge bg-success" style="font-size:.82rem;padding:5px 10px">${summary.existing_clients} існуючих</span>
+    ${summary.warnings > 0 ? `<span class="badge bg-warning text-dark" style="font-size:.82rem;padding:5px 10px">${summary.warnings} ⚠ попереджень</span>` : ''}
   `;
 
   const tbody = document.getElementById('previewTableBody');
@@ -234,12 +250,12 @@ function renderPreview(rows, summary) {
     const trClass = row.client_status === 'exists' ? 'tr-exists' : (hasWarn ? 'tr-warn' : 'tr-new');
 
     const statusBadge = row.client_status === 'exists'
-      ? '<span class="badge bg-success" style="font-size:.7rem">Існує</span>'
-      : '<span class="badge bg-primary" style="font-size:.7rem">Новий</span>';
+      ? '<span class="badge bg-success" style="font-size:.84rem;padding:5px 10px">Існує</span>'
+      : '<span class="badge bg-primary" style="font-size:.84rem;padding:5px 10px">Новий</span>';
 
     const warnHtml = hasWarn
-      ? row.warnings.map(w => `<div style="color:#b45309;font-size:.72rem;white-space:nowrap;">⚠ ${esc(w)}</div>`).join('')
-      : '<span class="text-muted" style="font-size:.72rem">—</span>';
+      ? row.warnings.map(w => `<div style="color:#b45309;font-size:.86rem;white-space:nowrap;">⚠ ${esc(w)}</div>`).join('')
+      : '<span class="text-muted" style="font-size:.86rem">—</span>';
 
     const DELIVERY_TYPES = ['Weekly','Monthly','Bi-weekly','One-time','Test'];
     const SIZES = ['M','L','XL','XXL'];
@@ -248,8 +264,8 @@ function renderPreview(rows, summary) {
     tr.className = trClass;
 
     const cells = [
-      `<td class="text-muted" style="font-size:.72rem">${row.row_num}</td>`,
-      `<td><span style="font-size:.72rem;color:#64748b;white-space:nowrap;overflow:hidden;display:block;max-width:90px;text-overflow:ellipsis" title="${esc(row.raw_client)}">${esc(row.raw_client)}</span></td>`,
+      `<td class="text-muted" style="font-size:.88rem;text-align:center">${row.row_num}</td>`,
+      `<td><span style="font-size:.88rem;color:#64748b;white-space:nowrap;overflow:hidden;display:block;max-width:90px;text-overflow:ellipsis" title="${esc(row.raw_client)}">${esc(row.raw_client)}</span></td>`,
       `<td>${clientTypeSel(i, row)}</td>`,
       `<td>${clientIdentifierInp(i, row)}</td>`,
       `<td>${sel(i, 'delivery_type', DELIVERY_TYPES, row.delivery_type)}</td>`,
