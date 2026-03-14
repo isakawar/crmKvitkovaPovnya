@@ -10,7 +10,9 @@ import requests
 from datetime import date, datetime
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
 from app.services.route_optimizer_service import (
-    optimize_deliveries,
+    optimize_json,
+    submit_csv_job,
+    get_job_status,
     routes_result_to_csv,
     RouteOptimizerError,
     RouteOptimizerInfeasibleError,
@@ -196,11 +198,6 @@ def route_generator():
         selected_date = date.today()
         selected_date_str = selected_date.isoformat()
 
-    start_time = request.form.get('start_time', '09:00')
-    num_couriers = max(int(request.form.get('num_couriers', 1) or 1), 1) if request.method == 'POST' else 1
-    capacity_raw = request.form.get('capacity', '').strip() if request.method == 'POST' else ''
-    capacity = int(capacity_raw) if capacity_raw.isdigit() and int(capacity_raw) > 0 else None
-
     optimizer_result = None
     result_json = ''
     deliveries = []
@@ -208,11 +205,11 @@ def route_generator():
     general_error = None
 
     if request.method == 'POST':
+        # AJAX — submit job, return job_id
         delivery_ids_raw = request.form.getlist('delivery_ids')
         delivery_ids = [int(x) for x in delivery_ids_raw if x.isdigit()]
 
         already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
-
         base_query = (
             Delivery.query
             .options(joinedload(Delivery.order), joinedload(Delivery.client))
@@ -225,43 +222,23 @@ def route_generator():
             )
             .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         )
-
-        if delivery_ids:
-            deliveries = base_query.filter(Delivery.id.in_(delivery_ids)).all()
-        else:
-            deliveries = base_query.all()
+        deliveries = base_query.filter(Delivery.id.in_(delivery_ids)).all() if delivery_ids else base_query.all()
 
         if not deliveries:
-            flash('На вибрану дату немає доставок для оптимізації.', 'warning')
-        else:
-            try:
-                optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
-                optimizer_result = optimize_deliveries(
-                    deliveries=deliveries,
-                    optimizer_url=optimizer_url,
-                    start_time=start_time,
-                    num_couriers=num_couriers,
-                    capacity=capacity,
-                )
-                result_json = json.dumps(optimizer_result, ensure_ascii=False)
-            except RouteOptimizerInfeasibleError as exc:
-                infeasible_error = {
-                    'message': str(exc),
-                    'minimum_couriers_required': exc.minimum_couriers_required,
-                }
-            except RouteOptimizerError as exc:
-                general_error = str(exc)
+            return jsonify({'error': 'Немає доставок для оптимізації на вибрану дату.'}), 422
+
+        try:
+            optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+            result = optimize_json(deliveries=deliveries, optimizer_url=optimizer_url)
+            return jsonify({'result': result, 'selected_date': selected_date_str})
+        except RouteOptimizerInfeasibleError as exc:
+            return jsonify({'error': str(exc), 'minimum_couriers_required': exc.minimum_couriers_required}), 422
+        except RouteOptimizerError as exc:
+            return jsonify({'error': str(exc)}), 502
 
     return render_template(
         'route_generator.html',
         selected_date=selected_date_str,
-        start_time=start_time,
-        num_couriers=num_couriers,
-        capacity=capacity_raw,
-        optimizer_result=optimizer_result,
-        result_json=result_json,
-        infeasible_error=infeasible_error,
-        general_error=general_error,
     )
 
 
@@ -290,6 +267,38 @@ def route_generator_recalculate():
         body = {}
 
     return jsonify(body), resp.status_code
+
+
+@orders_bp.route('/route-generator/optimize-csv', methods=['POST'])
+@login_required
+def route_generator_optimize_csv():
+    csv_file = request.files.get('file')
+    if not csv_file or not csv_file.filename:
+        return jsonify({'error': 'Оберіть CSV файл.'}), 422
+
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    try:
+        job_id, result = submit_csv_job(csv_file.stream, csv_file.filename, optimizer_url)
+        if result is not None:
+            # Sync mode — result ready immediately
+            return jsonify({'result': result})
+        # Async mode — poll job
+        return jsonify({'job_id': job_id})
+    except RouteOptimizerInfeasibleError as exc:
+        return jsonify({'error': str(exc), 'minimum_couriers_required': exc.minimum_couriers_required}), 422
+    except RouteOptimizerError as exc:
+        return jsonify({'error': str(exc)}), 502
+
+
+@orders_bp.route('/route-generator/job/<job_id>', methods=['GET'])
+@login_required
+def route_generator_job_status(job_id):
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    try:
+        data = get_job_status(job_id, optimizer_url)
+        return jsonify(data)
+    except RouteOptimizerError as exc:
+        return jsonify({'error': str(exc)}), 502
 
 
 @orders_bp.route('/route-generator/deliveries', methods=['GET'])
