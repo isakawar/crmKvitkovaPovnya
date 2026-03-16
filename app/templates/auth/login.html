@@ -1,40 +1,402 @@
 {% extends "layout.html" %}
 
+{% block head %}
+{{ super() }}
+<style>
+  .auth-shell {
+    min-height: 100vh;
+    padding: 2rem;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.16), transparent 24%),
+      radial-gradient(circle at bottom right, rgba(120, 113, 108, 0.12), transparent 28%),
+      linear-gradient(135deg, #f8f5ef 0%, #f5f5f4 42%, #fafaf9 100%);
+  }
+
+  .auth-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 430px);
+    gap: 1.2rem;
+    min-height: calc(100vh - 4rem);
+    align-items: stretch;
+  }
+
+  .auth-panel,
+  .auth-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 2rem;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 22px 60px rgba(28, 25, 23, 0.08);
+    backdrop-filter: blur(14px);
+  }
+
+  .auth-panel {
+    position: relative;
+    overflow: hidden;
+    padding: 1.85rem;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.16), transparent 26%),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(250, 250, 249, 0.92));
+  }
+
+  .auth-panel__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    background: rgba(255, 251, 235, 0.96);
+    padding: 0.46rem 0.78rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #b45309;
+  }
+
+  .auth-panel__title {
+    max-width: 16ch;
+    margin: 1.15rem 0 0.75rem;
+    font-size: clamp(2.65rem, 4.2vw, 4.35rem);
+    line-height: 0.94;
+    letter-spacing: -0.06em;
+    color: #1c1917;
+  }
+
+  .auth-panel__text {
+    max-width: 31rem;
+    margin: 0;
+    font-size: 0.98rem;
+    line-height: 1.65;
+    color: #78716c;
+  }
+
+  .auth-panel__meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .auth-panel__meta-card {
+    border: 1px solid #ece7e3;
+    border-radius: 1.15rem;
+    background: rgba(255, 255, 255, 0.88);
+    padding: 0.85rem 0.9rem;
+  }
+
+  .auth-panel__meta-label {
+    margin: 0 0 0.45rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .auth-panel__meta-value {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.42;
+    color: #292524;
+    font-weight: 600;
+  }
+
+  .auth-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    padding: 1.55rem 1.55rem 1.35rem;
+  }
+
+  .auth-card__logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    width: 13rem;
+    height: 13rem;
+    border-radius: 2.4rem;
+    background: #fff7ed;
+    margin: 0 auto 1.15rem;
+    overflow: hidden;
+  }
+
+  .auth-card__logo img {
+    width: 9.875rem;
+    height: 9.875rem;
+    object-fit: cover;
+    border-radius: 2rem;
+  }
+
+  .auth-card__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e7e5e4;
+    border-radius: 999px;
+    background: #fafaf9;
+    padding: 0.38rem 0.72rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .auth-card__title {
+    margin: 0.8rem 0 0.45rem;
+    font-size: 2.1rem;
+    line-height: 0.96;
+    letter-spacing: -0.05em;
+    color: #1c1917;
+  }
+
+  .auth-card__text {
+    margin: 0 0 1.1rem;
+    color: #78716c;
+    line-height: 1.55;
+  }
+
+  .auth-alert {
+    border: 1px solid;
+    border-radius: 1rem;
+    padding: 0.9rem 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 0.95rem;
+  }
+
+  .auth-alert--danger {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+  }
+
+  .auth-alert--success {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #047857;
+  }
+
+  .auth-alert--info {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+  }
+
+  .auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+
+  .auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+
+  .auth-field__label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+
+  .auth-field__control {
+    position: relative;
+  }
+
+  .auth-field__control i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a8a29e;
+    font-size: 0.98rem;
+  }
+
+  .auth-input {
+    width: 100%;
+    border: 1px solid #e7e5e4;
+    border-radius: 1.1rem;
+    background: #fff;
+    padding: 0.9rem 1rem 0.9rem 2.75rem;
+    font-size: 0.98rem;
+    color: #1c1917;
+    transition: 0.16s ease;
+  }
+
+  .auth-input:focus {
+    outline: none;
+    border-color: #1c1917;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.14);
+  }
+
+  .auth-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    border: 1px solid #1c1917;
+    border-radius: 1rem;
+    background: #1c1917;
+    padding: 0.92rem 1.1rem;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: #fff;
+    transition: 0.16s ease;
+  }
+
+  .auth-submit:hover {
+    background: #44403c;
+    border-color: #44403c;
+  }
+
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1rem 0 0.9rem;
+    color: #a8a29e;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .auth-divider::before,
+  .auth-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #ece7e3;
+  }
+
+  .auth-footnote {
+    margin: 0.8rem 0 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: #a8a29e;
+  }
+
+  @media (max-width: 1100px) {
+    .auth-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .auth-shell {
+      padding: 1rem;
+    }
+
+    .auth-grid {
+      min-height: auto;
+      gap: 1rem;
+    }
+
+    .auth-panel,
+    .auth-card {
+      padding: 1.25rem;
+      border-radius: 1.5rem;
+    }
+
+    .auth-panel__meta {
+      grid-template-columns: 1fr;
+    }
+
+    .auth-card__title {
+      font-size: 1.85rem;
+    }
+
+    .auth-card__logo {
+      width: 9rem;
+      height: 9rem;
+      border-radius: 1.9rem;
+    }
+
+    .auth-card__logo img {
+      width: 6.75rem;
+      height: 6.75rem;
+      border-radius: 1.4rem;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center mt-5">
-        <div class="col-md-6 col-lg-4">
-            <div class="card shadow">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo" class="mb-4" style="max-width: 150px;">
-                        <h4 class="card-title mb-4">Вхід до системи</h4>
-                    </div>
+<div class="auth-shell">
+  <div class="auth-grid">
+    <section class="auth-panel">
+      <span class="auth-panel__badge">
+        <i class="bi bi-flower1"></i>
+        Kvitkova CRM
+      </span>
+      <h1 class="auth-panel__title">Управління квітковими циклами без хаосу.</h1>
+      <p class="auth-panel__text">
+        Один робочий простір для клієнтів, підписок, разових замовлень, маршрутів і продовжень. Мінімалістичний інтерфейс для щоденної роботи менеджера.
+      </p>
 
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}">{{ message }}</div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
+      <div class="auth-panel__meta">
+        <article class="auth-panel__meta-card">
+          <p class="auth-panel__meta-label">Клієнти</p>
+          <p class="auth-panel__meta-value">Картки, контакти та швидке оформлення.</p>
+        </article>
+        <article class="auth-panel__meta-card">
+          <p class="auth-panel__meta-label">Підписки</p>
+          <p class="auth-panel__meta-value">4 доставки в циклі та продовження.</p>
+        </article>
+        <article class="auth-panel__meta-card">
+          <p class="auth-panel__meta-label">Маршрути</p>
+          <p class="auth-panel__meta-value">Кур'єри, Telegram і контроль дня.</p>
+        </article>
+      </div>
+    </section>
 
-                    <form method="POST" action="{{ url_for('auth.login') }}">
-                        <div class="form-group mb-3">
-                            <label for="username" class="form-label">Логін</label>
-                            <input type="text" class="form-control" id="username" name="username" required>
-                        </div>
-                        <div class="form-group mb-4">
-                            <label for="password" class="form-label">Пароль</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
-                        </div>
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Увійти</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+    <section class="auth-card">
+      <div class="auth-card__logo">
+        <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Kvitkova CRM">
+      </div>
+
+      <h2 class="auth-card__title">Вхід до системи</h2>
+      <p class="auth-card__text">Увійди під своїм акаунтом, щоб перейти до роботи з CRM.</p>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="auth-alert auth-alert--{{ category if category in ['danger', 'success', 'info'] else 'info' }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="auth-divider">Робочий доступ</div>
+
+      <form method="POST" action="{{ url_for('auth.login') }}" class="auth-form">
+        <label class="auth-field" for="username">
+          <span class="auth-field__label">Логін</span>
+          <span class="auth-field__control">
+            <i class="bi bi-person"></i>
+            <input type="text" class="auth-input" id="username" name="username" autocomplete="username" required>
+          </span>
+        </label>
+
+        <label class="auth-field" for="password">
+          <span class="auth-field__label">Пароль</span>
+          <span class="auth-field__control">
+            <i class="bi bi-lock"></i>
+            <input type="password" class="auth-input" id="password" name="password" autocomplete="current-password" required>
+          </span>
+        </label>
+
+        <button type="submit" class="auth-submit">
+          <i class="bi bi-box-arrow-in-right"></i>
+          Увійти
+        </button>
+      </form>
+
+    </section>
+  </div>
 </div>
-{% endblock %} 
+{% endblock %}
