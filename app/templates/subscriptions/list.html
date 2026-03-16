@@ -9,6 +9,31 @@
   </div>
 </div>
 
+<!-- Search -->
+<div class="mb-5">
+  <form method="get" action="" class="flex items-center gap-3">
+    <input type="hidden" name="city" value="{{ city_filter }}">
+    <input type="hidden" name="type" value="{{ type_filter }}">
+    <div class="relative flex-1 max-w-md">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm"></i>
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Пошук за Instagram, отримувачем або телефоном..."
+        class="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+        autocomplete="off"
+      />
+    </div>
+    {% if search_query %}
+    <a href="{{ url_for('orders.subscriptions_list', city=city_filter, type=type_filter) }}"
+       class="text-sm text-stone-400 hover:text-stone-600 transition-colors">
+      <i class="bi bi-x-circle"></i> Скинути
+    </a>
+    {% endif %}
+  </form>
+</div>
+
 <!-- Stat cards -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
   <div class="bg-white border border-stone-200 rounded-xl p-5">
@@ -42,6 +67,7 @@
 
 <!-- Filters -->
 <form method="get" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
+  <input type="hidden" name="q" value="{{ search_query }}">
   <select name="city"
           class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
     <option value="">Всі міста</option>
@@ -60,7 +86,7 @@
           class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
     Фільтрувати
   </button>
-  {% if city_filter or type_filter %}
+  {% if search_query or city_filter or type_filter %}
   <a href="{{ url_for('orders.subscriptions_list') }}"
      class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
     Скинути
@@ -145,7 +171,13 @@
 <div class="flex flex-col items-center justify-center py-20 text-stone-400">
   <i class="bi bi-arrow-repeat text-5xl mb-4"></i>
   <p class="text-lg font-medium">Підписок не знайдено</p>
-  <p class="text-sm mt-1">Підписки — замовлення типу Weekly, Monthly або Bi-weekly</p>
+  <p class="text-sm mt-1">
+    {% if search_query or city_filter or type_filter %}
+      Спробуйте змінити пошук або фільтри
+    {% else %}
+      Підписки — замовлення типу Weekly, Monthly або Bi-weekly
+    {% endif %}
+  </p>
 </div>
 {% endif %}
 {% endblock %}

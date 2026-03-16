@@ -663,11 +663,24 @@ def subscriptions_list():
         .all()
     )
 
+    search_query = request.args.get('q', '').strip()
     city_filter = request.args.get('city', '').strip()
     type_filter = request.args.get('type', '').strip()
 
     data = []
     for order in subscription_orders:
+        if search_query:
+            q = search_query.lower()
+            searchable_values = [
+                order.client.instagram if order.client else '',
+                order.client.phone if order.client else '',
+                order.recipient_name,
+                order.recipient_phone,
+                order.recipient_social,
+                order.city,
+            ]
+            if not any(value and q in str(value).lower() for value in searchable_values):
+                continue
         if city_filter and order.city != city_filter:
             continue
         if type_filter and order.delivery_type != type_filter:
@@ -687,6 +700,7 @@ def subscriptions_list():
         completed_count=completed_count,
         total_count=len(data),
         cities=cities,
+        search_query=search_query,
         city_filter=city_filter,
         type_filter=type_filter,
     )

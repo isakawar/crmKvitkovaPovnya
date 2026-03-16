@@ -1,92 +1,207 @@
-<!-- Client Add/Edit Modal (Bootstrap modal + Tailwind styling) -->
-<div class="modal fade" id="clientModal" tabindex="-1" aria-labelledby="clientModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 rounded-2xl shadow-2xl overflow-hidden">
-      <form id="addClientForm">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-stone-200">
-          <h5 class="text-base font-semibold text-stone-900" id="clientModalLabel">Додати клієнта</h5>
-          <button type="button" class="text-stone-400 hover:text-stone-600 transition-colors p-1" data-bs-dismiss="modal">
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-
-        <!-- Body -->
-        <div class="px-6 py-4 space-y-4">
-          <input type="hidden" id="client-id" name="client_id">
-
-          <div>
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">
-              Instagram <span class="text-red-500">*</span>
-            </label>
-            <input type="text" name="instagram" id="edit-instagram"
-                   class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors"
-                   required>
-          </div>
-
-          <div class="relative">
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">Номер телефону</label>
-            <div class="relative">
-              <input type="text" name="phone" id="edit-phone"
-                     placeholder="+38"
-                     pattern="\+380[0-9]{9}"
-                     class="w-full px-3 py-2 pr-8 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors">
-              <button type="button" id="clear-phone-btn"
-                      class="absolute right-2 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500 transition-colors"
-                      tabindex="-1">&times;</button>
+<div class="modal fade" id="clientModal" tabindex="-1" aria-labelledby="clientModalLabel" aria-describedby="clientModalDescription" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable client-modal-dialog">
+    <div class="modal-content client-modal-content">
+      <form id="addClientForm" novalidate>
+        <div class="client-modal-shell">
+          <div class="client-modal-header">
+            <div class="space-y-3">
+              <span class="client-mode-chip" id="client-modal-mode-badge">
+                <i class="bi bi-person-plus"></i>
+                Новий клієнт
+              </span>
+              <div>
+                <h2 class="text-xl font-semibold text-stone-900 md:text-2xl" id="clientModalLabel">Створити клієнта</h2>
+                <p class="mt-1 text-sm text-stone-500" id="clientModalDescription">
+                  Заповніть контактні дані та параметри лояльності, щоб одразу використовувати картку в замовленнях і підписках.
+                </p>
+              </div>
             </div>
-            <p class="text-xs text-stone-400 mt-1">Формат: +380XXXXXXXXX</p>
+
+            <button type="button" class="client-modal-close" data-bs-dismiss="modal" aria-label="Закрити">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">Telegram</label>
-            <input type="text" name="telegram" id="edit-telegram"
-                   placeholder="Необов'язково"
-                   class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors">
+          <div class="client-modal-body">
+            <input type="hidden" id="client-id" name="client_id">
+
+            <div class="client-form-grid">
+              <section class="client-panel client-panel-primary">
+                <div>
+                  <div>
+                    <span class="client-section-kicker">
+                      <i class="bi bi-chat-heart"></i>
+                      Контакти
+                    </span>
+                    <h3 class="mt-3 text-lg font-semibold text-stone-900">Основний канал комунікації</h3>
+                    <p class="mt-1 text-sm text-stone-500">
+                      Instagram є обов'язковим, решту полів можна додати одразу або пізніше під час редагування.
+                    </p>
+                  </div>
+                </div>
+
+                <div class="mt-6 space-y-4">
+                  <div class="client-field">
+                    <label class="client-label" for="edit-instagram">
+                      <i class="bi bi-instagram"></i>
+                      Instagram <span class="text-red-500">*</span>
+                    </label>
+                    <div class="client-input-wrap">
+                      <i class="bi bi-at client-input-icon"></i>
+                      <input
+                        type="text"
+                        name="instagram"
+                        id="edit-instagram"
+                        class="client-input client-input-with-icon"
+                        placeholder="@username"
+                        autocomplete="off"
+                        required
+                      >
+                    </div>
+                    <p class="client-field-error"></p>
+                  </div>
+
+                  <div class="client-field">
+                    <label class="client-label" for="edit-telegram">
+                      <i class="bi bi-telegram"></i>
+                      Telegram
+                    </label>
+                    <div class="client-input-wrap">
+                      <i class="bi bi-send client-input-icon"></i>
+                      <input
+                        type="text"
+                        name="telegram"
+                        id="edit-telegram"
+                        class="client-input client-input-with-icon"
+                        placeholder="@telegram або нікнейм"
+                        autocomplete="off"
+                      >
+                    </div>
+                    <p class="client-field-error"></p>
+                  </div>
+
+                  <div class="client-field">
+                    <label class="client-label" for="edit-phone">
+                      <i class="bi bi-telephone"></i>
+                      Номер телефону
+                    </label>
+                    <div class="client-input-wrap">
+                      <i class="bi bi-phone client-input-icon"></i>
+                      <input
+                        type="tel"
+                        name="phone"
+                        id="edit-phone"
+                        class="client-input client-input-with-icon client-input-with-action"
+                        placeholder="+380XXXXXXXXX"
+                        pattern="\+380[0-9]{9}"
+                        autocomplete="tel"
+                      >
+                      <button type="button" id="clear-phone-btn" class="client-clear-btn hidden" tabindex="-1" aria-label="Очистити телефон">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </div>
+                    <p class="client-hint">Формат для CRM: +380XXXXXXXXX</p>
+                    <p class="client-field-error"></p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="client-panel">
+                <span class="client-section-kicker client-section-kicker-muted">
+                  <i class="bi bi-stars"></i>
+                  Лояльність
+                </span>
+                <h3 class="mt-3 text-lg font-semibold text-stone-900">Баланс, знижка та джерело</h3>
+                <p class="mt-1 text-sm text-stone-500">
+                  Ці поля формують контекст для менеджера і допомагають швидше оформлювати повторні замовлення.
+                </p>
+
+                <div class="client-two-col mt-6">
+                  <div class="client-field client-field-compact">
+                    <label class="client-label" for="edit-credits">
+                      <i class="bi bi-wallet2"></i>
+                      Кредити
+                    </label>
+                    <div class="client-input-wrap">
+                      <input
+                        type="number"
+                        name="credits"
+                        id="edit-credits"
+                        min="0"
+                        class="client-input"
+                        placeholder="0"
+                        inputmode="numeric"
+                      >
+                    </div>
+                    <p class="client-field-error"></p>
+                  </div>
+
+                  <div class="client-field client-field-compact">
+                    <label class="client-label" for="edit-personal-discount">
+                      <i class="bi bi-percent"></i>
+                      Персональна знижка
+                    </label>
+                    <div class="client-input-wrap">
+                      <input
+                        type="number"
+                        name="personal_discount"
+                        id="edit-personal-discount"
+                        min="0"
+                        max="100"
+                        step="1"
+                        class="client-input"
+                        placeholder="0"
+                        inputmode="numeric"
+                      >
+                    </div>
+                    <p class="client-field-error"></p>
+                  </div>
+                </div>
+
+                <div class="client-field mt-4">
+                  <label class="client-label" for="edit-marketing-source">
+                    <i class="bi bi-megaphone"></i>
+                    Звідки дізнались
+                  </label>
+                  <div class="client-input-wrap">
+                    <select
+                      name="marketing_source"
+                      id="edit-marketing-source"
+                      class="client-select client-input-with-action"
+                    >
+                      <option value="">Оберіть варіант</option>
+                      {% if marketing_sources and marketing_sources|length > 0 %}
+                        {% for src in marketing_sources %}
+                          <option value="{{ src.value }}">{{ src.value }}</option>
+                        {% endfor %}
+                      {% else %}
+                        <option disabled>Додайте варіанти у налаштуваннях</option>
+                      {% endif %}
+                    </select>
+                    <i class="bi bi-chevron-down client-select-icon"></i>
+                  </div>
+                  <p class="client-field-error"></p>
+                </div>
+              </section>
+            </div>
+
+            <div id="client-error" class="client-error-banner" role="alert"></div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">Кредити</label>
-            <input type="number" name="credits" id="edit-credits" min="0"
-                   class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors">
+          <div class="client-modal-footer">
+            <p class="client-footer-copy" id="client-footer-copy">
+              Поля зі зірочкою потрібні для створення картки. Інші дані можна оновити будь-коли.
+            </p>
+
+            <div class="flex flex-col-reverse gap-3 sm:flex-row">
+              <button type="button" class="client-btn-secondary" data-bs-dismiss="modal">
+                Скасувати
+              </button>
+              <button type="submit" id="submit-btn" class="client-btn-primary">
+                <span id="submit-btn-text">Створити клієнта</span>
+              </button>
+            </div>
           </div>
-
-          <div>
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">Звідки дізнались</label>
-            <select name="marketing_source" id="edit-marketing-source"
-                    class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors appearance-none">
-              <option value="">Оберіть варіант</option>
-              {% if marketing_sources and marketing_sources|length > 0 %}
-                {% for src in marketing_sources %}
-                  <option value="{{ src.value }}">{{ src.value }}</option>
-                {% endfor %}
-              {% else %}
-                <option disabled>Додайте варіанти у налаштуваннях</option>
-              {% endif %}
-            </select>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-stone-700 mb-1.5">Персональна знижка</label>
-            <input type="number" name="personal_discount" id="edit-personal-discount"
-                   placeholder="Наприклад: 5" min="0" max="100" step="1"
-                   class="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-colors">
-          </div>
-
-          <div id="client-error" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
-        </div>
-
-        <!-- Footer -->
-        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-stone-200 bg-stone-50">
-          <button type="button"
-                  class="px-4 py-2 text-sm font-medium text-stone-700 bg-white border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors"
-                  data-bs-dismiss="modal">
-            Скасувати
-          </button>
-          <button type="submit" id="submit-btn"
-                  class="px-4 py-2 text-sm font-medium text-white bg-stone-900 rounded-lg hover:bg-stone-700 transition-colors">
-            Додати
-          </button>
         </div>
       </form>
     </div>

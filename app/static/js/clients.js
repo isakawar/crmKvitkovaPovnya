@@ -1,14 +1,48 @@
 document.addEventListener('DOMContentLoaded', function () {
   const addForm = document.getElementById('addClientForm');
-  const errorDiv = document.getElementById('client-error');
-  const phoneInput = document.getElementById('edit-phone');
   const modal = document.getElementById('clientModal');
+  if (!addForm || !modal) return;
+
+  const errorDiv = document.getElementById('client-error');
   const modalTitle = document.getElementById('clientModalLabel');
+  const modalDescription = document.getElementById('clientModalDescription');
+  const modeBadge = document.getElementById('client-modal-mode-badge');
+  const footerCopy = document.getElementById('client-footer-copy');
   const submitBtn = document.getElementById('submit-btn');
+  const submitBtnText = document.getElementById('submit-btn-text');
   const clientIdInput = document.getElementById('client-id');
+  const instagramInput = document.getElementById('edit-instagram');
+  const phoneInput = document.getElementById('edit-phone');
+  const telegramInput = document.getElementById('edit-telegram');
+  const creditsInput = document.getElementById('edit-credits');
+  const marketingSourceInput = document.getElementById('edit-marketing-source');
+  const personalDiscountInput = document.getElementById('edit-personal-discount');
   const clearPhoneBtn = document.getElementById('clear-phone-btn');
+  const modalInstance = bootstrap.Modal.getOrCreateInstance(modal);
+  const phonePattern = /^\+380[0-9]{9}$/;
 
   let isEditMode = false;
+  let isSubmitting = false;
+  let currentClientLabel = '';
+
+  const modeContent = {
+    create: {
+      badge: '<i class="bi bi-person-plus"></i> Новий клієнт',
+      title: 'Створити клієнта',
+      description: 'Заповніть контактні дані та параметри лояльності, щоб одразу використовувати картку в замовленнях і підписках.',
+      submit: 'Створити клієнта',
+      loading: 'Створюємо...',
+      footer: 'Поля зі зірочкою потрібні для створення картки. Інші дані можна оновити будь-коли.',
+    },
+    edit: {
+      badge: '<i class="bi bi-pencil-square"></i> Редагування',
+      title: 'Редагувати клієнта',
+      description: 'Оновіть контакти або параметри лояльності. Зміни одразу збережуться в картці клієнта.',
+      submit: 'Зберегти зміни',
+      loading: 'Зберігаємо...',
+      footer: 'Збереження оновить наявну картку клієнта. Історія замовлень та підписок залишиться без змін.',
+    },
+  };
 
   // Click on card to edit
   document.querySelectorAll('[data-client-id]').forEach(card => {
@@ -25,86 +59,237 @@ document.addEventListener('DOMContentLoaded', function () {
         const client = await response.json();
         fillFormWithClientData(client);
         isEditMode = true;
-        modalTitle.textContent = 'Редагувати клієнта';
-        submitBtn.textContent = 'Зберегти';
+        currentClientLabel = client.instagram || '';
         clientIdInput.value = clientId;
-        new bootstrap.Modal(modal).show();
+        renderMode();
+        modalInstance.show();
+      } else {
+        showToast('Не вдалося завантажити дані клієнта', 'error');
       }
     } catch (error) {
       console.error('Помилка завантаження даних клієнта:', error);
+      showToast('Не вдалося завантажити дані клієнта', 'error');
     }
   }
 
   function fillFormWithClientData(client) {
-    document.getElementById('edit-instagram').value = client.instagram;
-    document.getElementById('edit-phone').value = client.phone;
-    document.getElementById('edit-telegram').value = client.telegram;
-    document.getElementById('edit-credits').value = client.credits;
-    document.getElementById('edit-marketing-source').value = client.marketing_source;
-    document.getElementById('edit-personal-discount').value = client.personal_discount;
+    instagramInput.value = client.instagram || '';
+    phoneInput.value = client.phone || '';
+    telegramInput.value = client.telegram || '';
+    creditsInput.value = client.credits ?? 0;
+    marketingSourceInput.value = client.marketing_source || '';
+    personalDiscountInput.value = client.personal_discount || '';
+    clearAllErrors();
+    toggleClearPhoneButton();
   }
 
   modal.addEventListener('show.bs.modal', function () {
-    if (!isEditMode) resetForm();
+    document.body.classList.add('client-modal-open');
+    if (!isEditMode) {
+      renderMode();
+      clearAllErrors();
+      toggleClearPhoneButton();
+    }
   });
+
+  modal.addEventListener('hidden.bs.modal', function () {
+    document.body.classList.remove('client-modal-open');
+    resetForm();
+  });
+
+  function renderMode() {
+    const content = isEditMode ? modeContent.edit : modeContent.create;
+    modalTitle.textContent = isEditMode && currentClientLabel
+      ? `${content.title} (${currentClientLabel})`
+      : content.title;
+    modalDescription.textContent = content.description;
+    modeBadge.innerHTML = content.badge;
+    footerCopy.textContent = content.footer;
+    if (!isSubmitting) {
+      submitBtnText.textContent = content.submit;
+    }
+  }
 
   function resetForm() {
     addForm.reset();
     clientIdInput.value = '';
     isEditMode = false;
-    modalTitle.textContent = 'Додати клієнта';
-    submitBtn.textContent = 'Додати';
-    errorDiv.classList.add('hidden');
+    isSubmitting = false;
+    currentClientLabel = '';
+    setSubmitState(false);
+    clearAllErrors();
+    toggleClearPhoneButton();
+    renderMode();
+  }
+
+  function getFieldErrorElement(field) {
+    return field.closest('.client-field')?.querySelector('.client-field-error');
+  }
+
+  function clearFieldError(field) {
+    if (!field) return;
+    field.classList.remove('is-invalid');
+    const fieldError = getFieldErrorElement(field);
+    if (fieldError) {
+      fieldError.textContent = '';
+      fieldError.classList.remove('is-visible');
+    }
+  }
+
+  function setFieldError(field, message) {
+    if (!field) return;
+    field.classList.add('is-invalid');
+    const fieldError = getFieldErrorElement(field);
+    if (fieldError) {
+      fieldError.textContent = message;
+      fieldError.classList.add('is-visible');
+    }
+  }
+
+  function clearAllErrors() {
+    errorDiv.textContent = '';
+    errorDiv.classList.remove('is-visible');
+    [instagramInput, phoneInput, telegramInput, creditsInput, marketingSourceInput, personalDiscountInput].forEach(clearFieldError);
+  }
+
+  function showFormError(message) {
+    errorDiv.textContent = message;
+    errorDiv.classList.add('is-visible');
+  }
+
+  function toggleClearPhoneButton() {
+    if (!clearPhoneBtn) return;
+    clearPhoneBtn.classList.toggle('hidden', !phoneInput.value.trim());
+  }
+
+  function normalizePhoneValue(value) {
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+
+    let normalizedDigits;
+    if (digits.startsWith('380')) {
+      normalizedDigits = digits;
+    } else if (digits.startsWith('0')) {
+      normalizedDigits = `38${digits}`;
+    } else {
+      normalizedDigits = `380${digits}`;
+    }
+
+    return `+${normalizedDigits.slice(0, 12)}`;
+  }
+
+  function setSubmitState(submitting) {
+    isSubmitting = submitting;
+    submitBtn.disabled = submitting;
+    submitBtnText.textContent = submitting
+      ? (isEditMode ? modeContent.edit.loading : modeContent.create.loading)
+      : (isEditMode ? modeContent.edit.submit : modeContent.create.submit);
+  }
+
+  function validateForm() {
+    let isValid = true;
+    clearAllErrors();
+
+    if (!instagramInput.value.trim()) {
+      setFieldError(instagramInput, 'Вкажіть Instagram клієнта');
+      isValid = false;
+    }
+
+    const phoneValue = phoneInput.value.trim();
+    if (phoneValue && !phonePattern.test(phoneValue)) {
+      setFieldError(phoneInput, 'Невірний формат: +380XXXXXXXXX');
+      isValid = false;
+    }
+
+    const creditsValue = creditsInput.value.trim();
+    if (creditsValue && Number(creditsValue) < 0) {
+      setFieldError(creditsInput, 'Кредити не можуть бути меншими за 0');
+      isValid = false;
+    }
+
+    const discountValue = personalDiscountInput.value.trim();
+    if (discountValue) {
+      const discount = Number(discountValue);
+      if (Number.isNaN(discount) || discount < 0 || discount > 100) {
+        setFieldError(personalDiscountInput, 'Знижка має бути в межах від 0 до 100');
+        isValid = false;
+      }
+    }
+
+    return isValid;
   }
 
   // Phone mask
   phoneInput.addEventListener('input', function (e) {
-    let value = e.target.value.replace(/\D/g, '');
-    if (value.length === 0) { e.target.value = '+38'; return; }
-    if (value.startsWith('380')) {
-      e.target.value = '+' + value;
-    } else if (value.startsWith('38')) {
-      e.target.value = '+' + value;
-    } else if (value.startsWith('0')) {
-      e.target.value = '+38' + value;
-    } else {
-      e.target.value = '+380' + value;
-    }
-    if (e.target.value.length > 13) e.target.value = e.target.value.substring(0, 13);
+    clearFieldError(phoneInput);
+    e.target.value = normalizePhoneValue(e.target.value);
+    toggleClearPhoneButton();
   });
 
   if (clearPhoneBtn && phoneInput) {
     clearPhoneBtn.addEventListener('click', function () {
       phoneInput.value = '';
+      clearFieldError(phoneInput);
+      toggleClearPhoneButton();
       phoneInput.focus();
     });
   }
 
+  [instagramInput, telegramInput, creditsInput, personalDiscountInput].forEach(input => {
+    input.addEventListener('input', function () {
+      clearFieldError(input);
+    });
+  });
+
+  marketingSourceInput.addEventListener('change', function () {
+    clearFieldError(marketingSourceInput);
+  });
+
+  phoneInput.addEventListener('blur', function () {
+    if (phoneInput.value.trim() && !phonePattern.test(phoneInput.value.trim())) {
+      setFieldError(phoneInput, 'Невірний формат: +380XXXXXXXXX');
+    }
+  });
+
   addForm.addEventListener('submit', async function (e) {
     e.preventDefault();
-    errorDiv.classList.add('hidden');
-    const phoneValue = phoneInput.value.trim();
-    const phonePattern = /^\+380[0-9]{9}$/;
-    if (phoneValue && phoneValue !== '+38' && !phonePattern.test(phoneValue)) {
-      errorDiv.textContent = 'Невірний формат: +380XXXXXXXXX';
-      errorDiv.classList.remove('hidden');
+
+    if (!validateForm()) {
       return;
     }
 
-    const formData = new FormData(addForm);
-    const url = isEditMode ? `/clients/${clientIdInput.value}` : '/clients/new';
-    const resp = await fetch(url, { method: 'POST', body: formData });
-    const data = await resp.json();
+    try {
+      setSubmitState(true);
+      const formData = new FormData(addForm);
+      const url = isEditMode ? `/clients/${clientIdInput.value}` : '/clients/new';
+      const resp = await fetch(url, { method: 'POST', body: formData });
+      const data = await resp.json().catch(() => ({}));
 
-    if (resp.ok && data.success) {
-      showToast('Клієнта успішно збережено!', 'success');
-      bootstrap.Modal.getInstance(modal).hide();
-      setTimeout(() => location.reload(), 1000);
-    } else {
-      errorDiv.textContent = data.error || 'Помилка збереження';
-      errorDiv.classList.remove('hidden');
+      if (resp.ok && data.success) {
+        showToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
+        modalInstance.hide();
+        setTimeout(() => location.reload(), 900);
+        return;
+      }
+
+      const message = data.error || 'Помилка збереження';
+      if (message.toLowerCase().includes('instagram')) {
+        setFieldError(instagramInput, message);
+      } else if (message.toLowerCase().includes('телефон') || message.toLowerCase().includes('номер')) {
+        setFieldError(phoneInput, message);
+      } else {
+        showFormError(message);
+      }
+    } catch (error) {
+      console.error('Помилка збереження клієнта:', error);
+      showFormError('Не вдалося зберегти клієнта. Спробуйте ще раз.');
+    } finally {
+      setSubmitState(false);
     }
   });
+
+  renderMode();
+  toggleClearPhoneButton();
 });
 
 function showToast(message, type = 'info') {
