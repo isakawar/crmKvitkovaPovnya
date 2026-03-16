@@ -3,6 +3,7 @@ from app.models import Client, Order, Delivery
 import datetime
 import logging
 import calendar
+from sqlalchemy import or_
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +142,20 @@ def create_order_and_deliveries(client, form):
     db.session.commit()
     return order
 
-def get_orders(phone=None, instagram=None, city=None, delivery_type=None, size=None):
-    logger.info(f'Фільтрація замовлень: phone={phone}, instagram={instagram}, city={city}, delivery_type={delivery_type}, size={size}')
+def get_orders(q=None, phone=None, instagram=None, city=None, delivery_type=None, size=None, date_from=None, date_to=None):
+    logger.info(f'Фільтрація замовлень: q={q}, phone={phone}, instagram={instagram}, city={city}, delivery_type={delivery_type}, size={size}, date_from={date_from}, date_to={date_to}')
     query = Order.query.join(Client)
+    if q:
+        like_query = f'%{q}%'
+        query = query.filter(or_(
+            Client.instagram.ilike(like_query),
+            Client.phone.ilike(like_query),
+            Order.recipient_name.ilike(like_query),
+            Order.recipient_phone.ilike(like_query),
+            Order.recipient_social.ilike(like_query),
+            Order.city.ilike(like_query),
+            Order.street.ilike(like_query),
+        ))
     if phone:
         query = query.filter(Order.recipient_phone.contains(phone))
     if instagram:
@@ -154,6 +166,21 @@ def get_orders(phone=None, instagram=None, city=None, delivery_type=None, size=N
         query = query.filter(Order.delivery_type == delivery_type)
     if size:
         query = query.filter(Order.size == size)
+    if date_from or date_to:
+        query = query.join(Delivery)
+        if date_from:
+            try:
+                parsed_date_from = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+                query = query.filter(Delivery.delivery_date >= parsed_date_from)
+            except ValueError:
+                logger.warning(f'Некоректний date_from у фільтрі замовлень: {date_from}')
+        if date_to:
+            try:
+                parsed_date_to = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+                query = query.filter(Delivery.delivery_date <= parsed_date_to)
+            except ValueError:
+                logger.warning(f'Некоректний date_to у фільтрі замовлень: {date_to}')
+        query = query.distinct()
     return query.order_by(Order.id.desc()).all()
 
 def paginate_orders(orders, page=1, per_page=10):

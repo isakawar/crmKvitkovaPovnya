@@ -9,6 +9,7 @@ import json
 import requests
 from datetime import date, datetime
 from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+from app.services.delivery_service import group_deliveries_by_date
 from app.services.route_optimizer_service import (
     optimize_json,
     submit_csv_job,
@@ -25,27 +26,100 @@ orders_bp = Blueprint('orders', __name__)
 @orders_bp.route('/orders', methods=['GET'])
 @login_required
 def orders_list():
+    search_query = (
+        request.args.get('q', '').strip()
+        or request.args.get('instagram', '').strip()
+        or request.args.get('phone', '').strip()
+    )
     phone = request.args.get('phone', '').strip()
     instagram = request.args.get('instagram', '').strip()
     city = request.args.get('city', '').strip()
     delivery_type = request.args.get('delivery_type', '').strip()
     size = request.args.get('size', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
     page = int(request.args.get('page', 1))
     per_page = 30
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     all_orders_count = Order.query.count()
-    orders = get_orders(phone, instagram, city if city else None, delivery_type if delivery_type else None, size if size else None)
-    orders_on_page, has_next = paginate_orders(orders, page, per_page)
+    orders = get_orders(
+        q=search_query if search_query else None,
+        phone=phone if phone else None,
+        instagram=instagram if instagram else None,
+        city=city if city else None,
+        delivery_type=delivery_type if delivery_type else None,
+        size=size if size else None,
+        date_from=date_from if date_from else None,
+        date_to=date_to if date_to else None,
+    )
+    filtered_order_ids = [order.id for order in orders]
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
     clients_count = db.session.query(Order.client_id).distinct().count()
     subscription_extensions_count = Order.query.filter_by(is_subscription_extended=True).count()
+    subscription_orders_count = Order.query.filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly'])).count()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
-    return render_template('orders/list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom, subscription_extensions_count=subscription_extensions_count)
+    deliveries = []
+    grouped_deliveries = {}
+    deliveries_count = 0
+    has_next = False
+    if filtered_order_ids:
+        deliveries_query = (
+            Delivery.query
+            .options(joinedload(Delivery.order), joinedload(Delivery.client))
+            .filter(Delivery.order_id.in_(filtered_order_ids))
+            .order_by(
+                Delivery.delivery_date.asc(),
+                db.case((Delivery.time_from == None, 1), else_=0),
+                Delivery.time_from.asc(),
+                Delivery.id.asc()
+            )
+        )
+        if date_from:
+            try:
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+        deliveries = deliveries_query.all()
+        deliveries_count = len(deliveries)
+        deliveries = deliveries[start_idx:end_idx]
+        grouped_deliveries = group_deliveries_by_date(deliveries)
+        has_next = end_idx < deliveries_count
+
+    return render_template(
+        'orders/list.html',
+        deliveries=deliveries,
+        deliveries_count=deliveries_count,
+        grouped_deliveries=grouped_deliveries,
+        page=page,
+        prev_page=prev_page,
+        next_page=next_page,
+        has_next=has_next,
+        orders_count=all_orders_count,
+        clients_count=clients_count,
+        per_page=per_page,
+        cities=cities,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom,
+        subscription_extensions_count=subscription_extensions_count,
+        subscription_orders_count=subscription_orders_count,
+        search_query=search_query,
+        city_filter=city,
+        delivery_type_filter=delivery_type,
+        size_filter=size,
+        date_from_filter=date_from,
+        date_to_filter=date_to,
+    )
 
 @orders_bp.route('/orders/new', methods=['GET'])
 @login_required

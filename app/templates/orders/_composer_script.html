@@ -424,9 +424,24 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
-        row.addEventListener('dblclick', async function() {
+    document.querySelectorAll('[data-order-edit]').forEach(trigger => {
+        trigger.addEventListener('click', async function() {
+            const orderId = this.getAttribute('data-order-edit');
+            if (!orderId) return;
+            try {
+                const response = await fetch(`/orders/${orderId}/edit`);
+                const orderData = await response.json();
+                populateComposerForm(orderData, orderId);
+            } catch (error) {
+                showToast('Помилка завантаження даних замовлення', 'error');
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-order-id][data-order-editable="true"]').forEach(card => {
+        card.addEventListener('dblclick', async function() {
             const orderId = this.getAttribute('data-order-id');
+            if (!orderId) return;
             try {
                 const response = await fetch(`/orders/${orderId}/edit`);
                 const orderData = await response.json();

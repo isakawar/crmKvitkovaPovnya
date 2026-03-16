@@ -2,1111 +2,406 @@
 {% from "macros.html" import render_toast, toast_script %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-5">
-    <div>
-        <h1 class="text-xl font-semibold text-stone-900">Замовлення</h1>
-        <p class="text-sm text-stone-500 mt-0.5">Управління підписками та замовленнями клієнтів</p>
+<div class="flex flex-col gap-6">
+  <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+    <div class="space-y-2">
+      <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
+        <i class="bi bi-bag-heart"></i>
+        Orders Desk
+      </span>
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
+        <p class="mt-1 max-w-2xl text-sm leading-6 text-stone-500">
+          Новий операційний вигляд для всіх разових замовлень і підписок: один фільтр-бар, табличний список доставок і швидке редагування з CRM.
+        </p>
+      </div>
     </div>
-    <div class="flex items-center gap-2">
-        <a href="/orders/export/csv" title="Експорт у CSV"
-           class="flex items-center gap-1.5 px-3 py-2 text-sm text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
-            <i class="bi bi-download"></i> Експорт
-        </a>
-        <button class="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
-                data-bs-toggle="modal" data-bs-target="#addOrderModal">
-            <i class="bi bi-plus-lg"></i> Нове замовлення
+
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <a href="/orders/export/csv"
+         class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+        <i class="bi bi-download"></i>
+        Експорт CSV
+      </a>
+      <button
+        type="button"
+        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+        data-open-composer="order"
+        data-bs-toggle="modal"
+        data-bs-target="#addOrderModal"
+      >
+        <i class="bi bi-plus-lg"></i>
+        Нове замовлення
+      </button>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-[22px] border border-stone-200 bg-gradient-to-br from-white via-white to-amber-50 p-4 shadow-sm">
+      <div class="mb-3 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-900 text-white">
+          <i class="bi bi-bag-heart"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
+          <p class="text-xs text-stone-500">усі активності</p>
+        </div>
+      </div>
+      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ orders_count }}</p>
+      <p class="mt-1.5 text-xs leading-5 text-stone-500">Замовлення та підписки в CRM.</p>
+    </article>
+
+    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <i class="bi bi-arrow-repeat"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Підписки</p>
+          <p class="text-xs text-stone-500">регулярні цикли</p>
+        </div>
+      </div>
+      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ subscription_orders_count }}</p>
+      <p class="mt-1.5 text-xs leading-5 text-stone-500">Weekly, Monthly і Bi-weekly сценарії.</p>
+    </article>
+
+    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <i class="bi bi-people"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнти</p>
+          <p class="text-xs text-stone-500">унікальні картки</p>
+        </div>
+      </div>
+      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ clients_count }}</p>
+      <p class="mt-1.5 text-xs leading-5 text-stone-500">Клієнти, які вже мають оформлені замовлення.</p>
+    </article>
+
+    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
+          <i class="bi bi-stars"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Продовження</p>
+          <p class="text-xs text-stone-500">переоформлені цикли</p>
+        </div>
+      </div>
+      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ subscription_extensions_count }}</p>
+      <p class="mt-1.5 text-xs leading-5 text-stone-500">Підписки, які вже були продовжені менеджером.</p>
+    </article>
+  </section>
+
+  <form method="get" id="orders-filter-form" class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
+      <div class="relative min-w-[280px] flex-1 md:max-w-md">
+        <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+        <input
+          type="text"
+          name="q"
+          value="{{ search_query }}"
+          placeholder="Пошук за Instagram, отримувачем, телефоном, соцмережею або містом..."
+          class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+          autocomplete="off"
+        >
+      </div>
+      <input
+        type="date"
+        name="date_from"
+        value="{{ date_from_filter }}"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+      <input
+        type="date"
+        name="date_to"
+        value="{{ date_to_filter }}"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+      <select
+        name="city"
+        id="filter-city"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Всі міста</option>
+        {% for city in cities %}
+          <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+        {% endfor %}
+      </select>
+
+      <select
+        name="delivery_type"
+        id="filter-delivery-type"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Усі типи</option>
+        {% for item in delivery_types %}
+          <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+        {% endfor %}
+      </select>
+
+      <select
+        name="size"
+        id="filter-size"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Усі розміри</option>
+        {% for item in sizes %}
+          <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+        {% endfor %}
+      </select>
+        <button
+          type="submit"
+          class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+        >
+          Застосувати
         </button>
-    </div>
-</div>
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
-    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
-        <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center mb-3">
-            <i class="bi bi-bag-heart text-green-700"></i>
-        </div>
-        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Замовлень</p>
-        <p class="text-3xl font-bold text-stone-900">{{ orders_count }}</p>
-    </div>
-    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
-        <div class="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center mb-3">
-            <i class="bi bi-cash-coin text-amber-700"></i>
-        </div>
-        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Середній чек</p>
-        <p class="text-3xl font-bold text-stone-900">{{ avg_order_sum or '—' }}</p>
-    </div>
-    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
-        <div class="w-9 h-9 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
-            <i class="bi bi-arrow-repeat text-stone-600"></i>
-        </div>
-        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Продовжень</p>
-        <p class="text-3xl font-bold text-stone-900">{{ subscription_extensions_count or '—' }}</p>
-    </div>
-    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
-        <div class="w-9 h-9 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
-            <i class="bi bi-people text-stone-600"></i>
-        </div>
-        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Клієнтів</p>
-        <p class="text-3xl font-bold text-stone-900">{{ clients_count or '—' }}</p>
-    </div>
-</div>
-
-<div class="mb-4">
-    <form class="flex flex-wrap gap-2 items-center" method="get" id="orders-filter-form">
-
-        <div class="relative flex items-center">
-            <i class="bi bi-instagram absolute left-2.5 text-stone-400 text-sm pointer-events-none"></i>
-            <input type="text" name="instagram" placeholder="Пошук за Instagram..."
-                   value="{{ request.args.get('instagram', '') }}"
-                   class="pl-8 pr-3 py-1.5 text-sm bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all w-48">
-        </div>
-
-        <div class="relative flex items-center">
-            <i class="bi bi-telephone absolute left-2.5 text-stone-400 text-sm pointer-events-none"></i>
-            <input type="text" name="phone" placeholder="Пошук за телефоном..."
-                   value="{{ request.args.get('phone', '') }}"
-                   class="pl-8 pr-3 py-1.5 text-sm bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all w-48">
-        </div>
-
-        <select name="city" id="filter-city"
-                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-36">
-            <option value="">Місто</option>
-            <option value="Київ"      {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
-            <option value="Бровари"   {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
-            <option value="Вишгород"  {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
-            <option value="Ірпінь"    {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
-        </select>
-
-        <select name="delivery_type" id="filter-delivery-type"
-                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-36">
-            <option value="">Тип доставки</option>
-            <option value="Weekly"    {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
-            <option value="Monthly"   {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
-            <option value="Bi-weekly" {% if request.args.get('delivery_type')=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
-            <option value="One-time"  {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
-        </select>
-
-        <select name="size" id="filter-size"
-                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-28">
-            <option value="">Розмір</option>
-            <option value="M"       {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
-            <option value="L"       {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
-            <option value="XL"      {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
-            <option value="XXL"     {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
-            <option value="Власний" {% if request.args.get('size')=='Власний' %}selected{% endif %}>Власний</option>
-        </select>
-
-        <button type="button" id="reset-filters-btn"
-                class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-stone-500 border border-stone-200 rounded-lg hover:bg-stone-100 hover:text-stone-700 transition-colors cursor-pointer">
-            <i class="bi bi-x-lg text-xs"></i> Скинути
+        {% if search_query or city_filter or delivery_type_filter or size_filter or date_from_filter or date_to_filter %}
+        <button
+          type="button"
+          id="reset-filters-btn"
+          class="rounded-lg border border-stone-200 bg-white px-4 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+        >
+          Скинути
         </button>
+        {% endif %}
+  </form>
 
-    </form>
-</div>
+  {% if deliveries %}
+  {% set weekday_map = {
+    0: 'Понеділок',
+    1: 'Вівторок',
+    2: 'Середа',
+    3: 'Четвер',
+    4: "П'ятниця",
+    5: 'Субота',
+    6: 'Неділя'
+  } %}
+  <section class="space-y-4 pt-2">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="text-2xl font-semibold tracking-tight text-stone-900">Список доставок</h2>
+        <p class="mt-1 text-sm text-stone-500">Усі доставки для поточного набору фільтрів, візуально згруповані по днях.</p>
+      </div>
+      <div class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-500 shadow-sm">
+        {{ deliveries_count }} доставок
+      </div>
+    </div>
 
-<table class="table table-hover align-middle w-100" id="orders-table">
-    <thead>
-        <tr>
-            <th>Клієнт</th>
-            <th>Отримувач</th>
-            <th>Телефон</th>
-            <th>Місто</th>
-            <th>Адреса</th>
-            <th>Тип</th>
-            <th>Розмір</th>
-            <th>Дата</th>
-            <th>День</th>
-            <th>Час</th>
-            <th>Для кого</th>
-            <th>Коментар</th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for order in orders_on_page %}
-        <tr data-order-id="{{ order.id }}">
-            <td>{{ order.client.instagram or '' }}</td>
-            <td>{{ order.recipient_name or '' }}</td>
-            <td>{{ order.recipient_phone or '' }}</td>
-            <td>{{ order.city or '' }}</td>
-            <td>
-                {% if order.is_pickup %}
-                    <span class="tag tag-easy">Самовивіз</span>
-                {% else %}
-                    {{ order.street or '' }}
-                    {% if order.building_number %}, {{ order.building_number }}{% endif %}
-                    {% if order.floor %}, {{ order.floor }}{% endif %}
-                    {% if order.entrance %}, {{ order.entrance }}{% endif %}
-                {% endif %}
-            </td>
-            <td><span class="tag">{{ order.delivery_type or '' }}</span></td>
-            <td>
-                <span class="tag {% if order.size=='M' %}tag-easy{% elif order.size=='L' %}tag-medium{% elif order.size=='XL' or order.size=='XXL' %}tag-hard{% endif %}">{{ order.size or '' }}</span>
-                {% if order.size == 'Власний' and order.custom_amount %}
-                    <span class="tag">{{ order.custom_amount }} грн</span>
-                {% endif %}
-            </td>
-            <td>{{ order.first_delivery_date.strftime('%d.%m.%Y') if order.first_delivery_date else '' }}</td>
-            <td>{{ order.delivery_day or '' }}</td>
-            <td>
-                {% if order.time_from and order.time_to %}
-                    {{ order.time_from }} - {{ order.time_to }}
-                {% elif order.time_from %}
-                    {{ order.time_from }}
-                {% else %}
-                    -
-                {% endif %}
-            </td>
-            <td>{{ order.for_whom or '' }}</td>
-            <td>
-                {% if order.comment %}
-                    <span class="text-muted" title="{{ order.comment }}">{{ order.comment[:80] }}{% if order.comment|length > 80 %}...{% endif %}</span>
-                {% endif %}
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+    <div class="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="min-w-[1180px] w-full border-collapse">
+          <thead>
+            <tr class="border-b border-stone-200 bg-stone-50/80">
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Клієнт</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Адреса</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Телефон</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Розмір</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Підписка</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Коментар</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Побажання</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Дата і час</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for date, items in grouped_deliveries|dictsort %}
+            <tr class="border-y border-stone-200 bg-stone-50">
+              <td colspan="8" class="px-4 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500">
+                    <i class="bi bi-calendar2-week"></i>
+                  </div>
+                  <div class="flex items-baseline gap-3">
+                    <span class="text-[1.05rem] font-semibold text-stone-900">{{ weekday_map[date.weekday()] }}, {{ date.strftime('%d.%m.%Y') }}</span>
+                    <span class="text-sm text-stone-400">({{ items|length }} достав{{ 'ка' if items|length == 1 else ('ки' if items|length in [2,3,4] else 'ок') }})</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
 
-<!-- Пагінація -->
-{% set total_pages = (orders_count // per_page) + (1 if orders_count % per_page else 0) %}
-{% if total_pages > 1 %}
-<div class="bottom-controls mt-3">
-    <nav class="pagination">
-        <ul class="pagination mb-0">
-            <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                <a class="page-link" href="?{{ update_query(1) }}">&laquo;</a>
-            </li>
-            {% if page > 3 %}
-                <li class="page-item"><a class="page-link" href="?{{ update_query(1) }}">1</a></li>
-                {% if page > 4 %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                {% endif %}
-            {% endif %}
-            {% for p in range(page-2, page+3) %}
-                {% if 1 <= p <= total_pages %}
-                    <li class="page-item {% if p == page %}active{% endif %}"><a class="page-link" href="?{{ update_query(p) }}">{{ p }}</a></li>
-                {% endif %}
+            {% for delivery in items %}
+            {% set order = delivery.order %}
+            {% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to if delivery.time_from and delivery.time_to else (delivery.time_from or 'Без часу') %}
+            {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
+            {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
+            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40">
+              <td class="px-4 py-4">
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
+                  <p class="text-sm text-stone-500">{{ delivery.client.instagram if delivery.client else 'Без клієнта' }}</p>
+                  {% if order and order.recipient_social %}
+                  <p class="text-sm text-stone-400">{{ order.recipient_social }}</p>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <div class="space-y-2">
+                  {% if delivery_mode %}
+                  <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                    {{ delivery_mode }}
+                  </span>
+                  {% endif %}
+                  <p class="text-sm leading-6 text-stone-700">
+                    {% if delivery.is_pickup %}
+                      Самовивіз
+                    {% elif delivery.street %}
+                      {{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
+                    {% elif order and order.street %}
+                      {{ order.street }}
+                    {% else %}
+                      Адресу не вказано
+                    {% endif %}
+                  </p>
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm font-medium text-stone-700">{{ delivery.phone or order.recipient_phone or 'Телефон не вказано' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center rounded-full border
+                  {% set size_value = delivery.size or order.size or '—' %}
+                  {% if size_value == 'M' %}border-emerald-200 bg-emerald-50 text-emerald-700
+                  {% elif size_value == 'L' %}border-lime-200 bg-lime-50 text-lime-700
+                  {% elif size_value == 'XL' %}border-amber-200 bg-amber-50 text-amber-700
+                  {% elif size_value == 'XXL' %}border-red-200 bg-red-50 text-red-700
+                  {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
+                  px-3 py-1 text-xs font-medium">
+                  {{ size_value }}
+                  {% if size_value == 'Власний' and order and order.custom_amount %}
+                    · {{ order.custom_amount }} грн
+                  {% endif %}
+                </span>
+              </td>
+
+              <td class="px-4 py-4">
+                <div class="flex flex-wrap gap-2">
+                  <span class="inline-flex items-center rounded-full border
+                    {% if delivery_type_label == 'Weekly' %}border-blue-200 bg-blue-50 text-blue-700
+                    {% elif delivery_type_label == 'Monthly' %}border-violet-200 bg-violet-50 text-violet-700
+                    {% elif delivery_type_label == 'Bi-weekly' %}border-pink-200 bg-pink-50 text-pink-700
+                    {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
+                    px-3 py-1 text-xs font-medium">
+                    {{ delivery_type_label }}
+                  </span>
+                  <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
+                    {% if delivery.status == 'Очікує' %}border border-stone-200 bg-stone-100 text-stone-600
+                    {% elif delivery.status == 'Розподілено' %}border border-blue-200 bg-blue-50 text-blue-700
+                    {% elif delivery.status == 'Доставлено' %}border border-emerald-200 bg-emerald-50 text-emerald-700
+                    {% elif delivery.status == 'Не оплачена' %}border border-red-200 bg-red-50 text-red-700
+                    {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
+                    {{ delivery.status }}
+                  </span>
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm leading-6 text-stone-700">{{ delivery.comment or order.comment or '—' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm leading-6 text-stone-700">{{ delivery.preferences or order.preferences or '—' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-stone-900">{{ date.strftime('%d.%m.%Y') }}</p>
+                  <p class="text-sm text-stone-500">{{ time_slot }}</p>
+                </div>
+              </td>
+            </tr>
             {% endfor %}
-            {% if page < total_pages-2 %}
-                {% if page < total_pages-3 %}
-                    <li class="page-item disabled"><span class="page-link">...</span></li>
-                {% endif %}
-                <li class="page-item"><a class="page-link" href="?{{ update_query(total_pages) }}">{{ total_pages }}</a></li>
-            {% endif %}
-            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                <a class="page-link" href="?{{ update_query(total_pages) }}">&raquo;</a>
-            </li>
-        </ul>
-    </nav>
-</div>
-{% endif %}
-
-<!-- Модалка створення замовлення -->
-<div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable order-composer-dialog">
-    <div class="modal-content order-composer-content">
-      <form id="addOrderForm" novalidate>
-        <div class="order-composer-shell">
-          <div class="order-composer-header">
-            <div class="space-y-3">
-              <span class="order-composer-chip" id="order-flow-chip">
-                <i class="bi bi-bag-heart"></i>
-                Замовлення
-              </span>
-              <div>
-                <div class="flex items-center gap-2">
-                  <h2 class="text-xl font-semibold text-stone-900 md:text-2xl" id="addOrderModalLabel">
-                    <span id="order-modal-title">Нове замовлення</span>
-                  </h2>
-                  <button type="button" class="order-icon-btn d-none" id="extend-subscription-header-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
-                    <i class="bi bi-arrow-repeat"></i>
-                  </button>
-                </div>
-                <p class="mt-1 text-sm text-stone-500" id="order-modal-description">
-                  Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.
-                </p>
-              </div>
-            </div>
-
-            <button type="button" class="order-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
-              <i class="bi bi-x-lg"></i>
-            </button>
-          </div>
-
-          <div class="order-composer-body">
-            <div id="add-order-error" class="order-error-banner"></div>
-
-            <div class="order-composer-grid">
-              <section class="order-panel order-panel-primary">
-                <span class="order-section-kicker">
-                  <i class="bi bi-person-vcard"></i>
-                  Контакти
-                </span>
-                <h3 class="mt-3 text-lg font-semibold text-stone-900">Клієнт та отримувач</h3>
-                <p class="mt-1 text-sm text-stone-500">
-                  Спочатку знайдіть клієнта, потім вкажіть дані отримувача для доставки або самовивозу.
-                </p>
-
-                <div class="mt-6 space-y-4">
-                  <div class="order-field">
-                    <label class="order-label" for="client-search">
-                      <i class="bi bi-instagram"></i>
-                      Instagram клієнта <span class="text-red-500">*</span>
-                    </label>
-                    <div class="order-input-wrap">
-                      <i class="bi bi-search order-input-icon"></i>
-                      <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
-                      <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
-                    </div>
-                  </div>
-
-                  <div class="order-field">
-                    <label class="order-label" for="recipient-name-input">
-                      <i class="bi bi-person"></i>
-                      Ім'я отримувача <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="recipient-name-input" name="recipient_name" class="order-input" placeholder="Наприклад, Олена" required>
-                  </div>
-
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="recipient-phone-input">
-                        <i class="bi bi-telephone"></i>
-                        Телефон отримувача <span class="text-red-500">*</span>
-                      </label>
-                      <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="recipient-social-input">
-                        <i class="bi bi-send"></i>
-                        Instagram / Telegram
-                      </label>
-                      <input type="text" id="recipient-social-input" name="recipient_social" class="order-input" placeholder="@recipient">
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="order-panel">
-                <span class="order-section-kicker order-section-kicker-muted">
-                  <i class="bi bi-calendar2-heart"></i>
-                  Параметри
-                </span>
-                <h3 class="mt-3 text-lg font-semibold text-stone-900">Логістика та графік</h3>
-                <p class="mt-1 text-sm text-stone-500">
-                  Вкажіть формат доставки, тип сценарію та ключові параметри підписки або замовлення.
-                </p>
-
-                <div class="mt-6 space-y-4">
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="order-city-select">
-                        <i class="bi bi-geo-alt"></i>
-                        Місто <span class="text-red-500">*</span>
-                      </label>
-                      <select name="city" id="order-city-select" class="order-select" required>
-                        <option value="">Оберіть місто</option>
-                        {% if cities and cities|length > 0 %}
-                            {% for city in cities %}
-                                <option value="{{ city.value }}">{{ city.value }}</option>
-                            {% endfor %}
-                        {% else %}
-                            <option disabled>Додайте міста у налаштуваннях</option>
-                        {% endif %}
-                      </select>
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="delivery-method-select">
-                        <i class="bi bi-truck"></i>
-                        Метод доставки
-                      </label>
-                      <select name="delivery_method" id="delivery-method-select" class="order-select">
-                        <option value="courier">Кур'єр</option>
-                        <option value="nova_poshta">Нова Пошта</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="order-switch-row">
-                    <div>
-                      <div class="text-sm font-medium text-stone-700">Самовивіз</div>
-                      <p class="text-xs text-stone-400 mt-1">Якщо увімкнено, поле адреси стане необов'язковим.</p>
-                    </div>
-                    <label class="order-switch">
-                      <input class="order-switch-input" type="checkbox" id="is-pickup" name="is_pickup">
-                      <span class="order-switch-track"></span>
-                    </label>
-                  </div>
-
-                  <div class="order-field">
-                    <label class="order-label" for="address-input">
-                      <i class="bi bi-signpost-2"></i>
-                      Адреса доставки <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок, квартира">
-                  </div>
-
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="delivery-type-select" id="delivery-type-label">
-                        <i class="bi bi-arrow-repeat"></i>
-                        Тип доставки <span class="text-red-500">*</span>
-                      </label>
-                      <select name="delivery_type" id="delivery-type-select" class="order-select" required>
-                        <option value="">Оберіть тип</option>
-                        {% if delivery_types and delivery_types|length > 0 %}
-                            {% for t in delivery_types %}
-                                <option value="{{ t.value }}">{{ t.value }}</option>
-                            {% endfor %}
-                        {% else %}
-                            <option disabled>Додайте типи у налаштуваннях</option>
-                        {% endif %}
-                      </select>
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="size-select">
-                        <i class="bi bi-box-seam"></i>
-                        Розмір <span class="text-red-500">*</span>
-                      </label>
-                      <select name="size" id="size-select" class="order-select" required>
-                        <option value="">Оберіть розмір</option>
-                        {% if sizes and sizes|length > 0 %}
-                            {% for s in sizes %}
-                                <option value="{{ s.value }}">{{ s.value }}</option>
-                            {% endfor %}
-                        {% else %}
-                            <option disabled>Додайте розміри у налаштуваннях</option>
-                        {% endif %}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="order-field" id="custom-amount-div" style="display:none;">
-                    <label class="order-label" for="custom-amount-input">
-                      <i class="bi bi-cash-stack"></i>
-                      Сума для власного розміру <span class="text-red-500">*</span>
-                    </label>
-                    <input type="number" id="custom-amount-input" name="custom_amount" class="order-input" min="0" placeholder="Введіть суму">
-                  </div>
-
-                  <div class="order-three-col">
-                    <div class="order-field">
-                      <label class="order-label" for="first-delivery-date-input">
-                        <i class="bi bi-calendar-event"></i>
-                        Перша доставка <span class="text-red-500">*</span>
-                      </label>
-                      <input type="date" id="first-delivery-date-input" name="first_delivery_date" class="order-input" required>
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="delivery-day-select">
-                        <i class="bi bi-calendar-week"></i>
-                        День <span class="text-red-500">*</span>
-                      </label>
-                      <select name="delivery_day" id="delivery-day-select" class="order-select" required>
-                        <option value="">Оберіть день</option>
-                        <option value="ПН">Понеділок</option>
-                        <option value="ВТ">Вівторок</option>
-                        <option value="СР">Середа</option>
-                        <option value="ЧТ">Четвер</option>
-                        <option value="ПТ">П'ятниця</option>
-                        <option value="СБ">Субота</option>
-                        <option value="НД">Неділя</option>
-                      </select>
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="for-whom-select">
-                        <i class="bi bi-gift"></i>
-                        Для кого <span class="text-red-500">*</span>
-                      </label>
-                      <select name="for_whom" id="for-whom-select" class="order-select" required>
-                        <option value="">Оберіть варіант</option>
-                        {% if for_whom and for_whom|length > 0 %}
-                            {% for f in for_whom %}
-                                <option value="{{ f.value }}">{{ f.value }}</option>
-                            {% endfor %}
-                        {% else %}
-                            <option disabled>Додайте варіанти у налаштуваннях</option>
-                        {% endif %}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="time-from-input">
-                        <i class="bi bi-clock"></i>
-                        Час з
-                      </label>
-                      <input type="time" id="time-from-input" name="time_from" class="order-input">
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="time-to-input">
-                        <i class="bi bi-clock-history"></i>
-                        Час до
-                      </label>
-                      <input type="time" id="time-to-input" name="time_to" class="order-input">
-                    </div>
-                  </div>
-                </div>
-              </section>
-            </div>
-
-            <section class="order-panel order-panel-notes mt-4">
-              <span class="order-section-kicker order-section-kicker-muted">
-                <i class="bi bi-chat-left-text"></i>
-                Деталі
-              </span>
-              <div class="order-two-col mt-5">
-                <div class="order-field">
-                  <label class="order-label" for="order-comment-input">
-                    <i class="bi bi-chat-square-text"></i>
-                    Коментар
-                  </label>
-                  <textarea name="comment" id="order-comment-input" class="order-textarea" rows="4" placeholder="Наприклад, деталі адреси або важливі примітки" maxlength="1000"></textarea>
-                </div>
-
-                <div class="order-field">
-                  <label class="order-label" for="order-preferences-input">
-                    <i class="bi bi-stars"></i>
-                    Побажання
-                  </label>
-                  <textarea name="preferences" id="order-preferences-input" class="order-textarea" rows="4" placeholder="Стиль композиції, колірна гамма, пакування" maxlength="1000"></textarea>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <div class="order-composer-footer">
-            <p class="order-footer-copy" id="order-footer-copy">
-              Для підписки система створить серію доставок автоматично. Для разового замовлення буде створена одна доставка.
-            </p>
-
-            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
-              <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-              <button type="submit" class="order-btn-primary" id="order-submit-btn">
-                <span id="order-submit-btn-text">Створити замовлення</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
+  </section>
+
+  {% set total_pages = (deliveries_count // per_page) + (1 if deliveries_count % per_page else 0) %}
+  {% if total_pages > 1 %}
+  <nav class="flex items-center justify-center gap-2 pt-2">
+    <a
+      href="{{ url_for('orders.orders_list', page=1, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+      class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == 1 %}pointer-events-none opacity-40{% endif %}"
+    >
+      <i class="bi bi-chevron-double-left"></i>
+    </a>
+
+    {% if page > 3 %}
+      <a href="{{ url_for('orders.orders_list', page=1, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">1</a>
+      {% if page > 4 %}
+        <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+      {% endif %}
+    {% endif %}
+
+    {% for p in range(page-2, page+3) %}
+      {% if 1 <= p <= total_pages %}
+        <a
+          href="{{ url_for('orders.orders_list', page=p, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+          class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm transition-colors {% if p == page %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}"
+        >
+          {{ p }}
+        </a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages - 2 %}
+      {% if page < total_pages - 3 %}
+        <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+      {% endif %}
+      <a href="{{ url_for('orders.orders_list', page=total_pages, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">{{ total_pages }}</a>
+    {% endif %}
+
+    <a
+      href="{{ url_for('orders.orders_list', page=total_pages, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+      class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == total_pages %}pointer-events-none opacity-40{% endif %}"
+    >
+      <i class="bi bi-chevron-double-right"></i>
+    </a>
+  </nav>
+  {% endif %}
+  {% else %}
+  <section class="rounded-[28px] border border-dashed border-stone-300 bg-white px-6 py-16 text-center">
+    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+      <i class="bi bi-search text-2xl"></i>
+    </div>
+    <h2 class="mt-5 text-xl font-semibold text-stone-900">Доставки не знайдено</h2>
+    <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500">
+      Спробуй змінити пошуковий запит або скинути фільтри. Після цього тут зʼявиться табличний список доставок, згрупований по днях.
+    </p>
+  </section>
+  {% endif %}
 </div>
 
-<!-- Модальне вікно для підтвердження продовження підписки -->
+{% include 'orders/_composer_modal.html' %}
+
 <div class="modal fade" id="extendSubscriptionModal" tabindex="-1" aria-labelledby="extendSubscriptionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="extendSubscriptionModalLabel">Підтвердження</h5>
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" id="extendSubscriptionModalLabel">Продовження підписки</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <p>Продовжити підписку для клієнта <strong id="extend-client-instagram"></strong>?</p>
+      <div class="modal-body pt-3">
+        <p class="mb-0 text-sm text-stone-600">
+          Продовжити підписку для клієнта <strong id="extend-client-instagram"></strong>?
+        </p>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Ні</button>
-        <button type="button" class="btn btn-success" id="confirmExtendBtn">Так</button>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-dark rounded-3" id="confirmExtendBtn">Продовжити</button>
       </div>
     </div>
   </div>
 </div>
 
-<style>
-.table th, .table td {
-  border-right: 2px solid #b5c9e6 !important;
-}
-.table th:last-child, .table td:last-child {
-  border-right: none !important;
-}
-#client-results {
-  left: 0;
-  right: 0;
-  width: auto;
-  min-width: unset;
-  max-width: unset;
-  overflow-x: auto;
-  box-shadow: 0 4px 16px 0 rgba(0,123,255,0.08);
-  border: 1.5px solid #e3eafc;
-  background: #fff;
-  z-index: 1055;
-}
-.modal-dialog { overflow: visible !important; }
-.input-disabled {
-  background: #d1d5db !important;
-  color: #6b7280 !important;
-  border: 1.5px solid #e3eafc !important;
-  opacity: 1 !important;
-  cursor: not-allowed !important;
-  font-weight: 500 !important;
-}
-.table td {
-  border-bottom: 1.5px solid #e3eafc !important;
-}
-.table tbody tr:last-child td {
-  border-bottom: none !important;
-}
-.table tbody tr:nth-child(even):not(.unpaid-row) td {
-  background: #f7f8fa !important;
-}
-.table tbody tr:nth-child(odd):not(.unpaid-row) td {
-  background: #fff !important;
-}
-.table th {
-  background: #e0edfa !important;
-  color: #1565c0 !important;
-  font-weight: 600 !important;
-}
-</style>
-{% endblock %}
-
 {{ render_toast() }}
+{% endblock %}
 
 {% block scripts %}
-<script>
-console.log('JS loaded!');
-
-// Функція для показу toast повідомлень (глобальна)
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('notification-toast');
-  if (!toast) {
-    console.error('Toast element not found!');
-    return;
-  }
-  
-  const toastBody = toast.querySelector('.toast-body');
-  const toastHeader = toast.querySelector('.toast-header');
-  const icon = toast.querySelector('.toast-header i');
-  
-  toastBody.textContent = message;
-  
-  // Змінюємо стилі залежно від типу
-  toastHeader.className = 'toast-header';
-  icon.className = 'me-2';
-  
-  switch(type) {
-    case 'success':
-      toastHeader.classList.add('bg-success', 'text-white');
-      icon.classList.add('bi', 'bi-check-circle-fill');
-      break;
-    case 'danger':
-    case 'error':
-      toastHeader.classList.add('bg-danger', 'text-white');
-      icon.classList.add('bi', 'bi-exclamation-triangle-fill');
-      break;
-    case 'warning':
-      toastHeader.classList.add('bg-warning', 'text-dark');
-      icon.classList.add('bi', 'bi-exclamation-triangle');
-      break;
-    default:
-      toastHeader.classList.add('bg-primary', 'text-white');
-      icon.classList.add('bi', 'bi-info-circle');
-  }
-  
-  const bsToast = new bootstrap.Toast(toast, {
-    autohide: true,
-    delay: 4000
-  });
-  bsToast.show();
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    const toastElement = document.getElementById('notification-toast');
-    if (!toastElement) {
-        const toastContainer = document.createElement('div');
-        toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-        toastContainer.innerHTML = `
-            <div id="notification-toast" class="toast" role="alert">
-                <div class="toast-header">
-                    <i class="bi bi-info-circle text-primary me-2" style="font-size: 1rem;"></i>
-                    <strong class="me-auto">Повідомлення</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-                </div>
-                <div class="toast-body"></div>
-            </div>
-        `;
-        document.body.appendChild(toastContainer);
-    }
-
-    const addOrderModalElement = document.getElementById('addOrderModal');
-    const addOrderForm = document.getElementById('addOrderForm');
-    if (!addOrderModalElement || !addOrderForm) {
-        return;
-    }
-
-    const addOrderModal = bootstrap.Modal.getOrCreateInstance(addOrderModalElement);
-    const extendSubscriptionModalElement = document.getElementById('extendSubscriptionModal');
-    const extendModal = extendSubscriptionModalElement
-        ? bootstrap.Modal.getOrCreateInstance(extendSubscriptionModalElement)
-        : null;
-    const subscriptionTypes = ['Weekly', 'Monthly', 'Bi-weekly'];
-
-    const clientSearch = document.getElementById('client-search');
-    const clientResults = document.getElementById('client-results');
-    const isPickupCheckbox = document.getElementById('is-pickup');
-    const addressInput = document.getElementById('address-input');
-    const deliveryMethodSelect = document.getElementById('delivery-method-select');
-    const deliveryTypeSelect = document.getElementById('delivery-type-select');
-    const deliveryTypeLabel = document.getElementById('delivery-type-label');
-    const sizeSelect = document.getElementById('size-select');
-    const customAmountDiv = document.getElementById('custom-amount-div');
-    const customAmountInput = document.getElementById('custom-amount-input');
-    const recipientPhoneInput = document.getElementById('recipient-phone-input');
-    const orderModalTitle = document.getElementById('order-modal-title');
-    const orderModalDescription = document.getElementById('order-modal-description');
-    const orderFlowChip = document.getElementById('order-flow-chip');
-    const orderFooterCopy = document.getElementById('order-footer-copy');
-    const orderSubmitBtn = document.getElementById('order-submit-btn');
-    const orderSubmitBtnText = document.getElementById('order-submit-btn-text');
-    const orderErrorBanner = document.getElementById('add-order-error');
-    const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
-    const confirmExtendBtn = document.getElementById('confirmExtendBtn');
-    const extendClientInstagram = document.getElementById('extend-client-instagram');
-    const addOrderBtn = document.querySelector('[data-bs-target="#addOrderModal"]');
-    const commentInput = document.getElementById('order-comment-input');
-    const preferencesInput = document.getElementById('order-preferences-input');
-    const filterForm = document.getElementById('orders-filter-form');
-    const filterCity = document.getElementById('filter-city');
-    const filterDeliveryType = document.getElementById('filter-delivery-type');
-    const filterSize = document.getElementById('filter-size');
-    const resetFiltersBtn = document.getElementById('reset-filters-btn');
-
-    let currentComposerFlow = 'order';
-    let isComposerSubmitting = false;
-    window.currentOrderId = null;
-
-    const composerContent = {
-        order: {
-            create: {
-                chip: '<i class="bi bi-bag-heart"></i> Замовлення',
-                title: 'Нове замовлення',
-                description: 'Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.',
-                footer: 'Для разового замовлення буде створена одна доставка. Для підписки достатньо змінити тип доставки на Weekly, Monthly або Bi-weekly.',
-                submit: 'Створити замовлення',
-            },
-            edit: {
-                chip: '<i class="bi bi-pencil-square"></i> Редагування',
-                title: 'Редагувати замовлення',
-                description: 'Оновіть дані отримувача, доставку або параметри букета. Зміни одразу синхронізуються з карткою замовлення.',
-                footer: 'Редагування не змінює історію клієнта, а лише оновлює поточне замовлення.',
-                submit: 'Зберегти зміни',
-            },
-        },
-        subscription: {
-            create: {
-                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
-                title: 'Нова підписка',
-                description: 'Створіть підписку для клієнта з уже заповненим Instagram. Після збереження CRM автоматично згенерує серію доставок.',
-                footer: 'Для підписки CRM створить 5 доставок: 4 активні та 1 неоплачену для продовження циклу.',
-                submit: 'Створити підписку',
-            },
-            edit: {
-                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
-                title: 'Редагувати підписку',
-                description: 'Оновіть графік або параметри поточної підписки. Дані застосуються до картки замовлення.',
-                footer: 'Редагування підписки не створює новий цикл, а змінює наявну конфігурацію.',
-                submit: 'Зберегти зміни',
-            },
-        },
-    };
-
-    function clearOrderError() {
-        if (!orderErrorBanner) return;
-        orderErrorBanner.textContent = '';
-        orderErrorBanner.classList.remove('is-visible');
-    }
-
-    function showOrderError(message) {
-        if (!orderErrorBanner) return;
-        orderErrorBanner.textContent = message;
-        orderErrorBanner.classList.add('is-visible');
-    }
-
-    function setComposerSubmitting(submitting) {
-        isComposerSubmitting = submitting;
-        orderSubmitBtn.disabled = submitting;
-        const state = addOrderForm.getAttribute('data-edit-id') ? 'edit' : 'create';
-        orderSubmitBtnText.textContent = submitting
-            ? 'Зберігаємо...'
-            : composerContent[currentComposerFlow][state].submit;
-    }
-
-    function applyComposerCopy(flow, isEditing = false) {
-        currentComposerFlow = flow;
-        const state = isEditing ? 'edit' : 'create';
-        const content = composerContent[flow][state];
-        orderFlowChip.innerHTML = content.chip;
-        orderModalTitle.textContent = content.title;
-        orderModalDescription.textContent = content.description;
-        orderFooterCopy.textContent = content.footer;
-        if (!isComposerSubmitting) {
-            orderSubmitBtnText.textContent = content.submit;
-        }
-        deliveryTypeLabel.innerHTML = flow === 'subscription'
-            ? '<i class="bi bi-arrow-repeat"></i> Тип підписки <span class="text-red-500">*</span>'
-            : '<i class="bi bi-arrow-repeat"></i> Тип доставки <span class="text-red-500">*</span>';
-        syncDeliveryTypeOptions();
-    }
-
-    function syncDeliveryTypeOptions() {
-        Array.from(deliveryTypeSelect.options).forEach(option => {
-            if (!option.value) {
-                option.hidden = false;
-                return;
-            }
-            option.hidden = currentComposerFlow === 'subscription' && !subscriptionTypes.includes(option.value);
-        });
-
-        if (currentComposerFlow === 'subscription' && !subscriptionTypes.includes(deliveryTypeSelect.value)) {
-            deliveryTypeSelect.value = 'Monthly';
-        }
-    }
-
-    function togglePickupState() {
-        if (isPickupCheckbox.checked) {
-            addressInput.value = '';
-            addressInput.disabled = true;
-            addressInput.removeAttribute('required');
-            addressInput.classList.add('input-disabled');
-        } else {
-            addressInput.disabled = false;
-            addressInput.setAttribute('required', 'required');
-            addressInput.classList.remove('input-disabled');
-        }
-    }
-
-    function syncCustomAmountState() {
-        if (sizeSelect.value === 'Власний') {
-            customAmountDiv.style.display = 'block';
-            customAmountInput.required = true;
-        } else {
-            customAmountDiv.style.display = 'none';
-            customAmountInput.required = false;
-            customAmountInput.value = '';
-        }
-    }
-
-    function clearClientResults() {
-        clientResults.classList.add('d-none');
-        clientResults.innerHTML = '';
-    }
-
-    function resetComposerForm(flow = 'order', clientInstagram = '') {
-        addOrderForm.reset();
-        addOrderForm.removeAttribute('data-edit-id');
-        clearOrderError();
-        window.currentOrderId = null;
-        clearClientResults();
-        deliveryMethodSelect.value = 'courier';
-        clientSearch.value = clientInstagram;
-        togglePickupState();
-        syncCustomAmountState();
-        applyComposerCopy(flow, false);
-        if (extendHeaderBtn) {
-            extendHeaderBtn.classList.add('d-none');
-            extendHeaderBtn.removeAttribute('data-order-id');
-            extendHeaderBtn.removeAttribute('data-client-instagram');
-        }
-    }
-
-    function openComposer(flow = 'order', clientInstagram = '') {
-        resetComposerForm(flow, clientInstagram);
-        addOrderModal.show();
-    }
-
-    async function fetchClientSuggestions(query) {
-        const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
-        return response.json();
-    }
-
-    function bindClientSearch() {
-        clientSearch.addEventListener('input', async function() {
-            const query = this.value.trim();
-            if (query.length < 2) {
-                clearClientResults();
-                return;
-            }
-
-            try {
-                const clients = await fetchClientSuggestions(query);
-                if (!clients.length) {
-                    clearClientResults();
-                    return;
-                }
-
-                clientResults.innerHTML = clients.map(client =>
-                    `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
-                ).join('');
-                clientResults.classList.remove('d-none');
-                clientResults.querySelectorAll('button').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        clientSearch.value = this.textContent.trim();
-                        clearClientResults();
-                    });
-                });
-            } catch (error) {
-                console.error('Помилка пошуку клієнтів:', error);
-                clearClientResults();
-            }
-        });
-
-        clientSearch.addEventListener('blur', function() {
-            setTimeout(clearClientResults, 180);
-        });
-    }
-
-    function sanitizeRecipientPhone() {
-        let value = recipientPhoneInput.value.replace(/[^\d+]/g, '');
-        if (!value.startsWith('+')) {
-            value = `+${value.replace(/^\+/, '')}`;
-        }
-        recipientPhoneInput.value = value.slice(0, 13);
-    }
-
-    async function submitComposerForm(event) {
-        event.preventDefault();
-        clearOrderError();
-
-        const phoneValue = recipientPhoneInput.value.trim();
-        const phonePattern = /^\+380[0-9]{9}$/;
-        if (!phonePattern.test(phoneValue)) {
-            showOrderError('Телефон має бути у форматі +380XXXXXXXXX');
-            return;
-        }
-
-        if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
-            showOrderError('Вкажіть адресу або увімкніть самовивіз');
-            return;
-        }
-
-        if (sizeSelect.value === 'Власний' && (!customAmountInput.value || Number(customAmountInput.value) <= 0)) {
-            showOrderError('Для власного розміру потрібно вказати суму більше 0');
-            return;
-        }
-
-        setComposerSubmitting(true);
-        const orderId = addOrderForm.getAttribute('data-edit-id');
-        const isEditing = Boolean(orderId);
-        const url = isEditing ? `/orders/${orderId}/edit` : '/orders/new';
-
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: new FormData(addOrderForm),
-            });
-            const data = await response.json().catch(() => ({}));
-
-            if (!(response.ok && data.success)) {
-                showOrderError(data.error || 'Помилка збереження');
-                return;
-            }
-
-            addOrderModal.hide();
-            const successMessage = isEditing
-                ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
-                : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
-            showToast(successMessage, 'success');
-            setTimeout(() => location.reload(), 900);
-        } catch (error) {
-            console.error('Помилка збереження:', error);
-            showOrderError('Помилка зʼєднання з сервером');
-        } finally {
-            setComposerSubmitting(false);
-        }
-    }
-
-    function populateComposerForm(orderData, orderId) {
-        const flow = subscriptionTypes.includes(orderData.delivery_type) ? 'subscription' : 'order';
-        resetComposerForm(flow, orderData.client_instagram);
-        addOrderForm.setAttribute('data-edit-id', orderId);
-        clientSearch.value = orderData.client_instagram || '';
-        addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
-        recipientPhoneInput.value = orderData.recipient_phone || '';
-        addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
-        addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
-        addressInput.value = orderData.street || '';
-        deliveryMethodSelect.value = orderData.delivery_method || 'courier';
-        deliveryTypeSelect.value = orderData.delivery_type || '';
-        sizeSelect.value = orderData.size || '';
-        customAmountInput.value = orderData.custom_amount || '';
-        addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date || '';
-        addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day || '';
-        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
-        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
-        addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
-        commentInput.value = orderData.comment || '';
-        preferencesInput.value = orderData.preferences || '';
-        isPickupCheckbox.checked = Boolean(orderData.is_pickup);
-
-        togglePickupState();
-        syncCustomAmountState();
-        applyComposerCopy(flow, true);
-
-        if (extendHeaderBtn) {
-            if (flow === 'subscription' && orderData.can_extend_subscription) {
-                extendHeaderBtn.classList.remove('d-none');
-                extendHeaderBtn.setAttribute('data-order-id', orderId);
-                extendHeaderBtn.setAttribute('data-client-instagram', orderData.client_instagram);
-            } else {
-                extendHeaderBtn.classList.add('d-none');
-            }
-        }
-
-        addOrderModal.show();
-    }
-
-    function maybeLaunchComposerFromQuery() {
-        const params = new URLSearchParams(window.location.search);
-        const compose = params.get('compose');
-        const clientInstagram = params.get('client_instagram') || '';
-
-        if (compose !== 'subscription') {
-            return;
-        }
-
-        openComposer('subscription', clientInstagram);
-        params.delete('compose');
-        params.delete('client_instagram');
-        const nextQuery = params.toString();
-        history.replaceState({}, document.title, `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`);
-    }
-
-    bindClientSearch();
-    togglePickupState();
-    syncCustomAmountState();
-    applyComposerCopy('order', false);
-
-    recipientPhoneInput.addEventListener('focus', function() {
-        if (!recipientPhoneInput.value) {
-            recipientPhoneInput.value = '+38';
-        }
-    });
-    recipientPhoneInput.addEventListener('input', sanitizeRecipientPhone);
-    isPickupCheckbox.addEventListener('change', togglePickupState);
-    sizeSelect.addEventListener('change', syncCustomAmountState);
-    addOrderForm.addEventListener('submit', submitComposerForm);
-
-    if (commentInput) {
-        commentInput.addEventListener('input', function() {
-            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
-        });
-    }
-    if (preferencesInput) {
-        preferencesInput.addEventListener('input', function() {
-            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
-        });
-    }
-
-    if (addOrderBtn) {
-        addOrderBtn.addEventListener('click', function() {
-            openComposer('order');
-        });
-    }
-
-    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
-        row.addEventListener('dblclick', async function() {
-            const orderId = this.getAttribute('data-order-id');
-            try {
-                const response = await fetch(`/orders/${orderId}/edit`);
-                const orderData = await response.json();
-                populateComposerForm(orderData, orderId);
-            } catch (error) {
-                showToast('Помилка завантаження даних замовлення', 'error');
-            }
-        });
-    });
-
-    document.querySelectorAll('.extend-subscription-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            window.currentOrderId = this.getAttribute('data-order-id');
-            if (extendClientInstagram) {
-                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
-            }
-            if (extendModal) {
-                extendModal.show();
-            }
-        });
-    });
-
-    if (confirmExtendBtn) {
-        confirmExtendBtn.addEventListener('click', async function() {
-            const orderId = window.currentOrderId;
-            if (!orderId) return;
-
-            try {
-                const response = await fetch(`/orders/${orderId}/extend-subscription`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                });
-                const data = await response.json();
-
-                if (data.success) {
-                    if (extendModal) extendModal.hide();
-                    showToast('Підписку успішно продовжено!', 'success');
-                    setTimeout(() => location.reload(), 900);
-                } else {
-                    showToast(`Помилка: ${data.error || 'Невідома помилка'}`, 'error');
-                }
-            } catch (error) {
-                showToast('Помилка зʼєднання з сервером', 'error');
-            }
-        });
-    }
-
-    if (extendHeaderBtn) {
-        extendHeaderBtn.addEventListener('click', function() {
-            window.currentOrderId = this.getAttribute('data-order-id');
-            if (extendClientInstagram) {
-                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
-            }
-            if (extendModal) {
-                extendModal.show();
-            }
-        });
-    }
-
-    if (filterCity) {
-        filterCity.addEventListener('change', function() {
-            filterForm.submit();
-        });
-    }
-    if (filterDeliveryType) {
-        filterDeliveryType.addEventListener('change', function() {
-            filterForm.submit();
-        });
-    }
-    if (filterSize) {
-        filterSize.addEventListener('change', function() {
-            filterForm.submit();
-        });
-    }
-    if (resetFiltersBtn) {
-        resetFiltersBtn.addEventListener('click', function() {
-            window.location.href = '/orders';
-        });
-    }
-
-    maybeLaunchComposerFromQuery();
-});
-</script>
+{{ toast_script() }}
+{% include 'orders/_composer_script.html' %}
 {% endblock %}
-
-{% macro update_query(page_num) %}
-    {%- set args = request.args.copy() -%}
-    {%- set _ = args.pop('page', None) -%}
-    {%- set _ = args.update({'page': page_num}) -%}
-    {%- set qs = [] -%}
-    {%- for k, v in args.items() -%}
-        {%- if v %}
-            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
-        {%- endif %}
-    {%- endfor -%}
-    {{ qs|join('&') }}
-{% endmacro %} 
