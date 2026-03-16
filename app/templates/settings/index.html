@@ -1,144 +1,798 @@
 {% extends 'layout.html' %}
-{% block content %}
-<h2 class="mb-4">Налаштування</h2>
-<div class="d-flex flex-wrap gap-4">
 
-    <div class="position-relative" style="width:180px; height:120px;">
-      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#citiesModal">
-        <i class="bi bi-geo-alt-fill" style="font-size:2.2rem; color:#007bff;"></i>
-        <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Міста</div>
-      </div>
-      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-            title="Список міст для вибору в замовленні.<br><b>Приклади:</b> Київ, Бровари, Ірпінь, Буча">
-        <i class="bi bi-info-circle-fill"></i>
-      </span>
-    </div>
-
-    <div class="position-relative" style="width:180px; height:120px;">
-      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
-        <i class="bi bi-truck" style="font-size:2.2rem; color:#007bff;"></i>
-        <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Тип доставки</div>
-      </div>
-      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-            title="Тип підписки або разовості доставки.<br><b>Приклади:</b> Weekly, Monthly, Bi-weekly, One-Time">
-        <i class="bi bi-info-circle-fill"></i>
-      </span>
-    </div>
-
-    <div class="position-relative" style="width:180px; height:120px;">
-      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#sizesModal">
-        <i class="bi bi-arrows-angle-expand" style="font-size:2.2rem; color:#007bff;"></i>
-        <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Розмір</div>
-      </div>
-      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-            title="Розміри букетів для замовлень.<br><b>Приклади:</b> M, L, XL, XXL, Власний">
-        <i class="bi bi-info-circle-fill"></i>
-      </span>
-    </div>
-
-    <div class="position-relative" style="width:180px; height:120px;">
-      <div class="card p-4 d-flex align-items-center justify-content-center h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#forWhomModal">
-        <i class="bi bi-people" style="font-size:2.2rem; color:#007bff;"></i>
-        <div class="mt-2 fw-bold" style="font-size:1.1rem; color:#007bff;">Для кого</div>
-      </div>
-      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-            title="Кому призначений букет. Відображається в замовленні.<br><b>Приклади:</b> Дружина, Мама, Подруга, Сестра, Сам(а)">
-        <i class="bi bi-info-circle-fill"></i>
-      </span>
-    </div>
-
-    <div class="position-relative" style="width:180px; height:120px;">
-      <div class="card p-4 d-flex align-items-center justify-content-center flex-column h-100" style="cursor:pointer; background:#eaf1fb; border:1.5px solid #c7e0fa; border-radius:18px; transition:box-shadow 0.18s;" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
-        <i class="bi bi-bullseye" style="font-size:2.2rem; color:#007bff;"></i>
-        <div class="mt-2 fw-bold w-100 text-center" style="font-size:1.1rem; color:#007bff;">Звідки дізнались</div>
-      </div>
-      <span class="settings-hint" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
-            title="Джерело залучення клієнта. Використовується для аналітики.<br><b>Приклади:</b> Instagram, TikTok, Telegram, Google, Рекомендація">
-        <i class="bi bi-info-circle-fill"></i>
-      </span>
-    </div>
-
-    <a href="{{ url_for('import_csv.import_page') }}" style="text-decoration:none;">
-      <div class="position-relative" style="width:180px; height:120px;">
-        <div class="card p-4 d-flex align-items-center justify-content-center flex-column h-100" style="cursor:pointer; background:#fff7ed; border:1.5px solid #fed7aa; border-radius:18px; transition:box-shadow 0.18s;">
-          <i class="bi bi-file-earmark-arrow-up-fill" style="font-size:2.2rem; color:#ea580c;"></i>
-          <div class="mt-2 fw-bold w-100 text-center" style="font-size:1.1rem; color:#ea580c;">Імпорт CSV</div>
-        </div>
-      </div>
-    </a>
-
-</div>
-
-<style>
-.settings-hint {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  color: #90b8e8;
-  font-size: 0.95rem;
-  cursor: default;
-  z-index: 10;
-  line-height: 1;
-  transition: color .15s;
-}
-.settings-hint:hover { color: #007bff; }
-</style>
-
-<!-- Модалки для кожного довідника -->
-{% macro settings_modal(id, label, endpoint) %}
-<div class="modal fade" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
-  <div class="modal-dialog">
+{% macro settings_modal(id, label, subtitle, endpoint, placeholder) %}
+<div class="modal fade settings-modal" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="{{ id }}Label">{{ label }}</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title" id="{{ id }}Label">{{ label }}</h2>
+          <p class="settings-modal__subtitle">{{ subtitle }}</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
       </div>
-      <div class="modal-body">
-        <ul class="list-group mb-3" id="{{ id }}-list">
-          <!-- Список буде підвантажуватись JS -->
-        </ul>
-        <form class="d-flex gap-2 settings-add-form" data-endpoint="{{ endpoint }}">
-          <input type="text" class="form-control" placeholder="Додати..." required maxlength="100">
-          <button type="submit" class="btn btn-primary">Додати</button>
+      <div class="settings-modal__body">
+        <div class="settings-modal__section">
+          <div class="settings-modal__section-head">
+            <span class="settings-modal__section-label">Поточні значення</span>
+            <span class="settings-modal__section-hint">Оновлюється при відкритті</span>
+          </div>
+          <ul class="settings-modal__list" id="{{ id }}-list">
+            <li class="settings-modal__placeholder">Завантаження...</li>
+          </ul>
+        </div>
+
+        <form class="settings-add-form settings-modal__form" data-endpoint="{{ endpoint }}">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Нове значення</span>
+            <input type="text" class="settings-modal__input" placeholder="{{ placeholder }}" required maxlength="100">
+          </label>
+          <button type="submit" class="settings-modal__submit">Додати</button>
         </form>
-        <div class="text-danger mt-2 settings-error" style="display:none;"></div>
+
+        <div class="settings-error" role="alert" hidden></div>
       </div>
     </div>
   </div>
 </div>
 {% endmacro %}
 
-{{ settings_modal('citiesModal', 'Міста', '/settings/cities') }}
-{{ settings_modal('deliveryTypesModal', 'Типи доставки', '/settings/delivery_types') }}
-{{ settings_modal('sizesModal', 'Розміри', '/settings/sizes') }}
-{{ settings_modal('forWhomModal', 'Для кого', '/settings/for_whom') }}
-{{ settings_modal('marketingSourcesModal', 'Звідки дізнались', '/settings/marketing_sources') }}
+{% block head %}
+{{ super() }}
+<style>
+  .settings-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
 
+  .settings-hero,
+  .settings-grid-card,
+  .settings-modal .modal-content {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    box-shadow: 0 16px 42px rgba(28, 25, 23, 0.06);
+  }
+
+  .settings-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1.85rem;
+    padding: 1.35rem 1.5rem;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 24%),
+      linear-gradient(135deg, #ffffff 0%, #fafaf9 58%, #f5f5f4 100%);
+  }
+
+  .settings-hero__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    background: rgba(255, 251, 235, 0.92);
+    padding: 0.42rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #b45309;
+  }
+
+  .settings-hero__title {
+    margin: 0.9rem 0 0.45rem;
+    font-size: clamp(2.25rem, 4vw, 3.45rem);
+    line-height: 0.96;
+    letter-spacing: -0.04em;
+    color: #1c1917;
+  }
+
+  .settings-hero__text {
+    max-width: 48rem;
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.65;
+    color: #78716c;
+  }
+
+  .settings-hero__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 220px;
+    border: 1px solid #1c1917;
+    border-radius: 1rem;
+    background: #1c1917;
+    padding: 0.85rem 1.15rem;
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: #fff;
+    text-decoration: none;
+    transition: 0.16s ease;
+  }
+
+  .settings-hero__action:hover {
+    background: #44403c;
+    border-color: #44403c;
+    color: #fff;
+  }
+
+  .settings-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .settings-grid-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    min-height: 220px;
+    padding: 1.25rem;
+    border-radius: 1.6rem;
+    text-align: left;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+  }
+
+  button.settings-grid-card {
+    cursor: pointer;
+  }
+
+  .settings-grid-card:hover,
+  .settings-grid-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: #d6d3d1;
+    box-shadow: 0 20px 44px rgba(28, 25, 23, 0.09);
+    outline: none;
+  }
+
+  .settings-grid-card--accent {
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 34%),
+      #fff;
+  }
+
+  .settings-grid-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    background: #fafaf9;
+    color: #1c1917;
+    font-size: 1.1rem;
+  }
+
+  .settings-grid-card__eyebrow {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .settings-grid-card__title {
+    margin: 0.2rem 0 0.35rem;
+    font-size: 1.45rem;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: #1c1917;
+  }
+
+  .settings-grid-card__text {
+    margin: 0;
+    font-size: 0.96rem;
+    line-height: 1.6;
+    color: #78716c;
+  }
+
+  .settings-grid-card__meta {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    color: #57534e;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .settings-grid-card__chevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    color: #78716c;
+    background: #fff;
+  }
+
+  .settings-modal .modal-dialog {
+    max-width: 680px;
+  }
+
+  .settings-modal--wide .modal-dialog {
+    max-width: 980px;
+  }
+
+  .settings-modal .modal-content {
+    border-radius: 1.9rem;
+    overflow: hidden;
+  }
+
+  .settings-modal__header,
+  .settings-modal__body,
+  .settings-modal__footer {
+    padding: 1.3rem 1.45rem;
+  }
+
+  .settings-modal__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 28%),
+      linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+  }
+
+  .settings-modal__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 0.36rem 0.68rem;
+    font-size: 0.73rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .settings-modal__title {
+    margin: 0.85rem 0 0.45rem;
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: #1c1917;
+  }
+
+  .settings-modal__subtitle {
+    max-width: 34rem;
+    margin: 0;
+    color: #78716c;
+    line-height: 1.6;
+  }
+
+  .settings-modal__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: #78716c;
+    transition: 0.16s ease;
+  }
+
+  .settings-modal__close:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
+
+  .settings-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: #fff;
+  }
+
+  .settings-modal__section {
+    border: 1px solid #f1f5f9;
+    border-radius: 1.4rem;
+    background: #fafaf9;
+    padding: 1rem;
+  }
+
+  .settings-modal__section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .settings-modal__section-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+
+  .settings-modal__section-hint {
+    font-size: 0.82rem;
+    color: #a8a29e;
+  }
+
+  .settings-modal__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    max-height: 280px;
+    overflow: auto;
+  }
+
+  .settings-modal__list-item,
+  .settings-modal__placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border: 1px solid #ece7e3;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.8rem 0.95rem;
+    color: #1c1917;
+  }
+
+  .settings-modal__item-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 999px;
+    background: #f5f5f4;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #78716c;
+    flex-shrink: 0;
+  }
+
+  .settings-modal__item-value {
+    font-size: 0.97rem;
+    font-weight: 600;
+    color: #292524;
+  }
+
+  .settings-modal__placeholder {
+    justify-content: center;
+    color: #a8a29e;
+  }
+
+  .settings-modal__form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.85rem;
+    align-items: end;
+  }
+
+  .settings-modal__field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .settings-modal__field-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+
+  .settings-modal__input {
+    width: 100%;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.92rem 1rem;
+    font-size: 0.96rem;
+    color: #1c1917;
+    transition: 0.16s ease;
+  }
+
+  .settings-modal__input:focus {
+    outline: none;
+    border-color: #1c1917;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.14);
+  }
+
+  .settings-modal__submit,
+  .settings-modal__footer-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 1rem;
+    padding: 0.92rem 1.15rem;
+    font-size: 0.94rem;
+    font-weight: 600;
+    transition: 0.16s ease;
+  }
+
+  .settings-modal__submit {
+    min-width: 136px;
+    background: #1c1917;
+    color: #fff;
+  }
+
+  .settings-modal__submit:hover {
+    background: #44403c;
+  }
+
+  .settings-error {
+    border: 1px solid #fecaca;
+    border-radius: 1rem;
+    background: #fef2f2;
+    padding: 0.85rem 0.95rem;
+    font-size: 0.92rem;
+    color: #b91c1c;
+  }
+
+  .settings-modal__table-wrap {
+    border: 1px solid #f1f5f9;
+    border-radius: 1.4rem;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  .settings-modal__table-scroll {
+    overflow: auto;
+  }
+
+  .settings-price-table {
+    width: 100%;
+    min-width: 620px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .settings-price-table th,
+  .settings-price-table td {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.95rem 1rem;
+    text-align: center;
+  }
+
+  .settings-price-table th {
+    background: #fafaf9;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #78716c;
+  }
+
+  .settings-price-table th:first-child,
+  .settings-price-table td:first-child {
+    text-align: left;
+    min-width: 180px;
+  }
+
+  .settings-price-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .settings-price-label {
+    font-weight: 600;
+    color: #1c1917;
+  }
+
+  .settings-price-input {
+    width: 92px;
+    border: 1px solid #e7e5e4;
+    border-radius: 0.85rem;
+    background: #fff;
+    padding: 0.65rem 0.75rem;
+    text-align: center;
+    color: #1c1917;
+    transition: 0.16s ease;
+  }
+
+  .settings-price-input:focus {
+    outline: none;
+    border-color: #1c1917;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.14);
+  }
+
+  .settings-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.8rem;
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
+  }
+
+  .settings-modal__footer-btn--ghost {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+  }
+
+  .settings-modal__footer-btn--ghost:hover {
+    background: #fafaf9;
+  }
+
+  .settings-modal__footer-btn--primary {
+    min-width: 164px;
+    background: #1c1917;
+    color: #fff;
+  }
+
+  .settings-modal__footer-btn--primary:hover {
+    background: #44403c;
+  }
+
+  @media (max-width: 1199px) {
+    .settings-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .settings-hero {
+      padding: 1.15rem;
+    }
+
+    .settings-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .settings-grid-card {
+      min-height: 200px;
+    }
+
+    .settings-modal__header,
+    .settings-modal__body,
+    .settings-modal__footer {
+      padding: 1rem;
+    }
+
+    .settings-modal__title {
+      font-size: 1.65rem;
+    }
+
+    .settings-modal__form,
+    .settings-modal__footer {
+      grid-template-columns: 1fr;
+    }
+
+    .settings-modal__submit,
+    .settings-modal__footer-btn {
+      width: 100%;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="settings-hero__label">
+          <i class="bi bi-sliders2"></i>
+          Settings desk
+        </span>
+        <h1 class="settings-hero__title">Налаштування</h1>
+        <p class="settings-hero__text">
+          Оновлюйте довідники CRM, цінову матрицю та службові параметри в одному місці. Без зайвих таблиць і перевантаженого інтерфейсу.
+        </p>
+      </div>
+      <a class="settings-hero__action" href="{{ url_for('import_csv.import_page') }}">
+        <i class="bi bi-file-earmark-arrow-up"></i>
+        Імпорт CSV
+      </a>
+    </div>
+  </section>
+
+  <section class="settings-grid" aria-label="Налаштування CRM">
+    <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#citiesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-geo-alt"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Довідник</p>
+        <h2 class="settings-grid-card__title">Міста</h2>
+        <p class="settings-grid-card__text">Список міст для маршрутизації, оформлення підписок і замовлень.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Оновити значення</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-arrow-repeat"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Сценарії</p>
+        <h2 class="settings-grid-card__title">Типи підписки</h2>
+        <p class="settings-grid-card__text">Варіанти циклів і форматів оформлення, які бачить менеджер у формах.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування списком</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#sizesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-box-seam"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Асортимент</p>
+        <h2 class="settings-grid-card__title">Розміри</h2>
+        <p class="settings-grid-card__text">Розміри букетів і композицій, які використовуються в цінах та оформленні.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Оновити довідник</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#forWhomModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-heart"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Контекст</p>
+        <h2 class="settings-grid-card__title">Для кого</h2>
+        <p class="settings-grid-card__text">Допомагає менеджеру швидше фіксувати, для кого готується букет або підписка.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Редагувати варіанти</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-megaphone"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Маркетинг</p>
+        <h2 class="settings-grid-card__title">Звідки дізнались</h2>
+        <p class="settings-grid-card__text">Джерела залучення клієнтів для CRM-аналітики та роботи з маркетингом.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Оновити джерела</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#pricesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-cash-stack"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Фінанси</p>
+        <h2 class="settings-grid-card__title">Ціни</h2>
+        <p class="settings-grid-card__text">Матриця вартості за типами підписки та розмірами букетів без переходу в окремі таблиці.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Відкрити матрицю</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+  </section>
+</div>
+
+{{ settings_modal('citiesModal', 'Міста', 'Підтримуйте актуальний перелік міст, який використовують замовлення, підписки та маршрути.', '/settings/cities', 'Наприклад, Київ') }}
+{{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
+{{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
+{{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
+{{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
+
+<div class="modal fade settings-modal settings-modal--wide" id="pricesModal" tabindex="-1" aria-labelledby="pricesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Цінова матриця</span>
+          <h2 class="settings-modal__title" id="pricesModalLabel">Ціни</h2>
+          <p class="settings-modal__subtitle">Оновлюйте вартість комбінацій типу підписки та розміру без переходу в окремий модуль.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <div class="settings-modal__table-wrap">
+          <div id="pricesTableWrap" class="settings-modal__table-scroll">
+            <div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-modal__footer">
+        <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Закрити</button>
+        <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--primary" id="savePricesBtn">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderSettingsPlaceholder(message) {
+    return `<li class="settings-modal__placeholder">${escapeHtml(message)}</li>`;
+}
+
+function loadPrices() {
+    const wrap = document.getElementById('pricesTableWrap');
+    wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>';
+
+    fetch('/settings/prices')
+        .then(r => r.json())
+        .then(data => {
+            const subs = data.subscription_types;
+            const sizes = data.sizes.filter(s => s.value.toLowerCase() !== 'власний');
+            const prices = data.prices;
+
+            if (!subs.length || !sizes.length) {
+                wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Спочатку додайте типи підписки та розміри.</div>';
+                return;
+            }
+
+            let html = '<table class="settings-price-table">';
+            html += '<thead><tr><th>Тип підписки</th>';
+            sizes.forEach(size => { html += `<th>${size.value}</th>`; });
+            html += '</tr></thead><tbody>';
+
+            subs.forEach(sub => {
+                html += `<tr><td><span class="settings-price-label">${sub.value}</span></td>`;
+                sizes.forEach(size => {
+                    const key = `${sub.id}_${size.id}`;
+                    const value = prices[key] !== undefined ? prices[key] : '';
+                    html += `<td><input type="number" min="0" class="settings-price-input" data-key="${key}" value="${value}" placeholder="0"></td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        });
+}
+
 function loadSettings(modalId, endpoint) {
-    const list = document.getElementById(modalId + '-list');
+    const list = document.getElementById(`${modalId}-list`);
+    list.innerHTML = renderSettingsPlaceholder('Завантаження...');
+
     fetch(endpoint)
         .then(r => r.json())
         .then(data => {
-            list.innerHTML = '';
-            data.forEach(item => {
-                const li = document.createElement('li');
-                li.className = 'list-group-item d-flex justify-content-between align-items-center';
-                li.textContent = item.value;
-                list.appendChild(li);
-            });
+            if (!data.length) {
+                list.innerHTML = renderSettingsPlaceholder('Поки що тут порожньо.');
+                return;
+            }
+
+            list.innerHTML = data.map((item, index) => `
+                <li class="settings-modal__list-item">
+                    <span class="settings-modal__item-index">${index + 1}</span>
+                    <span class="settings-modal__item-value">${escapeHtml(item.value)}</span>
+                </li>
+            `).join('');
         });
 }
-document.addEventListener('DOMContentLoaded', function() {
-    // Ініціалізація підказок
-    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
-        new bootstrap.Tooltip(el, { trigger: 'hover' });
-    });
 
-    // Для кожної модалки підключаємо завантаження та додавання
+document.addEventListener('DOMContentLoaded', function() {
     [
         {id: 'citiesModal', endpoint: '/settings/cities'},
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
@@ -146,14 +800,20 @@ document.addEventListener('DOMContentLoaded', function() {
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},
         {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'}
     ].forEach(function(modal) {
-        document.getElementById(modal.id).addEventListener('show.bs.modal', function() {
+        const modalEl = document.getElementById(modal.id);
+        const form = modalEl.querySelector('.settings-add-form');
+        const input = form.querySelector('input');
+        const error = modalEl.querySelector('.settings-error');
+
+        modalEl.addEventListener('show.bs.modal', function() {
+            error.hidden = true;
             loadSettings(modal.id, modal.endpoint);
         });
-        document.querySelector('#' + modal.id + ' .settings-add-form').addEventListener('submit', function(e) {
+
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
-            const input = this.querySelector('input');
-            const error = this.parentElement.querySelector('.settings-error');
-            error.style.display = 'none';
+            error.hidden = true;
+
             fetch(modal.endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -164,13 +824,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     input.value = '';
                     loadSettings(modal.id, modal.endpoint);
-                } else {
-                    error.textContent = data.error || 'Помилка';
-                    error.style.display = 'block';
+                    return;
                 }
+
+                error.textContent = data.error || 'Помилка';
+                error.hidden = false;
             });
+        });
+    });
+
+    document.getElementById('pricesModal').addEventListener('show.bs.modal', function() {
+        loadPrices();
+    });
+
+    document.getElementById('savePricesBtn').addEventListener('click', function() {
+        const inputs = document.querySelectorAll('#pricesTableWrap input[data-key]');
+        const payload = {};
+
+        inputs.forEach(input => {
+            payload[input.dataset.key] = input.value === '' ? 0 : parseInt(input.value, 10);
+        });
+
+        fetch('/settings/prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadPrices();
+            }
         });
     });
 });
 </script>
-{% endblock %} 
+{% endblock %}

@@ -8,7 +8,19 @@ import logging
 import json
 import requests
 from datetime import date, datetime
-from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+from app.services.order_service import (
+    SUBSCRIPTION_TYPES,
+    WEEKDAY_MAP,
+    build_delivery_dates,
+    calculate_next_delivery_date,
+    create_order_and_deliveries,
+    detect_order_scenario,
+    get_or_create_client,
+    get_orders,
+    paginate_orders,
+    update_order,
+    delete_order,
+)
 from app.services.delivery_service import group_deliveries_by_date
 from app.services.route_optimizer_service import (
     optimize_json,
@@ -138,7 +150,10 @@ def order_create():
     logging.info(f'Form data: {dict(request.form)}')
     
     is_pickup = request.form.get('is_pickup') == 'on'
-    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'delivery_type', 'size', 'first_delivery_date', 'delivery_day', 'for_whom']
+    scenario = detect_order_scenario(request.form)
+    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
+    if scenario == 'subscription':
+        required_fields.extend(['delivery_type', 'delivery_day'])
     if not is_pickup:
         required_fields.append('street')
     errors = []
@@ -209,7 +224,7 @@ def order_edit(order_id):
         return jsonify({'success': True})
     # --- Перевірка, чи можна продовжити підписку ---
     can_extend_subscription = True
-    if order.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly']:
+    if order.delivery_type in SUBSCRIPTION_TYPES:
         if getattr(order, 'is_subscription_extended', False):
             can_extend_subscription = False
         else:
@@ -551,19 +566,30 @@ def extend_subscription(order_id):
     order = Order.query.get_or_404(order_id)
     
     # Перевіряємо, чи це підписка
-    if order.delivery_type not in ['Weekly', 'Monthly', 'Bi-weekly']:
+    if order.delivery_type not in SUBSCRIPTION_TYPES:
         return jsonify({'success': False, 'error': 'Це не підписка'}), 400
-    
-    # Знаходимо доставку з is_subscription=False (5-та доставка)
-    unpaid_delivery = Delivery.query.filter_by(
-        order_id=order_id, 
-        is_subscription=False
-    ).first()
-    
-    if not unpaid_delivery:
-        return jsonify({'success': False, 'error': 'Не знайдено неоплачену доставку'}), 404
+    if getattr(order, 'is_subscription_extended', False):
+        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
     
     try:
+        last_delivery = (
+            Delivery.query
+            .filter_by(order_id=order_id)
+            .order_by(Delivery.delivery_date.desc(), Delivery.id.desc())
+            .first()
+        )
+        if not last_delivery or not last_delivery.delivery_date:
+            return jsonify({'success': False, 'error': 'Не знайдено доставки замовлення'}), 404
+
+        first_next_delivery = calculate_next_delivery_date(
+            last_delivery.delivery_date,
+            order.delivery_type,
+            WEEKDAY_MAP.get(order.delivery_day, last_delivery.delivery_date.weekday()),
+        )
+        next_cycle_dates = build_delivery_dates(first_next_delivery, order.delivery_type, order.delivery_day)
+        if len(next_cycle_dates) < 4:
+            return jsonify({'success': False, 'error': 'Не вдалося сформувати новий цикл'}), 400
+
         # --- КЛОНУЄМО ORDER ---
         new_order = Order(
             client_id=order.client_id,
@@ -579,7 +605,7 @@ def extend_subscription(order_id):
             delivery_type=order.delivery_type,
             size=order.size,
             custom_amount=order.custom_amount,
-            first_delivery_date=order.first_delivery_date,
+            first_delivery_date=first_next_delivery,
             delivery_day=order.delivery_day,
             time_from=order.time_from,
             time_to=order.time_to,
@@ -589,75 +615,41 @@ def extend_subscription(order_id):
             bouquet_size=order.bouquet_size,
             price_at_order=order.price_at_order,
             periodicity=order.periodicity,
-            preferred_days=order.preferred_days
+            preferred_days=order.preferred_days,
+            delivery_method=order.delivery_method,
+            address_comment=order.address_comment,
+            bouquet_type=order.bouquet_type,
+            composition_type=order.composition_type,
         )
         db.session.add(new_order)
         db.session.flush()  # Щоб отримати new_order.id
 
-        # --- ПРИВʼЯЗУЄМО ДОСТАВКИ ДО НОВОГО ORDER ---
-        unpaid_delivery.status = 'Очікує'
-        unpaid_delivery.is_subscription = True
-        unpaid_delivery.order_id = new_order.id
         # Відмічаємо старий order як продовжений
         order.is_subscription_extended = True
-        
-        # Створюємо 4 нові доставки
-        from app.services.order_service import WEEKDAY_MAP
-        import datetime
-        import calendar
-        
-        last_delivery = Delivery.query.filter_by(order_id=order_id).order_by(Delivery.delivery_date.desc()).first()
-        if not last_delivery:
-            return jsonify({'success': False, 'error': 'Не знайдено доставки замовлення'}), 404
-        
-        prev_date = last_delivery.delivery_date
-        desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
-        deliveries = []
-        
-        for i in range(4):
-            if order.delivery_type == 'Weekly':
-                next_date = prev_date + datetime.timedelta(days=1)
-                while next_date.weekday() != desired_weekday:
-                    next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Bi-weekly':
-                next_date = prev_date + datetime.timedelta(days=8)
-                while next_date.weekday() != desired_weekday:
-                    next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Monthly':
-                year = prev_date.year + (prev_date.month // 12)
-                month = (prev_date.month % 12) + 1
-                c = calendar.Calendar()
-                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
-                next_date = None
-                for d in month_days:
-                    if d > prev_date:
-                        next_date = d
-                        break
-                if not next_date:
-                    next_date = prev_date + datetime.timedelta(days=30)
-            else:
-                next_date = prev_date + datetime.timedelta(weeks=1)
-            deliveries.append(next_date)
-            prev_date = next_date
-        
-        for i, d_date in enumerate(deliveries):
-            is_subscription = i < 3
-            status = 'Очікує' if is_subscription else 'Не оплачена'
+
+        for i, d_date in enumerate(next_cycle_dates):
             delivery = Delivery(
                 order_id=new_order.id,
                 client_id=order.client_id,
                 delivery_date=d_date,
-                status=status,
+                status='Очікує',
                 comment=order.comment if i == 0 else '',
+                preferences=order.preferences,
                 street=order.street if not order.is_pickup else None,
                 building_number=order.building_number if not order.is_pickup else None,
+                floor=order.floor if not order.is_pickup else None,
+                entrance=order.entrance if not order.is_pickup else None,
                 time_from=order.time_from,
                 time_to=order.time_to,
                 size=order.size,
                 phone=order.recipient_phone,
                 is_pickup=order.is_pickup,
                 delivery_type=order.delivery_type,
-                is_subscription=is_subscription
+                is_subscription=True,
+                delivery_method=order.delivery_method,
+                address_comment=order.address_comment,
+                bouquet_type=order.bouquet_type,
+                composition_type=order.composition_type,
             )
             db.session.add(delivery)
         db.session.commit()
@@ -733,7 +725,7 @@ def subscriptions_list():
     subscription_orders = (
         Order.query
         .options(joinedload(Order.client), joinedload(Order.deliveries))
-        .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
+        .filter(Order.delivery_type.in_(SUBSCRIPTION_TYPES))
         .order_by(Order.created_at.desc())
         .all()
     )
@@ -790,8 +782,6 @@ def subscriptions_list():
 @orders_bp.route('/subscriptions/<int:order_id>', methods=['GET'])
 @login_required
 def subscription_detail(order_id):
-    subscription_types = ['Weekly', 'Monthly', 'Bi-weekly']
-
     def format_address(street='', building_number='', floor='', entrance='', address_comment=''):
         parts = []
         line = ' '.join(part for part in [street, building_number] if part)
@@ -811,28 +801,25 @@ def subscription_detail(order_id):
         .get_or_404(order_id)
     )
 
-    if order.delivery_type not in subscription_types:
+    if order.delivery_type not in SUBSCRIPTION_TYPES:
         return jsonify({'error': 'Це замовлення не є підпискою'}), 400
 
     deliveries = sorted(order.deliveries, key=lambda delivery: (delivery.delivery_date, delivery.id))
     total_deliveries = len(deliveries)
     completed_deliveries = sum(1 for delivery in deliveries if delivery.status == 'Доставлено')
-    unpaid_delivery = next((delivery for delivery in deliveries if not delivery.is_subscription), None)
     next_delivery = next((delivery for delivery in deliveries if delivery.status in ['Очікує', 'Розподілено']), None)
-    can_extend = (
-        not getattr(order, 'is_subscription_extended', False)
-        and any(not delivery.is_subscription for delivery in deliveries)
-    )
+    final_delivery = deliveries[-1] if deliveries else None
+    can_extend = not getattr(order, 'is_subscription_extended', False)
 
     related_orders = (
-        Order.query
-        .options(joinedload(Order.deliveries))
-        .filter(
-            Order.client_id == order.client_id,
-            Order.delivery_type.in_(subscription_types),
-            Order.recipient_name == order.recipient_name,
-            Order.recipient_phone == order.recipient_phone,
-        )
+            Order.query
+            .options(joinedload(Order.deliveries))
+            .filter(
+                Order.client_id == order.client_id,
+                Order.delivery_type.in_(SUBSCRIPTION_TYPES),
+                Order.recipient_name == order.recipient_name,
+                Order.recipient_phone == order.recipient_phone,
+            )
         .order_by(Order.created_at.desc())
         .all()
     )
@@ -883,7 +870,7 @@ def subscription_detail(order_id):
             'can_extend': can_extend,
             'is_extended': bool(getattr(order, 'is_subscription_extended', False)),
             'next_delivery_date': next_delivery.delivery_date.strftime('%d.%m.%Y') if next_delivery and next_delivery.delivery_date else '',
-            'unpaid_delivery_date': unpaid_delivery.delivery_date.strftime('%d.%m.%Y') if unpaid_delivery and unpaid_delivery.delivery_date else '',
+            'final_delivery_date': final_delivery.delivery_date.strftime('%d.%m.%Y') if final_delivery and final_delivery.delivery_date else '',
         },
         'deliveries': [
             {

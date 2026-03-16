@@ -302,7 +302,7 @@
                     <p class="mt-1" id="subscription-composition-type">—</p>
                   </div>
                   <div>
-                    <p class="font-medium text-stone-900">Неоплачена доставка</p>
+                    <p class="font-medium text-stone-900">Фінальна доставка циклу</p>
                     <p class="mt-1" id="subscription-unpaid-delivery">—</p>
                   </div>
                 </div>
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('subscription-address-comment').textContent = data.notes.address_comment || '—';
       document.getElementById('subscription-bouquet-type').textContent = data.notes.bouquet_type || '—';
       document.getElementById('subscription-composition-type').textContent = data.notes.composition_type || '—';
-      document.getElementById('subscription-unpaid-delivery').textContent = data.stats.unpaid_delivery_date || 'Немає';
+      document.getElementById('subscription-unpaid-delivery').textContent = data.stats.final_delivery_date || 'Немає';
 
       openOrderBtn.onclick = async () => {
         detailModal.hide();

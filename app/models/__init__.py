@@ -9,5 +9,6 @@ from .order import Order
 from .settings import Settings
 from .user import User, Role
 from .delivery_route import DeliveryRoute, RouteDelivery
+from .price import Price
 
-__all__ = ['Client', 'Courier', 'Delivery', 'Order', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery'] 
+__all__ = ['Client', 'Courier', 'Delivery', 'Order', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price'] 

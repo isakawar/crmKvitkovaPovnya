@@ -23,8 +23,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const pickupInput = document.getElementById('is-pickup-input');
     const deliveryModeHint = document.getElementById('delivery-mode-hint');
     const deliveryModeButtons = Array.from(document.querySelectorAll('[data-delivery-mode]'));
+    const scenarioInput = document.getElementById('order-scenario-input');
+    const scenarioButtons = Array.from(document.querySelectorAll('[data-composer-scenario]'));
+    const scenarioCopy = document.getElementById('order-scenario-copy');
+    const deliveryTypeField = document.getElementById('delivery-type-field');
     const deliveryTypeSelect = document.getElementById('delivery-type-select');
     const deliveryTypeLabel = document.getElementById('delivery-type-label');
+    const deliveryDayField = document.getElementById('delivery-day-field');
+    const deliveryDaySelect = document.getElementById('delivery-day-select');
+    const firstDeliveryLabel = document.getElementById('first-delivery-label');
     const sizeSelect = document.getElementById('size-select');
     const customAmountDiv = document.getElementById('custom-amount-div');
     const customAmountInput = document.getElementById('custom-amount-input');
@@ -52,6 +59,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentComposerFlow = 'order';
     let currentDeliveryMode = 'courier';
     let isComposerSubmitting = false;
+    let isScenarioLocked = false;
     let returnModalInstance = null;
     window.currentOrderId = null;
 
@@ -60,8 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
             create: {
                 chip: '<i class="bi bi-bag-heart"></i> Замовлення',
                 title: 'Нове замовлення',
-                description: 'Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.',
-                footer: 'Для разового замовлення буде створена одна доставка. Для підписки достатньо змінити тип доставки на Weekly, Monthly або Bi-weekly.',
+                description: 'Заповніть контактні дані, графік доставки та параметри букета.',
+                footer: '',
                 submit: 'Створити замовлення',
             },
             edit: {
@@ -76,8 +84,8 @@ document.addEventListener('DOMContentLoaded', function() {
             create: {
                 chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
                 title: 'Нова підписка',
-                description: 'Створіть підписку для клієнта з уже заповненим Instagram. Після збереження CRM автоматично згенерує серію доставок.',
-                footer: 'Для підписки CRM створить 5 доставок: 4 активні та 1 неоплачену для продовження циклу.',
+                description: 'Створіть цикл для клієнта з уже заповненим Instagram.',
+                footer: '',
                 submit: 'Створити підписку',
             },
             edit: {
@@ -94,6 +102,32 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!orderErrorBanner) return;
         orderErrorBanner.textContent = '';
         orderErrorBanner.classList.remove('is-visible');
+    }
+
+    function ensureDeliveryTypeOption(value, label = value) {
+        if (!value) return '';
+        const options = Array.from(deliveryTypeSelect.options);
+        const existing = options.find(option => option.value === value);
+        if (existing) return existing.value;
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        option.dataset.generated = 'true';
+        deliveryTypeSelect.appendChild(option);
+        return option.value;
+    }
+
+    function getDefaultOneTimeType() {
+        const options = Array.from(deliveryTypeSelect.options);
+        const oneTimeOption = options.find(option => /one[\s-]?time/i.test(option.value) || /разов/i.test(option.textContent || ''));
+        if (oneTimeOption) {
+            return oneTimeOption.value;
+        }
+        const testOption = options.find(option => /test/i.test(option.value) || /тест/i.test(option.textContent || ''));
+        if (testOption) {
+            return testOption.value;
+        }
+        return ensureDeliveryTypeOption('One-time', 'One-time');
     }
 
     function syncComposerBackButton() {
@@ -118,6 +152,20 @@ document.addEventListener('DOMContentLoaded', function() {
         orderErrorBanner.classList.add('is-visible');
     }
 
+    function syncScenarioButtons() {
+        scenarioButtons.forEach(button => {
+            const isActive = button.dataset.composerScenario === currentComposerFlow;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+            button.disabled = isScenarioLocked;
+        });
+    }
+
+    function lockScenarioSwitch(locked) {
+        isScenarioLocked = locked;
+        syncScenarioButtons();
+    }
+
     function setComposerSubmitting(submitting) {
         isComposerSubmitting = submitting;
         orderSubmitBtn.disabled = submitting;
@@ -128,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function applyComposerCopy(flow, isEditing = false) {
-        currentComposerFlow = flow;
         const state = isEditing ? 'edit' : 'create';
         const content = composerContent[flow][state];
         orderFlowChip.innerHTML = content.chip;
@@ -141,7 +188,6 @@ document.addEventListener('DOMContentLoaded', function() {
         deliveryTypeLabel.innerHTML = flow === 'subscription'
             ? '<i class="bi bi-arrow-repeat"></i> Тип підписки <span class="text-red-500">*</span>'
             : '<i class="bi bi-arrow-repeat"></i> Тип доставки <span class="text-red-500">*</span>';
-        syncDeliveryTypeOptions();
     }
 
     function syncDeliveryTypeOptions() {
@@ -156,6 +202,55 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentComposerFlow === 'subscription' && !subscriptionTypes.includes(deliveryTypeSelect.value)) {
             deliveryTypeSelect.value = 'Monthly';
         }
+    }
+
+    function syncScenarioUI(isEditing = false) {
+        if (scenarioInput) {
+            scenarioInput.value = currentComposerFlow;
+        }
+        syncScenarioButtons();
+        if (scenarioCopy) {
+            scenarioCopy.textContent = currentComposerFlow === 'subscription'
+                ? 'Підписка створює 4 доставки в межах одного циклу.'
+                : 'Разовий сценарій створює одне замовлення й одну доставку.';
+        }
+        if (deliveryTypeField) {
+            deliveryTypeField.classList.toggle('hidden', currentComposerFlow !== 'subscription');
+        }
+        if (deliveryDayField) {
+            deliveryDayField.classList.toggle('hidden', currentComposerFlow !== 'subscription');
+        }
+        if (deliveryTypeSelect) {
+            deliveryTypeSelect.required = currentComposerFlow === 'subscription';
+        }
+        if (deliveryDaySelect) {
+            deliveryDaySelect.required = currentComposerFlow === 'subscription';
+        }
+        if (firstDeliveryLabel) {
+            firstDeliveryLabel.innerHTML = currentComposerFlow === 'subscription'
+                ? '<i class="bi bi-calendar-event"></i> Перша доставка <span class="text-red-500">*</span>'
+                : '<i class="bi bi-calendar-event"></i> Дата доставки <span class="text-red-500">*</span>';
+        }
+        syncDeliveryTypeOptions();
+        if (currentComposerFlow === 'subscription') {
+            if (!subscriptionTypes.includes(deliveryTypeSelect.value)) {
+                deliveryTypeSelect.value = 'Monthly';
+            }
+            if (!isEditing && !deliveryDaySelect.value) {
+                deliveryDaySelect.value = 'ПН';
+            }
+            return;
+        }
+        if (!isEditing) {
+            deliveryTypeSelect.value = getDefaultOneTimeType();
+            deliveryDaySelect.value = '';
+        }
+    }
+
+    function setComposerFlow(flow, isEditing = false) {
+        currentComposerFlow = flow;
+        applyComposerCopy(flow, isEditing);
+        syncScenarioUI(isEditing);
     }
 
     function setDeliveryMode(mode = 'courier') {
@@ -226,6 +321,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
+        lockScenarioSwitch(false);
         if (!options.preserveReturnContext) {
             clearReturnContext();
         } else {
@@ -234,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
         clientSearch.value = clientInstagram;
         setDeliveryMode('courier');
         syncCustomAmountState();
-        applyComposerCopy(flow, false);
+        setComposerFlow(flow, false);
         if (extendHeaderBtn) {
             extendHeaderBtn.classList.add('d-none');
             extendHeaderBtn.removeAttribute('data-order-id');
@@ -333,6 +429,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        if (currentComposerFlow === 'subscription' && !deliveryTypeSelect.value) {
+            showOrderError('Оберіть тип підписки');
+            return;
+        }
+
+        if (currentComposerFlow === 'subscription' && !deliveryDaySelect.value) {
+            showOrderError('Оберіть день доставки для підписки');
+            return;
+        }
+
         setComposerSubmitting(true);
         const orderId = addOrderForm.getAttribute('data-edit-id');
         const isEditing = Boolean(orderId);
@@ -370,6 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
         resetComposerForm(flow, orderData.client_instagram, {
             preserveReturnContext: Boolean(options.preserveReturnContext),
         });
+        lockScenarioSwitch(true);
         addOrderForm.setAttribute('data-edit-id', orderId);
         clientSearch.value = orderData.client_instagram || '';
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
@@ -377,11 +484,11 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
-        deliveryTypeSelect.value = orderData.delivery_type || '';
+        deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
         addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date || '';
-        addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day || '';
+        deliveryDaySelect.value = orderData.delivery_day || '';
         addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
         addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
         addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
@@ -395,7 +502,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setDeliveryMode('courier');
         }
         syncCustomAmountState();
-        applyComposerCopy(flow, true);
+        setComposerFlow(flow, true);
 
         if (extendHeaderBtn) {
             if (flow === 'subscription' && orderData.can_extend_subscription) {
@@ -429,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
     bindClientSearch();
     setDeliveryMode('courier');
     syncCustomAmountState();
-    applyComposerCopy('order', false);
+    setComposerFlow('order', false);
 
     recipientPhoneInput.addEventListener('focus', function() {
         if (!recipientPhoneInput.value) {
@@ -443,6 +550,14 @@ document.addEventListener('DOMContentLoaded', function() {
     deliveryModeButtons.forEach(button => {
         button.addEventListener('click', function() {
             setDeliveryMode(this.dataset.deliveryMode || 'courier');
+        });
+    });
+
+    scenarioButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            if (isScenarioLocked) return;
+            const nextFlow = this.dataset.composerScenario || 'order';
+            setComposerFlow(nextFlow, false);
         });
     });
 

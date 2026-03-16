@@ -173,6 +173,54 @@
     @apply grid gap-4 xl:grid-cols-[0.92fr_1.08fr];
   }
 
+  .order-scenario-panel {
+    @apply rounded-[20px] border border-stone-200 bg-white/90 px-4 py-2.5 shadow-sm lg:px-5 lg:py-3;
+  }
+
+  .order-scenario-head {
+    @apply flex flex-col gap-2 md:flex-row md:items-center md:justify-between;
+  }
+
+  .order-scenario-kicker {
+    @apply whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400;
+  }
+
+  .order-scenario-copy {
+    @apply max-w-3xl text-xs leading-5 text-stone-500;
+  }
+
+  .order-scenario-copy-compact {
+    @apply mt-2 leading-4;
+  }
+
+  .order-scenario-switch {
+    @apply grid gap-2 md:min-w-[400px] md:grid-cols-2;
+  }
+
+  .order-scenario-option {
+    @apply flex flex-col rounded-[16px] border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-left transition-all duration-200 hover:border-stone-300 hover:bg-white;
+  }
+
+  .order-scenario-option.is-active {
+    @apply border-stone-900 bg-stone-900 text-white shadow-sm;
+  }
+
+  .order-scenario-option:disabled {
+    @apply cursor-not-allowed opacity-60 hover:border-stone-200 hover:bg-stone-50;
+  }
+
+  .order-scenario-option-title {
+    @apply text-sm font-semibold leading-4;
+  }
+
+  .order-scenario-option-copy {
+    @apply mt-0.5 text-[10px] leading-4 text-stone-400;
+  }
+
+  .order-scenario-option.is-active .order-scenario-option-copy {
+    @apply text-white/70;
+  }
+
   .order-panel {
     @apply rounded-[24px] border border-stone-200 bg-white p-4 shadow-sm lg:p-5;
   }
