@@ -9,9 +9,7 @@
     border-radius: 16px;
     border: 1.5px solid #e3eafc;
     overflow: hidden;
-  }
-  .leaflet-tile-pane {
-    transform: translateZ(0);
+    isolation: isolate;
   }
   .stop-marker {
     display: flex;
@@ -440,7 +438,11 @@ document.getElementById('tab-csv').addEventListener('click', function() {
 });
 
 // ── Delivery picker ───────────────────────────────────────────────────────────
-const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+let _pickerModalInstance = null;
+function pickerModal() {
+  if (!_pickerModalInstance) _pickerModalInstance = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+  return _pickerModalInstance;
+}
 let pickerDeliveries = [];
 
 function formatDate(dateStr) {
@@ -515,7 +517,7 @@ document.getElementById('btn-open-picker').addEventListener('click', async funct
     </div>
   `;
 
-  pickerModal.show();
+  pickerModal().show();
 
   try {
     const resp = await fetch(`/route-generator/deliveries?date=${dateVal}`);
@@ -555,7 +557,7 @@ document.getElementById('btn-run-optimizer').addEventListener('click', async fun
     form.appendChild(inp);
   });
 
-  pickerModal.hide();
+  pickerModal().hide();
   document.getElementById('loading-overlay').classList.add('active');
 
   try {
