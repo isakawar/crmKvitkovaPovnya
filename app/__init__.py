@@ -34,7 +34,6 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.orders.routes import orders_bp
     from app.blueprints.clients.routes import clients_bp
     from app.blueprints.couriers.routes import couriers_bp
-    from app.blueprints.deliveries.routes import deliveries_bp
     from app.blueprints.reports.routes import reports_bp
     from app.blueprints.settings.routes import bp as settings_bp
     from app.blueprints.auth import bp as auth_bp
@@ -45,7 +44,6 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
     app.register_blueprint(couriers_bp)
-    app.register_blueprint(deliveries_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(auth_bp)
