@@ -3,9 +3,11 @@
 {% block content %}
 <!-- Header -->
 <div class="flex items-center justify-between mb-6">
-  <div>
-    <h1 class="text-xl font-semibold text-stone-900">Клієнти</h1>
-    <p class="text-sm text-stone-500 mt-0.5">Всього: {{ clients_count }}</p>
+  <div class="flex items-center gap-3">
+    <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Клієнти</h1>
+    <div class="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1 text-xs text-stone-500 shadow-sm">
+      {{ clients_count }}
+    </div>
   </div>
   <button class="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
           data-bs-toggle="modal" data-bs-target="#clientModal">
@@ -14,33 +16,43 @@
   </button>
 </div>
 
-<!-- Search -->
-<div class="mb-5">
-  <form method="get" action="" class="flex items-center gap-3">
-    <div class="relative flex-1 max-w-md">
-      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm"></i>
-      <input
-        type="text"
-        name="q"
-        value="{{ search_query }}"
-        placeholder="Пошук за Instagram, Telegram або телефоном..."
-        class="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-        autocomplete="off"
-      />
-    </div>
-    {% if search_query %}
-    <a href="{{ url_for('clients.clients_list') }}" class="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-      <i class="bi bi-x-circle"></i> Скинути
-    </a>
-    {% endif %}
-  </form>
-</div>
+<!-- Filters -->
+<form method="get" action="" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
+  <div class="relative min-w-[280px] flex-1 md:max-w-md">
+    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+    <input
+      type="text"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Пошук за Instagram, Telegram або телефоном..."
+      class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      autocomplete="off"
+    />
+  </div>
+  <select name="sub"
+          onchange="this.form.submit()"
+          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+    <option value="" {% if sub_filter == '' %}selected{% endif %}>Всі клієнти</option>
+    <option value="active" {% if sub_filter == 'active' %}selected{% endif %}>Активна підписка</option>
+    <option value="inactive" {% if sub_filter == 'inactive' %}selected{% endif %}>Без підписки</option>
+  </select>
+  <button type="submit"
+          class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
+    Фільтрувати
+  </button>
+  {% if search_query or sub_filter %}
+  <a href="{{ url_for('clients.clients_list') }}"
+     class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
+    Скинути
+  </a>
+  {% endif %}
+</form>
 
 <!-- Card grid -->
 {% if clients %}
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
   {% for client in clients %}
-  <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
+  <div class="bg-white border border-stone-200 rounded-xl p-4 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
        data-client-id="{{ client.id }}">
 
     <!-- Top row: name + subscription dot -->
@@ -78,7 +90,7 @@
       <div class="flex items-center gap-1 text-xs text-stone-400">
         <i class="bi bi-wallet2"></i>
         <span class="text-stone-600 font-medium">{{ client.credits }}</span>
-        <span>кредитів</span>
+        <span>₴</span>
       </div>
       <div class="flex items-center gap-2">
         {% if client.marketing_source %}

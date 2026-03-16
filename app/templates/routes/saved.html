@@ -2,398 +2,430 @@
 
 {% block head %}
 {{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-/* ── Page ────────────────────────────────────────────── */
-.rp-wrap   { max-width: 100%; }
-.rp-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.rp-title  { font-size: 1.05rem; font-weight: 700; color: #0f172a; letter-spacing: -.01em; margin: 0; }
+  .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
+</style>
+<style>
+  .route-card { transition: box-shadow 0.15s; }
+  .route-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  .chevron-icon { transition: transform 0.2s; }
+  .hdr-open .chevron-icon { transform: rotate(180deg); }
 
-/* ── Filter ──────────────────────────────────────────── */
-.rp-filter { display: flex; gap: 6px; align-items: center; }
-.rp-filter input[type=date] { height: 32px; font-size: 0.8rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 10px; color: #334155; background: #fff; }
-.rp-filter .btn { height: 32px; font-size: 0.8rem; padding: 0 12px; border-radius: 7px; line-height: 1; }
-
-/* ── Route list container ────────────────────────────── */
-.rl-wrap { display: flex; flex-direction: column; gap: 4px; }
-
-/* ── Single route item ───────────────────────────────── */
-.rl-item { background: #fff; border: 1px solid #e8edf4; border-radius: 10px; overflow: hidden; transition: border-color .15s, box-shadow .15s; }
-.rl-item:hover { border-color: #c7d2e6; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
-
-/* ── Status accent strip ─────────────────────────────── */
-.rl-header { display: flex; align-items: center; gap: 0; cursor: pointer; user-select: none; min-height: 48px; }
-.rl-accent { width: 4px; align-self: stretch; flex-shrink: 0; border-radius: 10px 0 0 10px; }
-.accent-draft     { background: #cbd5e1; }
-.accent-sent      { background: #60a5fa; }
-.accent-accepted  { background: #34d399; }
-.accent-rejected  { background: #f87171; }
-.accent-completed { background: #38bdf8; }
-
-.rl-body { display: flex; align-items: center; gap: 10px; flex: 1; padding: 10px 14px; flex-wrap: wrap; min-width: 0; }
-
-/* ── Date block ──────────────────────────────────────── */
-.rl-date  { min-width: 90px; }
-.rl-date-main { font-size: 0.85rem; font-weight: 600; color: #0f172a; white-space: nowrap; }
-.rl-date-id   { font-size: 0.72rem; color: #94a3b8; }
-
-/* ── Status pill ─────────────────────────────────────── */
-.spill { display: inline-flex; align-items: center; gap: 3px; padding: 3px 9px; border-radius: 99px; font-size: 0.71rem; font-weight: 600; white-space: nowrap; cursor: default; }
-.spill-draft     { background: #f1f5f9; color: #64748b; }
-.spill-sent      { background: #eff6ff; color: #2563eb; }
-.spill-accepted  { background: #f0fdf4; color: #16a34a; }
-.spill-rejected  { background: #fef2f2; color: #dc2626; }
-.spill-completed { background: #f0f9ff; color: #0284c7; }
-
-/* ── Meta chips ──────────────────────────────────────── */
-.rl-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
-.chip { display: inline-flex; align-items: center; gap: 3px; font-size: 0.77rem; color: #64748b; white-space: nowrap; }
-.chip i { font-size: 0.72rem; opacity: .75; }
-.chip-price { color: #15803d; font-weight: 600; }
-.chip-courier { color: #334155; }
-
-/* ── Actions area ────────────────────────────────────── */
-.rl-actions { display: flex; align-items: center; gap: 6px; padding-right: 10px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-.assign-row { display: flex; gap: 4px; align-items: center; }
-.assign-row select { height: 30px; font-size: 0.78rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 8px; background: #fff; max-width: 130px; }
-.assign-row input  { height: 30px; font-size: 0.78rem; border: 1px solid #e2e8f0; border-radius: 7px; padding: 0 8px; background: #fff; width: 78px; }
-.bxs { height: 30px; font-size: 0.77rem; padding: 0 10px; border-radius: 7px; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; line-height: 1; }
-.status-label { font-size: 0.75rem; color: #94a3b8; white-space: nowrap; display: flex; align-items: center; gap: 4px; }
-
-/* ── Chevron ─────────────────────────────────────────── */
-.rl-chevron { font-size: 0.65rem; color: #94a3b8; margin-right: 10px; transition: transform .2s; flex-shrink: 0; }
-.rl-header.open .rl-chevron { transform: rotate(90deg); }
-
-/* ── Stops panel ─────────────────────────────────────── */
-.rl-stops { border-top: 1px solid #f1f5f9; }
-.stops-tbl { font-size: 0.78rem; margin: 0; }
-.stops-tbl thead th {
-  background: #f8fafc;
-  color: #94a3b8;
-  font-weight: 600;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  padding: 7px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  border-top: none;
-}
-.stops-tbl tbody td { padding: 8px 12px; border-color: #f8fafc; color: #334155; vertical-align: middle; }
-.stops-tbl tbody tr:last-child td { border-bottom: none; }
-.snum { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: #6366f1; color: #fff; font-size: 0.66rem; font-weight: 700; }
-.ig-link { color: #6366f1; font-size: 0.77rem; }
-.addr-sub { font-size: 0.71rem; color: #94a3b8; margin-top: 1px; }
+  .stops-tbl th {
+    background: #fafaf9; color: #a8a29e;
+    font-size: 0.68rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 8px 16px; border-bottom: 1px solid #f5f5f4;
+    border-top: none; white-space: nowrap;
+  }
+  .stops-tbl td {
+    padding: 10px 16px; border-bottom: 1px solid #f5f5f4;
+    font-size: 0.875rem; color: #44403c; vertical-align: middle;
+  }
+  .stops-tbl tr:last-child td { border-bottom: none; }
+  .stops-tbl tbody tr:hover td { background: #fafaf9; }
+  .stop-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #3b82f6; color: #fff;
+    font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+  }
+  .ig-link { color: #3b82f6; }
 </style>
 {% endblock %}
 
 {% block content %}
-{% macro delivery_table(deliveries) %}
-<table class="table stops-tbl mb-0">
-  <thead>
-    <tr>
-      <th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for d in deliveries %}
-  {% set order = d.order %}
-  {% set client = d.client %}
-  <tr>
-    <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
-    <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
-    <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-    <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
-    <td>
-      {% if order %}
-        {% set parts = [] %}
-        {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
-        {% set street = d.street or order.street %}
-        {% if street %}{% set _ = parts.append(street) %}{% endif %}
-        {% set build = d.building_number or order.building_number %}
-        {% if build %}{% set _ = parts.append(build) %}{% endif %}
-        {{ parts | join(', ') or '—' }}
-      {% else %}—{% endif %}
-    </td>
-    <td style="white-space:nowrap;">
-      {% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}
-    </td>
-    <td style="max-width:180px; color:#64748b;">
-      {% set comment = d.comment or (order.comment if order else '') %}
-      {% if comment %}<span title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
-    </td>
-  </tr>
-  {% endfor %}
-  </tbody>
-</table>
-{% endmacro %}
-<div class="rp-wrap">
-
-<div class="rp-topbar">
-  <h1 class="rp-title">Маршрути</h1>
-  <form method="get" class="rp-filter">
-    <input type="date" name="date" value="{{ date_filter }}">
-    <button type="submit" class="btn btn-sm btn-outline-primary">Фільтр</button>
-    {% if date_filter %}
-    <a href="{{ url_for('routes.saved_routes') }}" class="btn btn-sm btn-outline-secondary">Скинути</a>
-    {% endif %}
-  </form>
-</div>
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% for cat, msg in messages %}
-  <div class="alert alert-{{ 'success' if cat == 'success' else 'danger' if cat == 'danger' else 'warning' }} alert-dismissible fade show py-2 mb-3" style="border-radius:8px;font-size:0.85rem;">
-    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endfor %}
-{% endwith %}
-
-{% if not routes %}
-<div class="text-center py-5 text-muted">
-  <i class="bi bi-signpost-2" style="font-size:2.2rem;opacity:.4;"></i>
-  <div class="mt-2" style="font-size:0.9rem;">Маршрутів немає</div>
-  <a href="{{ url_for('orders.route_generator') }}" class="btn btn-sm btn-primary mt-3">
-    <i class="bi bi-signpost-split me-1"></i>Побудувати маршрут
-  </a>
-</div>
-{% else %}
-
-{% set status_labels = {
-  'draft': 'Чернетка',
-  'sent': 'Надіслано',
-  'accepted': 'Прийнято',
-  'rejected': 'Відхилено',
-  'completed': 'Завершено'
+{% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
+{% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
+{% set status_colors = {
+  'draft':     'bg-stone-100 text-stone-500',
+  'sent':      'bg-blue-50 text-blue-600',
+  'accepted':  'bg-emerald-50 text-emerald-600',
+  'rejected':  'bg-red-50 text-red-500',
+  'completed': 'bg-sky-50 text-sky-600'
 } %}
 
-<div class="rl-wrap">
-{% for route in routes %}
-<div class="rl-item">
+<div class="flex flex-col gap-6">
 
-  <div class="rl-header" data-bs-toggle="collapse" data-bs-target="#stops-{{ route.id }}" id="hdr-{{ route.id }}">
-    <div class="rl-accent accent-{{ route.status }}"></div>
-    <div class="rl-body">
-
-      <!-- Date + ID -->
-      <div class="rl-date">
-        <div class="rl-date-main">{{ route.route_date.strftime('%d.%m.%Y') }}</div>
-        <div class="rl-date-id">#{{ route.id }}</div>
-      </div>
-
-      <!-- Status pill -->
-      {% set status_time = route.sent_at if route.status == 'sent' else
-                           route.accepted_at if route.status == 'accepted' else
-                           route.rejected_at if route.status == 'rejected' else none %}
-      <span class="spill spill-{{ route.status }}"
-            {% if status_time %}title="{{ status_time|kyiv_time }}" data-bs-toggle="tooltip"{% endif %}>
-        {% if route.status == 'accepted' %}<i class="bi bi-check-circle-fill"></i>
-        {% elif route.status == 'rejected' %}<i class="bi bi-x-circle-fill"></i>
-        {% elif route.status == 'sent' %}<i class="bi bi-send-fill"></i>
-        {% elif route.status == 'completed' %}<i class="bi bi-check2-all"></i>
-        {% endif %}
-        {{ status_labels.get(route.status, route.status) }}
-      </span>
-
-      <!-- Meta chips -->
-      <div class="rl-meta">
-        <span class="chip"><i class="bi bi-box-seam"></i>{{ route.deliveries_count }} дост.</span>
-        {% if route.total_distance_km %}
-        <span class="chip"><i class="bi bi-geo-alt"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
-        {% endif %}
-        {% if route.estimated_duration_min %}
-        {% set h = route.estimated_duration_min // 60 %}
-        {% set m = route.estimated_duration_min % 60 %}
-        <span class="chip"><i class="bi bi-clock"></i>{% if h %}{{ h }}г {% endif %}{{ m }}хв</span>
-        {% endif %}
-        {% if route.courier %}
-        <span class="chip chip-courier"><i class="bi bi-person-badge"></i>{{ route.courier.name }}</span>
-        {% endif %}
-        {% if route.delivery_price %}
-        <span class="chip chip-price">{{ route.delivery_price }}₴</span>
-        {% endif %}
-      </div>
-
+  <!-- Header -->
+  <div class="flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Маршрути</h1>
+      <p class="text-sm text-stone-400 mt-0.5">Управління маршрутами доставок</p>
     </div>
-
-    <!-- Actions (stop propagation handled in JS) -->
-    <div class="rl-actions">
-      {% if route.status in ['draft', 'rejected'] %}
-      <form method="post" action="{{ url_for('routes.assign_route', route_id=route.id) }}" class="assign-row">
-        <select name="courier_id">
-          <option value="">— Кур'єр —</option>
-          {% for c in couriers %}
-          <option value="{{ c.id }}" {% if route.courier_id == c.id %}selected{% endif %}>{{ c.name }}</option>
-          {% endfor %}
-        </select>
-        <input type="number" name="delivery_price" placeholder="Ціна ₴" value="{{ route.delivery_price or '' }}" min="0">
-        <button type="submit" class="bxs btn btn-outline-secondary"><i class="bi bi-check2"></i></button>
+    <div class="flex items-center gap-3">
+      <!-- Date filter -->
+      <form method="get" class="flex items-center gap-2">
+        <label class="text-sm text-stone-500 whitespace-nowrap">Дата маршруту:</label>
+        <input type="text" id="route-date-picker" readonly
+               placeholder="Обрати дату"
+               style="width:150px"
+               class="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-600 shadow-sm hover:bg-stone-50 transition-colors cursor-pointer focus:outline-none">
+        <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
+        {% if date_filter %}
+        <a href="{{ url_for('routes.saved_routes') }}"
+           class="flex h-8 w-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition-colors">
+          <i class="bi bi-x text-base leading-none"></i>
+        </a>
+        {% endif %}
       </form>
-      {% if route.courier_id %}
-      <form method="post" action="{{ url_for('routes.send_route', route_id=route.id) }}">
-        <button type="submit" class="bxs btn btn-primary">
-          <i class="bi bi-telegram"></i>Надіслати
-        </button>
-      </form>
-      {% endif %}
-      {% endif %}
 
-      {% if route.status == 'sent' %}
-      <span class="status-label"><i class="bi bi-hourglass-split"></i>Очікує</span>
-      {% endif %}
+      <!-- Create route -->
+      <a href="{{ url_for('orders.route_generator') }}"
+         class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+        <i class="bi bi-plus-lg"></i> Створити маршрут
+      </a>
+    </div>
+  </div>
 
+  <!-- Flash messages -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+    <div class="flex items-center gap-3 rounded-xl border px-5 py-3 text-sm
+                {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800
+                {% elif cat == 'danger' %}border-red-200 bg-red-50 text-red-800
+                {% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %}">
+      <i class="bi {% if cat == 'success' %}bi-check-circle{% elif cat == 'danger' %}bi-x-circle{% else %}bi-exclamation-triangle{% endif %}"></i>
+      {{ msg }}
+    </div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Empty state -->
+  {% if not routes %}
+  <div class="flex flex-col items-center justify-center rounded-[22px] border border-dashed border-stone-300 bg-white py-20 text-center">
+    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400 mb-4">
+      <i class="bi bi-signpost-2 text-2xl"></i>
+    </div>
+    <h2 class="text-lg font-semibold text-stone-900">Маршрутів немає</h2>
+    <p class="text-sm text-stone-400 mt-1 mb-5">Побудуйте перший маршрут через оптимізатор</p>
+    <a href="{{ url_for('orders.route_generator') }}"
+       class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+      <i class="bi bi-signpost-split"></i> Побудувати маршрут
+    </a>
+  </div>
+
+  {% else %}
+
+  <!-- Route list -->
+  <div class="flex flex-col gap-3">
+  {% for route in routes %}
+  {% set formatted_date = route.route_date.day ~ ' ' ~ months[route.route_date.month] ~ ', ' ~ route.route_date.year %}
+
+  <div class="route-card rounded-xl border border-stone-200 bg-white overflow-hidden">
+
+    <!-- Header row -->
+    <div class="route-hdr flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
+         data-target="stops-{{ route.id }}" id="hdr-{{ route.id }}">
+
+      <!-- Date -->
+      <div class="min-w-[140px]">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Дата</p>
+        <p class="text-sm font-semibold text-stone-900">{{ formatted_date }}</p>
+      </div>
+
+      <!-- Status -->
+      <div class="min-w-[100px]">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Статус</p>
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ status_colors.get(route.status, 'bg-stone-100 text-stone-500') }}">
+          {{ status_labels.get(route.status, route.status) }}
+        </span>
+      </div>
+
+      <!-- Deliveries -->
+      <div class="min-w-[70px]">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Доставок</p>
+        <p class="text-sm font-semibold text-stone-900">{{ route.deliveries_count }}</p>
+      </div>
+
+      <!-- Distance -->
+      <div class="min-w-[90px]">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Кілометраж</p>
+        <p class="text-sm font-semibold text-stone-900">
+          {% if route.total_distance_km %}{{ '%.1f'|format(route.total_distance_km) }} км{% else %}—{% endif %}
+        </p>
+      </div>
+
+      <!-- Courier -->
+      <div class="flex-1 min-w-[160px]">
+        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Кур'єр</p>
+        <div class="flex items-center gap-2">
+          <p class="text-sm font-semibold {{ 'text-stone-900' if route.courier else 'text-stone-400' }}">
+            {{ route.courier.name if route.courier else 'Не призначено' }}
+          </p>
+          {% if route.status in ['draft', 'rejected'] %}
+          <button type="button"
+                  onclick="event.stopPropagation(); openAssignModal({{ route.id }}, {{ route.courier_id or 'null' }}, {{ route.delivery_price or 'null' }})"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+            <i class="bi bi-person-gear text-stone-400"></i>
+            {{ 'Змінити' if route.courier else 'Призначити' }}
+          </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Delete -->
       <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
-            onsubmit="return confirm('Видалити маршрут?')">
-        <button type="submit" class="bxs btn btn-outline-danger" style="padding:0 8px;">
-          <i class="bi bi-trash"></i>
+            onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
+        <button type="submit"
+                class="flex h-8 w-8 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+          <i class="bi bi-trash text-sm"></i>
         </button>
       </form>
+
+      <!-- Chevron -->
+      <i class="bi bi-chevron-down chevron-icon text-stone-400 text-sm flex-shrink-0"></i>
     </div>
 
-    <i class="bi bi-chevron-right rl-chevron"></i>
+    <!-- Stops table (collapsed) -->
+    <div class="route-stops border-t border-stone-100" id="stops-{{ route.id }}" style="display:none;">
+      {% if route.stops %}
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse stops-tbl">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Клієнт</th>
+              <th>Букет</th>
+              <th>Отримувач</th>
+              <th>Адреса</th>
+              <th>Телефон</th>
+              <th>Час</th>
+              <th>Коментар</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for stop in route.stops %}
+          {% set d = stop.delivery %}
+          {% set order = d.order if d else none %}
+          {% set client = d.client if d else none %}
+          <tr>
+            <td><span class="stop-num">{{ stop.stop_order }}</span></td>
+            <td class="whitespace-nowrap">
+              {% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}
+            </td>
+            <td class="whitespace-nowrap">
+              {{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}
+            </td>
+            <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
+            <td>
+              {% if d and d.is_pickup %}
+                <span class="text-stone-400">Самовивіз</span>
+              {% elif order %}
+                {% set parts = [] %}
+                {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+                {% set street = d.street or order.street %}
+                {% if street %}{% set _ = parts.append(street) %}{% endif %}
+                {% set build = d.building_number or order.building_number %}
+                {% if build %}{% set _ = parts.append(build) %}{% endif %}
+                {{ parts | join(', ') or '—' }}
+                {% set floor = d.floor or order.floor %}
+                {% set ent = d.entrance or order.entrance %}
+                {% if floor or ent %}
+                <div class="text-xs text-stone-400 mt-0.5">{% if floor %}пов.{{ floor }}{% endif %}{% if ent %} під.{{ ent }}{% endif %}</div>
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td class="whitespace-nowrap">
+              {{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}
+            </td>
+            <td class="whitespace-nowrap">
+              {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
+              {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
+              {% else %}—{% endif %}
+            </td>
+            <td style="max-width:180px;">
+              {% set comment = d.comment or (order.comment if order else '') %}
+              {% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="px-5 py-4 text-sm text-stone-400">Зупинок немає</div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
   </div>
 
-  <!-- Stops -->
-  <div class="collapse rl-stops" id="stops-{{ route.id }}">
-    {% if route.stops %}
-    <table class="table stops-tbl">
-      <thead>
-        <tr>
-          <th style="width:26px;">#</th>
-          <th>Клієнт</th>
-          <th>Букет</th>
-          <th>Отримувач</th>
-          <th>Адреса</th>
-          <th>Телефон</th>
-          <th>Час</th>
-          <th>Коментар</th>
-        </tr>
-      </thead>
-      <tbody>
-      {% for stop in route.stops %}
-      {% set d = stop.delivery %}
-      {% set order = d.order if d else none %}
-      {% set client = d.client if d else none %}
-      <tr>
-        <td><span class="snum">{{ stop.stop_order }}</span></td>
+  {% endif %}
 
-        <td style="white-space:nowrap;">
-          {% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}
-        </td>
-
-        <td style="white-space:nowrap;">
-          {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
-          {{ size or '—' }}
-        </td>
-
-        <td style="white-space:nowrap;">{{ (order.recipient_name if order else '') or '—' }}</td>
-
-        <td>
-          {% if d and d.is_pickup %}
-            <span style="color:#94a3b8;">Самовивіз</span>
-          {% elif order %}
-            {% set parts = [] %}
-            {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
-            {% set street = d.street or order.street %}
-            {% if street %}{% set _ = parts.append(street) %}{% endif %}
-            {% set build = d.building_number or order.building_number %}
-            {% if build %}{% set _ = parts.append(build) %}{% endif %}
-            {{ parts | join(', ') }}
-            {% set floor = d.floor or order.floor %}
-            {% set ent = d.entrance or order.entrance %}
-            {% if floor or ent %}
-            <div class="addr-sub">{% if floor %}пов.{{ floor }}{% endif %}{% if ent %} під.{{ ent }}{% endif %}</div>
-            {% endif %}
-          {% else %}—{% endif %}
-        </td>
-
-        <td style="white-space:nowrap;">
-          {{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}
-        </td>
-
-        <td style="white-space:nowrap;">
-          {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
-          {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
-          {% else %}—{% endif %}
-        </td>
-
-        <td style="max-width:180px; color:#64748b;">
-          {% set comment = d.comment or (order.comment if order else '') %}
-          {% if comment %}<span title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
-        </td>
-      </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <div style="padding:12px 16px; font-size:0.8rem; color:#94a3b8;">Зупинок немає</div>
-    {% endif %}
-  </div>
-
-</div>
-{% endfor %}
-</div>
-
-{% endif %}
-
-{% if nova_poshta_deliveries or pickup_deliveries %}
-<div class="mt-4">
-  <div style="font-size:0.8rem; color:#94a3b8; margin-bottom:6px;">{{ np_date.strftime('%d.%m.%Y') }}</div>
-
-  <!-- Tabs -->
-  <ul class="nav nav-tabs" id="extraDelivTabs" role="tablist" style="border-bottom:1px solid #e8edf4;">
-    {% if nova_poshta_deliveries %}
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="np-tab" data-bs-toggle="tab" data-bs-target="#np-pane" type="button" role="tab"
-              style="font-size:0.8rem; padding:6px 14px; color:#e65c00; border-color:#e8edf4 #e8edf4 #fff;">
-        <i class="bi bi-truck me-1"></i>Нова Пошта
-        <span class="badge rounded-pill ms-1" style="background:#fff3e0; color:#e65c00; font-size:0.68rem;">{{ nova_poshta_deliveries|length }}</span>
-      </button>
-    </li>
-    {% endif %}
-    {% if pickup_deliveries %}
-    <li class="nav-item" role="presentation">
-      <button class="nav-link {% if not nova_poshta_deliveries %}active{% endif %}" id="pickup-tab" data-bs-toggle="tab" data-bs-target="#pickup-pane" type="button" role="tab"
-              style="font-size:0.8rem; padding:6px 14px; color:#7c3aed; border-color:#e8edf4 #e8edf4 #fff;">
-        <i class="bi bi-bag-check me-1"></i>Самовивіз
-        <span class="badge rounded-pill ms-1" style="background:#f5f3ff; color:#7c3aed; font-size:0.68rem;">{{ pickup_deliveries|length }}</span>
-      </button>
-    </li>
-    {% endif %}
-  </ul>
-
-  <div class="tab-content" id="extraDelivTabContent">
+  <!-- Nova Poshta / Pickup section -->
+  {% if nova_poshta_deliveries or pickup_deliveries %}
+  {% set months_local = months %}
+  <div class="flex flex-col gap-3">
+    <div class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }}</div>
 
     {% if nova_poshta_deliveries %}
-    <div class="tab-pane fade show active" id="np-pane" role="tabpanel">
-      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #e65c00;">
-        {{ delivery_table(nova_poshta_deliveries) }}
+    <div class="rounded-xl border border-stone-200 bg-white overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100 bg-stone-50">
+        <i class="bi bi-truck text-orange-500 text-sm"></i>
+        <span class="text-sm font-medium text-stone-700">Нова Пошта</span>
+        <span class="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-medium text-orange-600">{{ nova_poshta_deliveries|length }}</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse stops-tbl">
+          <thead><tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr></thead>
+          <tbody>
+          {% for d in nova_poshta_deliveries %}
+          {% set order = d.order %}{% set client = d.client %}
+          <tr>
+            <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+            <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+            <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+            <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+            <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+            <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+            <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% endif %}
 
     {% if pickup_deliveries %}
-    <div class="tab-pane fade {% if not nova_poshta_deliveries %}show active{% endif %}" id="pickup-pane" role="tabpanel">
-      <div class="rl-item" style="border-top:none; border-radius:0 0 10px 10px; border-left:3px solid #7c3aed;">
-        {{ delivery_table(pickup_deliveries) }}
+    <div class="rounded-xl border border-stone-200 bg-white overflow-hidden">
+      <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100 bg-stone-50">
+        <i class="bi bi-bag-check text-violet-500 text-sm"></i>
+        <span class="text-sm font-medium text-stone-700">Самовивіз</span>
+        <span class="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-medium text-violet-600">{{ pickup_deliveries|length }}</span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse stops-tbl">
+          <thead><tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr></thead>
+          <tbody>
+          {% for d in pickup_deliveries %}
+          {% set order = d.order %}{% set client = d.client %}
+          <tr>
+            <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+            <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+            <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+            <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+            <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+            <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+            <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
     {% endif %}
+  </div>
+  {% endif %}
 
+</div>
+<!-- Assign courier modal -->
+<div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content" style="border-radius:16px;border:1px solid #e7e5e4;overflow:hidden;">
+      <div style="padding:20px 24px 0;">
+        <div class="flex items-center justify-between mb-1">
+          <h5 class="text-base font-semibold text-stone-900 m-0">Призначити кур'єра</h5>
+          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-colors" data-bs-dismiss="modal">
+            <i class="bi bi-x text-lg leading-none"></i>
+          </button>
+        </div>
+        <p class="text-sm text-stone-400 mb-5">Оберіть кур'єра та вкажіть суму доставки</p>
+      </div>
+
+      <form method="post" id="assign-form" action="" class="flex flex-col">
+        <div style="padding:0 24px 20px;" class="flex flex-col gap-3">
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Кур'єр</label>
+            <select name="courier_id" id="assign-courier-select"
+                    class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+              <option value="">— Оберіть кур'єра —</option>
+              {% for c in couriers %}
+              <option value="{{ c.id }}">{{ c.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Сума доставки, ₴</label>
+            <input type="number" name="delivery_price" id="assign-price-input"
+                   placeholder="0" min="0"
+                   class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          </div>
+
+        </div>
+
+        <div style="padding:14px 24px;border-top:1px solid #f5f5f4;display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" data-bs-dismiss="modal"
+                  class="inline-flex items-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+            Скасувати
+          </button>
+          <button type="submit"
+                  class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
+            <i class="bi bi-telegram"></i> Зберегти та надіслати
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
-{% endif %}
 
-</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
-document.querySelectorAll('.rl-actions button, .rl-actions form, .rl-actions select, .rl-actions input').forEach(function(el) {
-  el.addEventListener('click', function(e) { e.stopPropagation(); });
+flatpickr('#route-date-picker', {
+  locale: 'uk',
+  dateFormat: 'Y-m-d',
+  defaultDate: '{{ date_filter }}' || null,
+  disableMobile: true,
+  onReady(dates, _, fp) {
+    if (dates[0]) fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+  },
+  onChange(dates, _, fp) {
+    if (dates[0]) {
+      document.getElementById('route-date-value').value = fp.formatDate(dates[0], 'Y-m-d');
+      fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+      fp.element.closest('form').submit();
+    }
+  },
 });
-document.querySelectorAll('.rl-stops').forEach(function(el) {
-  const hdr = document.getElementById('hdr-' + el.id.replace('stops-', ''));
-  el.addEventListener('show.bs.collapse', function() { if (hdr) hdr.classList.add('open'); });
-  el.addEventListener('hide.bs.collapse', function() { if (hdr) hdr.classList.remove('open'); });
+</script>
+<script>
+// Toggle collapse
+document.querySelectorAll('.route-hdr').forEach(function(hdr) {
+  hdr.addEventListener('click', function() {
+    const targetId = this.dataset.target;
+    const panel = document.getElementById(targetId);
+    const isOpen = panel.style.display !== 'none';
+    panel.style.display = isOpen ? 'none' : '';
+    this.classList.toggle('hdr-open', !isOpen);
+  });
 });
+
+// Assign modal
+let _assignModal = null;
+function getAssignModal() {
+  if (!_assignModal) _assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+  return _assignModal;
+}
+function openAssignModal(routeId, courierId, deliveryPrice) {
+  const form = document.getElementById('assign-form');
+  form.action = '/routes/' + routeId + '/assign-and-send';
+  const select = document.getElementById('assign-courier-select');
+  select.value = courierId || '';
+  document.getElementById('assign-price-input').value = deliveryPrice || '';
+  getAssignModal().show();
+}
+
+// Init tooltips
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
   new bootstrap.Tooltip(el);
 });

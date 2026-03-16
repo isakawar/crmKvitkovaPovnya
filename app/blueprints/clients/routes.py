@@ -11,8 +11,15 @@ def clients_list():
     page = int(request.args.get('page', 1))
     per_page = 30
     search_query = request.args.get('q', '').strip()
+    sub_filter = request.args.get('sub', '')
 
     all_clients = get_all_clients()
+
+    active_sub_client_ids = set(
+        row[0] for row in db.session.query(Order.client_id)
+        .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
+        .distinct().all()
+    )
 
     if search_query:
         q = search_query.lower()
@@ -22,6 +29,11 @@ def clients_list():
             or (c.telegram and q in c.telegram.lower())
             or (c.phone and q in c.phone)
         ]
+
+    if sub_filter == 'active':
+        all_clients = [c for c in all_clients if c.id in active_sub_client_ids]
+    elif sub_filter == 'inactive':
+        all_clients = [c for c in all_clients if c.id not in active_sub_client_ids]
 
     total_clients = len(all_clients)
     start_idx = (page - 1) * per_page
@@ -34,12 +46,6 @@ def clients_list():
 
     marketing_sources = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
 
-    active_sub_client_ids = set(
-        row[0] for row in db.session.query(Order.client_id)
-        .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
-        .distinct().all()
-    )
-
     return render_template('clients/list.html',
                          clients=clients_on_page,
                          page=page,
@@ -49,7 +55,8 @@ def clients_list():
                          clients_count=total_clients,
                          marketing_sources=marketing_sources,
                          active_sub_client_ids=active_sub_client_ids,
-                         search_query=search_query)
+                         search_query=search_query,
+                         sub_filter=sub_filter)
 
 @clients_bp.route('/clients/new', methods=['POST'])
 def client_create():

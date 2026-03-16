@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const creditsValue = creditsInput.value.trim();
     if (creditsValue && Number(creditsValue) < 0) {
-      setFieldError(creditsInput, 'Кредити не можуть бути меншими за 0');
+      setFieldError(creditsInput, 'Баланс не може бути меншими за 0');
       isValid = false;
     }
 

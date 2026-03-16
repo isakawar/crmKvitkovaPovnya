@@ -1,31 +1,35 @@
 {% extends 'layout.html' %}
 {% from "macros.html" import render_toast, toast_script %}
 
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-input { cursor: pointer; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
+  .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="flex flex-col gap-6">
   <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
     <div class="space-y-2">
-      <span class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-amber-700">
-        <i class="bi bi-bag-heart"></i>
-        Orders Desk
-      </span>
       <div>
         <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
-        <p class="mt-1 max-w-2xl text-sm leading-6 text-stone-500">
-          Новий операційний вигляд для всіх разових замовлень і підписок: один фільтр-бар, табличний список доставок і швидке редагування з CRM.
-        </p>
       </div>
     </div>
 
     <div class="flex flex-col gap-3 sm:flex-row">
       <a href="/orders/export/csv"
-         class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+         class="inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
         <i class="bi bi-download"></i>
         Експорт CSV
       </a>
       <button
         type="button"
-        class="inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700"
         data-open-composer="order"
         data-bs-toggle="modal"
         data-bs-target="#addOrderModal"
@@ -106,18 +110,19 @@
           autocomplete="off"
         >
       </div>
-      <input
-        type="date"
-        name="date_from"
-        value="{{ date_from_filter }}"
-        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      >
-      <input
-        type="date"
-        name="date_to"
-        value="{{ date_to_filter }}"
-        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      >
+      <div class="relative">
+        <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+        <input
+          type="text"
+          id="date-range-picker"
+          placeholder="Оберіть дату"
+          readonly
+          style="width:150px"
+          class="rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+      </div>
+      <input type="hidden" name="date_from" id="date_from" value="{{ date_from_filter }}">
+      <input type="hidden" name="date_to" id="date_to" value="{{ date_to_filter }}">
       <select
         name="city"
         id="filter-city"
@@ -160,9 +165,10 @@
         <button
           type="button"
           id="reset-filters-btn"
-          class="rounded-lg border border-stone-200 bg-white px-4 py-1.5 text-sm text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+          title="Скинути фільтри"
+          class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-700"
         >
-          Скинути
+          <i class="bi bi-x text-base leading-none"></i>
         </button>
         {% endif %}
   </form>
@@ -404,4 +410,62 @@
 {% block scripts %}
 {{ toast_script() }}
 {% include 'orders/_composer_script.html' %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
+<script>
+(function () {
+  const dateFromEl = document.getElementById('date_from');
+  const dateToEl   = document.getElementById('date_to');
+  const form       = document.getElementById('orders-filter-form');
+  const resetBtn   = document.getElementById('reset-filters-btn');
+
+  const initialFrom = dateFromEl.value;
+  const initialTo   = dateToEl.value;
+  const defaultDate = initialFrom
+    ? (initialTo && initialTo !== initialFrom ? [initialFrom, initialTo] : [initialFrom])
+    : [];
+
+  const fp = flatpickr('#date-range-picker', {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    locale: 'uk',
+    defaultDate: defaultDate,
+    disableMobile: true,
+    onReady(_, __, instance) {
+      if (defaultDate.length) {
+        const [from, to] = instance.selectedDates;
+        instance.element.value = to
+          ? instance.formatDate(from, 'd.m.Y') + ' — ' + instance.formatDate(to, 'd.m.Y')
+          : instance.formatDate(from, 'd.m.Y');
+      }
+    },
+    onChange(dates, _, instance) {
+      if (dates.length === 1) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
+        instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+      } else if (dates.length === 2) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
+        instance.element.value =
+          instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+      } else {
+        dateFromEl.value = '';
+        dateToEl.value   = '';
+      }
+    },
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      fp.clear();
+      dateFromEl.value = '';
+      dateToEl.value   = '';
+      const params = new URLSearchParams(window.location.search);
+      ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
+      window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    });
+  }
+})();
+</script>
 {% endblock %}
