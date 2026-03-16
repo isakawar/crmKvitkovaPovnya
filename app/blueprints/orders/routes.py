@@ -732,6 +732,7 @@ def extend_form_from_delivery(delivery_id):
 def subscriptions_list():
     subscription_orders = (
         Order.query
+        .options(joinedload(Order.client), joinedload(Order.deliveries))
         .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
         .order_by(Order.created_at.desc())
         .all()
@@ -784,3 +785,142 @@ def subscriptions_list():
         sizes=sizes,
         for_whom=for_whom,
     )
+
+
+@orders_bp.route('/subscriptions/<int:order_id>', methods=['GET'])
+@login_required
+def subscription_detail(order_id):
+    subscription_types = ['Weekly', 'Monthly', 'Bi-weekly']
+
+    def format_address(street='', building_number='', floor='', entrance='', address_comment=''):
+        parts = []
+        line = ' '.join(part for part in [street, building_number] if part)
+        if line:
+            parts.append(line)
+        if floor:
+            parts.append(f'поверх {floor}')
+        if entrance:
+            parts.append(f'підʼїзд {entrance}')
+        if address_comment:
+            parts.append(address_comment)
+        return ', '.join(part for part in parts if part)
+
+    order = (
+        Order.query
+        .options(joinedload(Order.client), joinedload(Order.deliveries))
+        .get_or_404(order_id)
+    )
+
+    if order.delivery_type not in subscription_types:
+        return jsonify({'error': 'Це замовлення не є підпискою'}), 400
+
+    deliveries = sorted(order.deliveries, key=lambda delivery: (delivery.delivery_date, delivery.id))
+    total_deliveries = len(deliveries)
+    completed_deliveries = sum(1 for delivery in deliveries if delivery.status == 'Доставлено')
+    unpaid_delivery = next((delivery for delivery in deliveries if not delivery.is_subscription), None)
+    next_delivery = next((delivery for delivery in deliveries if delivery.status in ['Очікує', 'Розподілено']), None)
+    can_extend = (
+        not getattr(order, 'is_subscription_extended', False)
+        and any(not delivery.is_subscription for delivery in deliveries)
+    )
+
+    related_orders = (
+        Order.query
+        .options(joinedload(Order.deliveries))
+        .filter(
+            Order.client_id == order.client_id,
+            Order.delivery_type.in_(subscription_types),
+            Order.recipient_name == order.recipient_name,
+            Order.recipient_phone == order.recipient_phone,
+        )
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    return jsonify({
+        'id': order.id,
+        'client': {
+            'instagram': order.client.instagram if order.client else '',
+            'phone': order.client.phone if order.client else '',
+            'telegram': order.client.telegram if order.client else '',
+        },
+        'recipient': {
+            'name': order.recipient_name,
+            'phone': order.recipient_phone,
+            'social': order.recipient_social or '',
+        },
+        'delivery': {
+            'city': order.city,
+            'address': 'Самовивіз' if order.is_pickup else format_address(
+                order.street,
+                order.building_number,
+                order.floor,
+                order.entrance,
+                order.address_comment,
+            ),
+            'delivery_type': order.delivery_type,
+            'size': order.size,
+            'custom_amount': order.custom_amount,
+            'delivery_day': order.delivery_day,
+            'first_delivery_date': order.first_delivery_date.strftime('%d.%m.%Y') if order.first_delivery_date else '',
+            'time_from': order.time_from or '',
+            'time_to': order.time_to or '',
+            'delivery_method': order.delivery_method or 'courier',
+            'is_pickup': order.is_pickup,
+            'for_whom': order.for_whom or '',
+        },
+        'notes': {
+            'comment': order.comment or '',
+            'preferences': order.preferences or '',
+            'address_comment': order.address_comment or '',
+            'bouquet_type': order.bouquet_type or '',
+            'composition_type': order.composition_type or '',
+        },
+        'stats': {
+            'total_deliveries': total_deliveries,
+            'completed_deliveries': completed_deliveries,
+            'active_deliveries': max(total_deliveries - completed_deliveries, 0),
+            'can_extend': can_extend,
+            'is_extended': bool(getattr(order, 'is_subscription_extended', False)),
+            'next_delivery_date': next_delivery.delivery_date.strftime('%d.%m.%Y') if next_delivery and next_delivery.delivery_date else '',
+            'unpaid_delivery_date': unpaid_delivery.delivery_date.strftime('%d.%m.%Y') if unpaid_delivery and unpaid_delivery.delivery_date else '',
+        },
+        'deliveries': [
+            {
+                'id': delivery.id,
+                'delivery_date': delivery.delivery_date.strftime('%d.%m.%Y') if delivery.delivery_date else '',
+                'status': delivery.status,
+                'time_from': delivery.time_from or '',
+                'time_to': delivery.time_to or '',
+                'address': 'Самовивіз' if delivery.is_pickup else format_address(
+                    delivery.street or order.street,
+                    delivery.building_number or order.building_number,
+                    delivery.floor or order.floor,
+                    delivery.entrance or order.entrance,
+                    delivery.address_comment or order.address_comment,
+                ),
+                'phone': delivery.phone or order.recipient_phone or '',
+                'comment': delivery.comment or '',
+                'preferences': delivery.preferences or order.preferences or '',
+                'delivery_method': delivery.delivery_method or order.delivery_method or 'courier',
+                'is_subscription': bool(delivery.is_subscription),
+            }
+            for delivery in deliveries
+        ],
+        'related_orders': [
+            {
+                'id': related_order.id,
+                'is_current': related_order.id == order.id,
+                'created_at': related_order.created_at.strftime('%d.%m.%Y %H:%M') if related_order.created_at else '',
+                'first_delivery_date': related_order.first_delivery_date.strftime('%d.%m.%Y') if related_order.first_delivery_date else '',
+                'delivery_type': related_order.delivery_type,
+                'size': related_order.size,
+                'city': related_order.city,
+                'is_extended': bool(getattr(related_order, 'is_subscription_extended', False)),
+                'recipient_name': related_order.recipient_name,
+                'deliveries_total': len(related_order.deliveries),
+                'deliveries_completed': sum(1 for related_delivery in related_order.deliveries if related_delivery.status == 'Доставлено'),
+            }
+            for related_order in related_orders
+        ],
+    })

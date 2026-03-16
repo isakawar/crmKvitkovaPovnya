@@ -100,8 +100,14 @@
   {% set progress = ((completed / total * 100) | int) if total > 0 else 0 %}
   {% set is_active = completed < total %}
 
-  <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-all
+  <div class="relative bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-all cursor-pointer
               {% if not is_active %}opacity-60{% endif %}">
+    <button
+      type="button"
+      class="absolute inset-0 z-10"
+      data-subscription-id="{{ order.id }}"
+      aria-label="Відкрити підписку {{ order.client.instagram }}"
+    ></button>
 
     <!-- Top: client + status dot -->
     <div class="flex items-start justify-between mb-3">
@@ -177,6 +183,175 @@
 </div>
 {% endif %}
 
+<div class="modal fade" id="subscriptionDetailModal" tabindex="-1" aria-labelledby="subscriptionDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl">
+    <div class="modal-content border-0 rounded-[32px] overflow-hidden">
+      <div class="border-b border-stone-200 bg-white px-6 py-5">
+        <div class="flex items-start justify-between gap-4">
+          <div class="space-y-3">
+            <span class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">
+              <i class="bi bi-arrow-repeat"></i>
+              Підписка
+            </span>
+            <div>
+              <h2 class="text-2xl font-semibold text-stone-900" id="subscriptionDetailModalLabel">Підписка</h2>
+              <p class="mt-1 text-sm text-stone-500" id="subscription-detail-subtitle">Завантажуємо деталі...</p>
+            </div>
+          </div>
+          <button type="button" class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-700" data-bs-dismiss="modal" aria-label="Закрити">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-stone-50 px-6 py-5 max-h-[calc(100dvh-12rem)] overflow-y-auto">
+        <div id="subscription-detail-error" class="hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"></div>
+
+        <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr] mt-1">
+          <section class="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-5">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнт і отримувач</p>
+                <h3 class="mt-2 text-lg font-semibold text-stone-900">Основна інформація</h3>
+              </div>
+              <button type="button" class="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900" id="subscription-open-order-btn">
+                <i class="bi bi-pencil-square"></i>
+                Відкрити замовлення
+              </button>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2">
+              <div class="rounded-[22px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнт</p>
+                <p class="mt-2 text-base font-semibold text-stone-900" id="subscription-client-instagram">—</p>
+                <p class="mt-1 text-sm text-stone-500" id="subscription-client-phone">—</p>
+                <p class="mt-1 text-sm text-stone-400" id="subscription-client-telegram">—</p>
+              </div>
+              <div class="rounded-[22px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Отримувач</p>
+                <p class="mt-2 text-base font-semibold text-stone-900" id="subscription-recipient-name">—</p>
+                <p class="mt-1 text-sm text-stone-500" id="subscription-recipient-phone">—</p>
+                <p class="mt-1 text-sm text-stone-400" id="subscription-recipient-social">—</p>
+              </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2 mt-4">
+              <div class="rounded-[22px] border border-stone-200 bg-white p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Логістика</p>
+                <div class="mt-2 space-y-1 text-sm text-stone-600">
+                  <p><span class="font-medium text-stone-900">Місто:</span> <span id="subscription-city">—</span></p>
+                  <p><span class="font-medium text-stone-900">Адреса:</span> <span id="subscription-address">—</span></p>
+                  <p><span class="font-medium text-stone-900">Формат:</span> <span id="subscription-delivery-mode">—</span></p>
+                  <p><span class="font-medium text-stone-900">Для кого:</span> <span id="subscription-for-whom">—</span></p>
+                </div>
+              </div>
+              <div class="rounded-[22px] border border-stone-200 bg-white p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Параметри підписки</p>
+                <div class="mt-2 space-y-1 text-sm text-stone-600">
+                  <p><span class="font-medium text-stone-900">Тип:</span> <span id="subscription-type">—</span></p>
+                  <p><span class="font-medium text-stone-900">Розмір:</span> <span id="subscription-size">—</span></p>
+                  <p><span class="font-medium text-stone-900">Перша доставка:</span> <span id="subscription-first-date">—</span></p>
+                  <p><span class="font-medium text-stone-900">День:</span> <span id="subscription-day">—</span></p>
+                  <p><span class="font-medium text-stone-900">Час:</span> <span id="subscription-time-slot">—</span></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-3 mt-4">
+              <div class="rounded-[20px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього доставок</p>
+                <p class="mt-2 text-3xl font-semibold text-stone-900" id="subscription-total-deliveries">0</p>
+              </div>
+              <div class="rounded-[20px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Завершено</p>
+                <p class="mt-2 text-3xl font-semibold text-emerald-600" id="subscription-completed-deliveries">0</p>
+              </div>
+              <div class="rounded-[20px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Наступна доставка</p>
+                <p class="mt-2 text-sm font-semibold text-stone-900" id="subscription-next-delivery">—</p>
+              </div>
+            </div>
+
+            <div class="grid gap-3 md:grid-cols-2 mt-4">
+              <div class="rounded-[22px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Нотатки менеджера</p>
+                <div class="mt-3 space-y-3 text-sm text-stone-600">
+                  <div>
+                    <p class="font-medium text-stone-900">Коментар</p>
+                    <p class="mt-1" id="subscription-comment">—</p>
+                  </div>
+                  <div>
+                    <p class="font-medium text-stone-900">Побажання</p>
+                    <p class="mt-1" id="subscription-preferences">—</p>
+                  </div>
+                  <div>
+                    <p class="font-medium text-stone-900">Коментар до адреси</p>
+                    <p class="mt-1" id="subscription-address-comment">—</p>
+                  </div>
+                </div>
+              </div>
+              <div class="rounded-[22px] border border-stone-200 bg-stone-50 p-4">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Букет і подача</p>
+                <div class="mt-3 space-y-3 text-sm text-stone-600">
+                  <div>
+                    <p class="font-medium text-stone-900">Пакування</p>
+                    <p class="mt-1" id="subscription-bouquet-type">—</p>
+                  </div>
+                  <div>
+                    <p class="font-medium text-stone-900">Композиція</p>
+                    <p class="mt-1" id="subscription-composition-type">—</p>
+                  </div>
+                  <div>
+                    <p class="font-medium text-stone-900">Неоплачена доставка</p>
+                    <p class="mt-1" id="subscription-unpaid-delivery">—</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between gap-3 mb-5">
+              <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Цикли</p>
+                <h3 class="mt-2 text-lg font-semibold text-stone-900">Пов'язані замовлення</h3>
+              </div>
+              <button type="button" class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700" id="subscription-extend-btn">
+                <i class="bi bi-arrow-repeat"></i>
+                Продовжити підписку
+              </button>
+            </div>
+
+            <div class="rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
+              Тут показані всі цикли цього клієнта для того самого отримувача. Клік по рядку відкриває саме замовлення в редакторі.
+            </div>
+            <div class="space-y-3" id="subscription-related-orders"></div>
+          </section>
+        </div>
+
+        <section class="rounded-[28px] border border-stone-200 bg-white p-5 shadow-sm mt-4">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Графік</p>
+              <h3 class="mt-2 text-lg font-semibold text-stone-900">Усі доставки підписки</h3>
+            </div>
+          </div>
+          <div class="overflow-hidden rounded-[24px] border border-stone-200">
+            <div class="hidden md:grid md:grid-cols-[1.15fr_1fr_0.9fr_1.1fr_0.9fr] bg-stone-50 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">
+              <span>Дата і статус</span>
+              <span>Адреса</span>
+              <span>Контакт</span>
+              <span>Коментар</span>
+              <span>Тип доставки</span>
+            </div>
+            <div class="divide-y divide-stone-200 bg-white" id="subscription-deliveries-list"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% include 'orders/_composer_modal.html' %}
 {{ render_toast() }}
 {% endblock %}
@@ -184,4 +359,213 @@
 {% block scripts %}
 {{ toast_script() }}
 {% include 'orders/_composer_script.html' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const detailModalElement = document.getElementById('subscriptionDetailModal');
+  if (!detailModalElement) return;
+
+  const detailModal = bootstrap.Modal.getOrCreateInstance(detailModalElement);
+  const detailError = document.getElementById('subscription-detail-error');
+  const deliveriesList = document.getElementById('subscription-deliveries-list');
+  const relatedOrdersList = document.getElementById('subscription-related-orders');
+  const openOrderBtn = document.getElementById('subscription-open-order-btn');
+  const extendBtn = document.getElementById('subscription-extend-btn');
+
+  let currentSubscriptionId = null;
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function setDetailError(message = '') {
+    if (!detailError) return;
+    detailError.textContent = message;
+    detailError.classList.toggle('hidden', !message);
+  }
+
+  function renderRelatedOrders(orders) {
+    if (!orders.length) {
+      relatedOrdersList.innerHTML = '<div class="rounded-[22px] border border-stone-200 bg-stone-50 px-4 py-6 text-sm text-stone-500">Повʼязаних циклів не знайдено.</div>';
+      return;
+    }
+
+    relatedOrdersList.innerHTML = orders.map(order => `
+      <button
+        type="button"
+        class="w-full rounded-[22px] border ${order.is_current ? 'border-stone-900 bg-stone-900 text-white' : 'border-stone-200 bg-stone-50 text-stone-800'} p-4 text-left transition-colors hover:border-stone-900 hover:bg-stone-100"
+        data-related-order-id="${order.id}"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold">Замовлення #${order.id}${order.is_current ? ' · поточне' : ''}</p>
+            <p class="mt-1 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">${escapeHtml(order.recipient_name || '—')} · ${escapeHtml(order.city || '—')}</p>
+            <p class="mt-1 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">Створено: ${escapeHtml(order.created_at || '—')}</p>
+          </div>
+          <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium ${order.is_current ? 'bg-white/10 text-white' : 'bg-white text-stone-600 border border-stone-200'}">
+            ${escapeHtml(order.delivery_type)} · ${escapeHtml(order.size || '—')}
+          </span>
+        </div>
+        <div class="mt-3 flex items-center gap-3 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">
+          <span>Старт: ${escapeHtml(order.first_delivery_date || '—')}</span>
+          <span>Виконано: ${escapeHtml(order.deliveries_completed || 0)}/${escapeHtml(order.deliveries_total || 0)}</span>
+          ${order.is_extended ? '<span>Продовжено</span>' : ''}
+        </div>
+      </button>
+    `).join('');
+
+    relatedOrdersList.querySelectorAll('[data-related-order-id]').forEach(button => {
+      button.addEventListener('click', async function() {
+        const orderId = this.getAttribute('data-related-order-id');
+        if (!orderId) return;
+        detailModal.hide();
+        try {
+          await window.orderComposerApi?.openOrderEditor(orderId, { returnToModalId: 'subscriptionDetailModal' });
+        } catch (error) {
+          showToast('Не вдалося відкрити замовлення', 'error');
+        }
+      });
+    });
+  }
+
+  function renderDeliveries(deliveries) {
+    if (!deliveries.length) {
+      deliveriesList.innerHTML = '<div class="px-4 py-6 text-sm text-stone-500">Для цього циклу ще немає доставок.</div>';
+      return;
+    }
+
+    deliveriesList.innerHTML = deliveries.map(delivery => {
+      const timeSlot = delivery.time_from && delivery.time_to
+        ? `${delivery.time_from} - ${delivery.time_to}`
+        : (delivery.time_from || 'Без часу');
+      const deliveryMode = delivery.delivery_method === 'nova_poshta'
+        ? 'Нова пошта'
+        : (delivery.address === 'Самовивіз' ? 'Самовивіз' : (delivery.is_subscription ? 'Оплачена' : 'На продовження'));
+      const statusClass = delivery.status === 'Доставлено'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : delivery.status === 'Не оплачена'
+          ? 'border-red-200 bg-red-50 text-red-700'
+          : delivery.status === 'Розподілено'
+            ? 'border-blue-200 bg-blue-50 text-blue-700'
+            : 'border-stone-200 bg-stone-100 text-stone-600';
+      return `
+        <div class="grid gap-3 px-4 py-4 md:grid-cols-[1.15fr_1fr_0.9fr_1.1fr_0.9fr] md:items-start">
+          <div>
+            <p class="text-sm font-semibold text-stone-900">${escapeHtml(delivery.delivery_date)}</p>
+            <p class="mt-1 text-sm text-stone-500">${escapeHtml(timeSlot)}</p>
+            <span class="mt-3 inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${statusClass}">
+              ${escapeHtml(delivery.status)}
+            </span>
+          </div>
+          <div class="text-sm text-stone-600">
+            <p class="font-medium text-stone-900 md:hidden">Адреса</p>
+            <p class="mt-1 md:mt-0">${escapeHtml(delivery.address || '—')}</p>
+          </div>
+          <div class="text-sm text-stone-600">
+            <p class="font-medium text-stone-900 md:hidden">Контакт</p>
+            <p class="mt-1 md:mt-0">${escapeHtml(delivery.phone || '—')}</p>
+          </div>
+          <div class="text-sm text-stone-600">
+            <p class="font-medium text-stone-900 md:hidden">Коментар</p>
+            <p class="mt-1 md:mt-0">${escapeHtml(delivery.comment || delivery.preferences || '—')}</p>
+          </div>
+          <div class="text-sm text-stone-600">
+            <p class="font-medium text-stone-900 md:hidden">Тип доставки</p>
+            <p class="mt-1 md:mt-0">${escapeHtml(deliveryMode)}</p>
+            <p class="mt-1 text-xs text-stone-400">${delivery.is_subscription ? 'Входить в оплачений цикл' : 'Доставка на продовження'}</p>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function openSubscriptionDetail(orderId) {
+    setDetailError('');
+    currentSubscriptionId = orderId;
+    deliveriesList.innerHTML = '<div class="rounded-[22px] border border-stone-200 bg-stone-50 px-4 py-6 text-sm text-stone-500">Завантажуємо доставки...</div>';
+    relatedOrdersList.innerHTML = '<div class="rounded-[22px] border border-stone-200 bg-stone-50 px-4 py-6 text-sm text-stone-500">Завантажуємо повʼязані замовлення...</div>';
+
+    try {
+      const response = await fetch(`/subscriptions/${orderId}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Не вдалося завантажити підписку');
+      }
+
+      document.getElementById('subscriptionDetailModalLabel').textContent = `Підписка (${data.client.instagram || 'без Instagram'})`;
+      document.getElementById('subscription-detail-subtitle').textContent = `Цикл ${data.delivery.delivery_type} · старт ${data.delivery.first_delivery_date || '—'} · ${data.stats.total_deliveries} доставок`;
+      document.getElementById('subscription-client-instagram').textContent = data.client.instagram || '—';
+      document.getElementById('subscription-client-phone').textContent = data.client.phone || 'Телефон не вказано';
+      document.getElementById('subscription-client-telegram').textContent = data.client.telegram || 'Telegram не вказано';
+      document.getElementById('subscription-recipient-name').textContent = data.recipient.name || '—';
+      document.getElementById('subscription-recipient-phone').textContent = data.recipient.phone || '—';
+      document.getElementById('subscription-recipient-social').textContent = data.recipient.social || 'Instagram / Telegram не вказано';
+      document.getElementById('subscription-city').textContent = data.delivery.city || '—';
+      document.getElementById('subscription-address').textContent = data.delivery.address || '—';
+      document.getElementById('subscription-delivery-mode').textContent = data.delivery.is_pickup ? 'Самовивіз' : (data.delivery.delivery_method === 'nova_poshta' ? 'Нова пошта' : 'Адреса');
+      document.getElementById('subscription-for-whom').textContent = data.delivery.for_whom || '—';
+      document.getElementById('subscription-type').textContent = data.delivery.delivery_type || '—';
+      document.getElementById('subscription-size').textContent = data.delivery.custom_amount ? `${data.delivery.size} · ${data.delivery.custom_amount} грн` : (data.delivery.size || '—');
+      document.getElementById('subscription-first-date').textContent = data.delivery.first_delivery_date || '—';
+      document.getElementById('subscription-day').textContent = data.delivery.delivery_day || '—';
+      document.getElementById('subscription-time-slot').textContent = data.delivery.time_from && data.delivery.time_to ? `${data.delivery.time_from} - ${data.delivery.time_to}` : (data.delivery.time_from || 'Без часу');
+      document.getElementById('subscription-total-deliveries').textContent = data.stats.total_deliveries;
+      document.getElementById('subscription-completed-deliveries').textContent = data.stats.completed_deliveries;
+      document.getElementById('subscription-next-delivery').textContent = data.stats.next_delivery_date || 'Немає активної дати';
+      document.getElementById('subscription-comment').textContent = data.notes.comment || '—';
+      document.getElementById('subscription-preferences').textContent = data.notes.preferences || '—';
+      document.getElementById('subscription-address-comment').textContent = data.notes.address_comment || '—';
+      document.getElementById('subscription-bouquet-type').textContent = data.notes.bouquet_type || '—';
+      document.getElementById('subscription-composition-type').textContent = data.notes.composition_type || '—';
+      document.getElementById('subscription-unpaid-delivery').textContent = data.stats.unpaid_delivery_date || 'Немає';
+
+      openOrderBtn.onclick = async () => {
+        detailModal.hide();
+        try {
+          await window.orderComposerApi?.openOrderEditor(data.id, { returnToModalId: 'subscriptionDetailModal' });
+        } catch (error) {
+          showToast('Не вдалося відкрити замовлення', 'error');
+        }
+      };
+
+      extendBtn.disabled = !data.stats.can_extend;
+      extendBtn.classList.toggle('opacity-50', !data.stats.can_extend);
+      extendBtn.onclick = async () => {
+        try {
+          const extendResponse = await fetch(`/orders/${data.id}/extend-subscription`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          const extendData = await extendResponse.json();
+          if (!extendResponse.ok || !extendData.success) {
+            throw new Error(extendData.error || 'Не вдалося продовжити підписку');
+          }
+          showToast('Підписку успішно продовжено!', 'success');
+          detailModal.hide();
+          setTimeout(() => location.reload(), 900);
+        } catch (error) {
+          showToast(error.message || 'Не вдалося продовжити підписку', 'error');
+        }
+      };
+
+      renderRelatedOrders(data.related_orders || []);
+      renderDeliveries(data.deliveries || []);
+      detailModal.show();
+    } catch (error) {
+      setDetailError(error.message || 'Не вдалося завантажити деталі підписки');
+      detailModal.show();
+    }
+  }
+
+  document.querySelectorAll('[data-subscription-id]').forEach(button => {
+    button.addEventListener('click', function() {
+      openSubscriptionDetail(this.getAttribute('data-subscription-id'));
+    });
+  });
+});
+</script>
 {% endblock %}

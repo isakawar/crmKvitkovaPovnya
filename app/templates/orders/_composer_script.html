@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const orderFooterCopy = document.getElementById('order-footer-copy');
     const orderSubmitBtn = document.getElementById('order-submit-btn');
     const orderSubmitBtnText = document.getElementById('order-submit-btn-text');
+    const composerBackBtn = document.getElementById('order-back-btn');
     const orderErrorBanner = document.getElementById('add-order-error');
     const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
     const confirmExtendBtn = document.getElementById('confirmExtendBtn');
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentComposerFlow = 'order';
     let currentDeliveryMode = 'courier';
     let isComposerSubmitting = false;
+    let returnModalInstance = null;
     window.currentOrderId = null;
 
     const composerContent = {
@@ -92,6 +94,22 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!orderErrorBanner) return;
         orderErrorBanner.textContent = '';
         orderErrorBanner.classList.remove('is-visible');
+    }
+
+    function syncComposerBackButton() {
+        if (!composerBackBtn) return;
+        composerBackBtn.classList.toggle('d-none', !returnModalInstance);
+    }
+
+    function clearReturnContext() {
+        returnModalInstance = null;
+        syncComposerBackButton();
+    }
+
+    function setReturnContext(modalId = '') {
+        const target = modalId ? document.getElementById(modalId) : null;
+        returnModalInstance = target ? bootstrap.Modal.getOrCreateInstance(target) : null;
+        syncComposerBackButton();
     }
 
     function showOrderError(message) {
@@ -202,12 +220,17 @@ document.addEventListener('DOMContentLoaded', function() {
         clientResults.innerHTML = '';
     }
 
-    function resetComposerForm(flow = 'order', clientInstagram = '') {
+    function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
         addOrderForm.removeAttribute('data-edit-id');
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
+        if (!options.preserveReturnContext) {
+            clearReturnContext();
+        } else {
+            syncComposerBackButton();
+        }
         clientSearch.value = clientInstagram;
         setDeliveryMode('courier');
         syncCustomAmountState();
@@ -222,6 +245,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function openComposer(flow = 'order', clientInstagram = '') {
         resetComposerForm(flow, clientInstagram);
         addOrderModal.show();
+    }
+
+    async function openOrderEditor(orderId, options = {}) {
+        if (!orderId) return;
+        if (options.returnToModalId) {
+            setReturnContext(options.returnToModalId);
+        } else {
+            clearReturnContext();
+        }
+        const response = await fetch(`/orders/${orderId}/edit`);
+        const orderData = await response.json();
+        populateComposerForm(orderData, orderId, {
+            preserveReturnContext: Boolean(options.returnToModalId),
+        });
     }
 
     async function fetchClientSuggestions(query) {
@@ -328,9 +365,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function populateComposerForm(orderData, orderId) {
+    function populateComposerForm(orderData, orderId, options = {}) {
         const flow = subscriptionTypes.includes(orderData.delivery_type) ? 'subscription' : 'order';
-        resetComposerForm(flow, orderData.client_instagram);
+        resetComposerForm(flow, orderData.client_instagram, {
+            preserveReturnContext: Boolean(options.preserveReturnContext),
+        });
         addOrderForm.setAttribute('data-edit-id', orderId);
         clientSearch.value = orderData.client_instagram || '';
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
@@ -424,14 +463,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    window.orderComposerApi = {
+        openComposer,
+        openOrderEditor,
+    };
+
+    if (composerBackBtn) {
+        composerBackBtn.addEventListener('click', function() {
+            if (!returnModalInstance) return;
+            addOrderModalElement.addEventListener('hidden.bs.modal', function handleReturn() {
+                addOrderModalElement.removeEventListener('hidden.bs.modal', handleReturn);
+                if (returnModalInstance) {
+                    returnModalInstance.show();
+                }
+            });
+            addOrderModal.hide();
+        });
+    }
+
     document.querySelectorAll('[data-order-edit]').forEach(trigger => {
         trigger.addEventListener('click', async function() {
             const orderId = this.getAttribute('data-order-edit');
             if (!orderId) return;
             try {
-                const response = await fetch(`/orders/${orderId}/edit`);
-                const orderData = await response.json();
-                populateComposerForm(orderData, orderId);
+                await openOrderEditor(orderId);
             } catch (error) {
                 showToast('Помилка завантаження даних замовлення', 'error');
             }
@@ -443,9 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const orderId = this.getAttribute('data-order-id');
             if (!orderId) return;
             try {
-                const response = await fetch(`/orders/${orderId}/edit`);
-                const orderData = await response.json();
-                populateComposerForm(orderData, orderId);
+                await openOrderEditor(orderId);
             } catch (error) {
                 showToast('Помилка завантаження даних замовлення', 'error');
             }
