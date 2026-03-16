@@ -43,44 +43,66 @@
                   Спочатку знайдіть клієнта, потім вкажіть дані отримувача для доставки або самовивозу.
                 </p>
 
-                <div class="mt-6 space-y-4">
-                  <div class="order-field">
-                    <label class="order-label" for="client-search">
-                      <i class="bi bi-instagram"></i>
-                      Instagram клієнта <span class="text-red-500">*</span>
-                    </label>
-                    <div class="order-input-wrap">
-                      <i class="bi bi-search order-input-icon"></i>
-                      <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
-                      <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
-                    </div>
-                  </div>
-
-                  <div class="order-field">
-                    <label class="order-label" for="recipient-name-input">
-                      <i class="bi bi-person"></i>
-                      Ім'я отримувача <span class="text-red-500">*</span>
-                    </label>
-                    <input type="text" id="recipient-name-input" name="recipient_name" class="order-input" placeholder="Наприклад, Олена" required>
-                  </div>
-
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="recipient-phone-input">
-                        <i class="bi bi-telephone"></i>
-                        Телефон отримувача <span class="text-red-500">*</span>
-                      </label>
-                      <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
+                <div class="mt-5 space-y-3">
+                  <section class="order-subpanel">
+                    <div class="order-subpanel-head">
+                      <span class="order-subpanel-chip">
+                        <i class="bi bi-person-check"></i>
+                        Клієнт
+                      </span>
+                      <p class="order-subpanel-copy">Знайдіть існуючу картку клієнта, щоб підписка прив’язалась без дублювання.</p>
                     </div>
 
                     <div class="order-field">
-                      <label class="order-label" for="recipient-social-input">
-                        <i class="bi bi-send"></i>
-                        Instagram / Telegram
+                      <label class="order-label" for="client-search">
+                        <i class="bi bi-instagram"></i>
+                        Instagram клієнта <span class="text-red-500">*</span>
                       </label>
-                      <input type="text" id="recipient-social-input" name="recipient_social" class="order-input" placeholder="@recipient">
+                      <div class="order-input-wrap">
+                        <i class="bi bi-search order-input-icon"></i>
+                        <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
+                        <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
+                      </div>
                     </div>
-                  </div>
+                  </section>
+
+                  <section class="order-subpanel">
+                    <div class="order-subpanel-head">
+                      <span class="order-subpanel-chip order-subpanel-chip-muted">
+                        <i class="bi bi-person-heart"></i>
+                        Отримувач
+                      </span>
+                      <p class="order-subpanel-copy">Ці дані використовуються для доставок, комунікації та друку маршрутів.</p>
+                    </div>
+
+                    <div class="space-y-4">
+                      <div class="order-field">
+                        <label class="order-label" for="recipient-name-input">
+                          <i class="bi bi-person"></i>
+                          Ім'я отримувача <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="recipient-name-input" name="recipient_name" class="order-input" placeholder="Наприклад, Олена" required>
+                      </div>
+
+                      <div class="order-two-col">
+                        <div class="order-field">
+                          <label class="order-label" for="recipient-phone-input">
+                            <i class="bi bi-telephone"></i>
+                            Телефон отримувача <span class="text-red-500">*</span>
+                          </label>
+                          <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
+                        </div>
+
+                        <div class="order-field">
+                          <label class="order-label" for="recipient-social-input">
+                            <i class="bi bi-send"></i>
+                            Instagram / Telegram
+                          </label>
+                          <input type="text" id="recipient-social-input" name="recipient_social" class="order-input" placeholder="@recipient">
+                        </div>
+                      </div>
+                    </div>
+                  </section>
                 </div>
               </section>
 
@@ -95,53 +117,52 @@
                 </p>
 
                 <div class="mt-6 space-y-4">
-                  <div class="order-two-col">
-                    <div class="order-field">
-                      <label class="order-label" for="order-city-select">
-                        <i class="bi bi-geo-alt"></i>
-                        Місто <span class="text-red-500">*</span>
-                      </label>
-                      <select name="city" id="order-city-select" class="order-select" required>
-                        <option value="">Оберіть місто</option>
-                        {% if cities and cities|length > 0 %}
-                            {% for city in cities %}
-                                <option value="{{ city.value }}">{{ city.value }}</option>
-                            {% endfor %}
-                        {% else %}
-                            <option disabled>Додайте міста у налаштуваннях</option>
-                        {% endif %}
-                      </select>
-                    </div>
-
-                    <div class="order-field">
-                      <label class="order-label" for="delivery-method-select">
-                        <i class="bi bi-truck"></i>
-                        Метод доставки
-                      </label>
-                      <select name="delivery_method" id="delivery-method-select" class="order-select">
-                        <option value="courier">Кур'єр</option>
-                        <option value="nova_poshta">Нова Пошта</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div class="order-switch-row">
-                    <div>
-                      <div class="text-sm font-medium text-stone-700">Самовивіз</div>
-                      <p class="text-xs text-stone-400 mt-1">Якщо увімкнено, поле адреси стане необов'язковим.</p>
-                    </div>
-                    <label class="order-switch">
-                      <input class="order-switch-input" type="checkbox" id="is-pickup" name="is_pickup">
-                      <span class="order-switch-track"></span>
+                  <div class="order-field">
+                    <label class="order-label" for="order-city-select">
+                      <i class="bi bi-geo-alt"></i>
+                      Місто <span class="text-red-500">*</span>
                     </label>
+                    <select name="city" id="order-city-select" class="order-select" required>
+                      <option value="">Оберіть місто</option>
+                      {% if cities and cities|length > 0 %}
+                          {% for city in cities %}
+                              <option value="{{ city.value }}">{{ city.value }}</option>
+                          {% endfor %}
+                      {% else %}
+                          <option disabled>Додайте міста у налаштуваннях</option>
+                      {% endif %}
+                    </select>
                   </div>
 
                   <div class="order-field">
-                    <label class="order-label" for="address-input">
+                    <div class="flex items-center justify-between gap-3">
+                      <label class="order-label" for="delivery-mode-switch">
+                        <i class="bi bi-truck"></i>
+                        Формат отримання
+                      </label>
+                      <span class="text-[11px] font-medium uppercase tracking-[0.16em] text-stone-400">1 з 3 режимів</span>
+                    </div>
+                    <div class="order-mode-switch" id="delivery-mode-switch" role="tablist" aria-label="Формат отримання">
+                      <button type="button" class="order-mode-option is-active" data-delivery-mode="courier">Адреса</button>
+                      <button type="button" class="order-mode-option" data-delivery-mode="nova_poshta">Нова пошта</button>
+                      <button type="button" class="order-mode-option" data-delivery-mode="pickup">Самовивіз</button>
+                    </div>
+                    <p class="order-helper-copy" id="delivery-mode-hint">
+                      Кур'єр доставить букет за вказаною адресою отримувача.
+                    </p>
+                    <input type="hidden" name="delivery_method" id="delivery-method-input" value="courier">
+                    <input type="hidden" name="is_pickup" id="is-pickup-input" value="">
+                  </div>
+
+                  <div class="order-field" id="address-field">
+                    <label class="order-label" for="address-input" id="address-label">
                       <i class="bi bi-signpost-2"></i>
-                      Адреса доставки <span class="text-red-500">*</span>
+                      Адреса <span class="text-red-500">*</span>
                     </label>
                     <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок, квартира">
+                    <p class="order-helper-copy" id="address-hint">
+                      Вкажіть повну адресу доставки, щоб кур'єр міг швидко оформити маршрут.
+                    </p>
                   </div>
 
                   <div class="order-two-col">
@@ -283,7 +304,7 @@
               Для підписки система створить серію доставок автоматично. Для разового замовлення буде створена одна доставка.
             </p>
 
-            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+            <div class="order-footer-actions">
               <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
               <button type="submit" class="order-btn-primary" id="order-submit-btn">
                 <span id="order-submit-btn-text">Створити замовлення</span>

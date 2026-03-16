@@ -173,11 +173,12 @@ def update_order(order, form):
     order.recipient_phone = form['recipient_phone']
     order.recipient_social = form.get('recipient_social')
     order.city = form['city']
-    order.street = form['street']
+    is_pickup = form.get('is_pickup') == 'on'
+    order.street = 'Самовивіз' if is_pickup else form['street']
     order.building_number = form.get('building_number')
     order.floor = form.get('floor')
     order.entrance = form.get('entrance')
-    order.is_pickup = form.get('is_pickup') == 'on'
+    order.is_pickup = is_pickup
     order.address_comment = form.get('address_comment')
     order.bouquet_type = form.get('bouquet_type')
     order.composition_type = form.get('composition_type')

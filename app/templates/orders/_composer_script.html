@@ -15,9 +15,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const clientSearch = document.getElementById('client-search');
     const clientResults = document.getElementById('client-results');
-    const isPickupCheckbox = document.getElementById('is-pickup');
     const addressInput = document.getElementById('address-input');
-    const deliveryMethodSelect = document.getElementById('delivery-method-select');
+    const addressField = document.getElementById('address-field');
+    const addressLabel = document.getElementById('address-label');
+    const addressHint = document.getElementById('address-hint');
+    const deliveryMethodInput = document.getElementById('delivery-method-input');
+    const pickupInput = document.getElementById('is-pickup-input');
+    const deliveryModeHint = document.getElementById('delivery-mode-hint');
+    const deliveryModeButtons = Array.from(document.querySelectorAll('[data-delivery-mode]'));
     const deliveryTypeSelect = document.getElementById('delivery-type-select');
     const deliveryTypeLabel = document.getElementById('delivery-type-label');
     const sizeSelect = document.getElementById('size-select');
@@ -44,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const resetFiltersBtn = document.getElementById('reset-filters-btn');
 
     let currentComposerFlow = 'order';
+    let currentDeliveryMode = 'courier';
     let isComposerSubmitting = false;
     window.currentOrderId = null;
 
@@ -134,17 +140,50 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function togglePickupState() {
-        if (isPickupCheckbox.checked) {
+    function setDeliveryMode(mode = 'courier') {
+        currentDeliveryMode = mode;
+
+        deliveryModeButtons.forEach(button => {
+            const isActive = button.dataset.deliveryMode === mode;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+
+        if (mode === 'pickup') {
+            deliveryMethodInput.value = 'courier';
+            pickupInput.value = 'on';
             addressInput.value = '';
             addressInput.disabled = true;
             addressInput.removeAttribute('required');
             addressInput.classList.add('input-disabled');
-        } else {
-            addressInput.disabled = false;
-            addressInput.setAttribute('required', 'required');
-            addressInput.classList.remove('input-disabled');
+            addressField.classList.add('hidden');
+            addressLabel.innerHTML = '<i class="bi bi-signpost-2"></i> Адреса <span class="text-red-500">*</span>';
+            addressInput.placeholder = 'Вулиця, будинок, квартира';
+            addressHint.textContent = 'Поле приховано, бо для самовивозу адреса не потрібна.';
+            deliveryModeHint.textContent = 'Клієнт забере замовлення самостійно, без адреси та маршруту курʼєра.';
+            return;
         }
+
+        pickupInput.value = '';
+        addressInput.disabled = false;
+        addressInput.setAttribute('required', 'required');
+        addressInput.classList.remove('input-disabled');
+        addressField.classList.remove('hidden');
+
+        if (mode === 'nova_poshta') {
+            deliveryMethodInput.value = 'nova_poshta';
+            addressLabel.innerHTML = '<i class="bi bi-box-seam"></i> Адреса доставки <span class="text-red-500">*</span>';
+            addressInput.placeholder = 'Відділення, поштомат або повна адреса Нової Пошти';
+            addressHint.textContent = 'Вкажіть відділення, поштомат або адресу доставки Нової Пошти в одному полі.';
+            deliveryModeHint.textContent = 'Для Нової Пошти збережемо той самий маршрутний рядок, але без курʼєрської адресації.';
+            return;
+        }
+
+        deliveryMethodInput.value = 'courier';
+        addressLabel.innerHTML = '<i class="bi bi-signpost-2"></i> Адреса <span class="text-red-500">*</span>';
+        addressInput.placeholder = 'Вулиця, будинок, квартира';
+        addressHint.textContent = 'Вкажіть повну адресу доставки, щоб курʼєр міг швидко оформити маршрут.';
+        deliveryModeHint.textContent = 'Курʼєр доставить букет за вказаною адресою отримувача.';
     }
 
     function syncCustomAmountState() {
@@ -169,9 +208,8 @@ document.addEventListener('DOMContentLoaded', function() {
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
-        deliveryMethodSelect.value = 'courier';
         clientSearch.value = clientInstagram;
-        togglePickupState();
+        setDeliveryMode('courier');
         syncCustomAmountState();
         applyComposerCopy(flow, false);
         if (extendHeaderBtn) {
@@ -246,8 +284,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
-            showOrderError('Вкажіть адресу або увімкніть самовивіз');
+        if (currentDeliveryMode !== 'pickup' && !addressInput.value.trim()) {
+            showOrderError(currentDeliveryMode === 'nova_poshta'
+                ? 'Вкажіть адресу доставки Нової Пошти'
+                : 'Вкажіть адресу або оберіть самовивіз');
             return;
         }
 
@@ -298,7 +338,6 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
-        deliveryMethodSelect.value = orderData.delivery_method || 'courier';
         deliveryTypeSelect.value = orderData.delivery_type || '';
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
@@ -309,9 +348,13 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
         if (commentInput) commentInput.value = orderData.comment || '';
         if (preferencesInput) preferencesInput.value = orderData.preferences || '';
-        isPickupCheckbox.checked = Boolean(orderData.is_pickup);
-
-        togglePickupState();
+        if (orderData.is_pickup) {
+            setDeliveryMode('pickup');
+        } else if (orderData.delivery_method === 'nova_poshta') {
+            setDeliveryMode('nova_poshta');
+        } else {
+            setDeliveryMode('courier');
+        }
         syncCustomAmountState();
         applyComposerCopy(flow, true);
 
@@ -345,7 +388,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     bindClientSearch();
-    togglePickupState();
+    setDeliveryMode('courier');
     syncCustomAmountState();
     applyComposerCopy('order', false);
 
@@ -355,9 +398,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     recipientPhoneInput.addEventListener('input', sanitizeRecipientPhone);
-    isPickupCheckbox.addEventListener('change', togglePickupState);
     sizeSelect.addEventListener('change', syncCustomAmountState);
     addOrderForm.addEventListener('submit', submitComposerForm);
+
+    deliveryModeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            setDeliveryMode(this.dataset.deliveryMode || 'courier');
+        });
+    });
 
     if (commentInput) {
         commentInput.addEventListener('input', function() {
