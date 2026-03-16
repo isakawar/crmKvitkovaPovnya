@@ -45,7 +45,7 @@ def orders_list():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
-    return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom, subscription_extensions_count=subscription_extensions_count)
+    return render_template('orders/list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom, subscription_extensions_count=subscription_extensions_count)
 
 @orders_bp.route('/orders/new', methods=['GET'])
 @login_required
@@ -55,7 +55,7 @@ def order_form():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
-    return render_template('order_form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
+    return render_template('orders/form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
 
 @orders_bp.route('/orders/new', methods=['POST'])
 @login_required
@@ -237,7 +237,7 @@ def route_generator():
             return jsonify({'error': str(exc)}), 502
 
     return render_template(
-        'route_generator.html',
+        'routes/generator.html',
         selected_date=selected_date_str,
     )
 
@@ -642,7 +642,7 @@ def extend_form_from_delivery(delivery_id):
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
-        'extend_order_modal.html',
+        'orders/extend_modal.html',
         delivery=delivery,
         order=order,
         client=client,
@@ -650,4 +650,43 @@ def extend_form_from_delivery(delivery_id):
         delivery_types=delivery_types,
         sizes=sizes,
         for_whom=for_whom
-    ) 
+    )
+
+
+@orders_bp.route('/subscriptions', methods=['GET'])
+@login_required
+def subscriptions_list():
+    subscription_orders = (
+        Order.query
+        .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    city_filter = request.args.get('city', '').strip()
+    type_filter = request.args.get('type', '').strip()
+
+    data = []
+    for order in subscription_orders:
+        if city_filter and order.city != city_filter:
+            continue
+        if type_filter and order.delivery_type != type_filter:
+            continue
+        total = len(order.deliveries)
+        completed = sum(1 for d in order.deliveries if d.status == 'Доставлено')
+        data.append({'order': order, 'total': total, 'completed': completed})
+
+    active_count = sum(1 for s in data if s['completed'] < s['total'])
+    completed_count = sum(1 for s in data if s['total'] > 0 and s['completed'] >= s['total'])
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+
+    return render_template(
+        'subscriptions/list.html',
+        subscriptions=data,
+        active_count=active_count,
+        completed_count=completed_count,
+        total_count=len(data),
+        cities=cities,
+        city_filter=city_filter,
+        type_filter=type_filter,
+    )

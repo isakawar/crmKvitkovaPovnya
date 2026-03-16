@@ -61,7 +61,7 @@ def deliveries_list():
     next_page = page + 1
     
     logger.info(f'Рендеримо шаблон з {len(deliveries_on_page)} доставками на сторінці, загалом {total_deliveries}')
-    return render_template('deliveries_list.html', 
+    return render_template('deliveries/list.html',
                          deliveries=deliveries_on_page, 
                          grouped_deliveries=grouped_on_page,
                          couriers=couriers,
@@ -140,7 +140,7 @@ def set_status(delivery_id):
 def assign_deliveries_page():
     all_deliveries = get_all_deliveries_ordered()
     couriers = get_all_couriers()
-    return render_template('assign_deliveries.html', all_deliveries=all_deliveries, couriers=couriers)
+    return render_template('deliveries/assign.html', all_deliveries=all_deliveries, couriers=couriers)
 
 @deliveries_bp.route('/assign-deliveries', methods=['POST'])
 def assign_deliveries_save():

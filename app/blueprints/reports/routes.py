@@ -6,4 +6,4 @@ reports_bp = Blueprint('reports', __name__)
 @reports_bp.route('/reports')
 def reports_page():
     data = get_reports_data()
-    return render_template('reports.html', **data) 
+    return render_template('reports/index.html', **data)

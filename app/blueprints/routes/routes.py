@@ -97,7 +97,7 @@ def saved_routes():
     )
 
     return render_template(
-        'saved_routes.html',
+        'routes/saved.html',
         routes=routes,
         couriers=couriers,
         date_filter=date_filter,

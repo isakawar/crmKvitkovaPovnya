@@ -79,7 +79,7 @@ def couriers_list():
     logger.info(f'Couriers page: {len(couriers)} couriers, period: {period}')
     
     return render_template(
-        'couriers_list.html',
+        'couriers/list.html',
         courier_stats=courier_stats,
         total_stats=total_stats,
         period=period,

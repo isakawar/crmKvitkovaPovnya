@@ -1,0 +1,151 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-stone-900">Підписки</h1>
+    <p class="text-sm text-stone-500 mt-0.5">Активних: {{ active_count }} / Всього: {{ total_count }}</p>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+  <div class="bg-white border border-stone-200 rounded-xl p-5">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+        <i class="bi bi-arrow-repeat text-blue-500"></i>
+      </div>
+      <span class="text-sm text-stone-500">Всього підписок</span>
+    </div>
+    <div class="text-3xl font-bold text-stone-900">{{ total_count }}</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-xl p-5">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+        <i class="bi bi-check-circle text-green-500"></i>
+      </div>
+      <span class="text-sm text-stone-500">Активних</span>
+    </div>
+    <div class="text-3xl font-bold text-stone-900">{{ active_count }}</div>
+  </div>
+  <div class="bg-white border border-stone-200 rounded-xl p-5">
+    <div class="flex items-center gap-3 mb-2">
+      <div class="w-10 h-10 bg-stone-100 rounded-lg flex items-center justify-center">
+        <i class="bi bi-archive text-stone-400"></i>
+      </div>
+      <span class="text-sm text-stone-500">Завершених</span>
+    </div>
+    <div class="text-3xl font-bold text-stone-900">{{ completed_count }}</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
+  <select name="city"
+          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+    <option value="">Всі міста</option>
+    {% for city in cities %}
+      <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+    {% endfor %}
+  </select>
+  <select name="type"
+          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+    <option value="">Всі типи</option>
+    <option value="Weekly" {% if type_filter == 'Weekly' %}selected{% endif %}>Weekly</option>
+    <option value="Monthly" {% if type_filter == 'Monthly' %}selected{% endif %}>Monthly</option>
+    <option value="Bi-weekly" {% if type_filter == 'Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
+  </select>
+  <button type="submit"
+          class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
+    Фільтрувати
+  </button>
+  {% if city_filter or type_filter %}
+  <a href="{{ url_for('orders.subscriptions_list') }}"
+     class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
+    Скинути
+  </a>
+  {% endif %}
+</form>
+
+<!-- Cards -->
+{% if subscriptions %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for item in subscriptions %}
+  {% set order = item.order %}
+  {% set total = item.total %}
+  {% set completed = item.completed %}
+  {% set progress = ((completed / total * 100) | int) if total > 0 else 0 %}
+  {% set is_active = completed < total %}
+
+  <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md transition-all
+              {% if not is_active %}opacity-60{% endif %}">
+
+    <!-- Top: client + status dot -->
+    <div class="flex items-start justify-between mb-3">
+      <div>
+        <p class="font-medium text-stone-900 text-sm">{{ order.client.instagram }}</p>
+        <p class="text-xs text-stone-400 mt-0.5">{{ order.recipient_name }}</p>
+      </div>
+      <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if is_active else 'bg-stone-300' }}"
+           title="{{ 'Активна' if is_active else 'Завершена' }}"></div>
+    </div>
+
+    <!-- Badges: type + size -->
+    <div class="flex items-center gap-2 mb-3 flex-wrap">
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
+                   {% if order.delivery_type == 'Weekly' %}bg-blue-50 border-blue-200 text-blue-700
+                   {% elif order.delivery_type == 'Monthly' %}bg-purple-50 border-purple-200 text-purple-700
+                   {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
+        {{ order.delivery_type }}
+      </span>
+      {% if order.size %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
+                   {% if order.size == 'L' %}bg-green-50 border-green-200 text-green-700
+                   {% elif order.size == 'XL' %}bg-amber-50 border-amber-200 text-amber-700
+                   {% elif order.size == 'XXL' %}bg-red-50 border-red-200 text-red-700
+                   {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
+        {{ order.size }}
+      </span>
+      {% endif %}
+      {% if order.delivery_day %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-50 border border-stone-200 text-stone-500 text-xs">
+        {{ order.delivery_day }}
+      </span>
+      {% endif %}
+    </div>
+
+    <!-- Progress bar -->
+    {% if total > 0 %}
+    <div class="mb-3">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs text-stone-400">Доставки</span>
+        <span class="text-xs text-stone-600 font-medium">{{ completed }}/{{ total }}</span>
+      </div>
+      <div class="bg-stone-100 rounded-full h-1.5">
+        <div class="bg-green-500 rounded-full h-1.5 transition-all" style="width: {{ progress }}%"></div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer: city + date -->
+    <div class="border-t border-stone-100 pt-3 flex items-center justify-between">
+      <div class="flex items-center gap-1.5 text-xs text-stone-400">
+        <i class="bi bi-geo-alt"></i>
+        <span>{{ order.city }}</span>
+      </div>
+      {% if order.first_delivery_date %}
+      <span class="text-xs text-stone-400">з {{ order.first_delivery_date.strftime('%d.%m.%Y') }}</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center py-20 text-stone-400">
+  <i class="bi bi-arrow-repeat text-5xl mb-4"></i>
+  <p class="text-lg font-medium">Підписок не знайдено</p>
+  <p class="text-sm mt-1">Підписки — замовлення типу Weekly, Monthly або Bi-weekly</p>
+</div>
+{% endif %}
+{% endblock %}

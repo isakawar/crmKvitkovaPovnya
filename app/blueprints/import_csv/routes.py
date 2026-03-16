@@ -8,7 +8,7 @@ import_csv_bp = Blueprint('import_csv', __name__, url_prefix='/import')
 @import_csv_bp.route('/', methods=['GET'])
 @login_required
 def import_page():
-    return render_template('import_csv.html')
+    return render_template('import_csv/index.html')
 
 
 @import_csv_bp.route('/preview', methods=['POST'])

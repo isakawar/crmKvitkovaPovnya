@@ -11,7 +11,7 @@ bp = Blueprint('settings', __name__)
 @permission_required('view_settings')
 def settings_page():
     settings = Settings.query.first()
-    return render_template('settings.html', settings=settings)
+    return render_template('settings/index.html', settings=settings)
 
 @bp.route('/settings/update', methods=['POST'])
 @login_required

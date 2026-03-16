@@ -1,0 +1,160 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- Header -->
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-xl font-semibold text-stone-900">Клієнти</h1>
+    <p class="text-sm text-stone-500 mt-0.5">Всього: {{ clients_count }}</p>
+  </div>
+  <button class="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
+          data-bs-toggle="modal" data-bs-target="#clientModal">
+    <i class="bi bi-plus"></i>
+    Додати клієнта
+  </button>
+</div>
+
+<!-- Search -->
+<div class="mb-5">
+  <form method="get" action="" class="flex items-center gap-3">
+    <div class="relative flex-1 max-w-md">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm"></i>
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Пошук за Instagram, Telegram або телефоном..."
+        class="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+        autocomplete="off"
+      />
+    </div>
+    {% if search_query %}
+    <a href="{{ url_for('clients.clients_list') }}" class="text-sm text-stone-400 hover:text-stone-600 transition-colors">
+      <i class="bi bi-x-circle"></i> Скинути
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Card grid -->
+{% if clients %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for client in clients %}
+  <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
+       data-client-id="{{ client.id }}">
+
+    <!-- Top row: name + subscription dot -->
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-2">
+        {% set icons = ['bi-person', 'bi-flower1', 'bi-star', 'bi-emoji-smile', 'bi-gem'] %}
+        <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="bi {{ icons[client.id % icons|length] }} text-stone-500 text-sm"></i>
+        </div>
+        <span class="font-medium text-stone-900 text-sm">{{ client.instagram }}</span>
+      </div>
+      <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if client.id in active_sub_client_ids else 'bg-stone-300' }}"
+           title="{{ 'Є активна підписка' if client.id in active_sub_client_ids else 'Без підписки' }}">
+      </div>
+    </div>
+
+    <!-- Phone & Telegram -->
+    <div class="space-y-1 mb-3">
+      {% if client.phone %}
+      <div class="flex items-center gap-2 text-sm text-stone-500">
+        <i class="bi bi-telephone text-xs"></i>
+        <span>{{ client.phone }}</span>
+      </div>
+      {% endif %}
+      {% if client.telegram %}
+      <div class="flex items-center gap-2 text-sm text-stone-500">
+        <i class="bi bi-telegram text-xs"></i>
+        <span>{{ client.telegram }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Footer: credits + discount -->
+    <div class="border-t border-stone-100 pt-3 flex items-center justify-between">
+      <div class="flex items-center gap-1 text-xs text-stone-400">
+        <i class="bi bi-wallet2"></i>
+        <span class="text-stone-600 font-medium">{{ client.credits }}</span>
+        <span>кредитів</span>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if client.marketing_source %}
+        <span class="text-xs text-stone-400 bg-stone-50 px-2 py-0.5 rounded">{{ client.marketing_source }}</span>
+        {% endif %}
+        {% if client.personal_discount %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
+          {{ client.personal_discount }}%
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center py-20 text-stone-400">
+  <i class="bi bi-people text-5xl mb-4"></i>
+  <p class="text-lg font-medium">Клієнтів не знайдено</p>
+  <p class="text-sm mt-1">{% if search_query %}Спробуйте інший запит{% else %}Додайте першого клієнта{% endif %}</p>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% set total_pages = (clients_count // 30) + (1 if clients_count % 30 else 0) %}
+{% if total_pages > 1 %}
+<div class="flex items-center justify-start gap-2 mt-8">
+  <a href="?{{ update_query(1) }}"
+     class="px-3 py-1.5 text-sm rounded-lg border transition-colors {% if page == 1 %}border-stone-100 text-stone-300 pointer-events-none{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
+    &laquo;
+  </a>
+
+  {% if page > 3 %}
+    <a href="?{{ update_query(1) }}" class="px-3 py-1.5 text-sm rounded-lg border border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200 transition-colors">1</a>
+    {% if page > 4 %}<span class="px-2 text-stone-300">…</span>{% endif %}
+  {% endif %}
+
+  {% for p in range(page-2, page+3) %}
+    {% if 1 <= p <= total_pages %}
+      <a href="?{{ update_query(p) }}"
+         class="px-3 py-1.5 text-sm rounded-lg border transition-colors
+                {% if p == page %}bg-stone-900 text-white border-stone-900{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
+        {{ p }}
+      </a>
+    {% endif %}
+  {% endfor %}
+
+  {% if page < total_pages - 2 %}
+    {% if page < total_pages - 3 %}<span class="px-2 text-stone-300">…</span>{% endif %}
+    <a href="?{{ update_query(total_pages) }}" class="px-3 py-1.5 text-sm rounded-lg border border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200 transition-colors">{{ total_pages }}</a>
+  {% endif %}
+
+  <a href="?{{ update_query(total_pages) }}"
+     class="px-3 py-1.5 text-sm rounded-lg border transition-colors {% if page == total_pages %}border-stone-100 text-stone-300 pointer-events-none{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
+    &raquo;
+  </a>
+</div>
+{% endif %}
+
+{% include 'clients/modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+{% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %}

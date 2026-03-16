@@ -2,60 +2,103 @@
 {% from "macros.html" import render_toast, toast_script %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-3 w-100">
-    <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#addOrderModal" style="font-weight:500; font-size:1.05rem;">
-        <i class="bi bi-plus-lg"></i> Додати
-    </button>
-    <a href="/orders/export/csv" class="btn btn-outline-secondary btn-sm" title="Експорт у CSV" style="padding:6px 10px; border-radius:8px;">
-        <i class="bi bi-download"></i>
-    </a>
+<div class="flex items-center justify-between mb-5">
+    <div>
+        <h1 class="text-xl font-semibold text-stone-900">Замовлення</h1>
+        <p class="text-sm text-stone-500 mt-0.5">Управління підписками та замовленнями клієнтів</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="/orders/export/csv" title="Експорт у CSV"
+           class="flex items-center gap-1.5 px-3 py-2 text-sm text-stone-600 border border-stone-200 rounded-lg hover:bg-stone-50 transition-colors">
+            <i class="bi bi-download"></i> Експорт
+        </a>
+        <button class="flex items-center gap-2 px-4 py-2 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors"
+                data-bs-toggle="modal" data-bs-target="#addOrderModal">
+            <i class="bi bi-plus-lg"></i> Нове замовлення
+        </button>
+    </div>
 </div>
-<div class="stat-cards mb-4 w-100">
-    <div class="stat-card">
-        <div class="stat-title">Всього замовлень</div>
-        <div class="stat-value">{{ orders_count }}</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
+        <div class="w-9 h-9 bg-green-50 rounded-lg flex items-center justify-center mb-3">
+            <i class="bi bi-bag-heart text-green-700"></i>
+        </div>
+        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Замовлень</p>
+        <p class="text-3xl font-bold text-stone-900">{{ orders_count }}</p>
     </div>
-    <div class="stat-card">
-        <div class="stat-title">Середній чек</div>
-        <div class="stat-value">{{ avg_order_sum or '-' }}</div>
+    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
+        <div class="w-9 h-9 bg-amber-50 rounded-lg flex items-center justify-center mb-3">
+            <i class="bi bi-cash-coin text-amber-700"></i>
+        </div>
+        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Середній чек</p>
+        <p class="text-3xl font-bold text-stone-900">{{ avg_order_sum or '—' }}</p>
     </div>
-    <div class="stat-card">
-        <div class="stat-title">Продовжень підписок</div>
-        <div class="stat-value">{{ subscription_extensions_count or '-' }}</div>
+    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
+        <div class="w-9 h-9 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
+            <i class="bi bi-arrow-repeat text-stone-600"></i>
+        </div>
+        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Продовжень</p>
+        <p class="text-3xl font-bold text-stone-900">{{ subscription_extensions_count or '—' }}</p>
     </div>
-    <div class="stat-card">
-        <div class="stat-title">Клієнтів</div>
-        <div class="stat-value">{{ clients_count or '-' }}</div>
+    <div class="bg-white border border-stone-200 rounded-xl p-5 hover:shadow-sm hover:border-amber-200 transition-all">
+        <div class="w-9 h-9 bg-stone-100 rounded-lg flex items-center justify-center mb-3">
+            <i class="bi bi-people text-stone-600"></i>
+        </div>
+        <p class="text-xs font-semibold text-stone-400 uppercase tracking-wide mb-1">Клієнтів</p>
+        <p class="text-3xl font-bold text-stone-900">{{ clients_count or '—' }}</p>
     </div>
 </div>
 
-<div class="filter-bar mb-3 w-100">
-    <form class="d-flex flex-wrap gap-2 align-items-center w-100" method="get" id="orders-filter-form">
-        <input type="text" class="form-control" name="instagram" placeholder="Пошук за Instagram..." value="{{ request.args.get('instagram', '') }}" style="max-width:200px;">
-        <input type="text" class="form-control" name="phone" placeholder="Пошук за телефоном..." value="{{ request.args.get('phone', '') }}" style="max-width:200px;">
-        <select class="form-select" name="city" id="filter-city" style="max-width:150px;">
+<div class="mb-4">
+    <form class="flex flex-wrap gap-2 items-center" method="get" id="orders-filter-form">
+
+        <div class="relative flex items-center">
+            <i class="bi bi-instagram absolute left-2.5 text-stone-400 text-sm pointer-events-none"></i>
+            <input type="text" name="instagram" placeholder="Пошук за Instagram..."
+                   value="{{ request.args.get('instagram', '') }}"
+                   class="pl-8 pr-3 py-1.5 text-sm bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all w-48">
+        </div>
+
+        <div class="relative flex items-center">
+            <i class="bi bi-telephone absolute left-2.5 text-stone-400 text-sm pointer-events-none"></i>
+            <input type="text" name="phone" placeholder="Пошук за телефоном..."
+                   value="{{ request.args.get('phone', '') }}"
+                   class="pl-8 pr-3 py-1.5 text-sm bg-white border border-stone-200 rounded-lg text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all w-48">
+        </div>
+
+        <select name="city" id="filter-city"
+                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-36">
             <option value="">Місто</option>
-            <option value="Київ" {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
-            <option value="Бровари" {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
-            <option value="Вишгород" {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
-            <option value="Ірпінь" {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
+            <option value="Київ"      {% if request.args.get('city')=='Київ' %}selected{% endif %}>Київ</option>
+            <option value="Бровари"   {% if request.args.get('city')=='Бровари' %}selected{% endif %}>Бровари</option>
+            <option value="Вишгород"  {% if request.args.get('city')=='Вишгород' %}selected{% endif %}>Вишгород</option>
+            <option value="Ірпінь"    {% if request.args.get('city')=='Ірпінь' %}selected{% endif %}>Ірпінь</option>
         </select>
-        <select class="form-select" name="delivery_type" id="filter-delivery-type" style="max-width:150px;">
+
+        <select name="delivery_type" id="filter-delivery-type"
+                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-36">
             <option value="">Тип доставки</option>
-            <option value="Weekly" {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
-            <option value="Monthly" {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
+            <option value="Weekly"    {% if request.args.get('delivery_type')=='Weekly' %}selected{% endif %}>Weekly</option>
+            <option value="Monthly"   {% if request.args.get('delivery_type')=='Monthly' %}selected{% endif %}>Monthly</option>
             <option value="Bi-weekly" {% if request.args.get('delivery_type')=='Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
-            <option value="One-time" {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
+            <option value="One-time"  {% if request.args.get('delivery_type')=='One-time' %}selected{% endif %}>One-time</option>
         </select>
-        <select class="form-select" name="size" id="filter-size" style="max-width:120px;">
+
+        <select name="size" id="filter-size"
+                class="py-1.5 px-3 text-sm bg-white border border-stone-200 rounded-lg text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent transition-all cursor-pointer w-28">
             <option value="">Розмір</option>
-            <option value="M" {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
-            <option value="L" {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
-            <option value="XL" {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
-            <option value="XXL" {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
+            <option value="M"       {% if request.args.get('size')=='M' %}selected{% endif %}>M</option>
+            <option value="L"       {% if request.args.get('size')=='L' %}selected{% endif %}>L</option>
+            <option value="XL"      {% if request.args.get('size')=='XL' %}selected{% endif %}>XL</option>
+            <option value="XXL"     {% if request.args.get('size')=='XXL' %}selected{% endif %}>XXL</option>
             <option value="Власний" {% if request.args.get('size')=='Власний' %}selected{% endif %}>Власний</option>
         </select>
-        <button type="button" class="btn btn-outline-secondary" id="reset-filters-btn">Скинути</button>
+
+        <button type="button" id="reset-filters-btn"
+                class="flex items-center gap-1.5 px-3 py-1.5 text-sm text-stone-500 border border-stone-200 rounded-lg hover:bg-stone-100 hover:text-stone-700 transition-colors cursor-pointer">
+            <i class="bi bi-x-lg text-xs"></i> Скинути
+        </button>
+
     </form>
 </div>
 

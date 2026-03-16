@@ -51,7 +51,7 @@ def florist_routes():
     )
 
     return render_template(
-        'florist_routes.html',
+        'florist/list.html',
         routes=routes,
         today=today,
         selected_date=selected_date,
