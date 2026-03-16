@@ -1,0 +1,465 @@
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const addOrderModalElement = document.getElementById('addOrderModal');
+    const addOrderForm = document.getElementById('addOrderForm');
+    if (!addOrderModalElement || !addOrderForm) {
+        return;
+    }
+
+    const addOrderModal = bootstrap.Modal.getOrCreateInstance(addOrderModalElement);
+    const extendSubscriptionModalElement = document.getElementById('extendSubscriptionModal');
+    const extendModal = extendSubscriptionModalElement
+        ? bootstrap.Modal.getOrCreateInstance(extendSubscriptionModalElement)
+        : null;
+    const subscriptionTypes = ['Weekly', 'Monthly', 'Bi-weekly'];
+
+    const clientSearch = document.getElementById('client-search');
+    const clientResults = document.getElementById('client-results');
+    const isPickupCheckbox = document.getElementById('is-pickup');
+    const addressInput = document.getElementById('address-input');
+    const deliveryMethodSelect = document.getElementById('delivery-method-select');
+    const deliveryTypeSelect = document.getElementById('delivery-type-select');
+    const deliveryTypeLabel = document.getElementById('delivery-type-label');
+    const sizeSelect = document.getElementById('size-select');
+    const customAmountDiv = document.getElementById('custom-amount-div');
+    const customAmountInput = document.getElementById('custom-amount-input');
+    const recipientPhoneInput = document.getElementById('recipient-phone-input');
+    const orderModalTitle = document.getElementById('order-modal-title');
+    const orderModalDescription = document.getElementById('order-modal-description');
+    const orderFlowChip = document.getElementById('order-flow-chip');
+    const orderFooterCopy = document.getElementById('order-footer-copy');
+    const orderSubmitBtn = document.getElementById('order-submit-btn');
+    const orderSubmitBtnText = document.getElementById('order-submit-btn-text');
+    const orderErrorBanner = document.getElementById('add-order-error');
+    const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
+    const confirmExtendBtn = document.getElementById('confirmExtendBtn');
+    const extendClientInstagram = document.getElementById('extend-client-instagram');
+    const composerTriggers = document.querySelectorAll('[data-open-composer]');
+    const commentInput = document.getElementById('order-comment-input');
+    const preferencesInput = document.getElementById('order-preferences-input');
+    const filterForm = document.getElementById('orders-filter-form');
+    const filterCity = document.getElementById('filter-city');
+    const filterDeliveryType = document.getElementById('filter-delivery-type');
+    const filterSize = document.getElementById('filter-size');
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+
+    let currentComposerFlow = 'order';
+    let isComposerSubmitting = false;
+    window.currentOrderId = null;
+
+    const composerContent = {
+        order: {
+            create: {
+                chip: '<i class="bi bi-bag-heart"></i> Замовлення',
+                title: 'Нове замовлення',
+                description: 'Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.',
+                footer: 'Для разового замовлення буде створена одна доставка. Для підписки достатньо змінити тип доставки на Weekly, Monthly або Bi-weekly.',
+                submit: 'Створити замовлення',
+            },
+            edit: {
+                chip: '<i class="bi bi-pencil-square"></i> Редагування',
+                title: 'Редагувати замовлення',
+                description: 'Оновіть дані отримувача, доставку або параметри букета. Зміни одразу синхронізуються з карткою замовлення.',
+                footer: 'Редагування не змінює історію клієнта, а лише оновлює поточне замовлення.',
+                submit: 'Зберегти зміни',
+            },
+        },
+        subscription: {
+            create: {
+                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
+                title: 'Нова підписка',
+                description: 'Створіть підписку для клієнта з уже заповненим Instagram. Після збереження CRM автоматично згенерує серію доставок.',
+                footer: 'Для підписки CRM створить 5 доставок: 4 активні та 1 неоплачену для продовження циклу.',
+                submit: 'Створити підписку',
+            },
+            edit: {
+                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
+                title: 'Редагувати підписку',
+                description: 'Оновіть графік або параметри поточної підписки. Дані застосуються до картки замовлення.',
+                footer: 'Редагування підписки не створює новий цикл, а змінює наявну конфігурацію.',
+                submit: 'Зберегти зміни',
+            },
+        },
+    };
+
+    function clearOrderError() {
+        if (!orderErrorBanner) return;
+        orderErrorBanner.textContent = '';
+        orderErrorBanner.classList.remove('is-visible');
+    }
+
+    function showOrderError(message) {
+        if (!orderErrorBanner) return;
+        orderErrorBanner.textContent = message;
+        orderErrorBanner.classList.add('is-visible');
+    }
+
+    function setComposerSubmitting(submitting) {
+        isComposerSubmitting = submitting;
+        orderSubmitBtn.disabled = submitting;
+        const state = addOrderForm.getAttribute('data-edit-id') ? 'edit' : 'create';
+        orderSubmitBtnText.textContent = submitting
+            ? 'Зберігаємо...'
+            : composerContent[currentComposerFlow][state].submit;
+    }
+
+    function applyComposerCopy(flow, isEditing = false) {
+        currentComposerFlow = flow;
+        const state = isEditing ? 'edit' : 'create';
+        const content = composerContent[flow][state];
+        orderFlowChip.innerHTML = content.chip;
+        orderModalTitle.textContent = content.title;
+        orderModalDescription.textContent = content.description;
+        orderFooterCopy.textContent = content.footer;
+        if (!isComposerSubmitting) {
+            orderSubmitBtnText.textContent = content.submit;
+        }
+        deliveryTypeLabel.innerHTML = flow === 'subscription'
+            ? '<i class="bi bi-arrow-repeat"></i> Тип підписки <span class="text-red-500">*</span>'
+            : '<i class="bi bi-arrow-repeat"></i> Тип доставки <span class="text-red-500">*</span>';
+        syncDeliveryTypeOptions();
+    }
+
+    function syncDeliveryTypeOptions() {
+        Array.from(deliveryTypeSelect.options).forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
+                return;
+            }
+            option.hidden = currentComposerFlow === 'subscription' && !subscriptionTypes.includes(option.value);
+        });
+
+        if (currentComposerFlow === 'subscription' && !subscriptionTypes.includes(deliveryTypeSelect.value)) {
+            deliveryTypeSelect.value = 'Monthly';
+        }
+    }
+
+    function togglePickupState() {
+        if (isPickupCheckbox.checked) {
+            addressInput.value = '';
+            addressInput.disabled = true;
+            addressInput.removeAttribute('required');
+            addressInput.classList.add('input-disabled');
+        } else {
+            addressInput.disabled = false;
+            addressInput.setAttribute('required', 'required');
+            addressInput.classList.remove('input-disabled');
+        }
+    }
+
+    function syncCustomAmountState() {
+        if (sizeSelect.value === 'Власний') {
+            customAmountDiv.style.display = 'block';
+            customAmountInput.required = true;
+        } else {
+            customAmountDiv.style.display = 'none';
+            customAmountInput.required = false;
+            customAmountInput.value = '';
+        }
+    }
+
+    function clearClientResults() {
+        clientResults.classList.add('d-none');
+        clientResults.innerHTML = '';
+    }
+
+    function resetComposerForm(flow = 'order', clientInstagram = '') {
+        addOrderForm.reset();
+        addOrderForm.removeAttribute('data-edit-id');
+        clearOrderError();
+        window.currentOrderId = null;
+        clearClientResults();
+        deliveryMethodSelect.value = 'courier';
+        clientSearch.value = clientInstagram;
+        togglePickupState();
+        syncCustomAmountState();
+        applyComposerCopy(flow, false);
+        if (extendHeaderBtn) {
+            extendHeaderBtn.classList.add('d-none');
+            extendHeaderBtn.removeAttribute('data-order-id');
+            extendHeaderBtn.removeAttribute('data-client-instagram');
+        }
+    }
+
+    function openComposer(flow = 'order', clientInstagram = '') {
+        resetComposerForm(flow, clientInstagram);
+        addOrderModal.show();
+    }
+
+    async function fetchClientSuggestions(query) {
+        const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
+        return response.json();
+    }
+
+    function bindClientSearch() {
+        clientSearch.addEventListener('input', async function() {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                clearClientResults();
+                return;
+            }
+
+            try {
+                const clients = await fetchClientSuggestions(query);
+                if (!clients.length) {
+                    clearClientResults();
+                    return;
+                }
+
+                clientResults.innerHTML = clients.map(client =>
+                    `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
+                ).join('');
+                clientResults.classList.remove('d-none');
+                clientResults.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        clientSearch.value = this.textContent.trim();
+                        clearClientResults();
+                    });
+                });
+            } catch (error) {
+                console.error('Помилка пошуку клієнтів:', error);
+                clearClientResults();
+            }
+        });
+
+        clientSearch.addEventListener('blur', function() {
+            setTimeout(clearClientResults, 180);
+        });
+    }
+
+    function sanitizeRecipientPhone() {
+        let value = recipientPhoneInput.value.replace(/[^\d+]/g, '');
+        if (!value.startsWith('+')) {
+            value = `+${value.replace(/^\+/, '')}`;
+        }
+        recipientPhoneInput.value = value.slice(0, 13);
+    }
+
+    async function submitComposerForm(event) {
+        event.preventDefault();
+        clearOrderError();
+
+        const phoneValue = recipientPhoneInput.value.trim();
+        const phonePattern = /^\+380[0-9]{9}$/;
+        if (!phonePattern.test(phoneValue)) {
+            showOrderError('Телефон має бути у форматі +380XXXXXXXXX');
+            return;
+        }
+
+        if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
+            showOrderError('Вкажіть адресу або увімкніть самовивіз');
+            return;
+        }
+
+        if (sizeSelect.value === 'Власний' && (!customAmountInput.value || Number(customAmountInput.value) <= 0)) {
+            showOrderError('Для власного розміру потрібно вказати суму більше 0');
+            return;
+        }
+
+        setComposerSubmitting(true);
+        const orderId = addOrderForm.getAttribute('data-edit-id');
+        const isEditing = Boolean(orderId);
+        const url = isEditing ? `/orders/${orderId}/edit` : '/orders/new';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(addOrderForm),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!(response.ok && data.success)) {
+                showOrderError(data.error || 'Помилка збереження');
+                return;
+            }
+
+            addOrderModal.hide();
+            const successMessage = isEditing
+                ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
+                : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
+            showToast(successMessage, 'success');
+            setTimeout(() => location.reload(), 900);
+        } catch (error) {
+            console.error('Помилка збереження:', error);
+            showOrderError('Помилка зʼєднання з сервером');
+        } finally {
+            setComposerSubmitting(false);
+        }
+    }
+
+    function populateComposerForm(orderData, orderId) {
+        const flow = subscriptionTypes.includes(orderData.delivery_type) ? 'subscription' : 'order';
+        resetComposerForm(flow, orderData.client_instagram);
+        addOrderForm.setAttribute('data-edit-id', orderId);
+        clientSearch.value = orderData.client_instagram || '';
+        addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
+        recipientPhoneInput.value = orderData.recipient_phone || '';
+        addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
+        addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
+        addressInput.value = orderData.street || '';
+        deliveryMethodSelect.value = orderData.delivery_method || 'courier';
+        deliveryTypeSelect.value = orderData.delivery_type || '';
+        sizeSelect.value = orderData.size || '';
+        customAmountInput.value = orderData.custom_amount || '';
+        addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date || '';
+        addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day || '';
+        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
+        if (commentInput) commentInput.value = orderData.comment || '';
+        if (preferencesInput) preferencesInput.value = orderData.preferences || '';
+        isPickupCheckbox.checked = Boolean(orderData.is_pickup);
+
+        togglePickupState();
+        syncCustomAmountState();
+        applyComposerCopy(flow, true);
+
+        if (extendHeaderBtn) {
+            if (flow === 'subscription' && orderData.can_extend_subscription) {
+                extendHeaderBtn.classList.remove('d-none');
+                extendHeaderBtn.setAttribute('data-order-id', orderId);
+                extendHeaderBtn.setAttribute('data-client-instagram', orderData.client_instagram);
+            } else {
+                extendHeaderBtn.classList.add('d-none');
+            }
+        }
+
+        addOrderModal.show();
+    }
+
+    function maybeLaunchComposerFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const compose = params.get('compose');
+        const clientInstagram = params.get('client_instagram') || '';
+
+        if (compose !== 'subscription') {
+            return;
+        }
+
+        openComposer('subscription', clientInstagram);
+        params.delete('compose');
+        params.delete('client_instagram');
+        const nextQuery = params.toString();
+        history.replaceState({}, document.title, `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`);
+    }
+
+    bindClientSearch();
+    togglePickupState();
+    syncCustomAmountState();
+    applyComposerCopy('order', false);
+
+    recipientPhoneInput.addEventListener('focus', function() {
+        if (!recipientPhoneInput.value) {
+            recipientPhoneInput.value = '+38';
+        }
+    });
+    recipientPhoneInput.addEventListener('input', sanitizeRecipientPhone);
+    isPickupCheckbox.addEventListener('change', togglePickupState);
+    sizeSelect.addEventListener('change', syncCustomAmountState);
+    addOrderForm.addEventListener('submit', submitComposerForm);
+
+    if (commentInput) {
+        commentInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
+    if (preferencesInput) {
+        preferencesInput.addEventListener('input', function() {
+            if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
+        });
+    }
+
+    composerTriggers.forEach(trigger => {
+        trigger.addEventListener('click', function() {
+            openComposer(this.dataset.openComposer || 'order', this.dataset.clientInstagram || '');
+        });
+    });
+
+    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
+        row.addEventListener('dblclick', async function() {
+            const orderId = this.getAttribute('data-order-id');
+            try {
+                const response = await fetch(`/orders/${orderId}/edit`);
+                const orderData = await response.json();
+                populateComposerForm(orderData, orderId);
+            } catch (error) {
+                showToast('Помилка завантаження даних замовлення', 'error');
+            }
+        });
+    });
+
+    document.querySelectorAll('.extend-subscription-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.currentOrderId = this.getAttribute('data-order-id');
+            if (extendClientInstagram) {
+                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
+            }
+            if (extendModal) {
+                extendModal.show();
+            }
+        });
+    });
+
+    if (confirmExtendBtn) {
+        confirmExtendBtn.addEventListener('click', async function() {
+            const orderId = window.currentOrderId;
+            if (!orderId) return;
+
+            try {
+                const response = await fetch(`/orders/${orderId}/extend-subscription`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (extendModal) extendModal.hide();
+                    showToast('Підписку успішно продовжено!', 'success');
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    showToast(`Помилка: ${data.error || 'Невідома помилка'}`, 'error');
+                }
+            } catch (error) {
+                showToast('Помилка зʼєднання з сервером', 'error');
+            }
+        });
+    }
+
+    if (extendHeaderBtn) {
+        extendHeaderBtn.addEventListener('click', function() {
+            window.currentOrderId = this.getAttribute('data-order-id');
+            if (extendClientInstagram) {
+                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
+            }
+            if (extendModal) {
+                extendModal.show();
+            }
+        });
+    }
+
+    if (filterCity && filterForm) {
+        filterCity.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    if (filterDeliveryType && filterForm) {
+        filterDeliveryType.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    if (filterSize && filterForm) {
+        filterSize.addEventListener('change', function() {
+            filterForm.submit();
+        });
+    }
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            window.location.href = '/orders';
+        });
+    }
+
+    maybeLaunchComposerFromQuery();
+});
+</script>

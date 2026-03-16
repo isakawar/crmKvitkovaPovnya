@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
 
 {% block content %}
 <!-- Header -->
@@ -7,31 +8,16 @@
     <h1 class="text-xl font-semibold text-stone-900">Підписки</h1>
     <p class="text-sm text-stone-500 mt-0.5">Активних: {{ active_count }} / Всього: {{ total_count }}</p>
   </div>
-</div>
-
-<!-- Search -->
-<div class="mb-5">
-  <form method="get" action="" class="flex items-center gap-3">
-    <input type="hidden" name="city" value="{{ city_filter }}">
-    <input type="hidden" name="type" value="{{ type_filter }}">
-    <div class="relative flex-1 max-w-md">
-      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm"></i>
-      <input
-        type="text"
-        name="q"
-        value="{{ search_query }}"
-        placeholder="Пошук за Instagram, отримувачем або телефоном..."
-        class="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-        autocomplete="off"
-      />
-    </div>
-    {% if search_query %}
-    <a href="{{ url_for('orders.subscriptions_list', city=city_filter, type=type_filter) }}"
-       class="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-      <i class="bi bi-x-circle"></i> Скинути
-    </a>
-    {% endif %}
-  </form>
+  <button
+    type="button"
+    class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+    data-open-composer="subscription"
+    data-bs-toggle="modal"
+    data-bs-target="#addOrderModal"
+  >
+    <i class="bi bi-plus-lg"></i>
+    Додати підписку
+  </button>
 </div>
 
 <!-- Stat cards -->
@@ -67,7 +53,17 @@
 
 <!-- Filters -->
 <form method="get" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
-  <input type="hidden" name="q" value="{{ search_query }}">
+  <div class="relative min-w-[280px] flex-1 md:max-w-md">
+    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+    <input
+      type="text"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Пошук за Instagram, отримувачем або телефоном..."
+      class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      autocomplete="off"
+    />
+  </div>
   <select name="city"
           class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
     <option value="">Всі міста</option>
@@ -180,4 +176,12 @@
   </p>
 </div>
 {% endif %}
+
+{% include 'orders/_composer_modal.html' %}
+{{ render_toast() }}
+{% endblock %}
+
+{% block scripts %}
+{{ toast_script() }}
+{% include 'orders/_composer_script.html' %}
 {% endblock %}

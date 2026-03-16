@@ -137,7 +137,135 @@
     @apply inline-flex min-w-[190px] items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70;
   }
 
+  .client-btn-subscription {
+    @apply inline-flex min-w-[180px] items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-medium text-amber-800 transition-colors duration-200 hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-stone-200 disabled:bg-stone-100 disabled:text-stone-400;
+  }
+
   .client-modal-close {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-500 transition-colors duration-200 hover:bg-stone-100 hover:text-stone-700;
+  }
+
+  .order-composer-dialog {
+    @apply max-w-6xl px-2 sm:px-4;
+  }
+
+  .order-composer-content {
+    @apply border-0 bg-transparent shadow-none;
+  }
+
+  .order-composer-shell {
+    @apply relative flex max-h-[calc(100vh-1.5rem)] flex-col overflow-hidden rounded-[30px] border border-stone-200 bg-stone-50 shadow-2xl;
+  }
+
+  .order-composer-header {
+    @apply flex items-start justify-between gap-4 border-b border-stone-200 bg-white px-5 py-5 sm:px-6 lg:px-8;
+  }
+
+  .order-composer-body {
+    @apply space-y-4 overflow-y-auto px-5 py-5 sm:px-6 lg:px-8 lg:py-6;
+  }
+
+  .order-composer-footer {
+    @apply flex flex-col gap-3 border-t border-stone-200 bg-white px-5 py-4 sm:px-6 lg:px-8 xl:flex-row xl:items-center xl:justify-between;
+  }
+
+  .order-composer-grid {
+    @apply grid gap-4 xl:grid-cols-[0.92fr_1.08fr];
+  }
+
+  .order-panel {
+    @apply rounded-[26px] border border-stone-200 bg-white p-5 shadow-sm lg:p-6;
+  }
+
+  .order-panel-primary {
+    @apply bg-gradient-to-br from-white via-stone-50 to-amber-50;
+  }
+
+  .order-panel-notes {
+    @apply bg-white;
+  }
+
+  .order-composer-chip,
+  .order-section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium uppercase tracking-wide text-amber-700;
+  }
+
+  .order-section-kicker-muted {
+    @apply border-stone-200 bg-stone-100 text-stone-600;
+  }
+
+  .order-composer-chip {
+    @apply border-stone-200 bg-stone-100 text-stone-600;
+  }
+
+  .order-field {
+    @apply space-y-2;
+  }
+
+  .order-label {
+    @apply flex items-center gap-2 text-sm font-medium text-stone-700;
+  }
+
+  .order-input-wrap {
+    @apply relative;
+  }
+
+  .order-input-icon {
+    @apply pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-stone-400;
+  }
+
+  .order-input,
+  .order-select,
+  .order-textarea {
+    @apply w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-900 placeholder:text-stone-400 transition-all duration-200 focus:border-stone-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-300;
+  }
+
+  .order-textarea {
+    @apply min-h-[120px] resize-y;
+  }
+
+  .order-select {
+    @apply appearance-none;
+  }
+
+  .order-input-with-icon {
+    @apply pl-11;
+  }
+
+  .order-two-col {
+    @apply grid gap-4 md:grid-cols-2;
+  }
+
+  .order-three-col {
+    @apply grid gap-4 xl:grid-cols-3;
+  }
+
+  .order-switch-row {
+    @apply flex items-center justify-between gap-4 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3;
+  }
+
+  .order-error-banner {
+    @apply hidden rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700;
+  }
+
+  .order-error-banner.is-visible {
+    @apply block;
+  }
+
+  .order-footer-copy {
+    @apply max-w-2xl text-xs leading-5 text-stone-500 xl:pr-6;
+  }
+
+  .order-btn-secondary {
+    @apply inline-flex w-full min-w-0 items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition-colors duration-200 hover:bg-stone-50 hover:text-stone-900 sm:w-auto sm:min-w-[140px];
+  }
+
+  .order-btn-primary {
+    @apply inline-flex w-full min-w-0 items-center justify-center rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto sm:min-w-[190px];
+  }
+
+  .order-icon-btn,
+  .order-close-btn {
     @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-500 transition-colors duration-200 hover:bg-stone-100 hover:text-stone-700;
   }
 }
@@ -151,6 +279,76 @@
   border-radius: 9999px;
   background: radial-gradient(circle, rgba(251, 191, 36, 0.18) 0%, rgba(251, 191, 36, 0) 68%);
   pointer-events: none;
+}
+
+.order-composer-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  height: 220px;
+  width: 220px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0) 70%);
+  pointer-events: none;
+}
+
+.order-search-results {
+  top: calc(100% + 0.5rem);
+  left: 0;
+  right: 0;
+  max-height: 14rem;
+  overflow-y: auto;
+  border: 1px solid #e7e5e4;
+  border-radius: 1rem;
+  box-shadow: 0 18px 40px rgba(28, 25, 23, 0.12);
+  background: #fff;
+  z-index: 20;
+}
+
+.order-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.order-switch-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.order-switch-track {
+  position: relative;
+  display: block;
+  width: 56px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #e7e5e4;
+  border: 1px solid #d6d3d1;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.order-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 4px 10px rgba(28, 25, 23, 0.14);
+  transition: transform 0.2s ease;
+}
+
+.order-switch-input:checked + .order-switch-track {
+  background: #1c1917;
+  border-color: #1c1917;
+}
+
+.order-switch-input:checked + .order-switch-track::after {
+  transform: translateX(24px);
 }
 
 .client-modal-open .modal-backdrop.show {

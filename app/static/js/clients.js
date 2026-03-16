@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const footerCopy = document.getElementById('client-footer-copy');
   const submitBtn = document.getElementById('submit-btn');
   const submitBtnText = document.getElementById('submit-btn-text');
+  const addSubscriptionBtn = document.getElementById('add-subscription-btn');
   const clientIdInput = document.getElementById('client-id');
   const instagramInput = document.getElementById('edit-instagram');
   const phoneInput = document.getElementById('edit-phone');
@@ -108,6 +109,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!isSubmitting) {
       submitBtnText.textContent = content.submit;
     }
+    updateSubscriptionButtonState();
   }
 
   function resetForm() {
@@ -120,6 +122,23 @@ document.addEventListener('DOMContentLoaded', function () {
     clearAllErrors();
     toggleClearPhoneButton();
     renderMode();
+  }
+
+  function isSubscriptionActionAvailable() {
+    const instagramFilled = Boolean(instagramInput.value.trim());
+    const phoneValue = phoneInput.value.trim();
+    const phoneValid = !phoneValue || phonePattern.test(phoneValue);
+    const creditsValue = creditsInput.value.trim();
+    const creditsValid = !creditsValue || Number(creditsValue) >= 0;
+    const discountValue = personalDiscountInput.value.trim();
+    const discountValid = !discountValue || (!Number.isNaN(Number(discountValue)) && Number(discountValue) >= 0 && Number(discountValue) <= 100);
+
+    return instagramFilled && phoneValid && creditsValid && discountValid;
+  }
+
+  function updateSubscriptionButtonState() {
+    if (!addSubscriptionBtn) return;
+    addSubscriptionBtn.disabled = isSubmitting || !isSubscriptionActionAvailable();
   }
 
   function getFieldErrorElement(field) {
@@ -181,9 +200,47 @@ document.addEventListener('DOMContentLoaded', function () {
   function setSubmitState(submitting) {
     isSubmitting = submitting;
     submitBtn.disabled = submitting;
+    if (addSubscriptionBtn) {
+      addSubscriptionBtn.disabled = true;
+    }
     submitBtnText.textContent = submitting
       ? (isEditMode ? modeContent.edit.loading : modeContent.create.loading)
       : (isEditMode ? modeContent.edit.submit : modeContent.create.submit);
+    if (!submitting) {
+      updateSubscriptionButtonState();
+    }
+  }
+
+  async function persistClient({ redirectToSubscription = false } = {}) {
+    setSubmitState(true);
+
+    const formData = new FormData(addForm);
+    const url = isEditMode ? `/clients/${clientIdInput.value}` : '/clients/new';
+    const resp = await fetch(url, { method: 'POST', body: formData });
+    const data = await resp.json().catch(() => ({}));
+
+    if (!(resp.ok && data.success)) {
+      const message = data.error || 'Помилка збереження';
+      if (message.toLowerCase().includes('instagram')) {
+        setFieldError(instagramInput, message);
+      } else if (message.toLowerCase().includes('телефон') || message.toLowerCase().includes('номер')) {
+        setFieldError(phoneInput, message);
+      } else {
+        showFormError(message);
+      }
+      return false;
+    }
+
+    if (redirectToSubscription) {
+      const instagramValue = instagramInput.value.trim();
+      window.location.href = `/subscriptions?compose=subscription&client_instagram=${encodeURIComponent(instagramValue)}`;
+      return true;
+    }
+
+    showToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
+    modalInstance.hide();
+    setTimeout(() => location.reload(), 900);
+    return true;
   }
 
   function validateForm() {
@@ -238,17 +295,20 @@ document.addEventListener('DOMContentLoaded', function () {
   [instagramInput, telegramInput, creditsInput, personalDiscountInput].forEach(input => {
     input.addEventListener('input', function () {
       clearFieldError(input);
+      updateSubscriptionButtonState();
     });
   });
 
   marketingSourceInput.addEventListener('change', function () {
     clearFieldError(marketingSourceInput);
+    updateSubscriptionButtonState();
   });
 
   phoneInput.addEventListener('blur', function () {
     if (phoneInput.value.trim() && !phonePattern.test(phoneInput.value.trim())) {
       setFieldError(phoneInput, 'Невірний формат: +380XXXXXXXXX');
     }
+    updateSubscriptionButtonState();
   });
 
   addForm.addEventListener('submit', async function (e) {
@@ -259,27 +319,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     try {
-      setSubmitState(true);
-      const formData = new FormData(addForm);
-      const url = isEditMode ? `/clients/${clientIdInput.value}` : '/clients/new';
-      const resp = await fetch(url, { method: 'POST', body: formData });
-      const data = await resp.json().catch(() => ({}));
-
-      if (resp.ok && data.success) {
-        showToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
-        modalInstance.hide();
-        setTimeout(() => location.reload(), 900);
-        return;
-      }
-
-      const message = data.error || 'Помилка збереження';
-      if (message.toLowerCase().includes('instagram')) {
-        setFieldError(instagramInput, message);
-      } else if (message.toLowerCase().includes('телефон') || message.toLowerCase().includes('номер')) {
-        setFieldError(phoneInput, message);
-      } else {
-        showFormError(message);
-      }
+      await persistClient();
     } catch (error) {
       console.error('Помилка збереження клієнта:', error);
       showFormError('Не вдалося зберегти клієнта. Спробуйте ще раз.');
@@ -288,8 +328,26 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  if (addSubscriptionBtn) {
+    addSubscriptionBtn.addEventListener('click', async function () {
+      if (!validateForm()) {
+        return;
+      }
+
+      try {
+        await persistClient({ redirectToSubscription: true });
+      } catch (error) {
+        console.error('Помилка під час переходу до підписки:', error);
+        showFormError('Не вдалося підготувати підписку. Спробуйте ще раз.');
+      } finally {
+        setSubmitState(false);
+      }
+    });
+  }
+
   renderMode();
   toggleClearPhoneButton();
+  updateSubscriptionButtonState();
 });
 
 function showToast(message, type = 'info') {

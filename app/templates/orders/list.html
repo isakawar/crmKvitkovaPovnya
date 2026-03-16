@@ -201,136 +201,297 @@
 
 <!-- Модалка створення замовлення -->
 <div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-md">
-    <div class="modal-content" style="border-radius:18px; box-shadow:0 4px 32px 0 rgba(0,123,255,0.07); border:none;">
-      <form id="addOrderForm">
-        <div class="modal-header" style="border-bottom:none; background:#fff; border-radius:18px 18px 0 0;">
-          <h5 class="modal-title d-flex align-items-center gap-2" id="addOrderModalLabel" style="font-weight:500; color:#23272f; font-size:1.18rem;">
-            <span id="order-modal-title">Нове замовлення</span>
-            <button type="button" class="btn btn-outline-success btn-sm d-none" id="extend-subscription-header-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
-              <i class="bi bi-arrow-repeat"></i>
-            </button>
-          </h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" style="background:#fff; padding:32px 28px 18px 28px;">
-          <div class="row g-3">
-            <div class="col-12">
-              <div style="position: relative;">
-                <input type="text" class="form-control form-control-lg" id="client-search" name="client_instagram" placeholder="Instagram клієнта *" required autocomplete="off" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <div class="list-group position-absolute w-100 d-none" id="client-results" style="z-index: 1000; max-height: 200px; overflow-y: auto; border-radius: 8px;"></div>
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable order-composer-dialog">
+    <div class="modal-content order-composer-content">
+      <form id="addOrderForm" novalidate>
+        <div class="order-composer-shell">
+          <div class="order-composer-header">
+            <div class="space-y-3">
+              <span class="order-composer-chip" id="order-flow-chip">
+                <i class="bi bi-bag-heart"></i>
+                Замовлення
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-xl font-semibold text-stone-900 md:text-2xl" id="addOrderModalLabel">
+                    <span id="order-modal-title">Нове замовлення</span>
+                  </h2>
+                  <button type="button" class="order-icon-btn d-none" id="extend-subscription-header-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                </div>
+                <p class="mt-1 text-sm text-stone-500" id="order-modal-description">
+                  Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.
+                </p>
               </div>
             </div>
-            <div class="col-12">
-              <input type="text" name="recipient_name" class="form-control" required placeholder="Ім'я отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <input type="text" name="recipient_phone" class="form-control" required placeholder="Телефон отримувача *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;" maxlength="13">
-            </div>
-            <div class="col-12">
-              <input type="text" name="recipient_social" class="form-control" placeholder="Instagram/Telegram отримувача (необов'язково)" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <select name="city" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="">Місто</option>
-                {% if cities and cities|length > 0 %}
-                    {% for city in cities %}
-                        <option value="{{ city.value }}" {% if request.args.get('city')==city.value %}selected{% endif %}>{{ city.value }}</option>
-                    {% endfor %}
-                {% else %}
-                    <option disabled>Додайте міста у налаштуваннях</option>
-                {% endif %}
-              </select>
-            </div>
-            <div class="col-12 d-flex align-items-center gap-2">
-              <input class="form-check-input" type="checkbox" id="is-pickup" name="is_pickup" style="margin-top:0;">
-              <label class="form-check-label text-secondary small" for="is-pickup" style="margin-bottom:0;">Самовивіз</label>
-            </div>
-            <div class="col-12">
-              <input type="text" name="street" id="address-input" class="form-control" required placeholder="Адреса доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <select name="delivery_method" class="form-select" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="courier">Кур'єр</option>
-                <option value="nova_poshta">Нова Пошта</option>
-              </select>
-            </div>
-            <div class="col-12">
-              <select name="delivery_type" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="">Тип доставки *</option>
-                {% if delivery_types and delivery_types|length > 0 %}
-                    {% for t in delivery_types %}
-                        <option value="{{ t.value }}" {% if request.args.get('delivery_type')==t.value %}selected{% endif %}>{{ t.value }}</option>
-                    {% endfor %}
-                {% else %}
-                    <option disabled>Додайте типи у налаштуваннях</option>
-                {% endif %}
-              </select>
-            </div>
-            <div class="col-12">
-              <select name="size" id="size-select" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="">Розмір *</option>
-                {% if sizes and sizes|length > 0 %}
-                    {% for s in sizes %}
-                        <option value="{{ s.value }}" {% if request.args.get('size')==s.value %}selected{% endif %}>{{ s.value }}</option>
-                    {% endfor %}
-                {% else %}
-                    <option disabled>Додайте розміри у налаштуваннях</option>
-                {% endif %}
-              </select>
-            </div>
-            <div class="col-12" id="custom-amount-div" style="display: none;">
-              <input type="number" name="custom_amount" class="form-control" min="0" placeholder="Сума для власного розміру *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <input type="date" name="first_delivery_date" class="form-control" required placeholder="Дата першої доставки *" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <select name="delivery_day" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="">День тижня *</option>
-                <option value="ПН">Понеділок</option>
-                <option value="ВТ">Вівторок</option>
-                <option value="СР">Середа</option>
-                <option value="ЧТ">Четвер</option>
-                <option value="ПТ">П'ятниця</option>
-                <option value="СБ">Субота</option>
-                <option value="НД">Неділя</option>
-              </select>
-            </div>
-            <div class="col-6">
-              <input type="time" name="time_from" class="form-control" placeholder="Час з" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-6">
-              <input type="time" name="time_to" class="form-control" placeholder="Час до" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-            </div>
-            <div class="col-12">
-              <select name="for_whom" class="form-select" required style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;">
-                <option value="">Для кого *</option>
-                {% if for_whom and for_whom|length > 0 %}
-                    {% for f in for_whom %}
-                        <option value="{{ f.value }}" {% if request.args.get('for_whom')==f.value %}selected{% endif %}>{{ f.value }}</option>
-                    {% endfor %}
-                {% else %}
-                    <option disabled>Додайте варіанти у налаштуваннях</option>
-                {% endif %}
-              </select>
-            </div>
-            <div class="col-12">
-              <textarea name="comment" class="form-control" rows="2" placeholder="Коментар (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
-            </div>
-            <div class="col-12">
-              <textarea name="preferences" class="form-control" rows="2" placeholder="Побажання (необов'язково)" maxlength="1000" style="background:#f7f8fa; border-radius:10px; border:1.5px solid #e3eafc; font-size:1.04rem;"></textarea>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer d-flex justify-content-between align-items-center" style="background:#fff; border-top:none; border-radius:0 0 18px 18px; padding: 18px 28px;">
-          <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-success d-none" id="extend-subscription-modal-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Продовжити підписку">
-              <i class="bi bi-arrow-repeat"></i>
+
+            <button type="button" class="order-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+              <i class="bi bi-x-lg"></i>
             </button>
-            <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px; border:1.5px solid #e3eafc; color:#23272f; font-weight:500;">Скасувати</button>
           </div>
-          <button type="submit" class="btn btn-primary" id="order-submit-btn" style="border-radius:8px; font-weight:500; min-width:120px;">Зберегти зміни</button>
+
+          <div class="order-composer-body">
+            <div id="add-order-error" class="order-error-banner"></div>
+
+            <div class="order-composer-grid">
+              <section class="order-panel order-panel-primary">
+                <span class="order-section-kicker">
+                  <i class="bi bi-person-vcard"></i>
+                  Контакти
+                </span>
+                <h3 class="mt-3 text-lg font-semibold text-stone-900">Клієнт та отримувач</h3>
+                <p class="mt-1 text-sm text-stone-500">
+                  Спочатку знайдіть клієнта, потім вкажіть дані отримувача для доставки або самовивозу.
+                </p>
+
+                <div class="mt-6 space-y-4">
+                  <div class="order-field">
+                    <label class="order-label" for="client-search">
+                      <i class="bi bi-instagram"></i>
+                      Instagram клієнта <span class="text-red-500">*</span>
+                    </label>
+                    <div class="order-input-wrap">
+                      <i class="bi bi-search order-input-icon"></i>
+                      <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
+                      <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
+                    </div>
+                  </div>
+
+                  <div class="order-field">
+                    <label class="order-label" for="recipient-name-input">
+                      <i class="bi bi-person"></i>
+                      Ім'я отримувача <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="recipient-name-input" name="recipient_name" class="order-input" placeholder="Наприклад, Олена" required>
+                  </div>
+
+                  <div class="order-two-col">
+                    <div class="order-field">
+                      <label class="order-label" for="recipient-phone-input">
+                        <i class="bi bi-telephone"></i>
+                        Телефон отримувача <span class="text-red-500">*</span>
+                      </label>
+                      <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="recipient-social-input">
+                        <i class="bi bi-send"></i>
+                        Instagram / Telegram
+                      </label>
+                      <input type="text" id="recipient-social-input" name="recipient_social" class="order-input" placeholder="@recipient">
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="order-panel">
+                <span class="order-section-kicker order-section-kicker-muted">
+                  <i class="bi bi-calendar2-heart"></i>
+                  Параметри
+                </span>
+                <h3 class="mt-3 text-lg font-semibold text-stone-900">Логістика та графік</h3>
+                <p class="mt-1 text-sm text-stone-500">
+                  Вкажіть формат доставки, тип сценарію та ключові параметри підписки або замовлення.
+                </p>
+
+                <div class="mt-6 space-y-4">
+                  <div class="order-two-col">
+                    <div class="order-field">
+                      <label class="order-label" for="order-city-select">
+                        <i class="bi bi-geo-alt"></i>
+                        Місто <span class="text-red-500">*</span>
+                      </label>
+                      <select name="city" id="order-city-select" class="order-select" required>
+                        <option value="">Оберіть місто</option>
+                        {% if cities and cities|length > 0 %}
+                            {% for city in cities %}
+                                <option value="{{ city.value }}">{{ city.value }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option disabled>Додайте міста у налаштуваннях</option>
+                        {% endif %}
+                      </select>
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="delivery-method-select">
+                        <i class="bi bi-truck"></i>
+                        Метод доставки
+                      </label>
+                      <select name="delivery_method" id="delivery-method-select" class="order-select">
+                        <option value="courier">Кур'єр</option>
+                        <option value="nova_poshta">Нова Пошта</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="order-switch-row">
+                    <div>
+                      <div class="text-sm font-medium text-stone-700">Самовивіз</div>
+                      <p class="text-xs text-stone-400 mt-1">Якщо увімкнено, поле адреси стане необов'язковим.</p>
+                    </div>
+                    <label class="order-switch">
+                      <input class="order-switch-input" type="checkbox" id="is-pickup" name="is_pickup">
+                      <span class="order-switch-track"></span>
+                    </label>
+                  </div>
+
+                  <div class="order-field">
+                    <label class="order-label" for="address-input">
+                      <i class="bi bi-signpost-2"></i>
+                      Адреса доставки <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок, квартира">
+                  </div>
+
+                  <div class="order-two-col">
+                    <div class="order-field">
+                      <label class="order-label" for="delivery-type-select" id="delivery-type-label">
+                        <i class="bi bi-arrow-repeat"></i>
+                        Тип доставки <span class="text-red-500">*</span>
+                      </label>
+                      <select name="delivery_type" id="delivery-type-select" class="order-select" required>
+                        <option value="">Оберіть тип</option>
+                        {% if delivery_types and delivery_types|length > 0 %}
+                            {% for t in delivery_types %}
+                                <option value="{{ t.value }}">{{ t.value }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option disabled>Додайте типи у налаштуваннях</option>
+                        {% endif %}
+                      </select>
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="size-select">
+                        <i class="bi bi-box-seam"></i>
+                        Розмір <span class="text-red-500">*</span>
+                      </label>
+                      <select name="size" id="size-select" class="order-select" required>
+                        <option value="">Оберіть розмір</option>
+                        {% if sizes and sizes|length > 0 %}
+                            {% for s in sizes %}
+                                <option value="{{ s.value }}">{{ s.value }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option disabled>Додайте розміри у налаштуваннях</option>
+                        {% endif %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="order-field" id="custom-amount-div" style="display:none;">
+                    <label class="order-label" for="custom-amount-input">
+                      <i class="bi bi-cash-stack"></i>
+                      Сума для власного розміру <span class="text-red-500">*</span>
+                    </label>
+                    <input type="number" id="custom-amount-input" name="custom_amount" class="order-input" min="0" placeholder="Введіть суму">
+                  </div>
+
+                  <div class="order-three-col">
+                    <div class="order-field">
+                      <label class="order-label" for="first-delivery-date-input">
+                        <i class="bi bi-calendar-event"></i>
+                        Перша доставка <span class="text-red-500">*</span>
+                      </label>
+                      <input type="date" id="first-delivery-date-input" name="first_delivery_date" class="order-input" required>
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="delivery-day-select">
+                        <i class="bi bi-calendar-week"></i>
+                        День <span class="text-red-500">*</span>
+                      </label>
+                      <select name="delivery_day" id="delivery-day-select" class="order-select" required>
+                        <option value="">Оберіть день</option>
+                        <option value="ПН">Понеділок</option>
+                        <option value="ВТ">Вівторок</option>
+                        <option value="СР">Середа</option>
+                        <option value="ЧТ">Четвер</option>
+                        <option value="ПТ">П'ятниця</option>
+                        <option value="СБ">Субота</option>
+                        <option value="НД">Неділя</option>
+                      </select>
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="for-whom-select">
+                        <i class="bi bi-gift"></i>
+                        Для кого <span class="text-red-500">*</span>
+                      </label>
+                      <select name="for_whom" id="for-whom-select" class="order-select" required>
+                        <option value="">Оберіть варіант</option>
+                        {% if for_whom and for_whom|length > 0 %}
+                            {% for f in for_whom %}
+                                <option value="{{ f.value }}">{{ f.value }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option disabled>Додайте варіанти у налаштуваннях</option>
+                        {% endif %}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="order-two-col">
+                    <div class="order-field">
+                      <label class="order-label" for="time-from-input">
+                        <i class="bi bi-clock"></i>
+                        Час з
+                      </label>
+                      <input type="time" id="time-from-input" name="time_from" class="order-input">
+                    </div>
+
+                    <div class="order-field">
+                      <label class="order-label" for="time-to-input">
+                        <i class="bi bi-clock-history"></i>
+                        Час до
+                      </label>
+                      <input type="time" id="time-to-input" name="time_to" class="order-input">
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <section class="order-panel order-panel-notes mt-4">
+              <span class="order-section-kicker order-section-kicker-muted">
+                <i class="bi bi-chat-left-text"></i>
+                Деталі
+              </span>
+              <div class="order-two-col mt-5">
+                <div class="order-field">
+                  <label class="order-label" for="order-comment-input">
+                    <i class="bi bi-chat-square-text"></i>
+                    Коментар
+                  </label>
+                  <textarea name="comment" id="order-comment-input" class="order-textarea" rows="4" placeholder="Наприклад, деталі адреси або важливі примітки" maxlength="1000"></textarea>
+                </div>
+
+                <div class="order-field">
+                  <label class="order-label" for="order-preferences-input">
+                    <i class="bi bi-stars"></i>
+                    Побажання
+                  </label>
+                  <textarea name="preferences" id="order-preferences-input" class="order-textarea" rows="4" placeholder="Стиль композиції, колірна гамма, пакування" maxlength="1000"></textarea>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="order-composer-footer">
+            <p class="order-footer-copy" id="order-footer-copy">
+              Для підписки система створить серію доставок автоматично. Для разового замовлення буде створена одна доставка.
+            </p>
+
+            <div class="flex flex-col-reverse gap-3 sm:flex-row sm:flex-wrap sm:justify-end">
+              <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+              <button type="submit" class="order-btn-primary" id="order-submit-btn">
+                <span id="order-submit-btn-text">Створити замовлення</span>
+              </button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
@@ -455,11 +616,8 @@ function showToast(message, type = 'info') {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Перевіряємо чи існує toast елемент
     const toastElement = document.getElementById('notification-toast');
-    
     if (!toastElement) {
-        console.error('Toast element not found! Creating manually...');
         const toastContainer = document.createElement('div');
         toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
         toastContainer.innerHTML = `
@@ -474,319 +632,366 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         document.body.appendChild(toastContainer);
     }
-    
-    // --- МОДАЛКА СТВОРЕННЯ ЗАМОВЛЕННЯ ---
+
+    const addOrderModalElement = document.getElementById('addOrderModal');
+    const addOrderForm = document.getElementById('addOrderForm');
+    if (!addOrderModalElement || !addOrderForm) {
+        return;
+    }
+
+    const addOrderModal = bootstrap.Modal.getOrCreateInstance(addOrderModalElement);
+    const extendSubscriptionModalElement = document.getElementById('extendSubscriptionModal');
+    const extendModal = extendSubscriptionModalElement
+        ? bootstrap.Modal.getOrCreateInstance(extendSubscriptionModalElement)
+        : null;
+    const subscriptionTypes = ['Weekly', 'Monthly', 'Bi-weekly'];
+
     const clientSearch = document.getElementById('client-search');
     const clientResults = document.getElementById('client-results');
     const isPickupCheckbox = document.getElementById('is-pickup');
     const addressInput = document.getElementById('address-input');
+    const deliveryMethodSelect = document.getElementById('delivery-method-select');
+    const deliveryTypeSelect = document.getElementById('delivery-type-select');
+    const deliveryTypeLabel = document.getElementById('delivery-type-label');
     const sizeSelect = document.getElementById('size-select');
     const customAmountDiv = document.getElementById('custom-amount-div');
-    const customAmountInput = document.querySelector('#addOrderForm input[name="custom_amount"]');
-    const addOrderForm = document.getElementById('addOrderForm');
-    const recipientPhoneInput = addOrderForm.querySelector('input[name="recipient_phone"]');
-    
-    console.log('clientSearch:', clientSearch);
-    console.log('recipientPhoneInput:', recipientPhoneInput);
-    console.log('customAmountDiv:', customAmountDiv);
-    console.log('customAmountInput:', customAmountInput);
+    const customAmountInput = document.getElementById('custom-amount-input');
+    const recipientPhoneInput = document.getElementById('recipient-phone-input');
+    const orderModalTitle = document.getElementById('order-modal-title');
+    const orderModalDescription = document.getElementById('order-modal-description');
+    const orderFlowChip = document.getElementById('order-flow-chip');
+    const orderFooterCopy = document.getElementById('order-footer-copy');
+    const orderSubmitBtn = document.getElementById('order-submit-btn');
+    const orderSubmitBtnText = document.getElementById('order-submit-btn-text');
+    const orderErrorBanner = document.getElementById('add-order-error');
+    const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
+    const confirmExtendBtn = document.getElementById('confirmExtendBtn');
+    const extendClientInstagram = document.getElementById('extend-client-instagram');
+    const addOrderBtn = document.querySelector('[data-bs-target="#addOrderModal"]');
+    const commentInput = document.getElementById('order-comment-input');
+    const preferencesInput = document.getElementById('order-preferences-input');
+    const filterForm = document.getElementById('orders-filter-form');
+    const filterCity = document.getElementById('filter-city');
+    const filterDeliveryType = document.getElementById('filter-delivery-type');
+    const filterSize = document.getElementById('filter-size');
+    const resetFiltersBtn = document.getElementById('reset-filters-btn');
 
-    if (recipientPhoneInput) {
-        recipientPhoneInput.setAttribute('maxlength', '13');
+    let currentComposerFlow = 'order';
+    let isComposerSubmitting = false;
+    window.currentOrderId = null;
+
+    const composerContent = {
+        order: {
+            create: {
+                chip: '<i class="bi bi-bag-heart"></i> Замовлення',
+                title: 'Нове замовлення',
+                description: 'Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.',
+                footer: 'Для разового замовлення буде створена одна доставка. Для підписки достатньо змінити тип доставки на Weekly, Monthly або Bi-weekly.',
+                submit: 'Створити замовлення',
+            },
+            edit: {
+                chip: '<i class="bi bi-pencil-square"></i> Редагування',
+                title: 'Редагувати замовлення',
+                description: 'Оновіть дані отримувача, доставку або параметри букета. Зміни одразу синхронізуються з карткою замовлення.',
+                footer: 'Редагування не змінює історію клієнта, а лише оновлює поточне замовлення.',
+                submit: 'Зберегти зміни',
+            },
+        },
+        subscription: {
+            create: {
+                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
+                title: 'Нова підписка',
+                description: 'Створіть підписку для клієнта з уже заповненим Instagram. Після збереження CRM автоматично згенерує серію доставок.',
+                footer: 'Для підписки CRM створить 5 доставок: 4 активні та 1 неоплачену для продовження циклу.',
+                submit: 'Створити підписку',
+            },
+            edit: {
+                chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
+                title: 'Редагувати підписку',
+                description: 'Оновіть графік або параметри поточної підписки. Дані застосуються до картки замовлення.',
+                footer: 'Редагування підписки не створює новий цикл, а змінює наявну конфігурацію.',
+                submit: 'Зберегти зміни',
+            },
+        },
+    };
+
+    function clearOrderError() {
+        if (!orderErrorBanner) return;
+        orderErrorBanner.textContent = '';
+        orderErrorBanner.classList.remove('is-visible');
     }
 
-    // Автопошук клієнтів
-    if (clientSearch) {
-        clientSearch.addEventListener('input', async function() {
-            const query = this.value.trim();
-            if (query.length < 2) {
-                clientResults.classList.add('d-none');
+    function showOrderError(message) {
+        if (!orderErrorBanner) return;
+        orderErrorBanner.textContent = message;
+        orderErrorBanner.classList.add('is-visible');
+    }
+
+    function setComposerSubmitting(submitting) {
+        isComposerSubmitting = submitting;
+        orderSubmitBtn.disabled = submitting;
+        const state = addOrderForm.getAttribute('data-edit-id') ? 'edit' : 'create';
+        orderSubmitBtnText.textContent = submitting
+            ? 'Зберігаємо...'
+            : composerContent[currentComposerFlow][state].submit;
+    }
+
+    function applyComposerCopy(flow, isEditing = false) {
+        currentComposerFlow = flow;
+        const state = isEditing ? 'edit' : 'create';
+        const content = composerContent[flow][state];
+        orderFlowChip.innerHTML = content.chip;
+        orderModalTitle.textContent = content.title;
+        orderModalDescription.textContent = content.description;
+        orderFooterCopy.textContent = content.footer;
+        if (!isComposerSubmitting) {
+            orderSubmitBtnText.textContent = content.submit;
+        }
+        deliveryTypeLabel.innerHTML = flow === 'subscription'
+            ? '<i class="bi bi-arrow-repeat"></i> Тип підписки <span class="text-red-500">*</span>'
+            : '<i class="bi bi-arrow-repeat"></i> Тип доставки <span class="text-red-500">*</span>';
+        syncDeliveryTypeOptions();
+    }
+
+    function syncDeliveryTypeOptions() {
+        Array.from(deliveryTypeSelect.options).forEach(option => {
+            if (!option.value) {
+                option.hidden = false;
                 return;
             }
-            try {
-                const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
-                const clients = await response.json();
-                if (clients.length > 0) {
-                    clientResults.innerHTML = clients.map(client => 
-                        `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
-                    ).join('');
-                    clientResults.classList.remove('d-none');
-                    clientResults.querySelectorAll('button').forEach(btn => {
-                        btn.addEventListener('click', function() {
-                            clientSearch.value = this.textContent;
-                            clientResults.classList.add('d-none');
-                        });
-                    });
-                } else {
-                    clientResults.classList.add('d-none');
-                }
-            } catch (error) {
-                console.error('Помилка пошуку клієнтів:', error);
-            }
+            option.hidden = currentComposerFlow === 'subscription' && !subscriptionTypes.includes(option.value);
         });
-        clientSearch.addEventListener('blur', function() {
-            setTimeout(() => clientResults.classList.add('d-none'), 200);
-        });
+
+        if (currentComposerFlow === 'subscription' && !subscriptionTypes.includes(deliveryTypeSelect.value)) {
+            deliveryTypeSelect.value = 'Monthly';
+        }
     }
 
-    // Самовивіз - деактивація адреси і required
-    if (isPickupCheckbox) {
-        isPickupCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                addressInput.value = '';
-                addressInput.disabled = true;
-                addressInput.removeAttribute('required');
-                addressInput.classList.add('input-disabled');
-            } else {
-                addressInput.disabled = false;
-                addressInput.setAttribute('required', 'required');
-                addressInput.classList.remove('input-disabled');
-            }
-        });
-        // При завантаженні сторінки одразу застосувати стиль, якщо вже вибрано
+    function togglePickupState() {
         if (isPickupCheckbox.checked) {
+            addressInput.value = '';
             addressInput.disabled = true;
             addressInput.removeAttribute('required');
             addressInput.classList.add('input-disabled');
+        } else {
+            addressInput.disabled = false;
+            addressInput.setAttribute('required', 'required');
+            addressInput.classList.remove('input-disabled');
         }
     }
 
-    // Власний розмір - показ поля суми
-    if (sizeSelect) {
-        sizeSelect.addEventListener('change', function() {
-            console.log('Size changed to:', this.value);
-            if (this.value === 'Власний') {
-                if (customAmountDiv) {
-                    customAmountDiv.style.display = 'block';
-                    console.log('Showing custom amount div');
-                }
-                if (customAmountInput) {
-                    customAmountInput.required = true;
-                    console.log('Made custom amount required');
-                }
-            } else {
-                if (customAmountDiv) {
-                    customAmountDiv.style.display = 'none';
-                    console.log('Hiding custom amount div');
-                }
-                if (customAmountInput) {
-                    customAmountInput.required = false;
-                    customAmountInput.value = '';
-                    console.log('Cleared custom amount');
-                }
-            }
-        });
+    function syncCustomAmountState() {
+        if (sizeSelect.value === 'Власний') {
+            customAmountDiv.style.display = 'block';
+            customAmountInput.required = true;
+        } else {
+            customAmountDiv.style.display = 'none';
+            customAmountInput.required = false;
+            customAmountInput.value = '';
+        }
     }
 
-    // Маска для номера телефону отримувача (тільки + і цифри, не більше 13)
-    if (recipientPhoneInput) {
-        recipientPhoneInput.addEventListener('input', function(e) {
-            let value = e.target.value.replace(/[^\d+]/g, '');
-            if (!value.startsWith('+')) value = '+' + value.replace(/^\+/, '');
-            value = value.slice(0, 13);
-            e.target.value = value;
-        });
-        recipientPhoneInput.addEventListener('focus', function(e) {
-            if (e.target.value === '') {
-                e.target.value = '+38';
-            }
-        });
+    function clearClientResults() {
+        clientResults.classList.add('d-none');
+        clientResults.innerHTML = '';
     }
 
-    // Валідація та AJAX submit
-    if (addOrderForm) {
-        addOrderForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            // Валідація телефону
-            const phoneValue = recipientPhoneInput.value;
-            const phonePattern = /^\+380[0-9]{9}$/;
-            if (!phonePattern.test(phoneValue) || phoneValue.length !== 13) {
-                showOrderError('Телефон має бути у форматі +380XXXXXXXXX (13 символів)');
+    function resetComposerForm(flow = 'order', clientInstagram = '') {
+        addOrderForm.reset();
+        addOrderForm.removeAttribute('data-edit-id');
+        clearOrderError();
+        window.currentOrderId = null;
+        clearClientResults();
+        deliveryMethodSelect.value = 'courier';
+        clientSearch.value = clientInstagram;
+        togglePickupState();
+        syncCustomAmountState();
+        applyComposerCopy(flow, false);
+        if (extendHeaderBtn) {
+            extendHeaderBtn.classList.add('d-none');
+            extendHeaderBtn.removeAttribute('data-order-id');
+            extendHeaderBtn.removeAttribute('data-client-instagram');
+        }
+    }
+
+    function openComposer(flow = 'order', clientInstagram = '') {
+        resetComposerForm(flow, clientInstagram);
+        addOrderModal.show();
+    }
+
+    async function fetchClientSuggestions(query) {
+        const response = await fetch(`/clients/search?q=${encodeURIComponent(query)}`);
+        return response.json();
+    }
+
+    function bindClientSearch() {
+        clientSearch.addEventListener('input', async function() {
+            const query = this.value.trim();
+            if (query.length < 2) {
+                clearClientResults();
                 return;
             }
-            if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
-                showOrderError('Вкажіть адресу або оберіть "Самовивіз"');
-                return;
-            }
-            if (sizeSelect.value === 'Власний') {
-                if (!customAmountInput) {
-                    showOrderError('Помилка: поле суми не знайдено. Спробуйте оновити сторінку.');
-                    return;
-                }
-                if (!customAmountInput.value || customAmountInput.value <= 0) {
-                    showOrderError('Для власного розміру потрібно вказати суму більше 0');
-                    return;
-                }
-            }
-            
-            // AJAX submit
-            const formData = new FormData(addOrderForm);
-            const orderId = addOrderForm.getAttribute('data-edit-id');
-            let url = '/orders/new';
-            if (orderId) {
-                url = `/orders/${orderId}/edit`;
-            }
-            
+
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {'X-Requested-With': 'XMLHttpRequest'},
-                    body: formData
+                const clients = await fetchClientSuggestions(query);
+                if (!clients.length) {
+                    clearClientResults();
+                    return;
+                }
+
+                clientResults.innerHTML = clients.map(client =>
+                    `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
+                ).join('');
+                clientResults.classList.remove('d-none');
+                clientResults.querySelectorAll('button').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        clientSearch.value = this.textContent.trim();
+                        clearClientResults();
+                    });
                 });
-                const data = await response.json();
-                console.log('Order response data:', data);
-                
-                if (response.ok && data.success) {
-                    // Успіх: закриваємо модалку, показуємо toast
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('addOrderModal'));
-                    if (modal) modal.hide();
-                    console.log('Showing success toast');
-                    showToast('Замовлення успішно збережено!', 'success');
-                    setTimeout(() => location.reload(), 1000);
-                } else {
-                    console.log('Error from server:', data.error);
-                    showOrderError(data.error || 'Помилка збереження замовлення!');
-                }
             } catch (error) {
-                showOrderError('Помилка зʼєднання з сервером!');
+                console.error('Помилка пошуку клієнтів:', error);
+                clearClientResults();
             }
+        });
+
+        clientSearch.addEventListener('blur', function() {
+            setTimeout(clearClientResults, 180);
         });
     }
 
-    // Вивід помилок у модалці
-    function showOrderError(msg) {
-        let msgDiv = document.getElementById('add-order-error');
-        if (!msgDiv) {
-            msgDiv = document.createElement('div');
-            msgDiv.id = 'add-order-error';
-            msgDiv.className = 'alert alert-danger';
-            addOrderForm.querySelector('.modal-body').prepend(msgDiv);
+    function sanitizeRecipientPhone() {
+        let value = recipientPhoneInput.value.replace(/[^\d+]/g, '');
+        if (!value.startsWith('+')) {
+            value = `+${value.replace(/^\+/, '')}`;
         }
-        msgDiv.textContent = msg;
-        msgDiv.classList.remove('d-none');
+        recipientPhoneInput.value = value.slice(0, 13);
     }
 
-    // При відкритті модалки для створення замовлення
-    const addOrderBtn = document.querySelector('[data-bs-target="#addOrderModal"]');
-    if (addOrderBtn) {
-        addOrderBtn.addEventListener('click', function() {
-            const form = document.getElementById('addOrderForm');
-            if (form) {
-                form.reset();
-                form.removeAttribute('data-edit-id');
-                const submitBtn = document.getElementById('order-submit-btn');
-                if (submitBtn) {
-                    submitBtn.textContent = 'Створити замовлення';
-                }
-                // Скидаємо всі custom поля, required, disabled тощо
-                const streetInput = form.querySelector('[name="street"]');
-                if (streetInput) {
-                    streetInput.disabled = false;
-                    streetInput.setAttribute('required', 'required');
-                }
-                if (customAmountDiv) {
-                    customAmountDiv.style.display = 'none';
-                }
-                if (customAmountInput) {
-                    customAmountInput.required = false;
-                    customAmountInput.value = '';
-                }
-                // --- Ховаємо кнопку 'Продовжити' ---
-                const extendBtn = document.getElementById('extend-subscription-modal-btn');
-                if (extendBtn) extendBtn.classList.add('d-none');
-                const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
-                if (extendHeaderBtn) extendHeaderBtn.classList.add('d-none');
-                // --- Заголовок ---
-                const titleSpan = document.getElementById('order-modal-title');
-                if (titleSpan) titleSpan.textContent = 'Нове замовлення';
+    async function submitComposerForm(event) {
+        event.preventDefault();
+        clearOrderError();
+
+        const phoneValue = recipientPhoneInput.value.trim();
+        const phonePattern = /^\+380[0-9]{9}$/;
+        if (!phonePattern.test(phoneValue)) {
+            showOrderError('Телефон має бути у форматі +380XXXXXXXXX');
+            return;
+        }
+
+        if (!isPickupCheckbox.checked && !addressInput.value.trim()) {
+            showOrderError('Вкажіть адресу або увімкніть самовивіз');
+            return;
+        }
+
+        if (sizeSelect.value === 'Власний' && (!customAmountInput.value || Number(customAmountInput.value) <= 0)) {
+            showOrderError('Для власного розміру потрібно вказати суму більше 0');
+            return;
+        }
+
+        setComposerSubmitting(true);
+        const orderId = addOrderForm.getAttribute('data-edit-id');
+        const isEditing = Boolean(orderId);
+        const url = isEditing ? `/orders/${orderId}/edit` : '/orders/new';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: new FormData(addOrderForm),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!(response.ok && data.success)) {
+                showOrderError(data.error || 'Помилка збереження');
+                return;
             }
-        });
+
+            addOrderModal.hide();
+            const successMessage = isEditing
+                ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
+                : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
+            showToast(successMessage, 'success');
+            setTimeout(() => location.reload(), 900);
+        } catch (error) {
+            console.error('Помилка збереження:', error);
+            showOrderError('Помилка зʼєднання з сервером');
+        } finally {
+            setComposerSubmitting(false);
+        }
     }
 
-    // --- РЕДАГУВАННЯ ЗАМОВЛЕНЬ ЧЕРЕЗ ПОДВІЙНИЙ КЛІК ---
-    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
-        row.addEventListener('dblclick', async function() {
-            const orderId = this.getAttribute('data-order-id');
-            try {
-                const response = await fetch(`/orders/${orderId}/edit`);
-                const orderData = await response.json();
-                
-                // Заповнюємо форму даними замовлення
-                addOrderForm.setAttribute('data-edit-id', orderId);
-                addOrderForm.querySelector('[name="client_instagram"]').value = orderData.client_instagram;
-                addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name;
-                addOrderForm.querySelector('[name="recipient_phone"]').value = orderData.recipient_phone;
-                addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
-                addOrderForm.querySelector('[name="city"]').value = orderData.city;
-                addOrderForm.querySelector('[name="street"]').value = orderData.street;
-                addOrderForm.querySelector('[name="delivery_method"]').value = orderData.delivery_method || 'courier';
-                addOrderForm.querySelector('[name="delivery_type"]').value = orderData.delivery_type;
-                addOrderForm.querySelector('[name="size"]').value = orderData.size;
-                addOrderForm.querySelector('[name="custom_amount"]').value = orderData.custom_amount || '';
-                addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date;
-                addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day;
-                addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
-                addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
-                addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom;
-                addOrderForm.querySelector('[name="comment"]').value = orderData.comment || '';
-                addOrderForm.querySelector('[name="preferences"]').value = orderData.preferences || '';
-                
-                // Самовивіз
-                const isPickup = orderData.is_pickup;
-                addOrderForm.querySelector('[name="is_pickup"]').checked = isPickup;
-                const addressInput = addOrderForm.querySelector('[name="street"]');
-                if (isPickup) {
-                    addressInput.value = '';
-                    addressInput.disabled = true;
-                    addressInput.removeAttribute('required');
-                } else {
-                    addressInput.disabled = false;
-                    addressInput.setAttribute('required', 'required');
-                }
-                
-                // Власний розмір
-                const sizeSelect = addOrderForm.querySelector('[name="size"]');
-                const customAmountDiv = document.getElementById('custom-amount-div');
-                const customAmountInput = addOrderForm.querySelector('[name="custom_amount"]');
-                if (orderData.size === 'Власний') {
-                    customAmountDiv.style.display = 'block';
-                    customAmountInput.required = true;
-                } else {
-                    customAmountDiv.style.display = 'none';
-                    customAmountInput.required = false;
-                    customAmountInput.value = '';
-                }
-                
-                // Відкриваємо модалку
-                const modal = new bootstrap.Modal(document.getElementById('addOrderModal'));
-                modal.show();
-                document.getElementById('order-submit-btn').textContent = 'Зберегти зміни';
-                // --- Заголовок ---
-                const titleSpan = document.getElementById('order-modal-title');
-                if (titleSpan) titleSpan.textContent = 'Редагування замовлення';
+    function populateComposerForm(orderData, orderId) {
+        const flow = subscriptionTypes.includes(orderData.delivery_type) ? 'subscription' : 'order';
+        resetComposerForm(flow, orderData.client_instagram);
+        addOrderForm.setAttribute('data-edit-id', orderId);
+        clientSearch.value = orderData.client_instagram || '';
+        addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
+        recipientPhoneInput.value = orderData.recipient_phone || '';
+        addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
+        addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
+        addressInput.value = orderData.street || '';
+        deliveryMethodSelect.value = orderData.delivery_method || 'courier';
+        deliveryTypeSelect.value = orderData.delivery_type || '';
+        sizeSelect.value = orderData.size || '';
+        customAmountInput.value = orderData.custom_amount || '';
+        addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date || '';
+        addOrderForm.querySelector('[name="delivery_day"]').value = orderData.delivery_day || '';
+        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
+        commentInput.value = orderData.comment || '';
+        preferencesInput.value = orderData.preferences || '';
+        isPickupCheckbox.checked = Boolean(orderData.is_pickup);
 
-                // --- КНОПКА ПРОДОВЖИТИ ПІДПИСКУ ---
-                const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
-                if(['Weekly','Monthly','Bi-weekly'].includes(orderData.delivery_type) && orderData.can_extend_subscription) {
-                    if (extendHeaderBtn) {
-                        extendHeaderBtn.classList.remove('d-none');
-                        extendHeaderBtn.setAttribute('data-order-id', orderId);
-                        extendHeaderBtn.setAttribute('data-client-instagram', orderData.client_instagram);
-                        if (window.bootstrap && bootstrap.Tooltip) {
-                            new bootstrap.Tooltip(extendHeaderBtn);
-                        }
-                    }
-                } else {
-                    if (extendHeaderBtn) extendHeaderBtn.classList.add('d-none');
-                }
-            } catch (error) {
-                alert('Помилка завантаження даних замовлення');
+        togglePickupState();
+        syncCustomAmountState();
+        applyComposerCopy(flow, true);
+
+        if (extendHeaderBtn) {
+            if (flow === 'subscription' && orderData.can_extend_subscription) {
+                extendHeaderBtn.classList.remove('d-none');
+                extendHeaderBtn.setAttribute('data-order-id', orderId);
+                extendHeaderBtn.setAttribute('data-client-instagram', orderData.client_instagram);
+            } else {
+                extendHeaderBtn.classList.add('d-none');
             }
-        });
+        }
+
+        addOrderModal.show();
+    }
+
+    function maybeLaunchComposerFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const compose = params.get('compose');
+        const clientInstagram = params.get('client_instagram') || '';
+
+        if (compose !== 'subscription') {
+            return;
+        }
+
+        openComposer('subscription', clientInstagram);
+        params.delete('compose');
+        params.delete('client_instagram');
+        const nextQuery = params.toString();
+        history.replaceState({}, document.title, `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`);
+    }
+
+    bindClientSearch();
+    togglePickupState();
+    syncCustomAmountState();
+    applyComposerCopy('order', false);
+
+    recipientPhoneInput.addEventListener('focus', function() {
+        if (!recipientPhoneInput.value) {
+            recipientPhoneInput.value = '+38';
+        }
     });
+    recipientPhoneInput.addEventListener('input', sanitizeRecipientPhone);
+    isPickupCheckbox.addEventListener('change', togglePickupState);
+    sizeSelect.addEventListener('change', syncCustomAmountState);
+    addOrderForm.addEventListener('submit', submitComposerForm);
 
-    const commentInput = document.querySelector('textarea[name="comment"]');
-    const preferencesInput = document.querySelector('textarea[name="preferences"]');
     if (commentInput) {
         commentInput.addEventListener('input', function() {
             if (this.value.length > 1000) this.value = this.value.slice(0, 1000);
@@ -798,68 +1003,75 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Логіка продовження підписки
-    const extendModal = new bootstrap.Modal(document.getElementById('extendSubscriptionModal'));
-    let currentOrderId = null;
-    
-    // Обробка кліків по кнопках "Продовжити підписку"
-    document.querySelectorAll('.extend-subscription-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Запобігаємо спрацьовуванню подвійного кліку по рядку
-            currentOrderId = this.getAttribute('data-order-id');
-            const clientInstagram = this.getAttribute('data-client-instagram');
-            
-            document.getElementById('extend-client-instagram').textContent = clientInstagram;
-            extendModal.show();
-        });
-    });
-    
-    // Підтвердження продовження підписки
-    document.getElementById('confirmExtendBtn').addEventListener('click', async function() {
-        const orderId = window.currentOrderId;
-        if (!orderId) return;
-        
-        try {
-            const response = await fetch(`/orders/${orderId}/extend-subscription`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'}
-            });
-            
-            const data = await response.json();
-            
-            if (data.success) {
-                extendModal.hide();
-                showToast('Підписку успішно продовжено!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showToast('Помилка: ' + (data.error || 'Невідома помилка'), 'error');
-            }
-        } catch (error) {
-            alert('Помилка зʼєднання з сервером!');
-        }
-    });
-
-    // --- Логіка продовження підписки з іконки в заголовку ---
-    const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
-    if (extendHeaderBtn) {
-        extendHeaderBtn.addEventListener('click', function() {
-            const orderId = this.getAttribute('data-order-id');
-            const clientInstagram = this.getAttribute('data-client-instagram');
-            document.getElementById('extend-client-instagram').textContent = clientInstagram;
-            window.currentOrderId = orderId;
-            const extendModal = new bootstrap.Modal(document.getElementById('extendSubscriptionModal'));
-            extendModal.show();
+    if (addOrderBtn) {
+        addOrderBtn.addEventListener('click', function() {
+            openComposer('order');
         });
     }
 
-    // --- АВТОСАБМІТ ДЛЯ ФІЛЬТРІВ ---
-    const filterForm = document.getElementById('orders-filter-form');
-    const filterCity = document.getElementById('filter-city');
-    const filterDeliveryType = document.getElementById('filter-delivery-type');
-    const filterSize = document.getElementById('filter-size');
-    const resetFiltersBtn = document.getElementById('reset-filters-btn');
+    document.querySelectorAll('#orders-table tbody tr').forEach(row => {
+        row.addEventListener('dblclick', async function() {
+            const orderId = this.getAttribute('data-order-id');
+            try {
+                const response = await fetch(`/orders/${orderId}/edit`);
+                const orderData = await response.json();
+                populateComposerForm(orderData, orderId);
+            } catch (error) {
+                showToast('Помилка завантаження даних замовлення', 'error');
+            }
+        });
+    });
 
-    // Автосабміт для фільтрів
+    document.querySelectorAll('.extend-subscription-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.currentOrderId = this.getAttribute('data-order-id');
+            if (extendClientInstagram) {
+                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
+            }
+            if (extendModal) {
+                extendModal.show();
+            }
+        });
+    });
+
+    if (confirmExtendBtn) {
+        confirmExtendBtn.addEventListener('click', async function() {
+            const orderId = window.currentOrderId;
+            if (!orderId) return;
+
+            try {
+                const response = await fetch(`/orders/${orderId}/extend-subscription`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    if (extendModal) extendModal.hide();
+                    showToast('Підписку успішно продовжено!', 'success');
+                    setTimeout(() => location.reload(), 900);
+                } else {
+                    showToast(`Помилка: ${data.error || 'Невідома помилка'}`, 'error');
+                }
+            } catch (error) {
+                showToast('Помилка зʼєднання з сервером', 'error');
+            }
+        });
+    }
+
+    if (extendHeaderBtn) {
+        extendHeaderBtn.addEventListener('click', function() {
+            window.currentOrderId = this.getAttribute('data-order-id');
+            if (extendClientInstagram) {
+                extendClientInstagram.textContent = this.getAttribute('data-client-instagram') || '';
+            }
+            if (extendModal) {
+                extendModal.show();
+            }
+        });
+    }
+
     if (filterCity) {
         filterCity.addEventListener('change', function() {
             filterForm.submit();
@@ -875,13 +1087,13 @@ document.addEventListener('DOMContentLoaded', function() {
             filterForm.submit();
         });
     }
-
-    // Кнопка скидання фільтрів
     if (resetFiltersBtn) {
         resetFiltersBtn.addEventListener('click', function() {
             window.location.href = '/orders';
         });
     }
+
+    maybeLaunchComposerFromQuery();
 });
 </script>
 {% endblock %}
