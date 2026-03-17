@@ -6,6 +6,7 @@ from sqlalchemy import func, case, and_, or_
 from . import dashboard_bp
 from app.extensions import db
 from app.models import Delivery, Order, Client
+from app.models.settings import Settings
 from app.models.delivery_route import DeliveryRoute
 from app.services.order_service import SUBSCRIPTION_TYPES
 
@@ -144,6 +145,11 @@ def dashboard_page():
             'days_overdue': days_overdue,
         })
 
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+
     return render_template(
         'dashboard/index.html',
         today=today,
@@ -168,6 +174,10 @@ def dashboard_page():
         routes_with_courier=routes_with_courier,
         routes_without_courier=routes_without_courier,
         ended_subscriptions=ended_subscriptions,
+        cities=cities,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom,
     )
 
 
