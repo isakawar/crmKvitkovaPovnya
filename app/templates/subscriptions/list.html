@@ -196,6 +196,44 @@
 </div>
 {% endif %}
 
+{% set total_pages = (total_count // per_page) + (1 if total_count % per_page else 0) %}
+{% if total_pages > 1 %}
+<nav class="flex items-center justify-center gap-2 mt-8">
+  <a href="?{{ update_query(1) }}"
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == 1 %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-left"></i>
+  </a>
+
+  {% if page > 3 %}
+    <a href="?{{ update_query(1) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">1</a>
+    {% if page > 4 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
+  {% endif %}
+
+  {% for p in range(page-2, page+3) %}
+    {% if 1 <= p <= total_pages %}
+      <a href="?{{ update_query(p) }}"
+         class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm transition-colors {% if p == page %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
+        {{ p }}
+      </a>
+    {% endif %}
+  {% endfor %}
+
+  {% if page < total_pages - 2 %}
+    {% if page < total_pages - 3 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
+    <a href="?{{ update_query(total_pages) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">{{ total_pages }}</a>
+  {% endif %}
+
+  <a href="?{{ update_query(total_pages) }}"
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == total_pages %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-right"></i>
+  </a>
+</nav>
+{% endif %}
+
 <div class="modal fade" id="subscriptionDetailModal" tabindex="-1" aria-labelledby="subscriptionDetailModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-xl">
     <div class="modal-content border-0 rounded-[32px] overflow-hidden">
@@ -582,3 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %}

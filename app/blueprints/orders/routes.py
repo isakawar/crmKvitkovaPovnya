@@ -264,6 +264,52 @@ def order_delete(order_id):
     delete_order(order)
     return jsonify({'success': True})
 
+@orders_bp.route('/orders/deliveries/time', methods=['POST'])
+@login_required
+def update_delivery_times():
+    data = request.get_json() or {}
+    delivery_ids = data.get('delivery_ids') or []
+    time_from = (data.get('time_from') or '').strip()
+    time_to = (data.get('time_to') or '').strip()
+    clear_time = bool(data.get('clear'))
+    delivery_date_raw = (data.get('delivery_date') or '').strip()
+
+    if not isinstance(delivery_ids, list) or not delivery_ids:
+        return jsonify({'success': False, 'error': 'Оберіть доставки для оновлення'}), 400
+    if not time_from and not time_to and not clear_time and not delivery_date_raw:
+        return jsonify({'success': False, 'error': 'Вкажіть час доставки'}), 400
+
+    def parse_time(value):
+        return datetime.strptime(value, '%H:%M').time()
+
+    try:
+        parsed_from = parse_time(time_from) if time_from else None
+        parsed_to = parse_time(time_to) if time_to else None
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Невірний формат часу. Використовуйте HH:MM'}), 400
+
+    if parsed_from and parsed_to and parsed_from > parsed_to:
+        return jsonify({'success': False, 'error': 'Час "з" має бути меншим за час "до"'}), 400
+
+    delivery_date = None
+    if delivery_date_raw:
+        try:
+            delivery_date = datetime.strptime(delivery_date_raw, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Невірний формат дати. Використовуйте YYYY-MM-DD'}), 400
+
+    deliveries = Delivery.query.filter(Delivery.id.in_(delivery_ids)).all()
+    if not deliveries:
+        return jsonify({'success': False, 'error': 'Доставки не знайдені'}), 404
+
+    for delivery in deliveries:
+        delivery.time_from = None if clear_time else (time_from or None)
+        delivery.time_to = None if clear_time else (time_to or None)
+        if delivery_date:
+            delivery.delivery_date = delivery_date
+    db.session.commit()
+    return jsonify({'success': True, 'updated': len(deliveries)})
+
 @orders_bp.route('/clients/search', methods=['GET'])
 @login_required
 def search_clients():
@@ -733,6 +779,8 @@ def subscriptions_list():
     search_query = request.args.get('q', '').strip()
     city_filter = request.args.get('city', '').strip()
     type_filter = request.args.get('type', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = 34
 
     data = []
     for order in subscription_orders:
@@ -758,6 +806,10 @@ def subscriptions_list():
 
     active_count = sum(1 for s in data if s['completed'] < s['total'])
     completed_count = sum(1 for s in data if s['total'] > 0 and s['completed'] >= s['total'])
+    total_count = len(data)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    data_page = data[start_idx:end_idx]
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
@@ -765,10 +817,12 @@ def subscriptions_list():
 
     return render_template(
         'subscriptions/list.html',
-        subscriptions=data,
+        subscriptions=data_page,
         active_count=active_count,
         completed_count=completed_count,
-        total_count=len(data),
+        total_count=total_count,
+        per_page=per_page,
+        page=page,
         cities=cities,
         search_query=search_query,
         city_filter=city_filter,

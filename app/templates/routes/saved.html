@@ -295,7 +295,7 @@
 
   .route-ops-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
 
@@ -304,13 +304,51 @@
     overflow: hidden;
   }
 
+  .route-ops-card--collapsible {
+    border: 1px solid #f1f5f9;
+    background: #fff;
+  }
+
+  .route-ops-summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .route-ops-summary::-webkit-details-marker {
+    display: none;
+  }
+
   .route-ops-head {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.65rem;
     padding: 1rem 1.2rem;
     border-bottom: 1px solid #f1f5f9;
     background: #fafaf9;
+  }
+
+  .route-ops-head-main {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .route-ops-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #292524;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  details[open] .route-ops-toggle {
+    transform: rotate(180deg);
   }
 
   .route-ops-title {
@@ -728,14 +766,19 @@
   {% if nova_poshta_deliveries or pickup_deliveries %}
   <section class="route-ops-grid">
     {% if nova_poshta_deliveries %}
-    <article class="route-ops-card">
-      <div class="route-ops-head">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><i class="bi bi-truck"></i></span>
-        <div>
-          <p class="route-ops-title">Нова Пошта</p>
-          <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ nova_poshta_deliveries|length }} доставок</p>
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><i class="bi bi-truck"></i></span>
+            <div>
+              <p class="route-ops-title">Нова Пошта</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ nova_poshta_deliveries|length }} доставок</p>
+            </div>
+          </div>
+          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
         </div>
-      </div>
+      </summary>
       <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
         <table class="route-table">
           <thead>
@@ -757,18 +800,23 @@
           </tbody>
         </table>
       </div>
-    </article>
+    </details>
     {% endif %}
 
     {% if pickup_deliveries %}
-    <article class="route-ops-card">
-      <div class="route-ops-head">
-        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-500"><i class="bi bi-bag-check"></i></span>
-        <div>
-          <p class="route-ops-title">Самовивіз</p>
-          <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ pickup_deliveries|length }} доставок</p>
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-500"><i class="bi bi-bag-check"></i></span>
+            <div>
+              <p class="route-ops-title">Самовивіз</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ pickup_deliveries|length }} доставок</p>
+            </div>
+          </div>
+          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
         </div>
-      </div>
+      </summary>
       <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
         <table class="route-table">
           <thead>
@@ -790,7 +838,7 @@
           </tbody>
         </table>
       </div>
-    </article>
+    </details>
     {% endif %}
   </section>
   {% endif %}

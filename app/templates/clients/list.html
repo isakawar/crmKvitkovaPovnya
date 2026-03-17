@@ -67,7 +67,7 @@
         <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
           <i class="bi {{ icons[client.id % icons|length] }} text-stone-500 text-sm"></i>
         </div>
-        <span class="font-medium text-stone-900 text-sm">{{ client.instagram }}</span>
+        <span class="font-medium text-stone-900 text-sm break-all">{{ client.instagram }}</span>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if client.id in active_sub_client_ids else 'bg-stone-300' }}"
            title="{{ 'Є активна підписка' if client.id in active_sub_client_ids else 'Без підписки' }}">
@@ -122,37 +122,40 @@
 <!-- Pagination -->
 {% set total_pages = (clients_count // 30) + (1 if clients_count % 30 else 0) %}
 {% if total_pages > 1 %}
-<div class="flex items-center justify-start gap-2 mt-8">
+<nav class="flex items-center justify-center gap-2 mt-8">
   <a href="?{{ update_query(1) }}"
-     class="px-3 py-1.5 text-sm rounded-lg border transition-colors {% if page == 1 %}border-stone-100 text-stone-300 pointer-events-none{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
-    &laquo;
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == 1 %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-left"></i>
   </a>
 
   {% if page > 3 %}
-    <a href="?{{ update_query(1) }}" class="px-3 py-1.5 text-sm rounded-lg border border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200 transition-colors">1</a>
-    {% if page > 4 %}<span class="px-2 text-stone-300">…</span>{% endif %}
+    <a href="?{{ update_query(1) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">1</a>
+    {% if page > 4 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
   {% endif %}
 
   {% for p in range(page-2, page+3) %}
     {% if 1 <= p <= total_pages %}
       <a href="?{{ update_query(p) }}"
-         class="px-3 py-1.5 text-sm rounded-lg border transition-colors
-                {% if p == page %}bg-stone-900 text-white border-stone-900{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
+         class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm transition-colors {% if p == page %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
         {{ p }}
       </a>
     {% endif %}
   {% endfor %}
 
   {% if page < total_pages - 2 %}
-    {% if page < total_pages - 3 %}<span class="px-2 text-stone-300">…</span>{% endif %}
-    <a href="?{{ update_query(total_pages) }}" class="px-3 py-1.5 text-sm rounded-lg border border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200 transition-colors">{{ total_pages }}</a>
+    {% if page < total_pages - 3 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
+    <a href="?{{ update_query(total_pages) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">{{ total_pages }}</a>
   {% endif %}
 
   <a href="?{{ update_query(total_pages) }}"
-     class="px-3 py-1.5 text-sm rounded-lg border transition-colors {% if page == total_pages %}border-stone-100 text-stone-300 pointer-events-none{% else %}border-stone-200 text-stone-600 hover:bg-amber-50 hover:border-amber-200{% endif %}">
-    &raquo;
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == total_pages %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-right"></i>
   </a>
-</div>
+</nav>
 {% endif %}
 
 {% include 'clients/modal.html' %}

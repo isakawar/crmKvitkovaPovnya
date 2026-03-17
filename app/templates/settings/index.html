@@ -1,4 +1,5 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
 
 {% macro settings_modal(id, label, subtitle, endpoint, placeholder) %}
 <div class="modal fade settings-modal" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
@@ -214,6 +215,232 @@
     border: 1px solid #e7e5e4;
     color: #78716c;
     background: #fff;
+  }
+
+  .settings-couriers {
+    margin-top: 1.6rem;
+    border-radius: 2rem;
+    border: 1px solid #efe9df;
+    background: #fff;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    padding: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+
+  .settings-couriers__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .settings-couriers__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid #fde7c2;
+    background: #fff7ed;
+    color: #c2410c;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .settings-couriers__title {
+    margin: 0.65rem 0 0.35rem;
+    font-size: 1.65rem;
+    font-weight: 700;
+    color: #1c1917;
+  }
+
+  .settings-couriers__text {
+    margin: 0;
+    color: #78716c;
+    max-width: 28rem;
+  }
+
+  .settings-couriers__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .settings-couriers__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fafaf9;
+    font-size: 0.75rem;
+    color: #57534e;
+    font-weight: 600;
+  }
+
+  .settings-couriers__add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    border-radius: 999px;
+    border: 1px solid #1c1917;
+    background: #1c1917;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .settings-couriers__add:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.16);
+  }
+
+  .settings-couriers__table-wrap {
+    border-radius: 1.5rem;
+    border: 1px solid #f1f5f9;
+    overflow: hidden;
+  }
+
+  .settings-couriers__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .settings-couriers__table th {
+    text-align: left;
+    padding: 0.9rem 1rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #a8a29e;
+    background: #fafaf9;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .settings-couriers__table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    color: #292524;
+    vertical-align: top;
+  }
+
+  .settings-couriers__table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .settings-couriers__name {
+    font-weight: 600;
+    color: #1c1917;
+  }
+
+  .settings-couriers__phone {
+    color: #78716c;
+    font-size: 0.9rem;
+  }
+
+  .settings-couriers__status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+
+  .settings-couriers__status--active {
+    color: #047857;
+    background: #ecfdf3;
+    border-color: #bbf7d0;
+  }
+
+  .settings-couriers__status--inactive {
+    color: #78716c;
+    background: #f5f5f4;
+    border-color: #e7e5e4;
+  }
+
+  .settings-couriers__telegram {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: #57534e;
+  }
+
+  .settings-couriers__telegram small {
+    color: #a8a29e;
+  }
+
+  .settings-couriers__actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+
+  .settings-couriers__action {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.9rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .settings-couriers__action:hover {
+    border-color: #1c1917;
+    color: #1c1917;
+  }
+
+  .settings-couriers__action--danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+  }
+
+  .settings-couriers__empty {
+    border-radius: 1.5rem;
+    border: 1px dashed #e7e5e4;
+    padding: 2rem;
+    text-align: center;
+    color: #a8a29e;
+  }
+
+  .settings-couriers__empty strong {
+    display: block;
+    color: #292524;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .settings-couriers__form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .settings-couriers__form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  .settings-couriers__form-actions .settings-modal__footer-btn {
+    width: auto;
   }
 
   .settings-modal .modal-dialog {
@@ -683,13 +910,191 @@
       </div>
     </button>
   </section>
+
+  <section class="settings-couriers" id="couriers">
+    <div class="settings-couriers__header">
+      <div>
+        <span class="settings-couriers__label"><i class="bi bi-person-badge"></i> Команда</span>
+        <h2 class="settings-couriers__title">Кур'єри</h2>
+        <p class="settings-couriers__text">Додавайте кур'єрів, оновлюйте статус активності та контролюйте Telegram-підключення.</p>
+      </div>
+      <div class="settings-couriers__meta">
+        <span class="settings-couriers__chip">Всього: {{ courier_stats.total }}</span>
+        <span class="settings-couriers__chip">Активні: {{ courier_stats.active }}</span>
+        <span class="settings-couriers__chip">Telegram: {{ courier_stats.telegram }}</span>
+        <button type="button" class="settings-couriers__add" data-bs-toggle="modal" data-bs-target="#courierAddModal">
+          <i class="bi bi-plus-lg"></i>
+          Додати кур'єра
+        </button>
+      </div>
+    </div>
+
+    {% if couriers %}
+    <div class="settings-couriers__table-wrap">
+      <table class="settings-couriers__table">
+        <thead>
+          <tr>
+            <th>Кур'єр</th>
+            <th>Телефон</th>
+            <th>Статус</th>
+            <th>Telegram</th>
+            <th>Дії</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for courier in couriers %}
+          <tr data-courier-id="{{ courier.id }}">
+            <td>
+              <div class="settings-couriers__name">{{ courier.name }}</div>
+              {% if not courier.active %}
+              <div class="settings-couriers__phone">Неактивний у маршрутах</div>
+              {% endif %}
+            </td>
+            <td class="settings-couriers__phone">{{ courier.phone }}</td>
+            <td>
+              <span class="settings-couriers__status {{ 'settings-couriers__status--active' if courier.active else 'settings-couriers__status--inactive' }}">
+                {{ 'Активний' if courier.active else 'Неактивний' }}
+              </span>
+            </td>
+            <td>
+              <div class="settings-couriers__telegram">
+                {% if courier.telegram_registered %}
+                  <span>Підключено</span>
+                  {% if courier.telegram_username %}
+                  <small>@{{ courier.telegram_username }}</small>
+                  {% endif %}
+                {% else %}
+                  <span>Не підключено</span>
+                  <small>Очікує активацію</small>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <div class="settings-couriers__actions">
+                <button class="settings-couriers__action js-courier-edit"
+                        data-courier-id="{{ courier.id }}"
+                        data-courier-name="{{ courier.name }}"
+                        data-courier-phone="{{ courier.phone }}"
+                        title="Редагувати">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="settings-couriers__action js-courier-toggle"
+                        data-courier-id="{{ courier.id }}"
+                        title="{{ 'Деактивувати' if courier.active else 'Активувати' }}">
+                  <i class="bi bi-{{ 'pause' if courier.active else 'play' }}"></i>
+                </button>
+                {% if courier.telegram_registered %}
+                <button class="settings-couriers__action js-courier-reset"
+                        data-courier-id="{{ courier.id }}"
+                        data-courier-name="{{ courier.name }}"
+                        title="Скинути Telegram">
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+                {% endif %}
+                <button class="settings-couriers__action settings-couriers__action--danger js-courier-delete"
+                        data-courier-id="{{ courier.id }}"
+                        data-courier-name="{{ courier.name }}"
+                        title="Видалити">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="settings-couriers__empty">
+      <strong>Кур'єрів ще немає</strong>
+      Додайте першого кур'єра, щоб CRM могла призначати маршрути.
+      <div style="margin-top: 1rem;">
+        <button type="button" class="settings-couriers__add" data-bs-toggle="modal" data-bs-target="#courierAddModal">
+          <i class="bi bi-plus-lg"></i>
+          Додати кур'єра
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </section>
 </div>
+
+{{ render_toast() }}
 
 {{ settings_modal('citiesModal', 'Міста', 'Підтримуйте актуальний перелік міст, який використовують замовлення, підписки та маршрути.', '/settings/cities', 'Наприклад, Київ') }}
 {{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
 {{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
 {{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
+
+<div class="modal fade settings-modal" id="courierAddModal" tabindex="-1" aria-labelledby="courierAddModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Команда</span>
+          <h2 class="settings-modal__title" id="courierAddModalLabel">Додати кур'єра</h2>
+          <p class="settings-modal__subtitle">Заповніть ім'я та телефон кур'єра, щоб він з'явився в маршрутах.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="courierAddForm" class="settings-couriers__form">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Ім'я кур'єра *</span>
+            <input type="text" class="settings-modal__input" id="courierName" name="name" required>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Телефон *</span>
+            <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+          </label>
+          <div class="settings-error" id="courierAddError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions">
+            <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Додати кур'єра</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade settings-modal" id="courierEditModal" tabindex="-1" aria-labelledby="courierEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Команда</span>
+          <h2 class="settings-modal__title" id="courierEditModalLabel">Редагувати кур'єра</h2>
+          <p class="settings-modal__subtitle">Оновіть контактні дані кур'єра або виправте телефон.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="courierEditForm" class="settings-couriers__form">
+          <input type="hidden" id="courierEditId">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Ім'я кур'єра *</span>
+            <input type="text" class="settings-modal__input" id="courierEditName" name="name" required>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Телефон *</span>
+            <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+          </label>
+          <div class="settings-error" id="courierEditError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions">
+            <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Зберегти</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade settings-modal settings-modal--wide" id="pricesModal" tabindex="-1" aria-labelledby="pricesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -733,6 +1138,42 @@ function escapeHtml(value) {
 
 function renderSettingsPlaceholder(message) {
     return `<li class="settings-modal__placeholder">${escapeHtml(message)}</li>`;
+}
+
+function applyPhoneMask(input) {
+    if (!input) return;
+    input.addEventListener('focus', function() {
+        if (!this.value) this.value = '+38';
+    });
+    input.addEventListener('input', function() {
+        let digits = this.value.replace(/\D/g, '');
+        if (digits.startsWith('380')) {
+            digits = digits.slice(0, 12);
+        } else if (digits.startsWith('38')) {
+            digits = digits.slice(0, 12);
+        } else if (digits.startsWith('0')) {
+            digits = '38' + digits.slice(0, 10);
+        } else {
+            digits = digits.slice(0, 12);
+        }
+        this.value = '+' + digits;
+    });
+    input.addEventListener('keydown', function(e) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 3) {
+            e.preventDefault();
+        }
+    });
+}
+
+function setCourierError(target, message) {
+    if (!target) return;
+    if (message) {
+        target.textContent = message;
+        target.hidden = false;
+    } else {
+        target.textContent = '';
+        target.hidden = true;
+    }
 }
 
 function loadPrices() {
@@ -857,6 +1298,176 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    const addModal = document.getElementById('courierAddModal');
+    const editModal = document.getElementById('courierEditModal');
+    const addForm = document.getElementById('courierAddForm');
+    const editForm = document.getElementById('courierEditForm');
+    const addError = document.getElementById('courierAddError');
+    const editError = document.getElementById('courierEditError');
+
+    applyPhoneMask(document.getElementById('courierPhone'));
+    applyPhoneMask(document.getElementById('courierEditPhone'));
+
+    if (addModal) {
+        addModal.addEventListener('show.bs.modal', function() {
+            if (addForm) addForm.reset();
+            setCourierError(addError, '');
+        });
+    }
+
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function() {
+            setCourierError(editError, '');
+        });
+    }
+
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            setCourierError(addError, '');
+
+            const formData = new FormData(addForm);
+            const data = {
+                name: formData.get('name'),
+                phone: formData.get('phone')
+            };
+
+            fetch('/couriers/new', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Кур\'єра додано', 'success');
+                    bootstrap.Modal.getInstance(addModal).hide();
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    setCourierError(addError, data.error || 'Помилка створення');
+                }
+            })
+            .catch(() => setCourierError(addError, 'Помилка мережі'));
+        });
+    }
+
+    document.querySelectorAll('.js-courier-edit').forEach(button => {
+        button.addEventListener('click', function() {
+            const courierId = this.dataset.courierId;
+            const courierName = this.dataset.courierName;
+            const courierPhone = this.dataset.courierPhone;
+
+            document.getElementById('courierEditId').value = courierId;
+            document.getElementById('courierEditName').value = courierName;
+            document.getElementById('courierEditPhone').value = courierPhone;
+            new bootstrap.Modal(editModal).show();
+        });
+    });
+
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            setCourierError(editError, '');
+
+            const courierId = document.getElementById('courierEditId').value;
+            const formData = new FormData(editForm);
+            const data = {
+                name: formData.get('name'),
+                phone: formData.get('phone')
+            };
+
+            fetch(`/couriers/${courierId}/edit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Дані оновлено', 'success');
+                    bootstrap.Modal.getInstance(editModal).hide();
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    setCourierError(editError, data.error || 'Помилка оновлення');
+                }
+            })
+            .catch(() => setCourierError(editError, 'Помилка мережі'));
+        });
+    }
+
+    document.querySelectorAll('.js-courier-toggle').forEach(button => {
+        button.addEventListener('click', function() {
+            const courierId = this.dataset.courierId;
+            fetch(`/couriers/${courierId}/toggle`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Статус оновлено', 'success');
+                    setTimeout(() => window.location.reload(), 500);
+                } else {
+                    showToast(data.error || 'Помилка оновлення', 'error');
+                }
+            })
+            .catch(() => showToast('Помилка мережі', 'error'));
+        });
+    });
+
+    document.querySelectorAll('.js-courier-reset').forEach(button => {
+        button.addEventListener('click', function() {
+            const courierId = this.dataset.courierId;
+            const courierName = this.dataset.courierName;
+
+            if (!confirm(`Скинути Telegram прив'язку для "${courierName}"?`)) {
+                return;
+            }
+
+            fetch(`/couriers/${courierId}/reset-telegram`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Telegram прив\'язку скинуто', 'success');
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    showToast(data.error || 'Помилка скидання', 'error');
+                }
+            })
+            .catch(() => showToast('Помилка мережі', 'error'));
+        });
+    });
+
+    document.querySelectorAll('.js-courier-delete').forEach(button => {
+        button.addEventListener('click', function() {
+            const courierId = this.dataset.courierId;
+            const courierName = this.dataset.courierName;
+
+            if (!confirm(`Ви впевнені, що хочете видалити кур'єра "${courierName}"?`)) {
+                return;
+            }
+
+            fetch(`/couriers/${courierId}/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Кур\'єра видалено', 'success');
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    showToast(data.error || 'Помилка видалення', 'error');
+                }
+            })
+            .catch(() => showToast('Помилка мережі', 'error'));
+        });
+    });
 });
 </script>
+{{ toast_script() }}
 {% endblock %}

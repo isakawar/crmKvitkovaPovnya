@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
 from app.models import Settings, Price
+from app.models.courier import Courier
 from app.extensions import db
 from app.utils.decorators import permission_required
 
@@ -11,7 +12,20 @@ bp = Blueprint('settings', __name__)
 @permission_required('view_settings')
 def settings_page():
     settings = Settings.query.first()
-    return render_template('settings/index.html', settings=settings)
+    couriers = Courier.query.order_by(Courier.name).all()
+    active_couriers = [c for c in couriers if c.active]
+    telegram_couriers = [c for c in couriers if c.telegram_registered]
+    courier_stats = {
+        'total': len(couriers),
+        'active': len(active_couriers),
+        'telegram': len(telegram_couriers),
+    }
+    return render_template(
+        'settings/index.html',
+        settings=settings,
+        couriers=couriers,
+        courier_stats=courier_stats
+    )
 
 @bp.route('/settings/update', methods=['POST'])
 @login_required
