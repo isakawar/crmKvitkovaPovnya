@@ -6,6 +6,7 @@ from sqlalchemy import func, case, and_, or_
 from . import dashboard_bp
 from app.extensions import db
 from app.models import Delivery, Order, Client
+from app.models.delivery_route import DeliveryRoute
 from app.services.order_service import SUBSCRIPTION_TYPES
 
 
@@ -35,6 +36,7 @@ def dashboard_page():
     delivered_total = totals_row[1] or 0
     in_couriers_total = totals_row[2] or 0
     unassigned_total = totals_row[3] or 0
+    pending_total = in_couriers_total + unassigned_total
 
     pickup_today = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == today,
@@ -58,6 +60,13 @@ def dashboard_page():
         Delivery.status != 'Скасовано'
     ).scalar() or 0
 
+    courier_today = db.session.query(func.count(Delivery.id)).filter(
+        Delivery.delivery_date == today,
+        Delivery.is_pickup.is_(False),
+        Delivery.delivery_method != 'nova_poshta',
+        Delivery.status != 'Скасовано'
+    ).scalar() or 0
+
     new_orders_today = db.session.query(func.count(Order.id)).filter(
         func.date(Order.created_at) == today
     ).scalar() or 0
@@ -69,6 +78,32 @@ def dashboard_page():
         Order.subscription_followup_status == 'extended',
         func.date(Order.subscription_followup_at) == today
     ).scalar() or 0
+    one_time_today = max(new_orders_today - new_subscriptions_today, 0)
+
+    trend_start = today - timedelta(days=6)
+    trend_rows = db.session.query(
+        Delivery.delivery_date,
+        func.count(Delivery.id)
+    ).filter(
+        Delivery.delivery_date >= trend_start,
+        Delivery.delivery_date <= today,
+        Delivery.status != 'Скасовано'
+    ).group_by(Delivery.delivery_date).all()
+    trend_map = {row[0]: row[1] for row in trend_rows}
+    deliveries_trend = []
+    for i in range(7):
+        day = trend_start + timedelta(days=i)
+        deliveries_trend.append({'date': day, 'count': trend_map.get(day, 0)})
+    deliveries_trend_max = max([item['count'] for item in deliveries_trend] or [0])
+
+    routes_total = db.session.query(func.count(DeliveryRoute.id)).filter(
+        DeliveryRoute.route_date == today
+    ).scalar() or 0
+    routes_with_courier = db.session.query(func.count(DeliveryRoute.id)).filter(
+        DeliveryRoute.route_date == today,
+        DeliveryRoute.courier_id.isnot(None)
+    ).scalar() or 0
+    routes_without_courier = max(routes_total - routes_with_courier, 0)
 
     last_delivery_subq = (
         db.session.query(
@@ -116,14 +151,22 @@ def dashboard_page():
         delivered_total=delivered_total,
         in_couriers_total=in_couriers_total,
         unassigned_total=unassigned_total,
+        pending_total=pending_total,
         deliveries_last_week=deliveries_last_week,
         pickup_today=pickup_today,
         pickup_last_week=pickup_last_week,
         nova_today=nova_today,
         nova_last_week=nova_last_week,
+        courier_today=courier_today,
         new_orders_today=new_orders_today,
         new_subscriptions_today=new_subscriptions_today,
         extended_today=extended_today,
+        one_time_today=one_time_today,
+        deliveries_trend=deliveries_trend,
+        deliveries_trend_max=deliveries_trend_max,
+        routes_total=routes_total,
+        routes_with_courier=routes_with_courier,
+        routes_without_courier=routes_without_courier,
         ended_subscriptions=ended_subscriptions,
     )
 

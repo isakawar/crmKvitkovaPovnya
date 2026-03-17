@@ -307,6 +307,10 @@ def update_delivery_times():
         delivery.time_to = None if clear_time else (time_to or None)
         if delivery_date:
             delivery.delivery_date = delivery_date
+            # If delivery was part of a route, remove it and reset status
+            if delivery.status == 'Розподілено':
+                RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+                delivery.status = 'Очікує'
     db.session.commit()
     return jsonify({'success': True, 'updated': len(deliveries)})
 

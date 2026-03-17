@@ -232,6 +232,15 @@ def assign_and_send_route(route_id):
 @login_required
 def delete_route(route_id):
     route = DeliveryRoute.query.get_or_404(route_id)
+
+    # Reset delivery statuses back to 'Очікує' before deleting
+    delivery_ids = [stop.delivery_id for stop in route.stops]
+    if delivery_ids:
+        from app.models.delivery import Delivery
+        Delivery.query.filter(Delivery.id.in_(delivery_ids)).update(
+            {'status': 'Очікує'}, synchronize_session=False
+        )
+
     db.session.delete(route)
     db.session.commit()
     flash('Маршрут видалено', 'success')

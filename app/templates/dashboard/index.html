@@ -105,6 +105,132 @@
     background: linear-gradient(90deg, #0f766e, #34d399);
   }
 
+  .dash-sparkline {
+    margin-top: 0.6rem;
+    height: 42px;
+  }
+
+  .dash-sparkline svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .dash-sparkline polyline {
+    fill: none;
+    stroke: #f97316;
+    stroke-width: 2;
+  }
+
+  .dash-sparkline circle {
+    fill: #f97316;
+  }
+
+  .dash-donut {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border-radius: 999px;
+    background: conic-gradient(#0f766e var(--courier-end, 0%), #f97316 var(--courier-end, 0%) var(--nova-end, 0%), #facc15 var(--nova-end, 0%) 100%);
+    margin-left: auto;
+  }
+
+  .dash-donut::after {
+    content: '';
+    position: absolute;
+    inset: 14px;
+    border-radius: 999px;
+    background: #fff;
+    z-index: 1;
+  }
+
+  .dash-donut-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    font-weight: 700;
+    color: #1c1917;
+    font-size: 1rem;
+    z-index: 2;
+  }
+
+  .dash-stack {
+    margin-top: 0.8rem;
+    height: 0.7rem;
+    border-radius: 999px;
+    background: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+  }
+
+  .dash-stack span {
+    height: 100%;
+    display: block;
+  }
+
+  .dash-stack .is-delivered {
+    background: #10b981;
+  }
+
+  .dash-stack .is-couriers {
+    background: #60a5fa;
+  }
+
+  .dash-stack .is-unassigned {
+    background: #f59e0b;
+  }
+
+  .dash-mini-bars {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-end;
+    height: 52px;
+    margin-top: 0.6rem;
+  }
+
+  .dash-mini-bar {
+    flex: 1;
+    border-radius: 999px;
+    background: #fde68a;
+    min-height: 6px;
+  }
+
+  .dash-mini-bar.is-today {
+    background: #f97316;
+  }
+
+  .dash-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.6rem;
+  }
+
+  .dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fafaf9;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #57534e;
+  }
+
+  .dash-ended-card--warn {
+    border-color: #fde68a;
+    background: #fffbeb;
+  }
+
+  .dash-ended-card--danger {
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+
   .dash-panel {
     display: grid;
     gap: 1.4rem;
@@ -263,6 +389,21 @@
     {% set delivered_ratio = (delivered_total / deliveries_total * 100) if deliveries_total else 0 %}
     {% set deliveries_last_week = deliveries_last_week | default(0) %}
     {% set deliveries_delta = deliveries_total - deliveries_last_week %}
+    {% set trend_max = deliveries_trend_max if deliveries_trend_max else 1 %}
+    {% set trend_points = [] %}
+    {% set trend_count = deliveries_trend|length %}
+    {% set trend_step = 120 / (trend_count - 1) if trend_count > 1 else 0 %}
+    {% set last_x = 0 %}
+    {% set last_y = 32 %}
+    {% for item in deliveries_trend %}
+      {% set x = (loop.index0 * trend_step) %}
+      {% set y = 32 - (item.count / trend_max * 28) %}
+      {% set _ = trend_points.append(x|round(1) ~ ',' ~ y|round(1)) %}
+      {% if loop.last %}
+        {% set last_x = x %}
+        {% set last_y = y %}
+      {% endif %}
+    {% endfor %}
     <div class="dash-card">
       <p class="dash-card__label">Доставок сьогодні</p>
       <p class="dash-card__value">{{ deliveries_total }}</p>
@@ -273,6 +414,12 @@
         </span>
       </div>
       <div class="dash-progress"><span style="width: {{ delivered_ratio|round(0, 'floor') }}%"></span></div>
+      <div class="dash-sparkline">
+        <svg viewBox="0 0 120 36" preserveAspectRatio="none">
+          <polyline points="{{ trend_points|join(' ') }}"></polyline>
+          <circle cx="{{ last_x|round(1) }}" cy="{{ last_y|round(1) }}" r="2.4"></circle>
+        </svg>
+      </div>
     </div>
     <div class="dash-card">
       <p class="dash-card__label">Ще в кур'єрів</p>
@@ -288,48 +435,105 @@
       <p class="dash-card__label">Виконано сьогодні</p>
       <p class="dash-card__value">{{ delivered_total }}</p>
       <p class="dash-card__hint">Поточний прогрес</p>
+      {% set pending_total = pending_total | default(0) %}
+      {% set status_total = (delivered_total + pending_total) if (delivered_total + pending_total) else 1 %}
+      <div class="dash-stack">
+        <span class="is-delivered" style="width: {{ (delivered_total / status_total * 100)|round(0, 'floor') }}%"></span>
+        <span class="is-couriers" style="width: {{ (in_couriers_total / status_total * 100)|round(0, 'floor') }}%"></span>
+        <span class="is-unassigned" style="width: {{ (unassigned_total / status_total * 100)|round(0, 'floor') }}%"></span>
+      </div>
     </div>
   </section>
 
   <section class="dash-panel">
+    {% set donut_total = courier_today + nova_today + pickup_today %}
+    {% set courier_pct = (courier_today / donut_total * 100) if donut_total else 0 %}
+    {% set nova_pct = (nova_today / donut_total * 100) if donut_total else 0 %}
+    {% set pickup_pct = (pickup_today / donut_total * 100) if donut_total else 0 %}
+    {% set courier_end = courier_pct %}
+    {% set nova_end = courier_pct + nova_pct %}
+    <div class="dash-card">
+      <p class="dash-card__label">Формати доставки</p>
+      <div class="flex items-center gap-4">
+        <div class="dash-donut" style="--courier-end: {{ courier_end|round(1) }}%; --nova-end: {{ nova_end|round(1) }}%;">
+          <div class="dash-donut-label">
+            {{ donut_total }}
+            <span class="dash-card__hint">всього</span>
+          </div>
+        </div>
+        <div class="dash-chip-row">
+          <span class="dash-chip">Курʼєр: {{ courier_today }}</span>
+          <span class="dash-chip">Нова Пошта: {{ nova_today }}</span>
+          <span class="dash-chip">Самовивіз: {{ pickup_today }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="dash-card">
+      <p class="dash-card__label">Статуси доставок</p>
+      <p class="dash-card__value">{{ delivered_total }}</p>
+      <p class="dash-card__hint">Доставлено</p>
+      <div class="dash-chip-row">
+        <span class="dash-chip">В курʼєрів: {{ in_couriers_total }}</span>
+        <span class="dash-chip">Не розподілено: {{ unassigned_total }}</span>
+      </div>
+    </div>
+    <div class="dash-card">
+      <p class="dash-card__label">Маршрути сьогодні</p>
+      <p class="dash-card__value">{{ routes_total }}</p>
+      <p class="dash-card__hint">Збережені маршрути</p>
+      <div class="dash-chip-row">
+        <span class="dash-chip">З курʼєром: {{ routes_with_courier }}</span>
+        <span class="dash-chip">Без курʼєра: {{ routes_without_courier }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="dash-panel">
+    {% set pickup_delta = pickup_today - pickup_last_week %}
+    {% set pickup_max = [pickup_today, pickup_last_week]|max %}
+    {% set pickup_today_h = (pickup_today / pickup_max * 100) if pickup_max else 0 %}
+    {% set pickup_last_h = (pickup_last_week / pickup_max * 100) if pickup_max else 0 %}
     <div class="dash-card">
       <p class="dash-card__label">Самовивіз</p>
+      <p class="dash-card__value">{{ pickup_today }}</p>
       <div class="dash-compare">
-        <div class="dash-compare__metric">
-          <p class="dash-card__value">{{ pickup_today }}</p>
-          <p class="dash-card__hint">Сьогодні</p>
-        </div>
-        {% set pickup_delta = pickup_today - pickup_last_week %}
+        <p class="dash-card__hint">Сьогодні</p>
         <span class="dash-compare__delta {{ 'dash-compare__delta--up' if pickup_delta >= 0 else 'dash-compare__delta--down' }}">
-          {{ '+' if pickup_delta >= 0 else '' }}{{ pickup_delta }} vs минулий тиждень
+          {{ '+' if pickup_delta >= 0 else '' }}{{ pickup_delta }} vs тиждень
         </span>
       </div>
-      <p class="dash-card__hint">Минулого тижня: {{ pickup_last_week }}</p>
+      <div class="dash-mini-bars">
+        <div class="dash-mini-bar" style="height: {{ pickup_last_h|round(0, 'floor') }}%"></div>
+        <div class="dash-mini-bar is-today" style="height: {{ pickup_today_h|round(0, 'floor') }}%"></div>
+      </div>
     </div>
+    {% set nova_delta = nova_today - nova_last_week %}
+    {% set nova_max = [nova_today, nova_last_week]|max %}
+    {% set nova_today_h = (nova_today / nova_max * 100) if nova_max else 0 %}
+    {% set nova_last_h = (nova_last_week / nova_max * 100) if nova_max else 0 %}
     <div class="dash-card">
-      <p class="dash-card__label">Нова Пошта</p>
+      <p class="dash-card__label">Нова пошта</p>
+      <p class="dash-card__value">{{ nova_today }}</p>
       <div class="dash-compare">
-        <div class="dash-compare__metric">
-          <p class="dash-card__value">{{ nova_today }}</p>
-          <p class="dash-card__hint">Сьогодні</p>
-        </div>
-        {% set nova_delta = nova_today - nova_last_week %}
+        <p class="dash-card__hint">Сьогодні</p>
         <span class="dash-compare__delta {{ 'dash-compare__delta--up' if nova_delta >= 0 else 'dash-compare__delta--down' }}">
-          {{ '+' if nova_delta >= 0 else '' }}{{ nova_delta }} vs минулий тиждень
+          {{ '+' if nova_delta >= 0 else '' }}{{ nova_delta }} vs тиждень
         </span>
       </div>
-      <p class="dash-card__hint">Минулого тижня: {{ nova_last_week }}</p>
+      <div class="dash-mini-bars">
+        <div class="dash-mini-bar" style="height: {{ nova_last_h|round(0, 'floor') }}%"></div>
+        <div class="dash-mini-bar is-today" style="height: {{ nova_today_h|round(0, 'floor') }}%"></div>
+      </div>
     </div>
     <div class="dash-card">
-      <p class="dash-card__label">Нові замовлення</p>
+      <p class="dash-card__label">Нові за сьогодні</p>
       <p class="dash-card__value">{{ new_orders_today }}</p>
-      <p class="dash-card__hint">Усі сценарії за сьогодні</p>
-    </div>
-    <div class="dash-card">
-      <p class="dash-card__label">Підписки за сьогодні</p>
-      <p class="dash-card__value">{{ new_subscriptions_today }}</p>
-      <p class="dash-card__hint">Нові цикли: {{ new_subscriptions_today }}</p>
-      <p class="dash-card__hint">Продовжено: {{ extended_today }}</p>
+      <p class="dash-card__hint">Усі сценарії</p>
+      <div class="dash-chip-row">
+        <span class="dash-chip">Разові: {{ one_time_today }}</span>
+        <span class="dash-chip">Нові цикли: {{ new_subscriptions_today }}</span>
+        <span class="dash-chip">Продовжено: {{ extended_today }}</span>
+      </div>
     </div>
   </section>
 
@@ -344,7 +548,8 @@
     {% if ended_subscriptions %}
       <div class="dash-ended-list">
         {% for item in ended_subscriptions %}
-        <div class="dash-ended-card" data-ended-id="{{ item.order_id }}">
+        {% set urgency_class = 'dash-ended-card--danger' if item.days_overdue >= 6 else ('dash-ended-card--warn' if item.days_overdue >= 3 else '') %}
+        <div class="dash-ended-card {{ urgency_class }}" data-ended-id="{{ item.order_id }}">
           <div class="dash-ended-meta">
             <strong>@{{ item.client_instagram }}</strong>
             <span>{{ item.recipient_name }} · {{ item.client_phone }}</span>
@@ -353,6 +558,7 @@
           <div class="dash-ended-tags">
             <span class="dash-tag">{{ item.delivery_type }}</span>
             <span class="dash-tag">Розмір: {{ item.size }}</span>
+            <span class="dash-tag">Затримка: {{ item.days_overdue }} днів</span>
           </div>
           <div class="dash-actions">
             <button class="dash-action-btn dash-action-btn--primary" data-followup-status="extended">Продовжено</button>
@@ -369,11 +575,13 @@
   </section>
 </div>
 
+{% include 'orders/_composer_modal.html' %}
 {{ render_toast() }}
 {% endblock %}
 
 {% block scripts %}
 {{ toast_script() }}
+{% include 'orders/_composer_script.html' %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('[data-ended-id]').forEach(card => {
@@ -381,6 +589,14 @@ document.addEventListener('DOMContentLoaded', function() {
     card.querySelectorAll('[data-followup-status]').forEach(button => {
       button.addEventListener('click', async function() {
         const status = this.getAttribute('data-followup-status');
+        if (status === 'extended') {
+          try {
+            await window.orderComposerApi?.openSubscriptionExtension(orderId);
+          } catch (error) {
+            showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
+          }
+          return;
+        }
         try {
           const response = await fetch(`/dashboard/subscriptions/${orderId}/status`, {
             method: 'POST',
