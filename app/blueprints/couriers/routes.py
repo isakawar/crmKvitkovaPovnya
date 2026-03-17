@@ -1,90 +1,18 @@
-from flask import render_template, request, jsonify, redirect, url_for, flash
-from datetime import datetime, date, timedelta
+from flask import request, jsonify, redirect, url_for, flash
 import logging
-from sqlalchemy import func, extract
 
 from . import couriers_bp
 from app.models.courier import Courier
 from app.models.delivery import Delivery
-from app.services.courier_service import get_all_couriers, create_courier
+from app.services.courier_service import create_courier
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
 
 @couriers_bp.route('/couriers', methods=['GET'])
 def couriers_list():
-    """Сторінка списку кур'єрів з статистикою"""
-    
-    # Отримуємо період для статистики
-    period = request.args.get('period', 'month')  # week, month, year, all
-    
-    # Обчислюємо дати для періоду
-    today = date.today()
-    if period == 'week':
-        start_date = today - timedelta(days=7)
-        period_title = "за тиждень"
-    elif period == 'month':
-        start_date = today - timedelta(days=30)
-        period_title = "за місяць"
-    elif period == 'year':
-        start_date = today - timedelta(days=365)
-        period_title = "за рік"
-    else:  # all
-        start_date = None
-        period_title = "за весь час"
-    
-    # Отримуємо всіх кур'єрів
-    couriers = Courier.query.order_by(Courier.name).all()
-    
-    # Статистика для кожного кур'єра
-    courier_stats = []
-    for courier in couriers:
-        deliveries_query = Delivery.query.filter(
-            Delivery.courier_id == courier.id,
-            Delivery.is_pickup == False
-        )
-
-        if start_date:
-            deliveries_query = deliveries_query.filter(Delivery.delivery_date >= start_date)
-
-        total_deliveries = deliveries_query.count()
-        completed = deliveries_query.filter(Delivery.status == 'Доставлено').count()
-        in_progress = deliveries_query.filter(Delivery.status == 'Розподілено').count()
-
-        last_delivery = deliveries_query.filter(
-            Delivery.status == 'Доставлено'
-        ).order_by(Delivery.delivered_at.desc()).first()
-
-        courier_stats.append({
-            'courier': courier,
-            'total_deliveries': total_deliveries,
-            'completed': completed,
-            'in_progress': in_progress,
-            'last_delivery': last_delivery,
-        })
-    
-    # Сортуємо за кількістю доставок
-    courier_stats.sort(key=lambda x: x['total_deliveries'], reverse=True)
-    
-    # Загальна статистика
-    active_couriers = [c for c in couriers if c.active]
-
-    total_stats = {
-        'total_couriers': len(couriers),
-        'active_couriers': len(active_couriers),
-        'total_deliveries': sum(cs['total_deliveries'] for cs in courier_stats),
-        'completed_deliveries': sum(cs['completed'] for cs in courier_stats),
-    }
-    
-    logger.info(f'Couriers page: {len(couriers)} couriers, period: {period}')
-    
-    return render_template(
-        'couriers/list.html',
-        courier_stats=courier_stats,
-        total_stats=total_stats,
-        period=period,
-        period_title=period_title
-    )
+    """Перенаправлення в налаштування."""
+    return redirect(url_for('settings.settings_page') + '#couriers')
 
 @couriers_bp.route('/couriers/new', methods=['POST'])
 def create_new_courier():

@@ -88,14 +88,33 @@
         .sidebar .sidebar-logo-row {
             justify-content: center !important;
             gap: 0 !important;
-            padding-left: 0 !important;
-            padding-right: 0 !important;
+            padding-left: 0.35rem !important;
+            padding-right: 0.35rem !important;
         }
         .sidebar:hover .sidebar-logo-row {
             justify-content: flex-start !important;
             gap: 0.75rem !important;
             padding-left: 0.75rem !important;
             padding-right: 0.75rem !important;
+        }
+
+        .sidebar-logo-box {
+            width: 3.85rem;
+            height: 3.85rem;
+            min-width: 3.85rem;
+            border-radius: 1.15rem;
+            background: #fef3c7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 10px 24px rgba(251, 191, 36, 0.15);
+        }
+
+        .sidebar-logo-box img {
+            width: 2.95rem;
+            height: 2.95rem;
+            object-fit: cover;
+            border-radius: 0.9rem;
         }
 
         /* Smooth label fade — NO display:none (causes jerk) */
@@ -143,13 +162,14 @@
 </head>
 <body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
 
+{% if current_user.is_authenticated %}
 <!-- Sidebar -->
 <div class="sidebar fixed left-0 top-0 bottom-0 w-16 bg-stone-100 border-r border-stone-200 flex flex-col items-center z-50 overflow-hidden">
 
     <!-- Logo -->
     <div class="sidebar-logo-row flex items-center gap-3 py-5 px-3 w-full">
-        <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0" style="min-width:2rem;">
-            <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo" class="w-6 h-6 object-cover rounded-md">
+        <div class="sidebar-logo-box flex-shrink-0">
+            <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
         </div>
         <span class="sidebar-logo-text text-sm font-semibold text-stone-900">Kvitkova CRM</span>
     </div>
@@ -160,49 +180,42 @@
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Клієнти">
-            <i class="bi bi-person text-lg flex-shrink-0"></i>
+            <i class="bi bi-people text-lg flex-shrink-0"></i>
             <span class="nav-label">Клієнти</span>
         </a>
         <a href="/subscriptions"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/subscriptions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Підписки">
-            <i class="bi bi-arrow-repeat text-lg flex-shrink-0"></i>
+            <i class="bi bi-box-seam text-lg flex-shrink-0"></i>
             <span class="nav-label">Підписки</span>
         </a>
         <a href="/orders"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Замовлення">
-            <i class="bi bi-bag text-lg flex-shrink-0"></i>
+            <i class="bi bi-truck text-lg flex-shrink-0"></i>
             <span class="nav-label">Замовлення</span>
         </a>
 <a href="/route-generator"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Оптимізатор маршрутів">
-            <i class="bi bi-signpost-split text-lg flex-shrink-0"></i>
+            <i class="bi bi-bezier2 text-lg flex-shrink-0"></i>
             <span class="nav-label">Маршрути</span>
         </a>
         <a href="/routes"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/routes') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Збережені маршрути">
-            <i class="bi bi-journals text-lg flex-shrink-0"></i>
+            <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
             <span class="nav-label">Збережені</span>
-        </a>
-        <a href="/couriers"
-           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/couriers') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-           title="Кур'єри">
-            <i class="bi bi-person-badge text-lg flex-shrink-0"></i>
-            <span class="nav-label">Кур'єри</span>
         </a>
         <a href="/reports"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/reports') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Звіти">
-            <i class="bi bi-bar-chart text-lg flex-shrink-0"></i>
+            <i class="bi bi-grid text-lg flex-shrink-0"></i>
             <span class="nav-label">Звіти</span>
         </a>
 
@@ -278,11 +291,17 @@
     </div>
   </div>
 </div>
+{% else %}
+<div style="min-height: 100vh;">
+    {{ self.content() }}
+</div>
+{% endif %}
 
 <!-- Bootstrap JS only (для модалок і тостів) -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    {% if current_user.is_authenticated %}
     // Changelog loader
     var changelogModal = document.getElementById('changelogModal');
     if (changelogModal) {
@@ -303,6 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (menu) menu.classList.add('hidden');
         }
     });
+    {% endif %}
 });
 </script>
 {% block scripts %}{% endblock %}

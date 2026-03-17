@@ -2,6 +2,7 @@
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable order-composer-dialog">
     <div class="modal-content order-composer-content">
       <form id="addOrderForm" novalidate>
+        <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <div class="order-composer-shell">
           <div class="order-composer-header">
             <div class="space-y-3">
@@ -22,7 +23,7 @@
                   </button>
                 </div>
                 <p class="mt-1 text-sm text-stone-500" id="order-modal-description">
-                  Заповніть контактні дані, графік доставки та параметри букета. Форма підтримує як разове замовлення, так і підписку.
+                  Заповніть контактні дані, графік доставки та параметри букета. 
                 </p>
               </div>
             </div>
@@ -34,6 +35,25 @@
 
           <div class="order-composer-body">
             <div id="add-order-error" class="order-error-banner"></div>
+
+            <section class="order-scenario-panel">
+              <div class="order-scenario-head">
+                <p class="order-scenario-kicker">Сценарій оформлення</p>
+                <div class="order-scenario-switch" role="tablist" aria-label="Сценарій оформлення">
+                  <button type="button" class="order-scenario-option" data-composer-scenario="subscription">
+                    <span class="order-scenario-option-title">Підписка</span>
+                    <span class="order-scenario-option-copy">4 доставки</span>
+                  </button>
+                  <button type="button" class="order-scenario-option is-active" data-composer-scenario="order">
+                    <span class="order-scenario-option-title">Разове замовлення</span>
+                    <span class="order-scenario-option-copy">1 доставка</span>
+                  </button>
+                </div>
+              </div>
+              <p class="order-scenario-copy order-scenario-copy-compact" id="order-scenario-copy">
+                Обери, чи це регулярна підписка на 4 доставки, чи разове замовлення з однією доставкою.
+              </p>
+            </section>
 
             <div class="order-composer-grid">
               <section class="order-panel order-panel-primary">
@@ -169,7 +189,7 @@
                   </div>
 
                   <div class="order-two-col">
-                    <div class="order-field">
+                    <div class="order-field" id="delivery-type-field">
                       <label class="order-label" for="delivery-type-select" id="delivery-type-label">
                         <i class="bi bi-arrow-repeat"></i>
                         Тип доставки <span class="text-red-500">*</span>
@@ -214,14 +234,14 @@
 
                   <div class="order-three-col">
                     <div class="order-field">
-                      <label class="order-label" for="first-delivery-date-input">
+                      <label class="order-label" for="first-delivery-date-input" id="first-delivery-label">
                         <i class="bi bi-calendar-event"></i>
                         Перша доставка <span class="text-red-500">*</span>
                       </label>
                       <input type="date" id="first-delivery-date-input" name="first_delivery_date" class="order-input" required>
                     </div>
 
-                    <div class="order-field">
+                    <div class="order-field" id="delivery-day-field">
                       <label class="order-label" for="delivery-day-select">
                         <i class="bi bi-calendar-week"></i>
                         День <span class="text-red-500">*</span>

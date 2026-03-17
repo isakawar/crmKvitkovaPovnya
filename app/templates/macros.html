@@ -6,16 +6,18 @@
     </div>
     <div class="sidebar-section">Головне</div>
     <nav class="nav flex-column mb-2">
-        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house-door"></i>Головна</a>
-        <a class="nav-link {% if '/orders' in request.path %}active{% endif %}" href="/orders"><i class="bi bi-list-check"></i>Замовлення</a>
-        <a class="nav-link {% if '/route-generator' in request.path %}active{% endif %}" href="/route-generator"><i class="bi bi-geo-alt"></i>Генератор маршруту</a>
+        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/"><i class="bi bi-house"></i>Головна</a>
+        <a class="nav-link {% if '/clients' in request.path %}active{% endif %}" href="/clients"><i class="bi bi-person"></i>Клієнти</a>
+        <a class="nav-link {% if '/subscriptions' in request.path %}active{% endif %}" href="/subscriptions"><i class="bi bi-box"></i>Підписки</a>
+        <a class="nav-link {% if '/orders' in request.path %}active{% endif %}" href="/orders"><i class="bi bi-truck"></i>Замовлення</a>
+        <a class="nav-link {% if '/route-generator' in request.path %}active{% endif %}" href="/route-generator"><i class="bi bi-bezier2"></i>Оптимізація маршруту</a>
+        <a class="nav-link {% if '/routes' in request.path and '/route-generator' not in request.path %}active{% endif %}" href="/routes"><i class="bi bi-geo-alt"></i>Маршрути</a>
     </nav>
     <div class="sidebar-section">Довідники</div>
     <nav class="nav flex-column mb-2">
-        <a class="nav-link {% if '/clients' in request.path %}active{% endif %}" href="/clients"><i class="bi bi-people"></i>Клієнти</a>
-        <a class="nav-link {% if '/couriers' in request.path %}active{% endif %}" href="/couriers"><i class="bi bi-truck"></i>Кур'єри</a>
+        <a class="nav-link {% if '/couriers' in request.path %}active{% endif %}" href="/couriers"><i class="bi bi-person-badge"></i>Кур'єри</a>
         <a class="nav-link {% if '/reports' in request.path %}active{% endif %}" href="/reports"><i class="bi bi-bar-chart"></i>Звіти</a>
-        <a class="nav-link {% if '/prices' in request.path %}active{% endif %}" href="/prices"><i class="bi bi-cash"></i>Ціни</a>
+        <a class="nav-link {% if '/settings' in request.path %}active{% endif %}" href="/settings"><i class="bi bi-gear"></i>Налаштування</a>
     </nav>
     <div class="copyright">© 2024 Kvitkova</div>
 </div>

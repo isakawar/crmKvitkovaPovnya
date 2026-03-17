@@ -6,375 +6,913 @@
 <style>
   .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
-</style>
-<style>
-  .route-card { transition: box-shadow 0.15s; }
-  .route-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
-  .chevron-icon { transition: transform 0.2s; }
-  .hdr-open .chevron-icon { transform: rotate(180deg); }
 
-  .stops-tbl th {
-    background: #fafaf9; color: #a8a29e;
-    font-size: 0.68rem; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.06em;
-    padding: 8px 16px; border-bottom: 1px solid #f5f5f4;
-    border-top: none; white-space: nowrap;
+  .routes-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
   }
-  .stops-tbl td {
-    padding: 10px 16px; border-bottom: 1px solid #f5f5f4;
-    font-size: 0.875rem; color: #44403c; vertical-align: middle;
+
+  .routes-hero {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e7e5e4;
+    border-radius: 1.75rem;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.14), transparent 26%),
+      linear-gradient(135deg, #ffffff 0%, #fafaf9 58%, #f5f5f4 100%);
+    padding: 1.1rem 1.25rem;
+    box-shadow: 0 18px 48px rgba(28, 25, 23, 0.08);
   }
-  .stops-tbl tr:last-child td { border-bottom: none; }
-  .stops-tbl tbody tr:hover td { background: #fafaf9; }
-  .stop-num {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 24px; height: 24px; border-radius: 50%;
-    background: #3b82f6; color: #fff;
-    font-size: 0.68rem; font-weight: 700; flex-shrink: 0;
+
+  .routes-board-card,
+  .route-ops-card,
+  .route-assign-shell {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(28, 25, 23, 0.06);
   }
-  .ig-link { color: #3b82f6; }
+
+  .routes-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .routes-hero-date {
+    position: relative;
+    min-width: 190px;
+  }
+
+  .routes-hero-date input {
+    width: 100%;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: rgba(250, 250, 249, 0.94);
+    padding: 0.72rem 0.9rem 0.72rem 2.45rem;
+    font-size: 0.86rem;
+    color: #57534e;
+    transition: 0.15s ease;
+  }
+
+  .routes-hero-date input:focus {
+    outline: none;
+    border-color: #1c1917;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.16);
+  }
+
+  .routes-hero-date i {
+    position: absolute;
+    left: 0.95rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a8a29e;
+    font-size: 0.9rem;
+    pointer-events: none;
+  }
+
+  .routes-hero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 1rem;
+    padding: 0.72rem 1rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    transition: 0.15s ease;
+  }
+
+  .routes-hero-btn-primary {
+    background: #1c1917;
+    color: #fff;
+  }
+
+  .routes-hero-btn-primary:hover {
+    background: #44403c;
+  }
+
+  .routes-hero-btn-secondary {
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+  }
+
+  .routes-hero-btn-secondary:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
+
+  .routes-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .routes-kpi-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 8px 18px rgba(28, 25, 23, 0.05);
+  }
+
+  .routes-kpi-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
+  }
+
+  .routes-board-card {
+    border-radius: 1.5rem;
+    overflow: hidden;
+  }
+
+  .routes-board-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.2rem 1.35rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafaf9;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .routes-board-header:hover {
+    background: #f5f5f4;
+  }
+
+  .routes-board-header.is-open {
+    background: #fff8eb;
+  }
+
+  .routes-route-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 0.8rem;
+  }
+
+  .route-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.42rem;
+    padding: 0.42rem 0.72rem;
+    border-radius: 999px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+  }
+
+  .route-badge-status-draft { background: #f5f5f4; color: #57534e; }
+  .route-badge-status-sent { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+  .route-badge-status-accepted { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+  .route-badge-status-rejected { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .route-badge-status-completed { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+
+  .routes-board-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+  }
+
+  .routes-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 0.95rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    padding: 0.65rem 0.95rem;
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #44403c;
+    transition: 0.15s ease;
+  }
+
+  .routes-action-btn:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
+
+  .routes-delete-btn {
+    width: 2.4rem;
+    height: 2.4rem;
+    justify-content: center;
+    color: #ef4444;
+  }
+
+  .routes-board-body {
+    display: none;
+    padding: 1.2rem 1.35rem 1.35rem;
+    background: #fff;
+  }
+
+  .routes-board-body.is-open {
+    display: block;
+  }
+
+  .route-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-bottom: 1rem;
+  }
+
+  .route-summary-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.1rem;
+    background: #fafaf9;
+    padding: 0.95rem 1rem;
+  }
+
+  .route-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e7e5e4;
+    border-radius: 1.2rem;
+  }
+
+  .route-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .route-table th {
+    background: #fafaf9;
+    color: #a8a29e;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.9rem 1rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .route-table td {
+    padding: 0.95rem 1rem;
+    font-size: 0.9rem;
+    color: #44403c;
+    border-bottom: 1px solid #f5f5f4;
+    vertical-align: middle;
+  }
+
+  .route-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .route-table tbody tr:hover td {
+    background: #fcfcfb;
+  }
+
+  .route-stop-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 999px;
+    background: #1c1917;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+  }
+
+  .ig-link {
+    color: #2563eb;
+    font-weight: 600;
+  }
+
+  .route-ops-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .route-ops-card {
+    border-radius: 1.45rem;
+    overflow: hidden;
+  }
+
+  .route-ops-card--collapsible {
+    border: 1px solid #f1f5f9;
+    background: #fff;
+  }
+
+  .route-ops-summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .route-ops-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .route-ops-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafaf9;
+  }
+
+  .route-ops-head-main {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .route-ops-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #292524;
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+
+  details[open] .route-ops-toggle {
+    transform: rotate(180deg);
+  }
+
+  .route-ops-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #292524;
+  }
+
+  .route-assign-dialog {
+    max-width: 34rem;
+  }
+
+  .route-assign-content {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .route-assign-shell {
+    overflow: hidden;
+    border-radius: 1.75rem;
+  }
+
+  .route-assign-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.45rem 1.5rem 1.2rem;
+    border-bottom: 1px solid #e7e5e4;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.15), transparent 34%),
+      linear-gradient(135deg, #ffffff 0%, #fafaf9 100%);
+  }
+
+  .route-assign-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #fcd34d;
+    background: #fffbeb;
+    color: #b45309;
+    padding: 0.42rem 0.8rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .route-assign-body {
+    padding: 1.35rem 1.5rem 1.2rem;
+    background: #fafaf9;
+  }
+
+  .route-assign-info {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .route-assign-info-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.85rem 0.9rem;
+  }
+
+  .route-assign-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-bottom: 0.95rem;
+  }
+
+  .route-assign-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #a8a29e;
+  }
+
+  .route-assign-input {
+    width: 100%;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    padding: 0.8rem 0.95rem;
+    font-size: 0.9rem;
+    color: #292524;
+    transition: 0.15s ease;
+  }
+
+  .route-assign-input:focus {
+    outline: none;
+    border-color: #1c1917;
+    box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.18);
+  }
+
+  .route-assign-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.2rem;
+    border-top: 1px solid #e7e5e4;
+    background: #fff;
+  }
+
+  .route-modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    color: #78716c;
+    transition: 0.15s ease;
+  }
+
+  .route-modal-close:hover {
+    background: #fafaf9;
+    color: #1c1917;
+  }
+
+  @media (max-width: 1200px) {
+    .routes-kpi-grid,
+    .route-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 900px) {
+    .route-ops-grid,
+    .route-assign-info {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .routes-hero {
+      padding: 1rem;
+    }
+
+    .routes-kpi-grid,
+    .route-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .routes-board-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .routes-board-actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+
+    .route-assign-header,
+    .route-assign-body,
+    .route-assign-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .routes-hero-actions {
+      width: 100%;
+    }
+
+    .routes-hero-date {
+      min-width: 100%;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
 {% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
-{% set status_colors = {
-  'draft':     'bg-stone-100 text-stone-500',
-  'sent':      'bg-blue-50 text-blue-600',
-  'accepted':  'bg-emerald-50 text-emerald-600',
-  'rejected':  'bg-red-50 text-red-500',
-  'completed': 'bg-sky-50 text-sky-600'
-} %}
+{% set stats = namespace(assigned=0, awaiting=0, sent=0) %}
+{% for route in routes %}
+  {% if route.courier_id %}
+    {% set stats.assigned = stats.assigned + 1 %}
+  {% else %}
+    {% set stats.awaiting = stats.awaiting + 1 %}
+  {% endif %}
+  {% if route.status == 'sent' %}
+    {% set stats.sent = stats.sent + 1 %}
+  {% endif %}
+{% endfor %}
 
-<div class="flex flex-col gap-6">
+<div class="routes-shell">
+  <section class="routes-hero">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div class="max-w-3xl">
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Маршрути</h1>
+      </div>
 
-  <!-- Header -->
-  <div class="flex flex-wrap items-start justify-between gap-4">
-    <div>
-      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Маршрути</h1>
-      <p class="text-sm text-stone-400 mt-0.5">Управління маршрутами доставок</p>
-    </div>
-    <div class="flex items-center gap-3">
-      <!-- Date filter -->
-      <form method="get" class="flex items-center gap-2">
-        <label class="text-sm text-stone-500 whitespace-nowrap">Дата маршруту:</label>
-        <input type="text" id="route-date-picker" readonly
-               placeholder="Обрати дату"
-               style="width:150px"
-               class="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-600 shadow-sm hover:bg-stone-50 transition-colors cursor-pointer focus:outline-none">
-        <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
+      <div class="routes-hero-actions">
+        <form method="get" class="routes-hero-date">
+          <i class="bi bi-calendar-event"></i>
+          <input type="text" id="route-date-picker" readonly placeholder="Обрати дату">
+          <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
+        </form>
         {% if date_filter %}
         <a href="{{ url_for('routes.saved_routes') }}"
-           class="flex h-8 w-8 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 hover:text-stone-700 hover:bg-stone-50 transition-colors">
-          <i class="bi bi-x text-base leading-none"></i>
+           class="routes-hero-btn routes-hero-btn-secondary">
+          <i class="bi bi-arrow-counterclockwise"></i>
+          Скинути
         </a>
         {% endif %}
-      </form>
-
-      <!-- Create route -->
-      <a href="{{ url_for('orders.route_generator') }}"
-         class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
-        <i class="bi bi-plus-lg"></i> Створити маршрут
-      </a>
+        <a href="{{ url_for('orders.route_generator') }}"
+           class="routes-hero-btn routes-hero-btn-primary">
+          <i class="bi bi-plus-lg"></i>
+          Створити маршрут
+        </a>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Flash messages -->
+  <section class="routes-kpi-grid">
+    <article class="routes-kpi-card">
+      <div class="routes-kpi-icon bg-amber-50 text-amber-600"><i class="bi bi-signpost-2"></i></div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Маршрутів</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ routes|length }}</p>
+    </article>
+    <article class="routes-kpi-card">
+      <div class="routes-kpi-icon bg-emerald-50 text-emerald-600"><i class="bi bi-person-check"></i></div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Призначено</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.assigned }}</p>
+    </article>
+    <article class="routes-kpi-card">
+      <div class="routes-kpi-icon bg-blue-50 text-blue-600"><i class="bi bi-send-check"></i></div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">В процесі</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.sent }}</p>
+    </article>
+    <article class="routes-kpi-card">
+      <div class="routes-kpi-icon bg-stone-100 text-stone-600"><i class="bi bi-hourglass-split"></i></div>
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Очікують</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
+    </article>
+  </section>
+
   {% with messages = get_flashed_messages(with_categories=true) %}
-    {% for cat, msg in messages %}
-    <div class="flex items-center gap-3 rounded-xl border px-5 py-3 text-sm
-                {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800
-                {% elif cat == 'danger' %}border-red-200 bg-red-50 text-red-800
-                {% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %}">
-      <i class="bi {% if cat == 'success' %}bi-check-circle{% elif cat == 'danger' %}bi-x-circle{% else %}bi-exclamation-triangle{% endif %}"></i>
-      {{ msg }}
-    </div>
-    {% endfor %}
+    {% if messages %}
+      <div class="flex flex-col gap-3">
+        {% for cat, msg in messages %}
+        {% if msg != 'Ви успішно увійшли в систему!' %}
+        <div class="flex items-center gap-3 rounded-[20px] border px-5 py-4 text-sm shadow-sm
+                    {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800
+                    {% elif cat == 'danger' %}border-red-200 bg-red-50 text-red-800
+                    {% else %}border-amber-200 bg-amber-50 text-amber-800{% endif %}">
+          <i class="bi {% if cat == 'success' %}bi-check-circle{% elif cat == 'danger' %}bi-x-circle{% else %}bi-exclamation-triangle{% endif %}"></i>
+          <span>{{ msg }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
   {% endwith %}
 
-  <!-- Empty state -->
   {% if not routes %}
-  <div class="flex flex-col items-center justify-center rounded-[22px] border border-dashed border-stone-300 bg-white py-20 text-center">
-    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400 mb-4">
-      <i class="bi bi-signpost-2 text-2xl"></i>
+  <section class="route-ops-card flex flex-col items-center justify-center py-20 text-center">
+    <div class="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+      <i class="bi bi-signpost-split text-2xl"></i>
     </div>
-    <h2 class="text-lg font-semibold text-stone-900">Маршрутів немає</h2>
-    <p class="text-sm text-stone-400 mt-1 mb-5">Побудуйте перший маршрут через оптимізатор</p>
+    <h2 class="mt-5 text-xl font-semibold text-stone-900">Маршрутів поки немає</h2>
+    <p class="mt-2 text-sm text-stone-400">Побудуй перший маршрут через оптимізатор і повернись сюди для призначення кур’єра.</p>
     <a href="{{ url_for('orders.route_generator') }}"
-       class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
-      <i class="bi bi-signpost-split"></i> Побудувати маршрут
+       class="mt-6 inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+      <i class="bi bi-magic"></i>
+      Побудувати маршрут
     </a>
-  </div>
-
+  </section>
   {% else %}
+  <section class="flex flex-col gap-4">
+    {% for route in routes %}
+    {% set formatted_date = route.route_date.day ~ ' ' ~ months[route.route_date.month] ~ ', ' ~ route.route_date.year %}
+    {% set courier_name = route.courier.name if route.courier else 'Не призначено' %}
+    {% set delivery_price = route.delivery_price if route.delivery_price is not none else '—' %}
+    <article class="routes-board-card">
+      <div class="routes-board-header" data-target="stops-{{ route.id }}" id="hdr-{{ route.id }}">
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-xl font-semibold text-stone-900">{{ formatted_date }}</h2>
+            <span class="route-badge route-badge-status-{{ route.status }}">{{ status_labels.get(route.status, route.status) }}</span>
+          </div>
+          <div class="routes-route-badges">
+            <span class="route-badge"><i class="bi bi-box-seam"></i>{{ route.deliveries_count }} доставок</span>
+            <span class="route-badge"><i class="bi bi-person-badge"></i>{{ courier_name }}</span>
+            <span class="route-badge"><i class="bi bi-signpost"></i>{% if route.total_distance_km %}{{ '%.1f'|format(route.total_distance_km) }} км{% else %}Без кілометражу{% endif %}</span>
+            <span class="route-badge"><i class="bi bi-cash-coin"></i>{% if route.delivery_price is not none %}{{ route.delivery_price }} ₴{% else %}Сума не задана{% endif %}</span>
+          </div>
+        </div>
 
-  <!-- Route list -->
-  <div class="flex flex-col gap-3">
-  {% for route in routes %}
-  {% set formatted_date = route.route_date.day ~ ' ' ~ months[route.route_date.month] ~ ', ' ~ route.route_date.year %}
-
-  <div class="route-card rounded-xl border border-stone-200 bg-white overflow-hidden">
-
-    <!-- Header row -->
-    <div class="route-hdr flex items-center gap-4 px-5 py-4 cursor-pointer select-none"
-         data-target="stops-{{ route.id }}" id="hdr-{{ route.id }}">
-
-      <!-- Date -->
-      <div class="min-w-[140px]">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Дата</p>
-        <p class="text-sm font-semibold text-stone-900">{{ formatted_date }}</p>
-      </div>
-
-      <!-- Status -->
-      <div class="min-w-[100px]">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Статус</p>
-        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {{ status_colors.get(route.status, 'bg-stone-100 text-stone-500') }}">
-          {{ status_labels.get(route.status, route.status) }}
-        </span>
-      </div>
-
-      <!-- Deliveries -->
-      <div class="min-w-[70px]">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Доставок</p>
-        <p class="text-sm font-semibold text-stone-900">{{ route.deliveries_count }}</p>
-      </div>
-
-      <!-- Distance -->
-      <div class="min-w-[90px]">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Кілометраж</p>
-        <p class="text-sm font-semibold text-stone-900">
-          {% if route.total_distance_km %}{{ '%.1f'|format(route.total_distance_km) }} км{% else %}—{% endif %}
-        </p>
-      </div>
-
-      <!-- Courier -->
-      <div class="flex-1 min-w-[160px]">
-        <p class="text-[11px] font-semibold uppercase tracking-wide text-stone-400 mb-0.5">Кур'єр</p>
-        <div class="flex items-center gap-2">
-          <p class="text-sm font-semibold {{ 'text-stone-900' if route.courier else 'text-stone-400' }}">
-            {{ route.courier.name if route.courier else 'Не призначено' }}
-          </p>
+        <div class="routes-board-actions">
           {% if route.status in ['draft', 'rejected'] %}
           <button type="button"
-                  onclick="event.stopPropagation(); openAssignModal({{ route.id }}, {{ route.courier_id or 'null' }}, {{ route.delivery_price or 'null' }})"
-                  class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-            <i class="bi bi-person-gear text-stone-400"></i>
-            {{ 'Змінити' if route.courier else 'Призначити' }}
+                  class="routes-action-btn route-assign-trigger"
+                  data-route-id="{{ route.id }}"
+                  data-courier-id="{{ route.courier_id or '' }}"
+                  data-delivery-price="{{ route.delivery_price if route.delivery_price is not none else '' }}"
+                  data-route-date="{{ formatted_date }}"
+                  data-deliveries-count="{{ route.deliveries_count }}"
+                  data-current-courier="{{ courier_name }}">
+            <i class="bi bi-person-gear"></i>
+            {{ 'Змінити курʼєра' if route.courier else 'Призначити курʼєра' }}
           </button>
           {% endif %}
+          <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
+                onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
+            <button type="submit" class="routes-action-btn routes-delete-btn">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+          <button type="button" class="routes-action-btn">
+            <i class="bi bi-chevron-down chevron-icon"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Delete -->
-      <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
-            onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
-        <button type="submit"
-                class="flex h-8 w-8 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors">
-          <i class="bi bi-trash text-sm"></i>
-        </button>
-      </form>
+      <div class="routes-board-body" id="stops-{{ route.id }}">
+        <div class="route-summary-grid">
+          <div class="route-summary-card">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Кур'єр</p>
+            <p class="mt-2 text-sm font-semibold text-stone-900">{{ courier_name }}</p>
+          </div>
+          <div class="route-summary-card">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Тривалість</p>
+            <p class="mt-2 text-sm font-semibold text-stone-900">{% if route.estimated_duration_min %}{{ route.estimated_duration_min }} хв{% else %}—{% endif %}</p>
+          </div>
+          <div class="route-summary-card">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Дата створення</p>
+            <p class="mt-2 text-sm font-semibold text-stone-900">{{ route.created_at.strftime('%d.%m.%Y %H:%M') if route.created_at else '—' }}</p>
+          </div>
+          <div class="route-summary-card">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Ціна доставки</p>
+            <p class="mt-2 text-sm font-semibold text-stone-900">{% if route.delivery_price is not none %}{{ route.delivery_price }} ₴{% else %}—{% endif %}</p>
+          </div>
+        </div>
 
-      <!-- Chevron -->
-      <i class="bi bi-chevron-down chevron-icon text-stone-400 text-sm flex-shrink-0"></i>
-    </div>
-
-    <!-- Stops table (collapsed) -->
-    <div class="route-stops border-t border-stone-100" id="stops-{{ route.id }}" style="display:none;">
-      {% if route.stops %}
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse stops-tbl">
-          <thead>
-            <tr>
-              <th style="width:40px;">#</th>
-              <th>Клієнт</th>
-              <th>Букет</th>
-              <th>Отримувач</th>
-              <th>Адреса</th>
-              <th>Телефон</th>
-              <th>Час</th>
-              <th>Коментар</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for stop in route.stops %}
-          {% set d = stop.delivery %}
-          {% set order = d.order if d else none %}
-          {% set client = d.client if d else none %}
-          <tr>
-            <td><span class="stop-num">{{ stop.stop_order }}</span></td>
-            <td class="whitespace-nowrap">
-              {% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}
-            </td>
-            <td class="whitespace-nowrap">
-              {{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}
-            </td>
-            <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
-            <td>
-              {% if d and d.is_pickup %}
-                <span class="text-stone-400">Самовивіз</span>
-              {% elif order %}
-                {% set parts = [] %}
-                {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
-                {% set street = d.street or order.street %}
-                {% if street %}{% set _ = parts.append(street) %}{% endif %}
-                {% set build = d.building_number or order.building_number %}
-                {% if build %}{% set _ = parts.append(build) %}{% endif %}
-                {{ parts | join(', ') or '—' }}
-                {% set floor = d.floor or order.floor %}
-                {% set ent = d.entrance or order.entrance %}
-                {% if floor or ent %}
-                <div class="text-xs text-stone-400 mt-0.5">{% if floor %}пов.{{ floor }}{% endif %}{% if ent %} під.{{ ent }}{% endif %}</div>
-                {% endif %}
-              {% else %}—{% endif %}
-            </td>
-            <td class="whitespace-nowrap">
-              {{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}
-            </td>
-            <td class="whitespace-nowrap">
-              {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
-              {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
-              {% else %}—{% endif %}
-            </td>
-            <td style="max-width:180px;">
-              {% set comment = d.comment or (order.comment if order else '') %}
-              {% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-          </tbody>
-        </table>
+        {% if route.stops %}
+        <div class="route-table-wrap">
+          <table class="route-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Клієнт</th>
+                <th>Букет</th>
+                <th>Отримувач</th>
+                <th>Адреса</th>
+                <th>Телефон</th>
+                <th>Час</th>
+                <th>Коментар</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for stop in route.stops %}
+              {% set d = stop.delivery %}
+              {% set order = d.order if d else none %}
+              {% set client = d.client if d else none %}
+              <tr>
+                <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
+                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+                <td class="whitespace-nowrap">{{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}</td>
+                <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
+                <td>
+                  {% if d and d.is_pickup %}
+                    <span class="text-stone-400">Самовивіз</span>
+                  {% elif order %}
+                    {% set parts = [] %}
+                    {% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}
+                    {% set street = d.street or order.street %}
+                    {% if street %}{% set _ = parts.append(street) %}{% endif %}
+                    {% set build = d.building_number or order.building_number %}
+                    {% if build %}{% set _ = parts.append(build) %}{% endif %}
+                    {{ parts | join(', ') or '—' }}
+                    {% set floor = d.floor or order.floor %}
+                    {% set ent = d.entrance or order.entrance %}
+                    {% if floor or ent %}
+                    <div class="mt-1 text-xs text-stone-400">{% if floor %}пов. {{ floor }}{% endif %}{% if ent %} · під. {{ ent }}{% endif %}</div>
+                    {% endif %}
+                  {% else %}—{% endif %}
+                </td>
+                <td class="whitespace-nowrap">{{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}</td>
+                <td class="whitespace-nowrap">
+                  {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
+                  {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
+                  {% else %}—{% endif %}
+                </td>
+                <td style="max-width:220px;">
+                  {% set comment = d.comment or (order.comment if order else '') %}
+                  {% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(68) }}</span>{% else %}—{% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="rounded-[18px] border border-dashed border-stone-300 px-5 py-8 text-center text-sm text-stone-400">
+          У цьому маршруті поки немає зупинок.
+        </div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="px-5 py-4 text-sm text-stone-400">Зупинок немає</div>
-      {% endif %}
-    </div>
-
-  </div>
-  {% endfor %}
-  </div>
-
+    </article>
+    {% endfor %}
+  </section>
   {% endif %}
 
-  <!-- Nova Poshta / Pickup section -->
   {% if nova_poshta_deliveries or pickup_deliveries %}
-  {% set months_local = months %}
-  <div class="flex flex-col gap-3">
-    <div class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }}</div>
-
+  <section class="route-ops-grid">
     {% if nova_poshta_deliveries %}
-    <div class="rounded-xl border border-stone-200 bg-white overflow-hidden">
-      <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100 bg-stone-50">
-        <i class="bi bi-truck text-orange-500 text-sm"></i>
-        <span class="text-sm font-medium text-stone-700">Нова Пошта</span>
-        <span class="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-medium text-orange-600">{{ nova_poshta_deliveries|length }}</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse stops-tbl">
-          <thead><tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr></thead>
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><i class="bi bi-truck"></i></span>
+            <div>
+              <p class="route-ops-title">Нова Пошта</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ nova_poshta_deliveries|length }} доставок</p>
+            </div>
+          </div>
+          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+        </div>
+      </summary>
+      <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
+        <table class="route-table">
+          <thead>
+            <tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr>
+          </thead>
           <tbody>
-          {% for d in nova_poshta_deliveries %}
-          {% set order = d.order %}{% set client = d.client %}
-          <tr>
-            <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
-            <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
-            <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-            <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
-            <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
-            <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
-            <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
-          </tr>
-          {% endfor %}
+            {% for d in nova_poshta_deliveries %}
+            {% set order = d.order %}{% set client = d.client %}
+            <tr>
+              <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+              <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+              <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
     {% endif %}
 
     {% if pickup_deliveries %}
-    <div class="rounded-xl border border-stone-200 bg-white overflow-hidden">
-      <div class="flex items-center gap-2 px-5 py-3 border-b border-stone-100 bg-stone-50">
-        <i class="bi bi-bag-check text-violet-500 text-sm"></i>
-        <span class="text-sm font-medium text-stone-700">Самовивіз</span>
-        <span class="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-medium text-violet-600">{{ pickup_deliveries|length }}</span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse stops-tbl">
-          <thead><tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr></thead>
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-500"><i class="bi bi-bag-check"></i></span>
+            <div>
+              <p class="route-ops-title">Самовивіз</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ pickup_deliveries|length }} доставок</p>
+            </div>
+          </div>
+          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+        </div>
+      </summary>
+      <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
+        <table class="route-table">
+          <thead>
+            <tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr>
+          </thead>
           <tbody>
-          {% for d in pickup_deliveries %}
-          {% set order = d.order %}{% set client = d.client %}
-          <tr>
-            <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
-            <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
-            <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-            <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
-            <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
-            <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
-            <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
-          </tr>
-          {% endfor %}
+            {% for d in pickup_deliveries %}
+            {% set order = d.order %}{% set client = d.client %}
+            <tr>
+              <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+              <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+              <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>
-    </div>
+    </details>
     {% endif %}
-  </div>
+  </section>
   {% endif %}
-
 </div>
-<!-- Assign courier modal -->
+
 <div class="modal fade" id="assignModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
-    <div class="modal-content" style="border-radius:16px;border:1px solid #e7e5e4;overflow:hidden;">
-      <div style="padding:20px 24px 0;">
-        <div class="flex items-center justify-between mb-1">
-          <h5 class="text-base font-semibold text-stone-900 m-0">Призначити кур'єра</h5>
-          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-full text-stone-400 hover:bg-stone-100 transition-colors" data-bs-dismiss="modal">
-            <i class="bi bi-x text-lg leading-none"></i>
-          </button>
-        </div>
-        <p class="text-sm text-stone-400 mb-5">Оберіть кур'єра та вкажіть суму доставки</p>
-      </div>
-
-      <form method="post" id="assign-form" action="" class="flex flex-col">
-        <div style="padding:0 24px 20px;" class="flex flex-col gap-3">
-
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Кур'єр</label>
-            <select name="courier_id" id="assign-courier-select"
-                    class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
-              <option value="">— Оберіть кур'єра —</option>
-              {% for c in couriers %}
-              <option value="{{ c.id }}">{{ c.name }}</option>
-              {% endfor %}
-            </select>
+  <div class="modal-dialog modal-dialog-centered route-assign-dialog">
+    <div class="modal-content route-assign-content">
+      <form method="post" id="assign-form" action="">
+        <div class="route-assign-shell">
+          <div class="route-assign-header">
+            <div class="max-w-[26rem]">
+              <span class="route-assign-chip" id="assign-modal-chip">
+                <i class="bi bi-person-gear"></i>
+                Кур'єр
+              </span>
+              <h2 class="mt-4 text-2xl font-semibold text-stone-900" id="assign-modal-title">Призначити кур'єра</h2>
+              <p class="mt-2 text-sm leading-6 text-stone-500" id="assign-modal-subtitle">Оберіть кур’єра для маршруту та за потреби зафіксуйте вартість доставки.</p>
+            </div>
+            <button type="button" class="route-modal-close" data-bs-dismiss="modal" aria-label="Закрити">
+              <i class="bi bi-x-lg"></i>
+            </button>
           </div>
 
-          <div class="flex flex-col gap-1.5">
-            <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Сума доставки, ₴</label>
-            <input type="number" name="delivery_price" id="assign-price-input"
-                   placeholder="0" min="0"
-                   class="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          <div class="route-assign-body">
+            <div class="route-assign-info">
+              <div class="route-assign-info-card">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Дата</p>
+                <p class="mt-2 text-sm font-semibold text-stone-900" id="assign-modal-date">—</p>
+              </div>
+              <div class="route-assign-info-card">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Доставок</p>
+                <p class="mt-2 text-sm font-semibold text-stone-900" id="assign-modal-deliveries">—</p>
+              </div>
+              <div class="route-assign-info-card">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Поточний кур'єр</p>
+                <p class="mt-2 text-sm font-semibold text-stone-900" id="assign-modal-current-courier">Не призначено</p>
+              </div>
+            </div>
+
+            <div class="route-assign-field">
+              <label class="route-assign-label" for="assign-courier-select">Кур'єр</label>
+              <select name="courier_id" id="assign-courier-select" class="route-assign-input">
+                <option value="">Оберіть кур'єра</option>
+                {% for c in couriers %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="route-assign-field mb-0">
+              <label class="route-assign-label" for="assign-price-input">Сума доставки, ₴</label>
+              <input type="number" name="delivery_price" id="assign-price-input" placeholder="0" min="0" class="route-assign-input">
+            </div>
           </div>
 
-        </div>
-
-        <div style="padding:14px 24px;border-top:1px solid #f5f5f4;display:flex;gap:8px;justify-content:flex-end;">
-          <button type="button" data-bs-dismiss="modal"
-                  class="inline-flex items-center rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
-            Скасувати
-          </button>
-          <button type="submit"
-                  class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
-            <i class="bi bi-telegram"></i> Зберегти та надіслати
-          </button>
+          <div class="route-assign-footer">
+            <button type="button"
+                    data-bs-dismiss="modal"
+                    class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900">
+              Скасувати
+            </button>
+            <button type="submit"
+                    class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+                    id="assign-modal-submit">
+              <i class="bi bi-telegram"></i>
+              Зберегти та надіслати
+            </button>
+          </div>
         </div>
       </form>
     </div>
   </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -399,33 +937,57 @@ flatpickr('#route-date-picker', {
 });
 </script>
 <script>
-// Toggle collapse
-document.querySelectorAll('.route-hdr').forEach(function(hdr) {
-  hdr.addEventListener('click', function() {
+document.querySelectorAll('.routes-board-header').forEach(function(header) {
+  header.addEventListener('click', function() {
     const targetId = this.dataset.target;
-    const panel = document.getElementById(targetId);
-    const isOpen = panel.style.display !== 'none';
-    panel.style.display = isOpen ? 'none' : '';
-    this.classList.toggle('hdr-open', !isOpen);
+    const body = document.getElementById(targetId);
+    const isOpen = body.classList.contains('is-open');
+    body.classList.toggle('is-open', !isOpen);
+    this.classList.toggle('is-open', !isOpen);
   });
 });
 
-// Assign modal
 let _assignModal = null;
 function getAssignModal() {
-  if (!_assignModal) _assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+  if (!_assignModal) {
+    _assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+  }
   return _assignModal;
 }
-function openAssignModal(routeId, courierId, deliveryPrice) {
+
+function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliveriesCount, currentCourierName) {
   const form = document.getElementById('assign-form');
+  const hasCourier = Boolean(courierId);
   form.action = '/routes/' + routeId + '/assign-and-send';
-  const select = document.getElementById('assign-courier-select');
-  select.value = courierId || '';
+  document.getElementById('assign-courier-select').value = courierId || '';
   document.getElementById('assign-price-input').value = deliveryPrice || '';
+  document.getElementById('assign-modal-title').textContent = hasCourier ? 'Змінити курʼєра' : 'Призначити курʼєра';
+  document.getElementById('assign-modal-subtitle').textContent = hasCourier
+    ? 'Оновіть призначення, якщо потрібно передати маршрут іншому курʼєру або скоригувати суму доставки.'
+    : 'Оберіть курʼєра для маршруту та за потреби зафіксуйте вартість доставки перед відправкою.';
+  document.getElementById('assign-modal-date').textContent = routeDate || '—';
+  document.getElementById('assign-modal-deliveries').textContent = deliveriesCount ? `${deliveriesCount} доставок` : '—';
+  document.getElementById('assign-modal-current-courier').textContent = currentCourierName || 'Не призначено';
+  document.getElementById('assign-modal-submit').innerHTML = hasCourier
+    ? '<i class="bi bi-arrow-repeat"></i> Оновити та надіслати'
+    : '<i class="bi bi-telegram"></i> Зберегти та надіслати';
   getAssignModal().show();
 }
 
-// Init tooltips
+document.querySelectorAll('.route-assign-trigger').forEach(function(button) {
+  button.addEventListener('click', function(event) {
+    event.stopPropagation();
+    openAssignModal(
+      this.dataset.routeId,
+      this.dataset.courierId || null,
+      this.dataset.deliveryPrice || null,
+      this.dataset.routeDate || '',
+      this.dataset.deliveriesCount || '',
+      this.dataset.currentCourier || ''
+    );
+  });
+});
+
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
   new bootstrap.Tooltip(el);
 });

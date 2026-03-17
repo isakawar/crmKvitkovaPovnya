@@ -79,9 +79,94 @@
   #changes-banner.visible { display: block; }
 
   /* Delivery picker */
+  .picker-modal .modal-content {
+    border-radius: 24px;
+    border: 1px solid #e7e5e4;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(28, 25, 23, 0.16);
+  }
+  .picker-modal .modal-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 20px 28px;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 24%),
+      linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+  }
+  .picker-modal__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #b45309;
+    background: rgba(255, 251, 235, 0.92);
+  }
+  .picker-modal__title {
+    margin: 10px 0 4px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1c1917;
+  }
+  .picker-modal__subtitle {
+    font-size: 0.86rem;
+    color: #78716c;
+  }
+  .picker-modal__close {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #78716c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s ease;
+  }
+  .picker-modal__close:hover { background: #fafaf9; color: #1c1917; }
+
+  .picker-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fff;
+  }
+  .picker-count {
+    font-size: 0.85rem;
+    color: #78716c;
+    font-weight: 600;
+  }
+  .picker-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .picker-chip {
+    border: 1px solid #e7e5e4;
+    border-radius: 999px;
+    background: #fff;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #57534e;
+    cursor: pointer;
+    transition: 0.15s ease;
+  }
+  .picker-chip:hover { background: #fafaf9; color: #1c1917; }
+  .picker-chip--muted { color: #a8a29e; }
+
   .picker-row {
     display: flex; align-items: center; gap: 14px;
-    padding: 10px 24px; border-bottom: 1px solid #f5f5f4;
+    padding: 12px 24px; border-bottom: 1px solid #f5f5f4;
     cursor: pointer; transition: background 0.12s; user-select: none;
   }
   .picker-row:last-child { border-bottom: none; }
@@ -95,6 +180,46 @@
     font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
     border-radius: 20px; background: #f5f5f4; color: #57534e; flex-shrink: 0;
   }
+
+  .picker-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 28px;
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
+  }
+  .picker-selected {
+    font-size: 0.85rem;
+    color: #78716c;
+  }
+  .picker-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .picker-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 14px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    transition: 0.15s ease;
+  }
+  .picker-btn:hover { background: #fafaf9; color: #1c1917; }
+  .picker-btn-primary {
+    border-color: #1c1917;
+    background: #1c1917;
+    color: #fff;
+  }
+  .picker-btn-primary:hover { background: #44403c; border-color: #44403c; }
 </style>
 {% endblock %}
 
@@ -110,9 +235,18 @@
 <div class="flex flex-col gap-6">
 
   <!-- Header -->
-  <div>
-    <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Оптимізатор маршрутів</h1>
-  </div>
+  <section class="mb-2 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Оптимізатор маршрутів</h1>
+      </div>
+      <a href="/routes"
+         class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+        <i class="bi bi-geo-alt"></i>
+        Збережені маршрути
+      </a>
+    </div>
+  </section>
 
   <!-- Tabs + Form -->
   <div class="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
@@ -194,17 +328,17 @@
 
     <!-- Stats -->
     <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <article class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-2">Доставок</p>
-        <p id="stat-deliveries" class="text-3xl font-semibold tracking-tight text-stone-900">0</p>
+      <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-1.5">Доставок</p>
+        <p id="stat-deliveries" class="text-2xl font-semibold tracking-tight text-stone-900">0</p>
       </article>
-      <article class="rounded-xl border border-stone-200 bg-white p-4 shadow-sm">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-2">Кур'єрів</p>
-        <p id="stat-couriers" class="text-3xl font-semibold tracking-tight text-stone-900">0</p>
+      <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-1.5">Кур'єрів</p>
+        <p id="stat-couriers" class="text-2xl font-semibold tracking-tight text-stone-900">0</p>
       </article>
-      <article id="stat-dropped-card" class="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm" style="display:none;">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-500 mb-2">Пропущено</p>
-        <p id="stat-dropped" class="text-3xl font-semibold tracking-tight text-amber-700">0</p>
+      <article id="stat-dropped-card" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm" style="display:none;">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-500 mb-1.5">Пропущено</p>
+        <p id="stat-dropped" class="text-2xl font-semibold tracking-tight text-amber-700">0</p>
       </article>
     </div>
 
@@ -258,22 +392,30 @@
 </div>
 
 <!-- Delivery picker modal -->
-<div class="modal fade" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content" style="border-radius:16px;border:1px solid #e7e5e4;">
-      <div class="modal-header" style="border-bottom:1px solid #e7e5e4;padding:18px 24px;">
+<div class="modal fade picker-modal" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
         <div>
-          <h5 class="modal-title mb-0" style="font-size:0.95rem;font-weight:600;">Доставки для оптимізації</h5>
-          <div id="picker-date-label" style="font-size:0.8rem;color:#a8a29e;margin-top:2px;"></div>
+          <span class="picker-modal__eyebrow">
+            <i class="bi bi-magic"></i>
+            Побудова маршруту
+          </span>
+          <h5 class="picker-modal__title mb-0">Доставки для оптимізації</h5>
+          <div id="picker-date-label" class="picker-modal__subtitle"></div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="picker-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="picker-toolbar">
+        <span id="picker-count" class="picker-count"></span>
+        <div class="picker-actions">
+          <button type="button" id="picker-select-all" class="picker-chip">Обрати всі</button>
+          <button type="button" id="picker-deselect-all" class="picker-chip picker-chip--muted">Зняти всі</button>
+        </div>
       </div>
       <div class="modal-body p-0">
-        <div style="display:flex;align-items:center;gap:12px;padding:8px 24px;border-bottom:1px solid #f5f5f4;background:#fafaf9;">
-          <span id="picker-count" style="font-size:0.8rem;color:#a8a29e;"></span>
-          <button type="button" id="picker-select-all" style="font-size:0.8rem;color:#44403c;background:none;border:none;padding:0;cursor:pointer;">Обрати всі</button>
-          <button type="button" id="picker-deselect-all" style="font-size:0.8rem;color:#a8a29e;background:none;border:none;padding:0;cursor:pointer;">Зняти всі</button>
-        </div>
         <div id="picker-list" style="max-height:420px;overflow-y:auto;">
           <div id="picker-empty" style="display:none;text-align:center;padding:48px 24px;color:#a8a29e;">
             <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
@@ -285,16 +427,14 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer" style="border-top:1px solid #e7e5e4;padding:14px 24px;gap:8px;">
-        <span id="picker-selected-count" style="font-size:0.8rem;color:#a8a29e;margin-right:auto;"></span>
-        <button type="button" data-bs-dismiss="modal"
-                style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;border:1px solid #e7e5e4;background:#fff;padding:6px 16px;font-size:0.875rem;font-weight:500;color:#57534e;cursor:pointer;transition:background 0.15s;">
-          Скасувати
-        </button>
-        <button type="button" id="btn-run-optimizer" disabled
-                style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;background:#1c1917;border:none;padding:6px 16px;font-size:0.875rem;font-weight:500;color:#fff;cursor:pointer;transition:background 0.15s;opacity:1;">
-          <i class="bi bi-magic"></i> Розрахувати
-        </button>
+      <div class="picker-footer">
+        <span id="picker-selected-count" class="picker-selected"></span>
+        <div class="picker-footer-actions">
+          <button type="button" data-bs-dismiss="modal" class="picker-btn">Скасувати</button>
+          <button type="button" id="btn-run-optimizer" disabled class="picker-btn picker-btn-primary">
+            <i class="bi bi-magic"></i> Розрахувати
+          </button>
+        </div>
       </div>
     </div>
   </div>

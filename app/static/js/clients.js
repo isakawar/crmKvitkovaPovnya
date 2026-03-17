@@ -167,12 +167,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function clearAllErrors() {
     errorDiv.textContent = '';
+    errorDiv.innerHTML = '';
     errorDiv.classList.remove('is-visible');
     [instagramInput, phoneInput, telegramInput, creditsInput, marketingSourceInput, personalDiscountInput].forEach(clearFieldError);
   }
 
   function showFormError(message) {
     errorDiv.textContent = message;
+    errorDiv.classList.add('is-visible');
+  }
+
+  function showDuplicatePrompt(message, clientId) {
+    errorDiv.innerHTML = '';
+    const text = document.createElement('div');
+    text.textContent = message;
+    const actions = document.createElement('div');
+    actions.className = 'client-error-actions';
+    const openBtn = document.createElement('button');
+    openBtn.type = 'button';
+    openBtn.className = 'client-error-action-btn';
+    openBtn.textContent = 'Відкрити клієнта';
+    openBtn.addEventListener('click', () => loadClientData(clientId));
+    actions.appendChild(openBtn);
+    errorDiv.appendChild(text);
+    errorDiv.appendChild(actions);
     errorDiv.classList.add('is-visible');
   }
 
@@ -221,11 +239,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!(resp.ok && data.success)) {
       const message = data.error || 'Помилка збереження';
-      if (message.toLowerCase().includes('instagram')) {
+      const isDuplicate = data.type === 'duplicate' && data.client_id;
+      if (data.field === 'instagram' || message.toLowerCase().includes('instagram')) {
         setFieldError(instagramInput, message);
-      } else if (message.toLowerCase().includes('телефон') || message.toLowerCase().includes('номер')) {
+      } else if (data.field === 'telegram' || message.toLowerCase().includes('telegram')) {
+        setFieldError(telegramInput, message);
+      } else if (data.field === 'phone' || message.toLowerCase().includes('телефон') || message.toLowerCase().includes('номер')) {
         setFieldError(phoneInput, message);
-      } else {
+      }
+
+      if (isDuplicate && !isEditMode) {
+        showDuplicatePrompt(message, data.client_id);
+      } else if (!getFieldErrorElement(instagramInput)?.textContent && !getFieldErrorElement(phoneInput)?.textContent && !getFieldErrorElement(telegramInput)?.textContent) {
         showFormError(message);
       }
       return false;
