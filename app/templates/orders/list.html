@@ -279,7 +279,6 @@
                   {% endif %}
                   <p class="text-sm leading-6 text-stone-700">
                     {% if delivery.is_pickup %}
-                      Самовивіз
                     {% elif delivery.street %}
                       {{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
                     {% elif order and order.street %}

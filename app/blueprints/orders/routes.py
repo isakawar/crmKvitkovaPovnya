@@ -780,7 +780,7 @@ def subscriptions_list():
     city_filter = request.args.get('city', '').strip()
     type_filter = request.args.get('type', '').strip()
     page = int(request.args.get('page', 1))
-    per_page = 34
+    per_page = 30
 
     data = []
     for order in subscription_orders:

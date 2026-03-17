@@ -587,19 +587,11 @@ document.addEventListener('DOMContentLoaded', function() {
       extendBtn.classList.toggle('opacity-50', !data.stats.can_extend);
       extendBtn.onclick = async () => {
         try {
-          const extendResponse = await fetch(`/orders/${data.id}/extend-subscription`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-          });
-          const extendData = await extendResponse.json();
-          if (!extendResponse.ok || !extendData.success) {
-            throw new Error(extendData.error || 'Не вдалося продовжити підписку');
-          }
-          showToast('Підписку успішно продовжено!', 'success');
           detailModal.hide();
-          setTimeout(() => location.reload(), 900);
+          await window.orderComposerApi?.openSubscriptionExtension(data.id, { returnToModalId: 'subscriptionDetailModal' });
         } catch (error) {
-          showToast(error.message || 'Не вдалося продовжити підписку', 'error');
+          showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
+          detailModal.show();
         }
       };
 

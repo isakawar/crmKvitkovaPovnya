@@ -113,7 +113,23 @@ def assign_route(route_id):
     route = DeliveryRoute.query.get_or_404(route_id)
     courier_id = request.form.get('courier_id', type=int)
     delivery_price = request.form.get('delivery_price', type=int)
-    route.courier_id = courier_id or None
+
+    # Notify old courier if route was sent and courier is being changed
+    old_courier_id = route.courier_id
+    new_courier_id = courier_id or None
+    if old_courier_id and old_courier_id != new_courier_id and route.telegram_message_id:
+        old_courier = Courier.query.get(old_courier_id)
+        if old_courier and old_courier.telegram_chat_id:
+            bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+            cancel_text = (
+                f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
+                f"Призначення було змінено. Ця пропозиція скасована."
+            )
+            _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+        route.telegram_message_id = None
+        route.status = 'draft'
+
+    route.courier_id = new_courier_id
     if delivery_price is not None:
         route.delivery_price = delivery_price
     db.session.commit()
@@ -136,6 +152,19 @@ def assign_and_send_route(route_id):
     if not courier or not courier.telegram_chat_id:
         flash('Кур\'єр не зареєстрований в Telegram', 'danger')
         return redirect(url_for('routes.saved_routes'))
+
+    # Notify old courier if route was already sent and courier is being changed
+    old_courier_id = route.courier_id
+    if old_courier_id and old_courier_id != courier_id and route.telegram_message_id:
+        old_courier = Courier.query.get(old_courier_id)
+        if old_courier and old_courier.telegram_chat_id:
+            bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+            cancel_text = (
+                f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
+                f"Призначення було змінено. Ця пропозиція скасована."
+            )
+            _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+        route.telegram_message_id = None
 
     route.courier_id = courier_id
     if delivery_price is not None:

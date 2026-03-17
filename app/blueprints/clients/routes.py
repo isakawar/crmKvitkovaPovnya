@@ -9,7 +9,7 @@ clients_bp = Blueprint('clients', __name__)
 @clients_bp.route('/clients', methods=['GET'])
 def clients_list():
     page = int(request.args.get('page', 1))
-    per_page = 30
+    per_page = 28
     search_query = request.args.get('q', '').strip()
     sub_filter = request.args.get('sub', '')
 

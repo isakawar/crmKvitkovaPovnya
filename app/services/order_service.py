@@ -131,6 +131,8 @@ def create_order_and_deliveries(client, form):
     deliveries = build_delivery_dates(order.first_delivery_date, order.delivery_type, order.delivery_day)
 
     for i, d_date in enumerate(deliveries):
+        delivery_time_from = order.time_from if i == 0 else None
+        delivery_time_to = order.time_to if i == 0 else None
         delivery = Delivery(
             order_id=order.id,
             client_id=client.id,
@@ -140,8 +142,8 @@ def create_order_and_deliveries(client, form):
             preferences=order.preferences,
             street=order.street if not order.is_pickup else None,
             building_number=order.building_number if not order.is_pickup else None,
-            time_from=order.time_from,
-            time_to=order.time_to,
+            time_from=delivery_time_from,
+            time_to=delivery_time_to,
             size=order.size,
             phone=order.recipient_phone,
             is_pickup=order.is_pickup,

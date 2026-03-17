@@ -88,6 +88,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 footer: '',
                 submit: 'Створити підписку',
             },
+            extend: {
+                chip: '<i class="bi bi-arrow-repeat"></i> Продовження',
+                title: 'Продовження підписки',
+                description: 'Параметри взято з попереднього циклу. Оберіть нову дату першої доставки.',
+                footer: 'Це створить новий цикл підписки, попередній залишиться в історії.',
+                submit: 'Створити продовження',
+            },
             edit: {
                 chip: '<i class="bi bi-arrow-repeat"></i> Підписка',
                 title: 'Редагувати підписку',
@@ -169,14 +176,18 @@ document.addEventListener('DOMContentLoaded', function() {
     function setComposerSubmitting(submitting) {
         isComposerSubmitting = submitting;
         orderSubmitBtn.disabled = submitting;
-        const state = addOrderForm.getAttribute('data-edit-id') ? 'edit' : 'create';
+        const state = addOrderForm.getAttribute('data-extend-mode') === 'true'
+            ? 'extend'
+            : (addOrderForm.getAttribute('data-edit-id') ? 'edit' : 'create');
         orderSubmitBtnText.textContent = submitting
             ? 'Зберігаємо...'
             : composerContent[currentComposerFlow][state].submit;
     }
 
     function applyComposerCopy(flow, isEditing = false) {
-        const state = isEditing ? 'edit' : 'create';
+        const state = addOrderForm.getAttribute('data-extend-mode') === 'true'
+            ? 'extend'
+            : (isEditing ? 'edit' : 'create');
         const content = composerContent[flow][state];
         orderFlowChip.innerHTML = content.chip;
         orderModalTitle.textContent = content.title;
@@ -318,6 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
         addOrderForm.removeAttribute('data-edit-id');
+        addOrderForm.removeAttribute('data-extend-mode');
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
@@ -353,6 +365,62 @@ document.addEventListener('DOMContentLoaded', function() {
         const response = await fetch(`/orders/${orderId}/edit`);
         const orderData = await response.json();
         populateComposerForm(orderData, orderId, {
+            preserveReturnContext: Boolean(options.returnToModalId),
+        });
+    }
+
+    function populateComposerForExtension(orderData, options = {}) {
+        resetComposerForm('subscription', orderData.client_instagram, {
+            preserveReturnContext: Boolean(options.preserveReturnContext),
+        });
+        lockScenarioSwitch(true);
+        addOrderForm.setAttribute('data-extend-mode', 'true');
+        clientSearch.value = orderData.client_instagram || '';
+        addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
+        recipientPhoneInput.value = orderData.recipient_phone || '';
+        addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
+        addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
+        addressInput.value = orderData.street || '';
+        deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
+        sizeSelect.value = orderData.size || '';
+        customAmountInput.value = orderData.custom_amount || '';
+        addOrderForm.querySelector('[name="first_delivery_date"]').value = '';
+        deliveryDaySelect.value = orderData.delivery_day || '';
+        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
+        if (commentInput) commentInput.value = orderData.comment || '';
+        if (preferencesInput) preferencesInput.value = orderData.preferences || '';
+        if (orderData.is_pickup) {
+            setDeliveryMode('pickup');
+        } else if (orderData.delivery_method === 'nova_poshta') {
+            setDeliveryMode('nova_poshta');
+        } else {
+            setDeliveryMode('courier');
+        }
+        syncCustomAmountState();
+        setComposerFlow('subscription', true);
+        if (extendHeaderBtn) {
+            extendHeaderBtn.classList.add('d-none');
+            extendHeaderBtn.removeAttribute('data-order-id');
+            extendHeaderBtn.removeAttribute('data-client-instagram');
+        }
+        addOrderModal.show();
+    }
+
+    async function openSubscriptionExtension(orderId, options = {}) {
+        if (!orderId) return;
+        if (options.returnToModalId) {
+            setReturnContext(options.returnToModalId);
+        } else {
+            clearReturnContext();
+        }
+        const response = await fetch(`/orders/${orderId}/edit`);
+        const orderData = await response.json();
+        if (!response.ok) {
+            throw new Error(orderData.error || 'Не вдалося завантажити підписку');
+        }
+        populateComposerForExtension(orderData, {
             preserveReturnContext: Boolean(options.returnToModalId),
         });
     }
@@ -581,6 +649,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.orderComposerApi = {
         openComposer,
         openOrderEditor,
+        openSubscriptionExtension,
     };
 
     if (composerBackBtn) {
