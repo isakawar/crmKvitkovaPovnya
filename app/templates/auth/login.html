@@ -157,30 +157,65 @@
   }
 
   .auth-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
     border: 1px solid;
-    border-radius: 1rem;
-    padding: 0.9rem 1rem;
-    font-size: 0.95rem;
+    border-radius: 1.1rem;
+    padding: 0.82rem 0.92rem;
+    font-size: 0.92rem;
     line-height: 1.5;
-    margin-bottom: 0.95rem;
+    margin-bottom: 0.8rem;
+    box-shadow: 0 8px 18px rgba(28, 25, 23, 0.04);
+  }
+
+  .auth-alert__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+    font-size: 0.9rem;
+  }
+
+  .auth-alert__text {
+    flex: 1;
+    padding-top: 0.15rem;
   }
 
   .auth-alert--danger {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #b91c1c;
+    background: #fff8f7;
+    border-color: #f5d0c8;
+    color: #9f2d20;
+  }
+
+  .auth-alert--danger .auth-alert__icon {
+    background: #fde8e3;
+    color: #b42318;
   }
 
   .auth-alert--success {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #047857;
+    background: #f4fbf7;
+    border-color: #cdebd9;
+    color: #166534;
+  }
+
+  .auth-alert--success .auth-alert__icon {
+    background: #dff6e8;
+    color: #15803d;
   }
 
   .auth-alert--info {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #1d4ed8;
+    background: #f7f7f6;
+    border-color: #e7e5e4;
+    color: #57534e;
+  }
+
+  .auth-alert--info .auth-alert__icon {
+    background: #f1f0ee;
+    color: #44403c;
   }
 
   .auth-form {
@@ -366,7 +401,19 @@
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
           {% for category, message in messages %}
-            <div class="auth-alert auth-alert--{{ category if category in ['danger', 'success', 'info'] else 'info' }}">{{ message }}</div>
+            {% set alert_category = category if category in ['danger', 'success', 'info'] else 'info' %}
+            <div class="auth-alert auth-alert--{{ alert_category }}">
+              <span class="auth-alert__icon">
+                {% if alert_category == 'danger' %}
+                  <i class="bi bi-exclamation-circle"></i>
+                {% elif alert_category == 'success' %}
+                  <i class="bi bi-check-circle"></i>
+                {% else %}
+                  <i class="bi bi-info-circle"></i>
+                {% endif %}
+              </span>
+              <span class="auth-alert__text">{{ message }}</span>
+            </div>
           {% endfor %}
         {% endif %}
       {% endwith %}

@@ -562,6 +562,7 @@
     {% if messages %}
       <div class="flex flex-col gap-3">
         {% for cat, msg in messages %}
+        {% if msg != 'Ви успішно увійшли в систему!' %}
         <div class="flex items-center gap-3 rounded-[20px] border px-5 py-4 text-sm shadow-sm
                     {% if cat == 'success' %}border-emerald-200 bg-emerald-50 text-emerald-800
                     {% elif cat == 'danger' %}border-red-200 bg-red-50 text-red-800
@@ -569,6 +570,7 @@
           <i class="bi {% if cat == 'success' %}bi-check-circle{% elif cat == 'danger' %}bi-x-circle{% else %}bi-exclamation-triangle{% endif %}"></i>
           <span>{{ msg }}</span>
         </div>
+        {% endif %}
         {% endfor %}
       </div>
     {% endif %}
