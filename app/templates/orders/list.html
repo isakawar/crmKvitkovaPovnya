@@ -14,87 +14,82 @@
 
 {% block content %}
 <div class="flex flex-col gap-6">
-  <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-    <div class="space-y-2">
+  <section class="mb-2 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
       </div>
-    </div>
 
-    <div class="flex flex-col gap-3 sm:flex-row">
-      <a href="/orders/export/csv"
-         class="inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
-        <i class="bi bi-download"></i>
-        Експорт CSV
-      </a>
-      <button
-        type="button"
-        class="inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700"
-        data-open-composer="order"
-        data-bs-toggle="modal"
-        data-bs-target="#addOrderModal"
-      >
-        <i class="bi bi-plus-lg"></i>
-        Нове замовлення
-      </button>
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+          Всього: {{ orders_count }}
+        </div>
+        <a href="/orders/export/csv"
+           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+          <i class="bi bi-download"></i>
+          Експорт CSV
+        </a>
+        <button
+          type="button"
+          class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          data-open-composer="order"
+          data-bs-toggle="modal"
+          data-bs-target="#addOrderModal"
+        >
+          <i class="bi bi-plus"></i>
+          Нове замовлення
+        </button>
+      </div>
     </div>
   </section>
 
   <section class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-    <article class="rounded-[22px] border border-stone-200 bg-gradient-to-br from-white via-white to-amber-50 p-4 shadow-sm">
-      <div class="mb-3 flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-900 text-white">
-          <i class="bi bi-bag-heart"></i>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
+          <i class="bi bi-bag-heart text-sm"></i>
         </div>
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
-          <p class="text-xs text-stone-500">усі активності</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ orders_count }}</p>
         </div>
       </div>
-      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ orders_count }}</p>
-      <p class="mt-1.5 text-xs leading-5 text-stone-500">Замовлення та підписки в CRM.</p>
     </article>
 
-    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
-      <div class="mb-3 flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-          <i class="bi bi-arrow-repeat"></i>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <i class="bi bi-arrow-repeat text-sm"></i>
         </div>
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Підписки</p>
-          <p class="text-xs text-stone-500">регулярні цикли</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_orders_count }}</p>
         </div>
       </div>
-      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ subscription_orders_count }}</p>
-      <p class="mt-1.5 text-xs leading-5 text-stone-500">Weekly, Monthly і Bi-weekly сценарії.</p>
     </article>
 
-    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
-      <div class="mb-3 flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-          <i class="bi bi-people"></i>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <i class="bi bi-people text-sm"></i>
         </div>
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнти</p>
-          <p class="text-xs text-stone-500">унікальні картки</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ clients_count }}</p>
         </div>
       </div>
-      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ clients_count }}</p>
-      <p class="mt-1.5 text-xs leading-5 text-stone-500">Клієнти, які вже мають оформлені замовлення.</p>
     </article>
 
-    <article class="rounded-[22px] border border-stone-200 bg-white p-4 shadow-sm">
-      <div class="mb-3 flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
-          <i class="bi bi-stars"></i>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
+          <i class="bi bi-stars text-sm"></i>
         </div>
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Продовження</p>
-          <p class="text-xs text-stone-500">переоформлені цикли</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_extensions_count }}</p>
         </div>
       </div>
-      <p class="text-3xl font-semibold tracking-tight text-stone-900">{{ subscription_extensions_count }}</p>
-      <p class="mt-1.5 text-xs leading-5 text-stone-500">Підписки, які вже були продовжені менеджером.</p>
     </article>
   </section>
 
