@@ -176,6 +176,13 @@
 
     <!-- Nav -->
     <nav class="flex flex-col w-full px-2 gap-0.5 flex-1">
+        <a href="/dashboard"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Дашборд">
+            <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
+            <span class="nav-label">Дашборд</span>
+        </a>
         <a href="/clients"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"

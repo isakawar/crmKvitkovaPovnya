@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const orderSubmitBtnText = document.getElementById('order-submit-btn-text');
     const composerBackBtn = document.getElementById('order-back-btn');
     const orderErrorBanner = document.getElementById('add-order-error');
+    const extendFromInput = document.getElementById('extend-from-order-id');
     const extendHeaderBtn = document.getElementById('extend-subscription-header-btn');
     const confirmExtendBtn = document.getElementById('confirmExtendBtn');
     const extendClientInstagram = document.getElementById('extend-client-instagram');
@@ -330,6 +331,9 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.reset();
         addOrderForm.removeAttribute('data-edit-id');
         addOrderForm.removeAttribute('data-extend-mode');
+        if (extendFromInput) {
+            extendFromInput.value = '';
+        }
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
@@ -375,6 +379,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         lockScenarioSwitch(true);
         addOrderForm.setAttribute('data-extend-mode', 'true');
+        if (extendFromInput) {
+            extendFromInput.value = orderData.id || '';
+        }
         clientSearch.value = orderData.client_instagram || '';
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
         recipientPhoneInput.value = orderData.recipient_phone || '';

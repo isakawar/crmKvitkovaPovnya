@@ -672,8 +672,12 @@ def extend_subscription(order_id):
 
         # Відмічаємо старий order як продовжений
         order.is_subscription_extended = True
+        order.subscription_followup_status = 'extended'
+        order.subscription_followup_at = datetime.utcnow()
 
         for i, d_date in enumerate(next_cycle_dates):
+            delivery_time_from = order.time_from if i == 0 else None
+            delivery_time_to = order.time_to if i == 0 else None
             delivery = Delivery(
                 order_id=new_order.id,
                 client_id=order.client_id,
@@ -685,8 +689,8 @@ def extend_subscription(order_id):
                 building_number=order.building_number if not order.is_pickup else None,
                 floor=order.floor if not order.is_pickup else None,
                 entrance=order.entrance if not order.is_pickup else None,
-                time_from=order.time_from,
-                time_to=order.time_to,
+                time_from=delivery_time_from,
+                time_to=delivery_time_to,
                 size=order.size,
                 phone=order.recipient_phone,
                 is_pickup=order.is_pickup,
