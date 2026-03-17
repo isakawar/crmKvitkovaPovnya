@@ -120,6 +120,14 @@
     @apply block;
   }
 
+  .client-error-actions {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  .client-error-action-btn {
+    @apply inline-flex items-center justify-center rounded-2xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 transition-colors hover:bg-red-50;
+  }
+
   .client-input.is-invalid,
   .client-select.is-invalid {
     @apply border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-200;

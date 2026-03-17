@@ -80,6 +80,10 @@ def client_create():
         personal_discount=personal_discount
     )
     if error:
+        if isinstance(error, dict):
+            payload = {'success': False}
+            payload.update(error)
+            return jsonify(payload), 400
         return jsonify({'success': False, 'error': error}), 400
     return jsonify({'success': True})
 
@@ -119,6 +123,10 @@ def client_update(client_id):
         personal_discount=personal_discount
     )
     if error:
+        if isinstance(error, dict):
+            payload = {'success': False}
+            payload.update(error)
+            return jsonify(payload), 400
         return jsonify({'success': False, 'error': error}), 400
     return jsonify({'success': True})
 
