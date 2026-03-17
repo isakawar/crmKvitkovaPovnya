@@ -106,26 +106,26 @@
   .routes-kpi-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 0.6rem;
   }
 
   .routes-kpi-card {
     border: 1px solid #e7e5e4;
-    border-radius: 1.4rem;
+    border-radius: 1rem;
     background: #fff;
-    padding: 0.95rem 1rem;
-    box-shadow: 0 12px 34px rgba(28, 25, 23, 0.05);
+    padding: 0.75rem 1rem;
+    box-shadow: 0 8px 18px rgba(28, 25, 23, 0.05);
   }
 
   .routes-kpi-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: 0.9rem;
-    margin-bottom: 0.7rem;
-    font-size: 0.95rem;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.75rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.85rem;
   }
 
   .routes-board-card {
@@ -539,22 +539,22 @@
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-amber-50 text-amber-600"><i class="bi bi-signpost-2"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Маршрутів</p>
-      <p class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">{{ routes|length }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ routes|length }}</p>
     </article>
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-emerald-50 text-emerald-600"><i class="bi bi-person-check"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Призначено</p>
-      <p class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">{{ stats.assigned }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.assigned }}</p>
     </article>
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-blue-50 text-blue-600"><i class="bi bi-send-check"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">В процесі</p>
-      <p class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">{{ stats.sent }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.sent }}</p>
     </article>
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-stone-100 text-stone-600"><i class="bi bi-hourglass-split"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Очікують</p>
-      <p class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
     </article>
   </section>
 
