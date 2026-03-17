@@ -40,6 +40,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.routes.routes import routes_bp
     from app.blueprints.florist.routes import florist_bp
     from app.blueprints.import_csv.routes import import_csv_bp
+    from app.blueprints.dashboard.routes import dashboard_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -50,6 +51,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(routes_bp)
     app.register_blueprint(florist_bp)
     app.register_blueprint(import_csv_bp)
+    app.register_blueprint(dashboard_bp)
 
     # Захист всіх маршрутів за замовчуванням
     @app.before_request
@@ -70,7 +72,7 @@ def create_app(config_class=DevelopmentConfig):
     # Головна сторінка перенаправляє на список замовлень
     @app.route('/')
     def index():
-        return redirect(url_for('orders.orders_list'))
+        return redirect(url_for('dashboard.dashboard_page'))
 
     from zoneinfo import ZoneInfo
     _kyiv_tz = ZoneInfo('Europe/Kyiv')

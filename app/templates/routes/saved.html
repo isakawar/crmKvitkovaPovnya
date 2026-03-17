@@ -649,7 +649,6 @@
         </div>
 
         <div class="routes-board-actions">
-          {% if route.status in ['draft', 'rejected'] %}
           <button type="button"
                   class="routes-action-btn route-assign-trigger"
                   data-route-id="{{ route.id }}"
@@ -657,11 +656,11 @@
                   data-delivery-price="{{ route.delivery_price if route.delivery_price is not none else '' }}"
                   data-route-date="{{ formatted_date }}"
                   data-deliveries-count="{{ route.deliveries_count }}"
-                  data-current-courier="{{ courier_name }}">
+                  data-current-courier="{{ courier_name }}"
+                  data-route-status="{{ route.status }}">
             <i class="bi bi-person-gear"></i>
             {{ 'Змінити курʼєра' if route.courier else 'Призначити курʼєра' }}
           </button>
-          {% endif %}
           <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
                 onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
             <button type="submit" class="routes-action-btn routes-delete-btn">
@@ -977,6 +976,9 @@ function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliverie
 document.querySelectorAll('.route-assign-trigger').forEach(function(button) {
   button.addEventListener('click', function(event) {
     event.stopPropagation();
+    if (this.dataset.routeStatus === 'completed') {
+      if (!confirm('Маршрут завершено. Ви впевнені, що хочете змінити курʼєра?')) return;
+    }
     openAssignModal(
       this.dataset.routeId,
       this.dataset.courierId || null,
