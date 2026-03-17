@@ -5,447 +5,333 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kvitkova CRM</title>
     {% block head %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
     {% endblock %}
     <style>
-        body, html {
-            cursor: url('data:image/svg+xml;utf8,<svg height="32" width="32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="8" fill="%23007bff"/></svg>') 16 16, auto;
-        }
-        body:hover, html:hover {
-            cursor: url('data:image/svg+xml;utf8,<svg height="32" width="32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="8" fill="%230056b3"/></svg>') 16 16, auto;
-        }
-        body {
-            background: #f9fafb;
-            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
-            color: #23272f;
-            font-weight: 400;
-        }
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
-            font-weight: 500;
-            color: #23272f;
-        }
-        html, body { height: 100%; }
-        .container-fluid {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 40px 32px 32px 32px;
-        }
-        .main-content > .container-fluid > *:not(:last-child) {
-            margin-bottom: 32px;
-        }
-        .sidebar {
-            background: #007bff;
-            color: #fff;
-            width: 72px;
-            position: fixed;
-            left: 0; top: 0; bottom: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 100;
-            border-right: none;
-            box-shadow: 2px 0 24px 0 rgba(0,123,255,0.04);
-            padding-top: 0;
-            transition: width 0.2s;
-        }
-        .sidebar-logo {
-            margin: 24px 0 24px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .sidebar-logo-inner {
-            background:#fff;
-            border-radius:50%;
-            padding:8px;
-            box-shadow:0 2px 12px rgba(0,0,0,0.07);
-            width:48px; height:48px;
-            display:flex; align-items:center; justify-content:center;
-        }
-        .sidebar-logo-inner img {
-            width:32px; height:32px; object-fit:cover; border-radius:50%;
-        }
-        .sidebar .nav-link {
-            color: #fff;
-            border-radius: 12px;
-            margin: 0 0 8px 0;
-            padding: 14px 0;
-            font-size: 1.7rem;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.18s, color 0.18s;
-        }
-        .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background: rgba(255,255,255,0.18);
-            color: #fff;
-        }
-        .sidebar .nav-link i {
-            color: inherit;
-            font-size: 1.7rem;
-        }
-        .main-content {
-            margin-left: 72px;
-            min-height: 100vh;
-            background: #f9fafb;
-            transition: margin-left 0.2s;
-        }
-        .topbar {
-            background: #eaf1fb;
-            color: #222;
-            padding: 1.2rem 2rem 1.2rem 2rem;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1.5px solid #e3eafc;
-            box-shadow: 0 2px 24px 0 rgba(0,123,255,0.04);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        .topbar .btn, .topbar .btn-outline-primary {
-            background: #fff;
-            color: #007bff;
-            border: 1.5px solid #e3eafc;
-            border-radius: 8px;
-            transition: background 0.18s, color 0.18s, border 0.18s;
-        }
-        .topbar .btn:hover, .topbar .btn-outline-primary:hover {
-            background: #007bff;
-            color: #fff;
-            border: 1.5px solid #007bff;
-        }
-        .stat-cards {
-            display: flex;
-            gap: 24px;
-            margin-bottom: 36px;
-            flex-wrap: wrap;
-        }
-        .stat-card {
-            background: #fcfcfd;
-            border-radius: 18px;
-            box-shadow: 0 4px 32px 0 rgba(0,123,255,0.04);
-            padding: 32px 40px;
-            min-width: 180px;
-            flex: 1 1 180px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            justify-content: center;
-            border: 1.5px solid #e3eafc;
-        }
-        .stat-card .stat-title {
-            font-size: 1.02rem;
-            color: #8b909a;
-            margin-bottom: 6px;
-            font-weight: 400;
-        }
-        .stat-card .stat-value {
-            font-size: 2.1rem;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .filter-bar {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-bottom: 18px;
-            background: #fcfcfd;
-            border-radius: 14px;
-            box-shadow: 0 2px 16px rgba(0,123,255,0.03);
-            padding: 14px 20px 8px 20px;
-            border: 1.5px solid #e3eafc;
-        }
-        .filter-bar input, .filter-bar select {
-            font-size: 0.98rem;
-            border-radius: 8px;
-            border: 1.5px solid #e3eafc;
-            background: #f7f8fa;
-            color: #23272f;
-            padding: 6px 10px;
-            height: 36px;
-            box-shadow: none;
-            transition: border 0.18s, background 0.18s;
-        }
-        .filter-bar input:focus, .filter-bar select:focus {
-            border: 1.5px solid #007bff;
-            background: #f3f6fa;
-            outline: none;
-        }
-        .filter-bar .btn, .filter-bar .btn-outline-primary, .filter-bar .btn-outline-secondary {
-            font-size: 0.98rem;
-            border-radius: 8px;
-            padding: 6px 16px;
-            font-weight: 500;
-            background: #eaf1fb;
-            color: #007bff;
-            border: 1.5px solid #e3eafc;
-            transition: background 0.18s, color 0.18s, border 0.18s;
-        }
-        .filter-bar .btn:hover, .filter-bar .btn-outline-primary:hover, .filter-bar .btn-outline-secondary:hover {
-            background: #007bff;
-            color: #fff;
-            border: 1.5px solid #007bff;
-        }
-        .filter-tag {
-            background: #f3f6fa;
-            color: #388e3c;
-            border-radius: 16px;
-            padding: 4px 14px;
-            font-size: 0.97rem;
-            margin-right: 6px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-        }
-        .filter-tag .bi-x {
-            cursor: pointer;
-            margin-left: 4px;
-        }
-        .table {
-            background: #fcfcfd;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 32px 0 rgba(0,123,255,0.03);
-            margin-bottom: 0;
-            border: 1.5px solid #e3eafc;
-        }
-        .table th {
-            background: #eaf1fb;
-            color: #222;
-            font-weight: 600;
-            border-bottom: 1.5px solid #e3eafc;
-            font-size: 1.01rem;
-            letter-spacing: 0.01em;
-            border-top: none;
-            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
-            font-weight: 500;
-        }
-        .table td {
-            background: #fcfcfd;
-            color: #23272f;
-            border-bottom: 1px solid #eaf1fb;
-            font-size: 0.99rem;
-            font-family: 'Inter', 'Segoe UI', system-ui, Arial, sans-serif;
-            font-weight: 400;
-        }
-        .tag {
-            display: inline-block;
-            background: #f3f6fa;
-            color: #23272f;
-            border-radius: 8px;
-            padding: 2px 10px;
-            font-size: 0.95rem;
-            margin-right: 4px;
-            font-weight: 500;
-            letter-spacing: 0.01em;
-            border: 1.5px solid #e3eafc;
-        }
-        .tag-hard { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
-        .tag-medium { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
-        .tag-easy { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
-        .tag-pickup { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
-        .tag-neutral { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
-        .tag-info { background: #eaf1fb; color: #3a4a5d; border-color: #d2e3f7; }
-        .tag-warning { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
-        .tag-success { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
-        .tag-error { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
-        
-        /* Стилі для неоплачених доставок підписки */
+        /* Функціональні стилі, які залежать від логіки (не декоративні) */
         .unpaid-subscription-delivery {
             background: #fff3cd !important;
             border-left: 4px solid #ffc107 !important;
         }
-        .unpaid-subscription-delivery:hover {
-            background: #ffeaa7 !important;
-        }
-        .unpaid-subscription-delivery td {
-            background: inherit !important;
-        }
-        
-        /* Стилі для деактивованих полів */
+        .unpaid-subscription-delivery:hover { background: #ffeaa7 !important; }
+        .unpaid-subscription-delivery td { background: inherit !important; }
+
         .input-disabled {
             background: #d1d5db !important;
             color: #6b7280 !important;
-            border: 1.5px solid #e3eafc !important;
             opacity: 1 !important;
             cursor: not-allowed !important;
-            font-weight: 500 !important;
         }
-        
-        /* Стилі для змінених дат доставки */
-        .delivery-date-cell {
-            transition: background-color 0.2s;
-        }
-        .delivery-date-cell:hover {
-            background-color: #e3f2fd !important;
-        }
+
+        .delivery-date-cell { transition: background-color 0.2s; }
+        .delivery-date-cell:hover { background-color: #e3f2fd !important; }
         .delivery-date-cell.changed {
             background-color: #fff3cd !important;
             border-left: 3px solid #ffc107 !important;
         }
-        
-        .pagination {
-            margin: 0;
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            gap: 8px;
-            background: none;
-            border: none;
-        }
-        .pagination .page-link {
-            border-radius: 8px !important;
-            color: #007bff;
-            border: none;
-            background: #eaf1fb;
-            margin: 0 2px;
+
+        /* Теги розміру/типу — використовуються в таблицях доставок/замовлень */
+        .tag {
+            display: inline-block;
+            border-radius: 6px;
+            padding: 2px 10px;
+            font-size: 0.85rem;
             font-weight: 500;
-            transition: background 0.18s, color 0.18s;
+            border: 1px solid;
         }
-        .pagination .page-item.active .page-link {
-            background: #007bff;
-            color: #fff;
+        .tag-hard    { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
+        .tag-medium  { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
+        .tag-easy    { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+        .tag-pickup  { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
+        .tag-neutral { background: #f6f8fa; color: #7a8a99; border-color: #e0e4ea; }
+        .tag-info    { background: #eaf1fb; color: #3a4a5d; border-color: #d2e3f7; }
+        .tag-warning { background: #fff7e0; color: #bfa14a; border-color: #f7e7b3; }
+        .tag-success { background: #e7fbe7; color: #5a9c6e; border-color: #c6e7c6; }
+        .tag-error   { background: #ffeae5; color: #d97a6c; border-color: #f7d3cb; }
+
+        /* ── Sidebar hover-expand ────────────────────────────────── */
+
+        /* Base sidebar transition */
+        .sidebar { transition: width 0.28s cubic-bezier(.4,0,.2,1); }
+        .sidebar:hover { width: 224px; }
+
+        /* ── Sidebar icon centering ─────────────────────────────── */
+        /* Collapsed: center icon, kill gap/padding so zero-width label
+           doesn't shift the flex center calculation */
+        .sidebar nav a {
+            justify-content: center !important;
+            gap: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
         }
-        .pagination .page-link:focus {
-            box-shadow: none;
+        /* Expanded: restore gap and padding */
+        .sidebar:hover nav a {
+            justify-content: flex-start !important;
+            gap: 0.75rem !important;
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
         }
-        .dropdown-menu {
-            min-width: 180px;
+
+        /* Fixed-width icons so every icon renders at same size */
+        .sidebar nav a i {
+            width: 1.25rem;
+            text-align: center;
+            flex-shrink: 0;
         }
-        /* Show on page + pagination row */
-        .bottom-controls {
+
+        /* Logo row — same centering logic */
+        .sidebar .sidebar-logo-row {
+            justify-content: center !important;
+            gap: 0 !important;
+            padding-left: 0.35rem !important;
+            padding-right: 0.35rem !important;
+        }
+        .sidebar:hover .sidebar-logo-row {
+            justify-content: flex-start !important;
+            gap: 0.75rem !important;
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+
+        .sidebar-logo-box {
+            width: 3.85rem;
+            height: 3.85rem;
+            min-width: 3.85rem;
+            border-radius: 1.15rem;
+            background: #fef3c7;
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            gap: 24px;
-            margin-top: 18px;
+            justify-content: center;
+            box-shadow: 0 10px 24px rgba(251, 191, 36, 0.15);
         }
-        .show-on-page-label {
-            font-size: 1rem;
-            color: #8b909a;
-            margin-right: 8px;
+
+        .sidebar-logo-box img {
+            width: 2.95rem;
+            height: 2.95rem;
+            object-fit: cover;
+            border-radius: 0.9rem;
         }
-        .show-on-page-select {
-            min-width: 70px;
-            border-radius: 8px;
-            border: 1.5px solid #e3eafc;
-            background: #eaf1fb;
-            color: #007bff;
-            font-size: 1rem;
-            padding: 4px 10px;
+
+        /* Smooth label fade — NO display:none (causes jerk) */
+        .nav-label,
+        .sidebar-logo-text {
+            display: block !important;
+            opacity: 0;
+            max-width: 0;
+            overflow: hidden;
+            white-space: nowrap;
+            pointer-events: none;
+            transition: opacity 0.22s ease, max-width 0.28s cubic-bezier(.4,0,.2,1);
         }
-        @media (max-width: 900px) {
-            .container-fluid { padding: 18px 2vw 18px 2vw; }
-            .stat-cards { flex-direction: column; gap: 16px; }
-            .sidebar { width: 56px; }
-            .main-content { margin-left: 56px; }
+        .sidebar:hover .nav-label,
+        .sidebar:hover .sidebar-logo-text {
+            opacity: 1;
+            max-width: 160px;
+            pointer-events: auto;
         }
-        @media (max-width: 600px) {
-            .container-fluid { padding: 4px 1vw 4px 1vw; }
-            .sidebar { display: none; }
-            .main-content { margin-left: 0; }
+
+        /* ── CSS Design Tokens (used by orders, deliveries, etc.) ── */
+        :root {
+            --br-950: #1A0A03; --br-900: #2C1008; --br-800: #3D1F0D;
+            --br-700: #5C3318; --br-600: #7A4A28; --br-500: #9A6240;
+            --br-400: #B8845E; --br-300: #D4A882; --br-200: #E8D2BC;
+            --br-100: #F4EAE0; --br-50:  #FAF6F2;
+            --gr-900: #0D2818; --gr-800: #1B4332; --gr-700: #2D6A4F;
+            --gr-600: #40916C; --gr-500: #52B788; --gr-400: #74C69D;
+            --gr-300: #95D5B2; --gr-200: #B7E4C7; --gr-100: #D8F3DC;
+            --gr-50:  #F0FAF3;
+            --am-900: #78350F; --am-700: #B45309; --am-500: #D97706;
+            --am-400: #F59E0B; --am-300: #FCD34D; --am-100: #FEF3C7;
+            --am-50:  #FFFBEB;
+            --color-bg: var(--br-50); --color-surface: #FEFCFA;
+            --color-border: var(--br-200); --color-text: var(--br-900);
+            --color-muted: var(--br-500); --color-primary: var(--gr-700);
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px; --radius-xl: 20px;
+            --shadow-xs: 0 1px 3px rgba(44,16,8,.06);
+            --shadow-sm: 0 2px 8px rgba(44,16,8,.08);
+            --shadow-md: 0 4px 20px rgba(44,16,8,.10);
+            --shadow-lg: 0 8px 40px rgba(44,16,8,.12);
+            --transition: 0.22s cubic-bezier(.4,0,.2,1);
         }
     </style>
 </head>
-<body>
-<div class="sidebar">
-    <div class="sidebar-logo">
-        <div class="sidebar-logo-inner">
-            <img src="{{ url_for('static', filename='logoKvitkova.jpg') }}" alt="Logo">
-        </div>
-    </div>
-    <a href="/clients" class="nav-link {% if request.path.startswith('/clients') %}active{% endif %}" title="Клієнти">
-        <i class="bi bi-person"></i>
-    </a>
-    <a href="/orders" class="nav-link {% if request.path.startswith('/orders') %}active{% endif %}" title="Замовлення">
-        <i class="bi bi-bag"></i>
-    </a>
-    <a href="/deliveries" class="nav-link {% if request.path.startswith('/deliveries') %}active{% endif %}" title="Доставки">
-        <i class="bi bi-truck"></i>
-    </a>
+<body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
 
-    <a href="/route-generator" class="nav-link {% if request.path.startswith('/route-generator') %}active{% endif %}" title="Оптимізатор маршрутів">
-        <i class="bi bi-signpost-split"></i>
-    </a>
-    <a href="/routes" class="nav-link {% if request.path.startswith('/routes') %}active{% endif %}" title="Збережені маршрути">
-        <i class="bi bi-journals"></i>
-    </a>
-    <a href="/couriers" class="nav-link {% if request.path.startswith('/couriers') %}active{% endif %}" title="Кур'єри">
-        <i class="bi bi-person-badge"></i>
-    </a>
-    <a href="/reports" class="nav-link {% if request.path.startswith('/reports') %}active{% endif %}" title="Звіти">
-        <i class="bi bi-bar-chart"></i>
-    </a>
-    <div style="flex:1 1 auto;"></div>
-    <a href="/settings" class="nav-link {% if request.path.startswith('/settings') %}active{% endif %}" title="Налаштування" style="margin-bottom: 12px;">
-        <i class="bi bi-gear"></i>
-    </a>
-    <a href="#" id="version-link" style="display:block; color:#fff; font-size:1.01rem; font-weight:700; text-shadow:0 2px 8px #1565c0, 0 1px 0 #23272f; opacity:0.97; text-decoration:none; margin-top:auto; margin-bottom:18px; letter-spacing:0.5px;" data-bs-toggle="modal" data-bs-target="#changelogModal">
-        v{{ app_version }}
-    </a>
+{% if current_user.is_authenticated %}
+<!-- Sidebar -->
+<div class="sidebar fixed left-0 top-0 bottom-0 w-16 bg-stone-100 border-r border-stone-200 flex flex-col items-center z-50 overflow-hidden">
+
+    <!-- Logo -->
+    <div class="sidebar-logo-row flex items-center gap-3 py-5 px-3 w-full">
+        <div class="sidebar-logo-box flex-shrink-0">
+            <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
+        </div>
+        <span class="sidebar-logo-text text-sm font-semibold text-stone-900">Kvitkova CRM</span>
+    </div>
+
+    <!-- Nav -->
+    <nav class="flex flex-col w-full px-2 gap-0.5 flex-1">
+        <a href="/dashboard"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Дашборд">
+            <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
+            <span class="nav-label">Дашборд</span>
+        </a>
+        <a href="/clients"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Клієнти">
+            <i class="bi bi-people text-lg flex-shrink-0"></i>
+            <span class="nav-label">Клієнти</span>
+        </a>
+        <a href="/subscriptions"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/subscriptions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Підписки">
+            <i class="bi bi-box-seam text-lg flex-shrink-0"></i>
+            <span class="nav-label">Підписки</span>
+        </a>
+        <a href="/orders"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Замовлення">
+            <i class="bi bi-truck text-lg flex-shrink-0"></i>
+            <span class="nav-label">Замовлення</span>
+        </a>
+<a href="/route-generator"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Оптимізатор маршрутів">
+            <i class="bi bi-bezier2 text-lg flex-shrink-0"></i>
+            <span class="nav-label">Маршрути</span>
+        </a>
+        <a href="/routes"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/routes') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Збережені маршрути">
+            <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
+            <span class="nav-label">Збережені</span>
+        </a>
+        <a href="/reports"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/reports') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Звіти">
+            <i class="bi bi-grid text-lg flex-shrink-0"></i>
+            <span class="nav-label">Звіти</span>
+        </a>
+
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+
+        <a href="/settings"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors mb-1
+                  {% if request.path.startswith('/settings') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Налаштування">
+            <i class="bi bi-gear text-lg flex-shrink-0"></i>
+            <span class="nav-label">Налаштування</span>
+        </a>
+
+        <!-- Version -->
+        <a href="#" id="version-link"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-xs text-stone-400 hover:bg-stone-200 transition-colors mb-3"
+           data-bs-toggle="modal" data-bs-target="#changelogModal" title="Changelog">
+            <i class="bi bi-clock-history text-base flex-shrink-0"></i>
+            <span class="nav-label">v{{ app_version }}</span>
+        </a>
+    </nav>
 </div>
-<div class="main-content">
-    <div class="topbar">
-        <div class="fw-bold fs-5">CRM Kvitkova Povnya</div>
-        <div class="d-flex align-items-center">
+
+<!-- Main content -->
+<div class="ml-16" style="min-height: 100vh;">
+
+    <!-- Topbar -->
+    <div class="bg-white border-b border-stone-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+        <span class="text-sm font-semibold text-stone-700">CRM Kvitkova Povnya</span>
+        <div class="flex items-center gap-2">
             {% if current_user.is_authenticated %}
-            <div class="dropdown me-3">
-                <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-person"></i> {{ current_user.username }}
+            <div class="relative" id="user-dropdown-wrapper">
+                <button onclick="document.getElementById('user-menu').classList.toggle('hidden')"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-stone-200 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
+                    <i class="bi bi-person"></i>
+                    {{ current_user.username }}
+                    <i class="bi bi-chevron-down text-xs"></i>
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                    <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">
+                <div id="user-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg py-1 min-w-36 z-50">
+                    <a href="{{ url_for('auth.logout') }}"
+                       class="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
                         <i class="bi bi-box-arrow-right"></i> Вийти
-                    </a></li>
-                </ul>
+                    </a>
+                </div>
             </div>
             {% endif %}
-            <a href="/" class="btn btn-outline-primary btn-sm"><i class="bi bi-house"></i></a>
+            <a href="/" class="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors">
+                <i class="bi bi-house"></i>
+            </a>
         </div>
     </div>
-    <div class="container-fluid py-4">
+
+    <!-- Page content -->
+    <div class="px-8 py-6">
         {% block content %}{% endblock %}
     </div>
 </div>
 
-<!-- Changelog Modal -->
+<!-- Changelog Modal (Bootstrap JS) -->
 <div class="modal fade" id="changelogModal" tabindex="-1" aria-labelledby="changelogModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content" style="border-radius:18px;">
-      <div class="modal-header" style="border-bottom:none;">
-        <h5 class="modal-title" id="changelogModalLabel">Changelog (історія змін)</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div class="modal-content rounded-2xl border-0 shadow-2xl">
+      <div class="flex items-center justify-between p-6 border-b border-stone-200">
+        <h5 class="text-base font-semibold text-stone-900" id="changelogModalLabel">Changelog (історія змін)</h5>
+        <button type="button" class="text-stone-400 hover:text-stone-600 transition-colors" data-bs-dismiss="modal">
+            <i class="bi bi-x-lg"></i>
+        </button>
       </div>
-      <div class="modal-body">
-        <pre id="changelog-textarea" class="form-control-plaintext" style="font-family:monospace; font-size:1.01rem; border-radius:10px; min-height:320px; background:#f8fafc; white-space:pre-wrap;"></pre>
+      <div class="p-6">
+        <pre id="changelog-textarea" class="text-sm text-stone-700 bg-stone-50 rounded-lg p-4 min-h-64 whitespace-pre-wrap font-mono overflow-auto"></pre>
       </div>
     </div>
   </div>
 </div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+{% else %}
+<div style="min-height: 100vh;">
+    {{ self.content() }}
+</div>
+{% endif %}
+
+<!-- Bootstrap JS only (для модалок і тостів) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" defer></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  var changelogModal = document.getElementById('changelogModal');
-  if (changelogModal) {
-    changelogModal.addEventListener('show.bs.modal', function() {
-      fetch('/changelog')
-        .then(r => r.ok ? r.text() : 'Changelog недоступний')
-        .then(text => {
-          document.getElementById('changelog-textarea').textContent = text;
+    {% if current_user.is_authenticated %}
+    // Changelog loader
+    var changelogModal = document.getElementById('changelogModal');
+    if (changelogModal) {
+        changelogModal.addEventListener('show.bs.modal', function() {
+            fetch('/changelog')
+                .then(r => r.ok ? r.text() : 'Changelog недоступний')
+                .then(text => {
+                    document.getElementById('changelog-textarea').textContent = text;
+                });
         });
+    }
+
+    // Close user dropdown on outside click
+    document.addEventListener('click', function(e) {
+        var wrapper = document.getElementById('user-dropdown-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            var menu = document.getElementById('user-menu');
+            if (menu) menu.classList.add('hidden');
+        }
     });
-  }
+    {% endif %}
 });
 </script>
 {% block scripts %}{% endblock %}
 </body>
-</html> 
+</html>

@@ -47,6 +47,17 @@ class Order(db.Model):
     periodicity = db.Column(db.String(8))
     preferred_days = db.Column(db.String(64))
     is_subscription_extended = db.Column(db.Boolean, default=False)  # Чи вже продовжено підписку
+    subscription_followup_status = db.Column(db.String(32), nullable=True)
+    subscription_followup_at = db.Column(db.DateTime, nullable=True)
 
     # Метод доставки: 'courier' | 'nova_poshta'
     delivery_method = db.Column(db.String(32), default='courier', nullable=False)
+
+    # Коментар до адреси (підʼїзд, квартира, поверх і тд)
+    address_comment = db.Column(db.Text, nullable=True)
+
+    # Тип пакування: 'коробка 📦', 'букет 🌸', 'коробка 📦 + пакет 🌸', тощо
+    bouquet_type = db.Column(db.String(64), nullable=True)
+
+    # Тип композиції: 'Весняний', 'Білосніжний', 'Екзотичний', 'Інший', тощо
+    composition_type = db.Column(db.String(64), nullable=True)

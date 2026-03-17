@@ -6,345 +6,435 @@
 <style>
   #route-map {
     height: 520px;
-    border-radius: 16px;
-    border: 1.5px solid #e3eafc;
-    overflow: hidden;
-  }
-  .leaflet-tile-pane {
-    transform: translateZ(0);
+    isolation: isolate;
   }
   .stop-marker {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    font-weight: 700;
-    font-size: 12px;
-    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%;
+    font-weight: 700; font-size: 12px; color: #fff;
     border: 2px solid rgba(255,255,255,0.85);
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   }
   .depot-icon {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 50%;
-    background: #fff;
-    border: 3px solid #007bff;
-    box-shadow: 0 2px 10px rgba(0,123,255,0.4);
-    font-size: 18px;
-    line-height: 1;
-  }
-  .route-card .stop-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f4f8;
-  }
-  .route-card .stop-row:last-child { border-bottom: none; }
-  .stop-num {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    color: #fff;
-    font-size: 11px;
-    font-weight: 700;
-    flex-shrink: 0;
-    margin-top: 1px;
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: #fff; border: 3px solid #1c1917;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    font-size: 18px; line-height: 1;
   }
   #loading-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(255,255,255,0.82);
-    z-index: 9999;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 18px;
+    display: none; position: fixed; inset: 0;
+    background: rgba(255,255,255,0.88); z-index: 9999;
+    flex-direction: column; align-items: center; justify-content: center; gap: 16px;
   }
   #loading-overlay.active { display: flex; }
   .spinner-ring {
-    width: 56px;
-    height: 56px;
-    border: 5px solid #e3eafc;
-    border-top-color: #007bff;
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
+    width: 44px; height: 44px;
+    border: 4px solid #e7e5e4; border-top-color: #1c1917;
+    border-radius: 50%; animation: spin 0.85s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Drag-and-drop routes */
+  /* Stop rows */
   .route-stops-list { padding: 4px 0; min-height: 48px; }
   .stop-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px 16px;
-    border-bottom: 1px solid #f0f4f8;
-    cursor: default;
-    transition: background 0.1s;
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px solid #f5f5f4;
+    cursor: default; transition: background 0.1s;
   }
   .stop-row:last-child { border-bottom: none; }
-  .stop-row:hover { background: #f7f9ff; }
-  .stop-row.sortable-ghost { opacity: 0.4; background: #eaf1fb; }
-  .stop-row.sortable-chosen { background: #eaf1fb; box-shadow: 0 2px 12px rgba(0,123,255,0.13); }
+  .stop-row:hover { background: #fafaf9; }
+  .stop-row.sortable-ghost { opacity: 0.4; background: #fef3c7; }
+  .stop-row.sortable-chosen { background: #fef3c7; box-shadow: 0 2px 12px rgba(245,158,11,0.13); }
   .drag-handle {
-    color: #c0c7d4;
-    cursor: grab;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    margin-top: 2px;
+    color: #d6d3d1; cursor: grab; font-size: 1.1rem;
+    flex-shrink: 0; margin-top: 2px; transition: color 0.15s;
+  }
+  .drag-handle:hover { color: #78716c; }
+  .drag-handle:active { cursor: grabbing; }
+  .route-stops-list.drag-over { background: #fef9ee; border-radius: 8px; }
+  .stop-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    color: #fff; font-size: 11px; font-weight: 700;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .btn-remove-stop {
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: #d6d3d1; font-size: 1rem; line-height: 1; flex-shrink: 0;
     transition: color 0.15s;
   }
-  .drag-handle:hover { color: #007bff; }
-  .drag-handle:active { cursor: grabbing; }
-  .route-stops-list.drag-over { background: #f0f5ff; border-radius: 8px; }
+  .btn-remove-stop:hover { color: #dc2626; }
+
+  /* Route card */
+  .route-card-header { cursor: pointer; transition: background 0.15s; }
+  .route-card-header:hover { background: #f5f5f4 !important; }
+  .route-card-active .route-card-header {
+    background: #fef3c7 !important;
+    box-shadow: inset 3px 0 0 #f59e0b;
+  }
 
   /* Changes banner */
-  #changes-banner {
-    display: none;
-    position: sticky;
-    bottom: 20px;
-    z-index: 100;
-    margin-top: 16px;
-  }
+  #changes-banner { display: none; position: sticky; bottom: 20px; z-index: 100; margin-top: 8px; }
   #changes-banner.visible { display: block; }
 
-  /* Delivery picker rows */
-  .picker-row {
+  /* Delivery picker */
+  .picker-modal .modal-content {
+    border-radius: 24px;
+    border: 1px solid #e7e5e4;
+    overflow: hidden;
+    box-shadow: 0 24px 64px rgba(28, 25, 23, 0.16);
+  }
+  .picker-modal .modal-header {
+    border-bottom: 1px solid #f1f5f9;
+    padding: 20px 28px;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 24%),
+      linear-gradient(180deg, #fffdf8 0%, #ffffff 100%);
+  }
+  .picker-modal__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #fde68a;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #b45309;
+    background: rgba(255, 251, 235, 0.92);
+  }
+  .picker-modal__title {
+    margin: 10px 0 4px;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1c1917;
+  }
+  .picker-modal__subtitle {
+    font-size: 0.86rem;
+    color: #78716c;
+  }
+  .picker-modal__close {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #78716c;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.15s ease;
+  }
+  .picker-modal__close:hover { background: #fafaf9; color: #1c1917; }
+
+  .picker-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 28px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fff;
+  }
+  .picker-count {
+    font-size: 0.85rem;
+    color: #78716c;
+    font-weight: 600;
+  }
+  .picker-actions {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 10px 24px;
-    border-bottom: 1px solid #f0f4f8;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .picker-chip {
+    border: 1px solid #e7e5e4;
+    border-radius: 999px;
+    background: #fff;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #57534e;
     cursor: pointer;
-    transition: background 0.12s;
-    user-select: none;
+    transition: 0.15s ease;
+  }
+  .picker-chip:hover { background: #fafaf9; color: #1c1917; }
+  .picker-chip--muted { color: #a8a29e; }
+
+  .picker-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 24px; border-bottom: 1px solid #f5f5f4;
+    cursor: pointer; transition: background 0.12s; user-select: none;
   }
   .picker-row:last-child { border-bottom: none; }
-  .picker-row:hover { background: #f7f9ff; }
+  .picker-row:hover { background: #fafaf9; }
   .picker-row.unchecked { opacity: 0.45; }
-  .picker-row input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; flex-shrink: 0; accent-color: #007bff; }
-  .picker-time { font-size: 0.88rem; font-weight: 700; color: #007bff; min-width: 90px; flex-shrink: 0; }
-  .picker-addr { font-size: 0.93rem; font-weight: 500; flex: 1; }
-  .picker-meta { font-size: 0.8rem; color: #9ca3af; margin-top: 2px; }
+  .picker-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; accent-color: #1c1917; }
+  .picker-time { font-size: 0.85rem; font-weight: 700; color: #1c1917; min-width: 90px; flex-shrink: 0; }
+  .picker-addr { font-size: 0.9rem; font-weight: 500; }
+  .picker-meta { font-size: 0.78rem; color: #a8a29e; margin-top: 2px; }
   .picker-badge {
-    font-size: 0.75rem; font-weight: 600; padding: 2px 8px;
-    border-radius: 20px; background: #eaf1fb; color: #3373cc;
-    flex-shrink: 0;
+    font-size: 0.72rem; font-weight: 600; padding: 2px 8px;
+    border-radius: 20px; background: #f5f5f4; color: #57534e; flex-shrink: 0;
   }
-  .btn-remove-stop:hover { color: #dc3545 !important; }
-  .route-card-header {
-    cursor: pointer;
-    transition: background 0.15s;
+
+  .picker-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 28px;
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
   }
-  .route-card-header:hover { background: #eef3fb !important; }
-  .route-card-active .route-card-header {
-    background: #ddeeff !important;
-    box-shadow: inset 3px 0 0 #007bff;
+  .picker-selected {
+    font-size: 0.85rem;
+    color: #78716c;
   }
+  .picker-footer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .picker-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 14px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    transition: 0.15s ease;
+  }
+  .picker-btn:hover { background: #fafaf9; color: #1c1917; }
+  .picker-btn-primary {
+    border-color: #1c1917;
+    background: #1c1917;
+    color: #fff;
+  }
+  .picker-btn-primary:hover { background: #44403c; border-color: #44403c; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div id="loading-overlay">
   <div class="spinner-ring"></div>
-  <div style="font-size:1.1rem;color:#007bff;font-weight:500;">Оптимізація маршрутів…<br><small style="color:#8b909a;font-weight:400;">Зазвичай займає 15–90 секунд</small></div>
-</div>
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2 class="mb-0">Оптимізатор маршрутів</h2>
-</div>
-
-<!-- Mode tabs -->
-<ul class="nav nav-tabs mb-0" id="optimizer-tabs" style="border-bottom:none;">
-  <li class="nav-item">
-    <button class="nav-link {% if not csv_mode %}active{% endif %}" id="tab-crm" type="button">
-      <i class="bi bi-database me-1"></i> З CRM
-    </button>
-  </li>
-  <li class="nav-item">
-    <button class="nav-link {% if csv_mode %}active{% endif %}" id="tab-csv" type="button">
-      <i class="bi bi-filetype-csv me-1"></i> Завантажити CSV
-    </button>
-  </li>
-</ul>
-
-<div class="card shadow-sm border-0 mb-4" style="border-top-left-radius:0;">
-  <div class="card-body">
-
-    <!-- CRM mode -->
-    <div id="panel-crm" {% if csv_mode %}style="display:none;"{% endif %}>
-      <form method="post" id="optimizer-form" class="row g-3 align-items-end">
-        <div class="col-md-9">
-          <label class="form-label">Дата доставок</label>
-          <input type="date" name="delivery_date" class="form-control" value="{{ selected_date }}">
-        </div>
-        <div class="col-md-3 d-grid">
-          <label class="form-label d-none d-md-block">&nbsp;</label>
-          <button type="button" id="btn-open-picker" class="btn btn-primary">
-            <i class="bi bi-magic me-1"></i> Побудувати маршрут
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <!-- CSV mode -->
-    <div id="panel-csv" {% if not csv_mode %}style="display:none;"{% endif %}>
-      <form method="post" action="{{ url_for('orders.route_generator_optimize_csv') }}"
-            enctype="multipart/form-data" class="row g-3 align-items-end" id="csv-form">
-        <div class="col-md-9">
-          <label class="form-label">CSV файл з замовленнями</label>
-          <input type="file" name="file" class="form-control" accept=".csv" id="csv-file-input">
-          <div class="form-text">Файл у форматі, який підтримує оптимізатор (колонки: city, address, house, delivery_window_start, delivery_window_end)</div>
-        </div>
-        <div class="col-md-3 d-grid">
-          <label class="form-label d-none d-md-block">&nbsp;</label>
-          <button type="submit" class="btn btn-primary">
-            <i class="bi bi-magic me-1"></i> Розрахувати
-          </button>
-        </div>
-      </form>
-    </div>
-
+  <div class="text-sm font-medium text-stone-900 text-center">
+    Оптимізація маршрутів…
+    <div class="text-xs text-stone-400 font-normal mt-1">Зазвичай займає 15–90 секунд</div>
   </div>
 </div>
 
-{% if infeasible_error %}
-  <div class="alert border-0 mb-4" style="background:#fff7e0;border-left:4px solid #ffc107 !important;border-radius:12px;padding:18px 24px;">
-    <div class="d-flex align-items-center gap-2 mb-1">
-      <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
-      <strong>Недостатньо кур'єрів для виконання всіх доставок</strong>
+<div class="flex flex-col gap-6">
+
+  <!-- Header -->
+  <section class="mb-2 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Оптимізатор маршрутів</h1>
+      </div>
+      <a href="/routes"
+         class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-stone-200 bg-white px-5 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+        <i class="bi bi-geo-alt"></i>
+        Збережені маршрути
+      </a>
     </div>
-    <div style="color:#5a4a00;">{{ infeasible_error.message }}</div>
+  </section>
+
+  <!-- Tabs + Form -->
+  <div class="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+    <div class="flex border-b border-stone-200 px-5 pt-4 gap-1">
+      <button id="tab-crm" type="button"
+              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px {% if not csv_mode %}border-stone-900 text-stone-900{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">
+        <i class="bi bi-database me-1"></i> З CRM
+      </button>
+      <button id="tab-csv" type="button"
+              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px {% if csv_mode %}border-stone-900 text-stone-900{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">
+        <i class="bi bi-filetype-csv me-1"></i> Завантажити CSV
+      </button>
+    </div>
+
+    <!-- CRM panel -->
+    <div id="panel-crm" class="px-5 py-4" {% if csv_mode %}style="display:none;"{% endif %}>
+      <form method="post" id="optimizer-form" class="flex flex-wrap items-end gap-4">
+        <div class="flex flex-col gap-1.5">
+          <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Дата доставок</label>
+          <input type="date" name="delivery_date" value="{{ selected_date }}"
+                 class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all">
+        </div>
+        <button type="button" id="btn-open-picker"
+                class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+          <i class="bi bi-magic"></i> Побудувати маршрут
+        </button>
+      </form>
+    </div>
+
+    <!-- CSV panel -->
+    <div id="panel-csv" class="px-5 py-4" {% if not csv_mode %}style="display:none;"{% endif %}>
+      <form method="post" action="{{ url_for('orders.route_generator_optimize_csv') }}"
+            enctype="multipart/form-data" class="flex flex-wrap items-end gap-4" id="csv-form">
+        <div class="flex flex-col gap-1.5" style="width:260px;">
+          <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">CSV файл з замовленнями</label>
+          <input type="file" name="file" id="csv-file-input" accept=".csv"
+                 class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 file:mr-3 file:border-0 file:bg-stone-900 file:text-white file:text-xs file:font-medium file:px-3 file:py-1 file:rounded">
+        
+        </div>
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+          <i class="bi bi-magic"></i> Розрахувати
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Errors -->
+  {% if infeasible_error %}
+  <div class="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <div class="flex items-center gap-2 mb-1">
+      <i class="bi bi-exclamation-triangle text-amber-500"></i>
+      <span class="text-sm font-medium text-amber-900">Недостатньо кур'єрів для виконання всіх доставок</span>
+    </div>
+    <p class="text-sm text-amber-700">{{ infeasible_error.message }}</p>
     {% if infeasible_error.minimum_couriers_required %}
-    <div class="mt-2">
-      Мінімум потрібно: <strong>{{ infeasible_error.minimum_couriers_required }}</strong> кур'єр(ів).
-      Збільш кількість кур'єрів або місткість.
-    </div>
+    <p class="text-sm text-amber-700 mt-1">Мінімум потрібно: <strong>{{ infeasible_error.minimum_couriers_required }}</strong> кур'єр(ів).</p>
     {% endif %}
   </div>
-{% endif %}
+  {% endif %}
 
-{% if general_error %}
-  <div class="alert border-0 mb-4" style="background:#ffeae5;border-left:4px solid #dc3545 !important;border-radius:12px;padding:18px 24px;">
-    <div class="d-flex align-items-center gap-2 mb-1">
-      <i class="bi bi-x-circle-fill text-danger fs-5"></i>
-      <strong>Помилка оптимізатора</strong>
+  {% if general_error %}
+  <div class="rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+    <div class="flex items-center gap-2 mb-1">
+      <i class="bi bi-x-circle text-red-500"></i>
+      <span class="text-sm font-medium text-red-900">Помилка оптимізатора</span>
     </div>
-    <div style="color:#7a1a1a;">{{ general_error }}</div>
+    <p class="text-sm text-red-700">{{ general_error }}</p>
   </div>
-{% endif %}
+  {% endif %}
 
-<div class="card shadow-sm border-0 mb-4">
-  <div class="card-body p-0" style="border-radius:16px;overflow:hidden;">
+  <!-- Map -->
+  <div class="overflow-hidden rounded-[22px] border border-stone-200 shadow-sm">
     <div id="route-map"></div>
   </div>
-</div>
 
-<div id="result-section" style="display:none;">
-  <div class="d-flex flex-wrap gap-3 mb-4">
-    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
-      <div class="stat-title">Доставок</div>
-      <div class="stat-value" id="stat-deliveries">0</div>
-    </div>
-    <div class="stat-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;">
-      <div class="stat-title">Кур'єрів</div>
-      <div class="stat-value" id="stat-couriers">0</div>
-    </div>
-    <div class="stat-card" id="stat-dropped-card" style="min-width:120px;flex:0 1 auto;padding:16px 24px;background:#fff7e0;border-color:#f7e7b3;display:none;">
-      <div class="stat-title" style="color:#bfa14a;">Пропущено</div>
-      <div class="stat-value" id="stat-dropped" style="color:#bfa14a;">0</div>
-    </div>
-  </div>
+  <!-- Result section -->
+  <div id="result-section" style="display:none;" class="flex flex-col gap-4">
 
-  <div class="d-flex gap-2 mb-4 flex-wrap">
-    <form method="post" action="{{ url_for('orders.route_generator_export_csv') }}" id="export-form">
-      <input type="hidden" name="result_json" id="export-result-json">
-      <input type="hidden" name="selected_date" id="export-selected-date" value="{{ selected_date }}">
-      <button type="submit" class="btn btn-outline-primary">
-        <i class="bi bi-download me-1"></i> Експорт CSV
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-1.5">Доставок</p>
+        <p id="stat-deliveries" class="text-2xl font-semibold tracking-tight text-stone-900">0</p>
+      </article>
+      <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 mb-1.5">Кур'єрів</p>
+        <p id="stat-couriers" class="text-2xl font-semibold tracking-tight text-stone-900">0</p>
+      </article>
+      <article id="stat-dropped-card" class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm" style="display:none;">
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-500 mb-1.5">Пропущено</p>
+        <p id="stat-dropped" class="text-2xl font-semibold tracking-tight text-amber-700">0</p>
+      </article>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex flex-wrap gap-2">
+      <form method="post" action="{{ url_for('orders.route_generator_export_csv') }}" id="export-form">
+        <input type="hidden" name="result_json" id="export-result-json">
+        <input type="hidden" name="selected_date" id="export-selected-date" value="{{ selected_date }}">
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
+          <i class="bi bi-download"></i> Експорт CSV
+        </button>
+      </form>
+      <button id="btn-add-courier"
+              class="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
+        <i class="bi bi-person-plus"></i> Додати кур'єра
       </button>
-    </form>
+      <button id="btn-save-routes" style="display:none;"
+              class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+        <i class="bi bi-floppy"></i> Зберегти маршрути
+      </button>
+    </div>
 
-    <button id="btn-add-courier" class="btn btn-outline-secondary">
-      <i class="bi bi-person-plus me-1"></i> Додати кур'єра
-    </button>
+    <!-- Routes -->
+    <div id="routes-container"></div>
 
-    <button id="btn-save-routes" class="btn btn-success" style="display:none;">
-      <i class="bi bi-floppy me-1"></i> Зберегти маршрути
-    </button>
-  </div>
-
-  <div id="routes-container"></div>
-
-  <!-- Changes banner -->
-  <div id="changes-banner">
-    <div class="d-flex align-items-center gap-3 p-3 px-4"
-         style="background:#fff;border:1.5px solid #007bff;border-radius:14px;box-shadow:0 4px 20px rgba(0,123,255,0.15);">
-      <i class="bi bi-pencil-square text-primary fs-5"></i>
-      <span style="font-weight:500;">Маршрут відредаговано вручну</span>
-      <span class="text-muted small">ETA та час у дорозі потребуватимуть перерахунку</span>
-      <div class="ms-auto d-flex gap-2">
-        <button id="btn-reset-routes" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-arrow-counterclockwise me-1"></i>Скинути
-        </button>
-        <button id="btn-recalculate" class="btn btn-success btn-sm">
-          <i class="bi bi-arrow-repeat me-1"></i>Перерахувати
-        </button>
-        <button id="btn-export-modified" class="btn btn-outline-primary btn-sm">
-          <i class="bi bi-download me-1"></i>Експорт CSV
-        </button>
+    <!-- Changes banner -->
+    <div id="changes-banner">
+      <div class="flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-3 shadow-sm">
+        <i class="bi bi-pencil-square text-amber-500"></i>
+        <span class="text-sm font-medium text-amber-900">Маршрут відредаговано вручну</span>
+        <span class="text-xs text-amber-600">ETA та час у дорозі потребуватимуть перерахунку</span>
+        <div class="flex gap-2 ml-auto">
+          <button id="btn-reset-routes"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50">
+            <i class="bi bi-arrow-counterclockwise"></i> Скинути
+          </button>
+          <button id="btn-recalculate"
+                  class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-700">
+            <i class="bi bi-arrow-repeat"></i> Перерахувати
+          </button>
+          <button id="btn-export-modified"
+                  class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50">
+            <i class="bi bi-download"></i> Експорт CSV
+          </button>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 
-<!-- ── Delivery picker modal ─────────────────────────────────────────────── -->
-<div class="modal fade" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content" style="border-radius:16px;border:1.5px solid #e3eafc;">
-      <div class="modal-header" style="border-bottom:1.5px solid #e3eafc;padding:18px 24px;">
+<!-- Delivery picker modal -->
+<div class="modal fade picker-modal" id="delivery-picker-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
         <div>
-          <h5 class="modal-title mb-0">Доставки для оптимізації</h5>
-          <div id="picker-date-label" class="text-muted small mt-1"></div>
+          <span class="picker-modal__eyebrow">
+            <i class="bi bi-magic"></i>
+            Побудова маршруту
+          </span>
+          <h5 class="picker-modal__title mb-0">Доставки для оптимізації</h5>
+          <div id="picker-date-label" class="picker-modal__subtitle"></div>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="picker-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="picker-toolbar">
+        <span id="picker-count" class="picker-count"></span>
+        <div class="picker-actions">
+          <button type="button" id="picker-select-all" class="picker-chip">Обрати всі</button>
+          <button type="button" id="picker-deselect-all" class="picker-chip picker-chip--muted">Зняти всі</button>
+        </div>
       </div>
       <div class="modal-body p-0">
-        <!-- Toolbar -->
-        <div class="d-flex align-items-center gap-3 px-4 py-2" style="border-bottom:1px solid #f0f4f8;background:#fff;">
-          <span id="picker-count" class="text-muted small"></span>
-          <button type="button" id="picker-select-all" class="btn btn-link btn-sm p-0 text-primary">Обрати всі</button>
-          <button type="button" id="picker-deselect-all" class="btn btn-link btn-sm p-0 text-secondary">Зняти всі</button>
-        </div>
-        <!-- List -->
         <div id="picker-list" style="max-height:420px;overflow-y:auto;">
-          <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
-            <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
-            Немає доставок на вибрану дату
+          <div id="picker-empty" style="display:none;text-align:center;padding:48px 24px;color:#a8a29e;">
+            <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
+            <p style="font-size:0.9rem;margin:0;">Немає доставок на вибрану дату</p>
           </div>
-          <div id="picker-loading" class="text-center py-5">
-            <div class="spinner-border spinner-border-sm text-primary"></div>
-            <span class="ms-2 text-muted">Завантаження…</span>
+          <div id="picker-loading" style="display:flex;align-items:center;justify-content:center;padding:40px 24px;gap:12px;">
+            <div class="spinner-ring" style="width:24px;height:24px;border-width:3px;"></div>
+            <span style="font-size:0.9rem;color:#a8a29e;">Завантаження…</span>
           </div>
         </div>
       </div>
-      <div class="modal-footer" style="border-top:1.5px solid #e3eafc;padding:14px 24px;">
-        <span id="picker-selected-count" class="text-muted small me-auto"></span>
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Скасувати</button>
-        <button type="button" id="btn-run-optimizer" class="btn btn-primary" disabled>
-          <i class="bi bi-magic me-1"></i> Розрахувати
-        </button>
+      <div class="picker-footer">
+        <span id="picker-selected-count" class="picker-selected"></span>
+        <div class="picker-footer-actions">
+          <button type="button" data-bs-dismiss="modal" class="picker-btn">Скасувати</button>
+          <button type="button" id="btn-run-optimizer" disabled class="picker-btn picker-btn-primary">
+            <i class="bi bi-magic"></i> Розрахувати
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -427,20 +517,30 @@ if (csvForm) {
 
 // ── Mode tab switching ────────────────────────────────────────────────────────
 document.getElementById('tab-crm').addEventListener('click', function() {
-  this.classList.add('active');
-  document.getElementById('tab-csv').classList.remove('active');
+  this.classList.add('border-stone-900', 'text-stone-900');
+  this.classList.remove('border-transparent', 'text-stone-500');
+  const tabCsv = document.getElementById('tab-csv');
+  tabCsv.classList.remove('border-stone-900', 'text-stone-900');
+  tabCsv.classList.add('border-transparent', 'text-stone-500');
   document.getElementById('panel-crm').style.display = '';
   document.getElementById('panel-csv').style.display = 'none';
 });
 document.getElementById('tab-csv').addEventListener('click', function() {
-  this.classList.add('active');
-  document.getElementById('tab-crm').classList.remove('active');
+  this.classList.add('border-stone-900', 'text-stone-900');
+  this.classList.remove('border-transparent', 'text-stone-500');
+  const tabCrm = document.getElementById('tab-crm');
+  tabCrm.classList.remove('border-stone-900', 'text-stone-900');
+  tabCrm.classList.add('border-transparent', 'text-stone-500');
   document.getElementById('panel-csv').style.display = '';
   document.getElementById('panel-crm').style.display = 'none';
 });
 
 // ── Delivery picker ───────────────────────────────────────────────────────────
-const pickerModal = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+let _pickerModalInstance = null;
+function pickerModal() {
+  if (!_pickerModalInstance) _pickerModalInstance = new bootstrap.Modal(document.getElementById('delivery-picker-modal'));
+  return _pickerModalInstance;
+}
 let pickerDeliveries = [];
 
 function formatDate(dateStr) {
@@ -452,7 +552,10 @@ function formatDate(dateStr) {
 function updatePickerFooter() {
   const checked = document.querySelectorAll('#picker-list input[type=checkbox]:checked').length;
   document.getElementById('picker-selected-count').textContent = `Обрано: ${checked} з ${pickerDeliveries.length}`;
-  document.getElementById('btn-run-optimizer').disabled = checked === 0;
+  const btn = document.getElementById('btn-run-optimizer');
+  btn.disabled = checked === 0;
+  btn.style.opacity = checked === 0 ? '0.4' : '1';
+  btn.style.cursor = checked === 0 ? 'not-allowed' : 'pointer';
 }
 
 function renderPickerList(deliveries) {
@@ -505,17 +608,17 @@ document.getElementById('btn-open-picker').addEventListener('click', async funct
   // Reset list
   const list = document.getElementById('picker-list');
   list.innerHTML = `
-    <div id="picker-empty" class="text-center text-muted py-5" style="display:none;">
-      <i class="bi bi-inbox" style="font-size:2rem;opacity:0.3;display:block;margin-bottom:8px;"></i>
-      Немає доставок на вибрану дату
+    <div id="picker-empty" style="display:none;text-align:center;padding:48px 24px;color:#a8a29e;">
+      <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:12px;"></i>
+      <p style="font-size:0.9rem;margin:0;">Немає доставок на вибрану дату</p>
     </div>
-    <div id="picker-loading" class="text-center py-5">
-      <div class="spinner-border spinner-border-sm text-primary"></div>
-      <span class="ms-2 text-muted">Завантаження…</span>
+    <div id="picker-loading" style="display:flex;align-items:center;justify-content:center;padding:40px 24px;gap:12px;">
+      <div class="spinner-ring" style="width:24px;height:24px;border-width:3px;"></div>
+      <span style="font-size:0.9rem;color:#a8a29e;">Завантаження…</span>
     </div>
   `;
 
-  pickerModal.show();
+  pickerModal().show();
 
   try {
     const resp = await fetch(`/route-generator/deliveries?date=${dateVal}`);
@@ -523,7 +626,7 @@ document.getElementById('btn-open-picker').addEventListener('click', async funct
     document.getElementById('picker-count').textContent = `Всього доставок: ${pickerDeliveries.length}`;
     renderPickerList(pickerDeliveries);
   } catch(e) {
-    document.getElementById('picker-loading').innerHTML = '<span class="text-danger">Помилка завантаження</span>';
+    document.getElementById('picker-loading').innerHTML = '<span style="color:#dc2626;font-size:0.9rem;">Помилка завантаження</span>';
   }
 });
 
@@ -555,7 +658,7 @@ document.getElementById('btn-run-optimizer').addEventListener('click', async fun
     form.appendChild(inp);
   });
 
-  pickerModal.hide();
+  pickerModal().hide();
   document.getElementById('loading-overlay').classList.add('active');
 
   try {
@@ -593,7 +696,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 }).addTo(map);
 
 // ── Per-route map layer registry ─────────────────────────────────────────────
-window.routeMapLayers = []; // [{line, markers:[]}]
+window.routeMapLayers = [];
 let activeRouteIdx = null;
 
 function highlightRoute(idx) {
@@ -603,19 +706,18 @@ function highlightRoute(idx) {
     if (entry.line) entry.line.setStyle({ weight: active ? 5 : 2, opacity: active ? 0.9 : 0.15 });
     entry.markers.forEach(function(m) { m.setOpacity(active ? 1 : 0.2); });
   });
-  document.querySelectorAll('#routes-container .card').forEach(function(card, i) {
+  document.querySelectorAll('#routes-container > div').forEach(function(card, i) {
     card.classList.toggle('route-card-active', i === idx);
   });
 }
 
-// Deselect on click outside cards
 document.addEventListener('click', function(e) {
-  if (activeRouteIdx !== null && !e.target.closest('#routes-container .card')) {
+  if (activeRouteIdx !== null && !e.target.closest('#routes-container > div')) {
     highlightRoute(null);
   }
 });
 
-// ── Route cards render + drag-and-drop (always present) ──────────────────────
+// ── Route cards render + drag-and-drop ───────────────────────────────────────
 (function() {
   const ROUTE_COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
   let originalResult = null;
@@ -624,7 +726,6 @@ document.addEventListener('click', function(e) {
   let isCsvMode = false;
   let selectedDate = '{{ selected_date }}';
 
-  // ── Render all route cards ──────────────────────────────────────────────────
   function renderRoutes(routes) {
     const container = document.getElementById('routes-container');
     container.innerHTML = '';
@@ -633,7 +734,7 @@ document.addEventListener('click', function(e) {
     routes.forEach(function(route, idx) {
       const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
       const card = document.createElement('div');
-      card.className = 'card shadow-sm border-0';
+      card.className = 'rounded-xl border border-stone-200 bg-white overflow-hidden';
       card.dataset.routeIdx = idx;
 
       const stopsCount = route.stops.length;
@@ -641,17 +742,16 @@ document.addEventListener('click', function(e) {
       const driveMin = route.totalDriveMin != null ? route.totalDriveMin + ' хв' : '—';
 
       card.innerHTML = `
-        <div class="card-header route-card-header d-flex justify-content-between align-items-center"
-             style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
-          <div class="d-flex align-items-center gap-2">
-            <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-            <strong>Кур'єр ${route.courierId}</strong>
+        <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
+          <div class="flex items-center gap-2">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+            <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">Кур'єр ${route.courierId}</span>
           </div>
-          <span class="route-meta text-muted small">
-            <span class="stops-count">${stopsCount}</span> зупинок &nbsp;·&nbsp; ${distKm} &nbsp;·&nbsp; ${driveMin}
+          <span style="font-size:0.78rem;color:#a8a29e;">
+            <span class="stops-count">${stopsCount}</span> зупинок · ${distKm} · ${driveMin}
           </span>
         </div>
-        <div class="card-body p-0">
+        <div>
           <ul class="route-stops-list list-unstyled mb-0"
               id="stop-list-${idx}"
               data-route-idx="${idx}"
@@ -660,7 +760,6 @@ document.addEventListener('click', function(e) {
       `;
       container.appendChild(card);
 
-      // Highlight on header click
       card.querySelector('.route-card-header').addEventListener('click', function(e) {
         if (e.target.closest('.btn-remove-stop')) return;
         const newIdx = activeRouteIdx === idx ? null : idx;
@@ -684,7 +783,6 @@ document.addEventListener('click', function(e) {
     });
   }
 
-  // ── Render stops inside a list ─────────────────────────────────────────────
   function renderStops(listEl, stops, color) {
     listEl.innerHTML = '';
     stops.forEach(function(stop, si) {
@@ -712,15 +810,13 @@ document.addEventListener('click', function(e) {
       <i class="bi bi-grip-vertical drag-handle"></i>
       <span class="stop-num" style="background:${color};">${num}</span>
       <div style="flex:1;">
-        <div style="font-weight:500;font-size:0.97rem;">${stop.address || '—'}</div>
-        <div class="d-flex flex-wrap gap-3 mt-1" style="font-size:0.88rem;color:#6b7280;">
+        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:0.8rem;color:#a8a29e;">
           <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
           ${timePart}${drivePart}${waitPart}
         </div>
       </div>
-      <button type="button" class="btn-remove-stop btn btn-link p-0 ms-2"
-              title="Зняти з маршруту"
-              style="color:#adb5bd;font-size:1.1rem;line-height:1;flex-shrink:0;">
+      <button type="button" class="btn-remove-stop" title="Зняти з маршруту">
         <i class="bi bi-x-lg"></i>
       </button>
     `;
@@ -737,20 +833,17 @@ document.addEventListener('click', function(e) {
     return li;
   }
 
-  // ── Renumber stops after drag ──────────────────────────────────────────────
   function renumberList(listEl) {
     const color = listEl.dataset.color;
     listEl.querySelectorAll('.stop-num').forEach(function(badge, i) {
       badge.textContent = i + 1;
       badge.style.background = color;
     });
-    // Update stops-count in card header
-    const card = listEl.closest('.card');
+    const card = listEl.closest('[data-route-idx]');
     const countEl = card && card.querySelector('.stops-count');
     if (countEl) countEl.textContent = listEl.children.length;
   }
 
-  // ── Sync currentRoutes from DOM ────────────────────────────────────────────
   function syncRoutesFromDOM() {
     document.querySelectorAll('.route-stops-list').forEach(function(listEl) {
       const routeIdx = parseInt(listEl.dataset.routeIdx);
@@ -762,7 +855,6 @@ document.addEventListener('click', function(e) {
     });
   }
 
-  // ── Empty hint visibility ──────────────────────────────────────────────────
   function updateEmptyHints() {
     document.querySelectorAll('.route-stops-list').forEach(function(listEl) {
       const hint = listEl.querySelector('.empty-hint');
@@ -771,31 +863,25 @@ document.addEventListener('click', function(e) {
     });
   }
 
-  // ── Init SortableJS ────────────────────────────────────────────────────────
   function initSortable(listEl) {
     Sortable.create(listEl, {
-      group: 'routes',          // enable cross-list dragging
+      group: 'routes',
       handle: '.drag-handle',
       animation: 150,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
       dragoverBubble: true,
       onEnd: function(evt) {
-        // Renumber both source and destination lists
         renumberList(evt.from);
         if (evt.from !== evt.to) renumberList(evt.to);
-
-        // Mark as changed
         hasChanges = true;
         document.getElementById('changes-banner').classList.add('visible');
-
         syncRoutesFromDOM();
         updateEmptyHints();
       }
     });
   }
 
-  // ── Reset to original ──────────────────────────────────────────────────────
   document.getElementById('btn-reset-routes').addEventListener('click', function() {
     currentRoutes = JSON.parse(JSON.stringify(originalResult.routes || []));
     hasChanges = false;
@@ -803,7 +889,6 @@ document.addEventListener('click', function(e) {
     renderRoutes(currentRoutes);
   });
 
-  // ── Export modified as CSV ─────────────────────────────────────────────────
   document.getElementById('btn-export-modified').addEventListener('click', function() {
     syncRoutesFromDOM();
     const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
@@ -823,15 +908,13 @@ document.addEventListener('click', function(e) {
     document.body.removeChild(form);
   });
 
-  // ── Recalculate ────────────────────────────────────────────────────────────
   document.getElementById('btn-recalculate').addEventListener('click', async function() {
     syncRoutesFromDOM();
 
     const btn = this;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Перераховую…';
+    btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перераховую…';
 
-    // Build recalculate payload
     const recalcRoutes = currentRoutes.map(function(route) {
       return {
         courierId: route.courierId,
@@ -839,8 +922,7 @@ document.addEventListener('click', function(e) {
           .filter(function(s) { return s.lat && s.lng; })
           .map(function(s) {
             return {
-              lat: s.lat,
-              lng: s.lng,
+              lat: s.lat, lng: s.lng,
               address: s.address || '',
               timeStart: s.timeStart || null,
               timeEnd: s.timeEnd || null,
@@ -868,17 +950,11 @@ document.addEventListener('click', function(e) {
         return;
       }
 
-      // Apply recalculated result
       currentRoutes = data.routes || currentRoutes;
       hasChanges = false;
       document.getElementById('changes-banner').classList.remove('visible');
-
-      // Re-render route cards with updated data
       renderRoutes(currentRoutes);
-
-      // Update map
       updateMap(data);
-
       updateStats(data.stats || {});
 
     } catch(e) {
@@ -889,14 +965,13 @@ document.addEventListener('click', function(e) {
     }
   });
 
-  // ── Save routes ────────────────────────────────────────────────────────────
   const btnSaveRoutes = document.getElementById('btn-save-routes');
   if (btnSaveRoutes) btnSaveRoutes.addEventListener('click', async function() {
     syncRoutesFromDOM();
     const resultToSave = Object.assign({}, originalResult, { routes: currentRoutes });
     const btn = this;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Збереження…';
+    btn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Збереження…';
 
     try {
       const resp = await fetch('{{ url_for("orders.route_generator_save") }}', {
@@ -913,10 +988,8 @@ document.addEventListener('click', function(e) {
         return;
       }
       btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Збережено!';
-      btn.classList.replace('btn-success', 'btn-outline-success');
       setTimeout(function() {
         btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
-        btn.classList.replace('btn-outline-success', 'btn-success');
         btn.disabled = false;
       }, 3000);
     } catch(e) {
@@ -926,8 +999,6 @@ document.addEventListener('click', function(e) {
     }
   });
 
-
-  // ── Update map with new result ────────────────────────────────────────────
   function updateMap(result) {
     map.eachLayer(function(layer) {
       if (layer instanceof L.Polyline || layer instanceof L.Marker) map.removeLayer(layer);
@@ -986,7 +1057,6 @@ document.addEventListener('click', function(e) {
     if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [36, 36] });
   }
 
-  // ── Add empty courier ──────────────────────────────────────────────────────
   document.getElementById('btn-add-courier').addEventListener('click', function() {
     const maxId = currentRoutes.reduce(function(acc, r) {
       return Math.max(acc, typeof r.courierId === 'number' ? r.courierId : 0);
@@ -1003,26 +1073,25 @@ document.addEventListener('click', function(e) {
     const idx = currentRoutes.length - 1;
     const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
     const card = document.createElement('div');
-    card.className = 'card shadow-sm border-0';
+    card.className = 'rounded-xl border border-stone-200 bg-white overflow-hidden';
     card.dataset.routeIdx = idx;
     card.innerHTML = `
-      <div class="card-header d-flex justify-content-between align-items-center"
-           style="background:#f7f9fc;border-bottom:1.5px solid #e3eafc;">
-        <div class="d-flex align-items-center gap-2">
-          <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-          <strong>Кур'єр ${newRoute.courierId}</strong>
-          <span class="badge bg-secondary ms-1" style="font-size:0.72rem;">новий</span>
+      <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
+        <div class="flex items-center gap-2">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">Кур'єр ${newRoute.courierId}</span>
+          <span style="font-size:0.72rem;background:#f5f5f4;color:#78716c;padding:2px 8px;border-radius:20px;">новий</span>
         </div>
-        <span class="route-meta text-muted small">
+        <span style="font-size:0.78rem;color:#a8a29e;">
           <span class="stops-count">0</span> зупинок
         </span>
       </div>
-      <div class="card-body p-0">
+      <div>
         <ul class="route-stops-list list-unstyled mb-0"
             id="stop-list-${idx}"
             data-route-idx="${idx}"
             data-color="${color}">
-          <li class="text-center text-muted py-3 empty-hint" style="font-size:0.88rem;pointer-events:none;">
+          <li class="empty-hint" style="text-align:center;padding:20px;font-size:0.85rem;color:#a8a29e;pointer-events:none;">
             <i class="bi bi-arrow-left-right me-1"></i>Перетягніть сюди доставки
           </li>
         </ul>
@@ -1035,11 +1104,9 @@ document.addEventListener('click', function(e) {
 
     hasChanges = true;
     document.getElementById('changes-banner').classList.add('visible');
-
     card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
-  // ── updateStats ────────────────────────────────────────────────────────────
   function updateStats(stats) {
     document.getElementById('stat-deliveries').textContent = stats.totalDeliveries ?? 0;
     document.getElementById('stat-couriers').textContent = stats.numCouriers ?? 0;
@@ -1049,7 +1116,6 @@ document.addEventListener('click', function(e) {
     document.getElementById('stat-dropped').textContent = dropped;
   }
 
-  // ── Export form: always use current routes ─────────────────────────────────
   document.getElementById('export-form').addEventListener('submit', function() {
     syncRoutesFromDOM();
     document.getElementById('export-result-json').value = JSON.stringify(
@@ -1058,9 +1124,6 @@ document.addEventListener('click', function(e) {
     document.getElementById('export-selected-date').value = selectedDate;
   });
 
-  // ── export-modified button (in changes banner) ────────────────────────────
-
-  // ── Public: render result after AJAX job ──────────────────────────────────
   window.renderResult = function(result, csvMode) {
     isCsvMode = !!csvMode;
     originalResult = result;
@@ -1079,8 +1142,6 @@ document.addEventListener('click', function(e) {
     document.getElementById('export-result-json').value = JSON.stringify(result);
     document.getElementById('changes-banner').classList.remove('visible');
   };
-
-  // ── Initial render (empty — AJAX will call renderResult) ──────────────────
 })();
 </script>
 {% endblock %}

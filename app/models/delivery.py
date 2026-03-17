@@ -47,6 +47,13 @@ class Delivery(db.Model):
     
     # Побажання
     preferences = db.Column(db.Text)
+
+    # Коментар до адреси (підʼїзд, квартира, поверх і тд)
+    address_comment = db.Column(db.Text, nullable=True)
+
+    # Тип пакування та тип композиції (денормалізовано з Order)
+    bouquet_type = db.Column(db.String(64), nullable=True)
+    composition_type = db.Column(db.String(64), nullable=True)
     
     # Telegram integration
     # telegram_notification_sent = db.Column(db.Boolean, default=False)

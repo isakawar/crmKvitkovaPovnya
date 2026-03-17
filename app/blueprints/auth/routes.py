@@ -16,7 +16,6 @@ def login():
         
         if user and user.check_password(password):
             login_user(user)
-            flash('Ви успішно увійшли в систему!', 'success')
             
             # Перенаправлення на сторінку, яку користувач намагався відвідати
             next_page = request.args.get('next')

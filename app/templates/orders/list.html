@@ -1,0 +1,742 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-input { cursor: pointer; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
+  .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+  .order-status-delivered {
+    background: #059669;
+    border-color: #059669;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+  <section class="mb-2 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+          Всього: {{ orders_count }}
+        </div>
+        <a href="/orders/export/csv"
+           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+          <i class="bi bi-download"></i>
+          Експорт CSV
+        </a>
+        <button
+          type="button"
+          class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          data-open-composer="order"
+          data-bs-toggle="modal"
+          data-bs-target="#addOrderModal"
+        >
+          <i class="bi bi-plus"></i>
+          Нове замовлення
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
+          <i class="bi bi-bag-heart text-sm"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ orders_count }}</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+          <i class="bi bi-arrow-repeat text-sm"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Підписки</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_orders_count }}</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+          <i class="bi bi-people text-sm"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнти</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ clients_count }}</p>
+        </div>
+      </div>
+    </article>
+
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
+          <i class="bi bi-stars text-sm"></i>
+        </div>
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Продовження</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_extensions_count }}</p>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <form method="get" id="orders-filter-form" class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
+      <div class="relative min-w-[280px] flex-1 md:max-w-md">
+        <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+        <input
+          type="text"
+          name="q"
+          value="{{ search_query }}"
+          placeholder="Пошук за Instagram, отримувачем, телефоном, соцмережею або містом..."
+          class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+          autocomplete="off"
+        >
+      </div>
+      <div class="relative">
+        <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+        <input
+          type="text"
+          id="date-range-picker"
+          placeholder="Оберіть дату"
+          readonly
+          style="width:150px"
+          class="rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+      </div>
+      <input type="hidden" name="date_from" id="date_from" value="{{ date_from_filter }}">
+      <input type="hidden" name="date_to" id="date_to" value="{{ date_to_filter }}">
+      <select
+        name="city"
+        id="filter-city"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Всі міста</option>
+        {% for city in cities %}
+          <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+        {% endfor %}
+      </select>
+
+      <select
+        name="delivery_type"
+        id="filter-delivery-type"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Усі типи</option>
+        {% for item in delivery_types %}
+          <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+        {% endfor %}
+      </select>
+
+      <select
+        name="size"
+        id="filter-size"
+        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      >
+        <option value="">Усі розміри</option>
+        {% for item in sizes %}
+          <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+        {% endfor %}
+      </select>
+        <button
+          type="submit"
+          class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+        >
+          Застосувати
+        </button>
+        {% if search_query or city_filter or delivery_type_filter or size_filter or date_from_filter or date_to_filter %}
+        <button
+          type="button"
+          id="reset-filters-btn"
+          title="Скинути фільтри"
+          class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-700"
+        >
+          <i class="bi bi-x text-base leading-none"></i>
+        </button>
+        {% endif %}
+  </form>
+
+  {% if deliveries %}
+  {% set weekday_map = {
+    0: 'Понеділок',
+    1: 'Вівторок',
+    2: 'Середа',
+    3: 'Четвер',
+    4: "П'ятниця",
+    5: 'Субота',
+    6: 'Неділя'
+  } %}
+  <section class="space-y-4 pt-2">
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <h2 class="text-2xl font-semibold tracking-tight text-stone-900">Список доставок</h2>
+        <p class="mt-1 text-sm text-stone-500">Усі доставки для поточного набору фільтрів, візуально згруповані по днях.</p>
+      </div>
+      <div class="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-2 text-sm text-stone-500 shadow-sm">
+        {{ deliveries_count }} доставок
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="mr-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Час доставки</div>
+      <div class="flex items-center gap-2">
+        <input type="time" id="bulk-time-from"
+               class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+        <span class="text-xs text-stone-400">—</span>
+        <input type="time" id="bulk-time-to"
+               class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+      </div>
+      <button type="button" id="apply-time-btn"
+              class="inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+        <i class="bi bi-clock"></i>
+        Застосувати
+      </button>
+      <button type="button" id="clear-selection-btn"
+              class="flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-700"
+              title="Очистити вибір і час">
+        <i class="bi bi-x text-base leading-none"></i>
+      </button>
+      <span id="selected-count" class="ml-auto text-sm text-stone-500">Обрано: 0</span>
+    </div>
+
+    <div class="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm">
+      <div class="overflow-x-auto">
+        <table class="min-w-[1220px] w-full border-collapse" data-deliveries-table>
+          <thead>
+            <tr class="border-b border-stone-200 bg-stone-50/80">
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900 w-10">
+                <input type="checkbox" id="select-all-deliveries"
+                       class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900">
+              </th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Клієнт</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Адреса</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Телефон</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Розмір</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Підписка</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Коментар</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Побажання</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Дата і час</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for date, items in grouped_deliveries|dictsort %}
+            <tr class="border-y border-stone-200 bg-stone-50">
+              <td colspan="9" class="px-4 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500">
+                    <i class="bi bi-calendar2-week"></i>
+                  </div>
+                  <div class="flex items-baseline gap-3">
+                    <span class="text-[1.05rem] font-semibold text-stone-900">{{ weekday_map[date.weekday()] }}, {{ date.strftime('%d.%m.%Y') }}</span>
+                    <span class="text-sm text-stone-400">({{ items|length }} достав{{ 'ка' if items|length == 1 else ('ки' if items|length in [2,3,4] else 'ок') }})</span>
+                  </div>
+                </div>
+              </td>
+            </tr>
+
+            {% for delivery in items %}
+            {% set order = delivery.order %}
+            {% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to if delivery.time_from and delivery.time_to else (delivery.time_from or 'Без часу') %}
+            {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
+            {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
+            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40"
+                data-delivery-id="{{ delivery.id }}"
+                data-order-id="{{ order.id if order else '' }}"
+                data-time-from="{{ delivery.time_from or '' }}"
+                data-time-to="{{ delivery.time_to or '' }}"
+                data-delivery-date="{{ date.strftime('%Y-%m-%d') }}">
+              <td class="px-4 py-4">
+                <input type="checkbox" class="delivery-select h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+                       value="{{ delivery.id }}">
+              </td>
+              <td class="px-4 py-4">
+                <div class="space-y-1">
+                  <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
+                  <p class="text-sm text-stone-500">{{ delivery.client.instagram if delivery.client else 'Без клієнта' }}</p>
+                  {% if order and order.recipient_social %}
+                  <p class="text-sm text-stone-400">{{ order.recipient_social }}</p>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <div class="space-y-2">
+                  {% if delivery_mode %}
+                  <span class="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
+                    {{ delivery_mode }}
+                  </span>
+                  {% endif %}
+                  <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
+                    {% if delivery.status == 'Доставлено' %}order-status-delivered
+                    {% elif delivery.status == 'Очікує' %}border border-stone-200 bg-stone-100 text-stone-600
+                    {% elif delivery.status == 'Розподілено' %}border border-blue-200 bg-blue-50 text-blue-700
+                    {% elif delivery.status == 'Не оплачена' %}border border-red-200 bg-red-50 text-red-700
+                    {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
+                    {{ delivery.status }}
+                  </span>
+                  <p class="text-sm leading-6 text-stone-700">
+                    {% if delivery.is_pickup %}
+                    {% elif delivery.street %}
+                      {{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
+                    {% elif order and order.street %}
+                      {{ order.street }}
+                    {% else %}
+                      Адресу не вказано
+                    {% endif %}
+                  </p>
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm font-medium text-stone-700">{{ delivery.phone or order.recipient_phone or 'Телефон не вказано' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center rounded-full border
+                  {% set size_value = delivery.size or order.size or '—' %}
+                  {% if size_value == 'M' %}border-emerald-200 bg-emerald-50 text-emerald-700
+                  {% elif size_value == 'L' %}border-lime-200 bg-lime-50 text-lime-700
+                  {% elif size_value == 'XL' %}border-amber-200 bg-amber-50 text-amber-700
+                  {% elif size_value == 'XXL' %}border-red-200 bg-red-50 text-red-700
+                  {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
+                  px-3 py-1 text-xs font-medium">
+                  {{ size_value }}
+                  {% if size_value == 'Власний' and order and order.custom_amount %}
+                    · {{ order.custom_amount }} грн
+                  {% endif %}
+                </span>
+              </td>
+
+              <td class="px-4 py-4">
+                <div class="flex flex-wrap gap-2">
+                  <span class="inline-flex items-center rounded-full border
+                    {% if delivery_type_label == 'Weekly' %}border-blue-200 bg-blue-50 text-blue-700
+                    {% elif delivery_type_label == 'Monthly' %}border-violet-200 bg-violet-50 text-violet-700
+                    {% elif delivery_type_label == 'Bi-weekly' %}border-pink-200 bg-pink-50 text-pink-700
+                    {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
+                    px-3 py-1 text-xs font-medium">
+                    {{ delivery_type_label }}
+                  </span>
+                </div>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm leading-6 text-stone-700">{{ delivery.comment or order.comment or '—' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <p class="text-sm leading-6 text-stone-700">{{ delivery.preferences or order.preferences or '—' }}</p>
+              </td>
+
+              <td class="px-4 py-4">
+                <button type="button"
+                        class="delivery-time-cell w-full text-left rounded-lg border border-transparent px-2 py-1 transition-colors hover:border-stone-200 hover:bg-stone-50"
+                        data-delivery-id="{{ delivery.id }}">
+                  <div class="space-y-1">
+                    <p class="text-sm font-semibold text-stone-900">{{ date.strftime('%d.%m.%Y') }}</p>
+                    <p class="delivery-time-slot text-sm text-stone-500">{{ time_slot }}</p>
+                  </div>
+                </button>
+              </td>
+            </tr>
+            {% endfor %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  {% set total_pages = (deliveries_count // per_page) + (1 if deliveries_count % per_page else 0) %}
+  {% if total_pages > 1 %}
+  <nav class="flex items-center justify-center gap-2 pt-2">
+    <a
+      href="{{ url_for('orders.orders_list', page=1, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+      class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == 1 %}pointer-events-none opacity-40{% endif %}"
+    >
+      <i class="bi bi-chevron-double-left"></i>
+    </a>
+
+    {% if page > 3 %}
+      <a href="{{ url_for('orders.orders_list', page=1, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">1</a>
+      {% if page > 4 %}
+        <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+      {% endif %}
+    {% endif %}
+
+    {% for p in range(page-2, page+3) %}
+      {% if 1 <= p <= total_pages %}
+        <a
+          href="{{ url_for('orders.orders_list', page=p, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+          class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm transition-colors {% if p == page %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}"
+        >
+          {{ p }}
+        </a>
+      {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages - 2 %}
+      {% if page < total_pages - 3 %}
+        <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+      {% endif %}
+      <a href="{{ url_for('orders.orders_list', page=total_pages, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">{{ total_pages }}</a>
+    {% endif %}
+
+    <a
+      href="{{ url_for('orders.orders_list', page=total_pages, q=search_query, city=city_filter, delivery_type=delivery_type_filter, size=size_filter, date_from=date_from_filter, date_to=date_to_filter) }}"
+      class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == total_pages %}pointer-events-none opacity-40{% endif %}"
+    >
+      <i class="bi bi-chevron-double-right"></i>
+    </a>
+  </nav>
+  {% endif %}
+  {% else %}
+  <section class="rounded-[28px] border border-dashed border-stone-300 bg-white px-6 py-16 text-center">
+    <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">
+      <i class="bi bi-search text-2xl"></i>
+    </div>
+    <h2 class="mt-5 text-xl font-semibold text-stone-900">Доставки не знайдено</h2>
+    <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-stone-500">
+      Спробуй змінити пошуковий запит або скинути фільтри. Після цього тут зʼявиться табличний список доставок, згрупований по днях.
+    </p>
+  </section>
+  {% endif %}
+</div>
+
+{% include 'orders/_composer_modal.html' %}
+
+<div class="modal fade" id="deliveryTimeModal" tabindex="-1" aria-labelledby="deliveryTimeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" id="deliveryTimeModalLabel">Дата та час доставки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <input type="hidden" id="delivery-edit-id">
+        <div class="grid gap-3">
+          <div>
+            <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Дата</label>
+            <input type="date" id="delivery-edit-date"
+                   class="mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Час з</label>
+              <input type="time" id="delivery-edit-from"
+                     class="mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+            </div>
+            <div>
+              <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Час до</label>
+              <input type="time" id="delivery-edit-to"
+                     class="mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-dark rounded-3" id="delivery-edit-save">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="extendSubscriptionModal" tabindex="-1" aria-labelledby="extendSubscriptionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title" id="extendSubscriptionModalLabel">Продовження підписки</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <p class="mb-0 text-sm text-stone-600">
+          Продовжити підписку для клієнта <strong id="extend-client-instagram"></strong>?
+        </p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Скасувати</button>
+        <button type="button" class="btn btn-dark rounded-3" id="confirmExtendBtn">Продовжити</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ render_toast() }}
+{% endblock %}
+
+{% block scripts %}
+{{ toast_script() }}
+{% include 'orders/_composer_script.html' %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
+<script>
+(function () {
+  const dateFromEl = document.getElementById('date_from');
+  const dateToEl   = document.getElementById('date_to');
+  const form       = document.getElementById('orders-filter-form');
+  const resetBtn   = document.getElementById('reset-filters-btn');
+
+  const initialFrom = dateFromEl.value;
+  const initialTo   = dateToEl.value;
+  const defaultDate = initialFrom
+    ? (initialTo && initialTo !== initialFrom ? [initialFrom, initialTo] : [initialFrom])
+    : [];
+
+  const fp = flatpickr('#date-range-picker', {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    locale: 'uk',
+    defaultDate: defaultDate,
+    disableMobile: true,
+    onReady(_, __, instance) {
+      if (defaultDate.length) {
+        const [from, to] = instance.selectedDates;
+        instance.element.value = to
+          ? instance.formatDate(from, 'd.m.Y') + ' — ' + instance.formatDate(to, 'd.m.Y')
+          : instance.formatDate(from, 'd.m.Y');
+      }
+    },
+    onChange(dates, _, instance) {
+      if (dates.length === 1) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
+        instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+      } else if (dates.length === 2) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
+        instance.element.value =
+          instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+      } else {
+        dateFromEl.value = '';
+        dateToEl.value   = '';
+      }
+    },
+  });
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      fp.clear();
+      dateFromEl.value = '';
+      dateToEl.value   = '';
+      const params = new URLSearchParams(window.location.search);
+      ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
+      window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+    });
+  }
+})();
+
+(function () {
+  const selectAll = document.getElementById('select-all-deliveries');
+  const selectedCount = document.getElementById('selected-count');
+  const timeFrom = document.getElementById('bulk-time-from');
+  const timeTo = document.getElementById('bulk-time-to');
+  const applyBtn = document.getElementById('apply-time-btn');
+  const clearSelectionBtn = document.getElementById('clear-selection-btn');
+  const timeCells = Array.from(document.querySelectorAll('.delivery-time-cell'));
+  const editModal = document.getElementById('deliveryTimeModal');
+  let editModalInstance = null;
+  const editIdInput = document.getElementById('delivery-edit-id');
+  const editDateInput = document.getElementById('delivery-edit-date');
+  const editFromInput = document.getElementById('delivery-edit-from');
+  const editToInput = document.getElementById('delivery-edit-to');
+  const editSaveBtn = document.getElementById('delivery-edit-save');
+  let pendingModalData = null;
+
+  if (!selectedCount || !applyBtn) return;
+
+  const checkboxes = () => Array.from(document.querySelectorAll('.delivery-select'));
+
+  function buildTimeLabel(from, to) {
+    if (from && to) return `${from} - ${to}`;
+    if (from) return from;
+    if (to) return to;
+    return 'Без часу';
+  }
+
+  function updateSelectedCount() {
+    const count = checkboxes().filter(cb => cb.checked).length;
+    selectedCount.textContent = `Обрано: ${count}`;
+    const hasTime = (timeFrom.value || timeTo.value);
+    applyBtn.disabled = count === 0 || !hasTime;
+  }
+
+  function syncSelectAll() {
+    if (!selectAll) return;
+    const boxes = checkboxes();
+    selectAll.checked = boxes.length > 0 && boxes.every(cb => cb.checked);
+    selectAll.indeterminate = boxes.some(cb => cb.checked) && !selectAll.checked;
+  }
+
+  function setSelection(ids) {
+    const idSet = new Set(ids.map(String));
+    checkboxes().forEach(cb => { cb.checked = idSet.has(cb.value); });
+    syncSelectAll();
+    updateSelectedCount();
+  }
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      checkboxes().forEach(cb => { cb.checked = selectAll.checked; });
+      updateSelectedCount();
+    });
+  }
+
+  document.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('delivery-select')) return;
+    syncSelectAll();
+    updateSelectedCount();
+  });
+
+  timeFrom.addEventListener('input', updateSelectedCount);
+  timeTo.addEventListener('input', updateSelectedCount);
+
+  clearSelectionBtn.addEventListener('click', function () {
+    timeFrom.value = '';
+    timeTo.value = '';
+    setSelection([]);
+    updateSelectedCount();
+  });
+
+  function ensureModalInstance() {
+    if (!editModal || !window.bootstrap || !window.bootstrap.Modal) return null;
+    if (!editModalInstance) editModalInstance = bootstrap.Modal.getOrCreateInstance(editModal);
+    return editModalInstance;
+  }
+
+  function openEditModalForRow(row) {
+    const id = row.dataset.deliveryId;
+    editIdInput.value = id;
+    editDateInput.value = row.dataset.deliveryDate || '';
+    editFromInput.value = row.dataset.timeFrom || '';
+    editToInput.value = row.dataset.timeTo || '';
+    const instance = ensureModalInstance();
+    if (instance) {
+      instance.show();
+      return;
+    }
+    pendingModalData = { id };
+    window.addEventListener('load', () => {
+      if (!pendingModalData) return;
+      const rowEl = document.querySelector(`tr[data-delivery-id="${pendingModalData.id}"]`);
+      if (!rowEl) return;
+      editIdInput.value = pendingModalData.id;
+      editDateInput.value = rowEl.dataset.deliveryDate || '';
+      editFromInput.value = rowEl.dataset.timeFrom || '';
+      editToInput.value = rowEl.dataset.timeTo || '';
+      const inst = ensureModalInstance();
+      if (inst) inst.show();
+      pendingModalData = null;
+    }, { once: true });
+  }
+
+  timeCells.forEach(cell => {
+    cell.addEventListener('click', function () {
+      const row = cell.closest('tr');
+      if (!row) return;
+      openEditModalForRow(row);
+    });
+  });
+
+  async function applyTime(ids, fromValue, toValue, clear = false, deliveryDate = '') {
+    try {
+      const resp = await fetch('/orders/deliveries/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          delivery_ids: ids,
+          time_from: fromValue,
+          time_to: toValue,
+          clear: clear,
+          delivery_date: deliveryDate,
+        }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok || !data.success) {
+        showToast(data.error || 'Не вдалося оновити час', 'error');
+        return;
+      }
+      ids.forEach(id => {
+        const row = document.querySelector(`tr[data-delivery-id="${id}"]`);
+        if (!row) return;
+        row.dataset.timeFrom = clear ? '' : fromValue;
+        row.dataset.timeTo = clear ? '' : toValue;
+        if (deliveryDate) {
+          row.dataset.deliveryDate = deliveryDate;
+        }
+        const slot = row.querySelector('.delivery-time-slot');
+        if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
+      });
+      showToast(clear ? 'Час доставки очищено' : 'Час доставки оновлено', 'success');
+      updateSelectedCount();
+    } catch (e) {
+      showToast('Помилка зʼєднання', 'error');
+    }
+  }
+
+  applyBtn.addEventListener('click', function () {
+    const ids = checkboxes().filter(cb => cb.checked).map(cb => cb.value);
+    if (!ids.length) return;
+    applyTime(ids, timeFrom.value, timeTo.value);
+  });
+
+  if (editSaveBtn) {
+    editSaveBtn.addEventListener('click', async function () {
+      const id = editIdInput.value;
+      if (!id) return;
+      const fromValue = editFromInput.value;
+      const toValue = editToInput.value;
+      const dateValue = editDateInput.value;
+      const prevRow = document.querySelector(`tr[data-delivery-id="${id}"]`);
+      const prevDate = prevRow ? prevRow.dataset.deliveryDate : '';
+
+      await applyTime([id], fromValue, toValue, false, dateValue);
+      if (editModalInstance) editModalInstance.hide();
+      if (dateValue && prevDate && dateValue !== prevDate) {
+        location.reload();
+      }
+    });
+  }
+
+  updateSelectedCount();
+})();
+
+(function () {
+  const ordersTable = document.querySelector('table');
+  if (!ordersTable) return;
+
+  ordersTable.addEventListener('click', function (event) {
+    const target = event.target;
+    if (!target) return;
+    if (target.closest('button, a, input, select, textarea, .delivery-time-cell, .delivery-select')) {
+      return;
+    }
+    const row = target.closest('tr[data-order-id]');
+    if (!row) return;
+    const orderId = row.dataset.orderId;
+    if (!orderId) return;
+    if (!window.orderComposerApi || !window.orderComposerApi.openOrderEditor) return;
+    window.orderComposerApi.openOrderEditor(orderId);
+  });
+})();
+</script>
+{% endblock %}

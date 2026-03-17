@@ -1,0 +1,11 @@
+{
+  "name": "crm-kvitkova",
+  "private": true,
+  "scripts": {
+    "dev": "tailwindcss -i ./app/static/css/src/input.css -o ./app/static/css/main.css --watch",
+    "build": "tailwindcss -i ./app/static/css/src/input.css -o ./app/static/css/main.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}

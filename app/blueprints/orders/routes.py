@@ -8,7 +8,20 @@ import logging
 import json
 import requests
 from datetime import date, datetime
-from app.services.order_service import get_orders, paginate_orders, update_order, delete_order, get_or_create_client, create_order_and_deliveries
+from app.services.order_service import (
+    SUBSCRIPTION_TYPES,
+    WEEKDAY_MAP,
+    build_delivery_dates,
+    calculate_next_delivery_date,
+    create_order_and_deliveries,
+    detect_order_scenario,
+    get_or_create_client,
+    get_orders,
+    paginate_orders,
+    update_order,
+    delete_order,
+)
+from app.services.delivery_service import group_deliveries_by_date
 from app.services.route_optimizer_service import (
     optimize_json,
     submit_csv_job,
@@ -25,27 +38,100 @@ orders_bp = Blueprint('orders', __name__)
 @orders_bp.route('/orders', methods=['GET'])
 @login_required
 def orders_list():
+    search_query = (
+        request.args.get('q', '').strip()
+        or request.args.get('instagram', '').strip()
+        or request.args.get('phone', '').strip()
+    )
     phone = request.args.get('phone', '').strip()
     instagram = request.args.get('instagram', '').strip()
     city = request.args.get('city', '').strip()
     delivery_type = request.args.get('delivery_type', '').strip()
     size = request.args.get('size', '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
     page = int(request.args.get('page', 1))
     per_page = 30
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     all_orders_count = Order.query.count()
-    orders = get_orders(phone, instagram, city if city else None, delivery_type if delivery_type else None, size if size else None)
-    orders_on_page, has_next = paginate_orders(orders, page, per_page)
+    orders = get_orders(
+        q=search_query if search_query else None,
+        phone=phone if phone else None,
+        instagram=instagram if instagram else None,
+        city=city if city else None,
+        delivery_type=delivery_type if delivery_type else None,
+        size=size if size else None,
+        date_from=date_from if date_from else None,
+        date_to=date_to if date_to else None,
+    )
+    filtered_order_ids = [order.id for order in orders]
     prev_page = page - 1 if page > 1 else 1
     next_page = page + 1
     clients_count = db.session.query(Order.client_id).distinct().count()
     subscription_extensions_count = Order.query.filter_by(is_subscription_extended=True).count()
+    subscription_orders_count = Order.query.filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly'])).count()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
-    return render_template('orders_list.html', orders_on_page=orders_on_page, page=page, prev_page=prev_page, next_page=next_page, has_next=has_next, orders_count=all_orders_count, clients_count=clients_count, per_page=per_page, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom, subscription_extensions_count=subscription_extensions_count)
+    deliveries = []
+    grouped_deliveries = {}
+    deliveries_count = 0
+    has_next = False
+    if filtered_order_ids:
+        deliveries_query = (
+            Delivery.query
+            .options(joinedload(Delivery.order), joinedload(Delivery.client))
+            .filter(Delivery.order_id.in_(filtered_order_ids))
+            .order_by(
+                Delivery.delivery_date.asc(),
+                db.case((Delivery.time_from == None, 1), else_=0),
+                Delivery.time_from.asc(),
+                Delivery.id.asc()
+            )
+        )
+        if date_from:
+            try:
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+        if date_to:
+            try:
+                deliveries_query = deliveries_query.filter(Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date())
+            except ValueError:
+                pass
+        deliveries = deliveries_query.all()
+        deliveries_count = len(deliveries)
+        deliveries = deliveries[start_idx:end_idx]
+        grouped_deliveries = group_deliveries_by_date(deliveries)
+        has_next = end_idx < deliveries_count
+
+    return render_template(
+        'orders/list.html',
+        deliveries=deliveries,
+        deliveries_count=deliveries_count,
+        grouped_deliveries=grouped_deliveries,
+        page=page,
+        prev_page=prev_page,
+        next_page=next_page,
+        has_next=has_next,
+        orders_count=all_orders_count,
+        clients_count=clients_count,
+        per_page=per_page,
+        cities=cities,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom,
+        subscription_extensions_count=subscription_extensions_count,
+        subscription_orders_count=subscription_orders_count,
+        search_query=search_query,
+        city_filter=city,
+        delivery_type_filter=delivery_type,
+        size_filter=size,
+        date_from_filter=date_from,
+        date_to_filter=date_to,
+    )
 
 @orders_bp.route('/orders/new', methods=['GET'])
 @login_required
@@ -55,7 +141,7 @@ def order_form():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
-    return render_template('order_form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
+    return render_template('orders/form.html', clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom)
 
 @orders_bp.route('/orders/new', methods=['POST'])
 @login_required
@@ -64,7 +150,10 @@ def order_create():
     logging.info(f'Form data: {dict(request.form)}')
     
     is_pickup = request.form.get('is_pickup') == 'on'
-    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'delivery_type', 'size', 'first_delivery_date', 'delivery_day', 'for_whom']
+    scenario = detect_order_scenario(request.form)
+    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
+    if scenario == 'subscription':
+        required_fields.extend(['delivery_type', 'delivery_day'])
     if not is_pickup:
         required_fields.append('street')
     errors = []
@@ -135,7 +224,7 @@ def order_edit(order_id):
         return jsonify({'success': True})
     # --- Перевірка, чи можна продовжити підписку ---
     can_extend_subscription = True
-    if order.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly']:
+    if order.delivery_type in SUBSCRIPTION_TYPES:
         if getattr(order, 'is_subscription_extended', False):
             can_extend_subscription = False
         else:
@@ -174,6 +263,56 @@ def order_delete(order_id):
     order = Order.query.get_or_404(order_id)
     delete_order(order)
     return jsonify({'success': True})
+
+@orders_bp.route('/orders/deliveries/time', methods=['POST'])
+@login_required
+def update_delivery_times():
+    data = request.get_json() or {}
+    delivery_ids = data.get('delivery_ids') or []
+    time_from = (data.get('time_from') or '').strip()
+    time_to = (data.get('time_to') or '').strip()
+    clear_time = bool(data.get('clear'))
+    delivery_date_raw = (data.get('delivery_date') or '').strip()
+
+    if not isinstance(delivery_ids, list) or not delivery_ids:
+        return jsonify({'success': False, 'error': 'Оберіть доставки для оновлення'}), 400
+    if not time_from and not time_to and not clear_time and not delivery_date_raw:
+        return jsonify({'success': False, 'error': 'Вкажіть час доставки'}), 400
+
+    def parse_time(value):
+        return datetime.strptime(value, '%H:%M').time()
+
+    try:
+        parsed_from = parse_time(time_from) if time_from else None
+        parsed_to = parse_time(time_to) if time_to else None
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Невірний формат часу. Використовуйте HH:MM'}), 400
+
+    if parsed_from and parsed_to and parsed_from > parsed_to:
+        return jsonify({'success': False, 'error': 'Час "з" має бути меншим за час "до"'}), 400
+
+    delivery_date = None
+    if delivery_date_raw:
+        try:
+            delivery_date = datetime.strptime(delivery_date_raw, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Невірний формат дати. Використовуйте YYYY-MM-DD'}), 400
+
+    deliveries = Delivery.query.filter(Delivery.id.in_(delivery_ids)).all()
+    if not deliveries:
+        return jsonify({'success': False, 'error': 'Доставки не знайдені'}), 404
+
+    for delivery in deliveries:
+        delivery.time_from = None if clear_time else (time_from or None)
+        delivery.time_to = None if clear_time else (time_to or None)
+        if delivery_date:
+            delivery.delivery_date = delivery_date
+            # If delivery was part of a route, remove it and reset status
+            if delivery.status == 'Розподілено':
+                RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+                delivery.status = 'Очікує'
+    db.session.commit()
+    return jsonify({'success': True, 'updated': len(deliveries)})
 
 @orders_bp.route('/clients/search', methods=['GET'])
 @login_required
@@ -237,7 +376,7 @@ def route_generator():
             return jsonify({'error': str(exc)}), 502
 
     return render_template(
-        'route_generator.html',
+        'routes/generator.html',
         selected_date=selected_date_str,
     )
 
@@ -477,19 +616,30 @@ def extend_subscription(order_id):
     order = Order.query.get_or_404(order_id)
     
     # Перевіряємо, чи це підписка
-    if order.delivery_type not in ['Weekly', 'Monthly', 'Bi-weekly']:
+    if order.delivery_type not in SUBSCRIPTION_TYPES:
         return jsonify({'success': False, 'error': 'Це не підписка'}), 400
-    
-    # Знаходимо доставку з is_subscription=False (5-та доставка)
-    unpaid_delivery = Delivery.query.filter_by(
-        order_id=order_id, 
-        is_subscription=False
-    ).first()
-    
-    if not unpaid_delivery:
-        return jsonify({'success': False, 'error': 'Не знайдено неоплачену доставку'}), 404
+    if getattr(order, 'is_subscription_extended', False):
+        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
     
     try:
+        last_delivery = (
+            Delivery.query
+            .filter_by(order_id=order_id)
+            .order_by(Delivery.delivery_date.desc(), Delivery.id.desc())
+            .first()
+        )
+        if not last_delivery or not last_delivery.delivery_date:
+            return jsonify({'success': False, 'error': 'Не знайдено доставки замовлення'}), 404
+
+        first_next_delivery = calculate_next_delivery_date(
+            last_delivery.delivery_date,
+            order.delivery_type,
+            WEEKDAY_MAP.get(order.delivery_day, last_delivery.delivery_date.weekday()),
+        )
+        next_cycle_dates = build_delivery_dates(first_next_delivery, order.delivery_type, order.delivery_day)
+        if len(next_cycle_dates) < 4:
+            return jsonify({'success': False, 'error': 'Не вдалося сформувати новий цикл'}), 400
+
         # --- КЛОНУЄМО ORDER ---
         new_order = Order(
             client_id=order.client_id,
@@ -505,7 +655,7 @@ def extend_subscription(order_id):
             delivery_type=order.delivery_type,
             size=order.size,
             custom_amount=order.custom_amount,
-            first_delivery_date=order.first_delivery_date,
+            first_delivery_date=first_next_delivery,
             delivery_day=order.delivery_day,
             time_from=order.time_from,
             time_to=order.time_to,
@@ -515,75 +665,45 @@ def extend_subscription(order_id):
             bouquet_size=order.bouquet_size,
             price_at_order=order.price_at_order,
             periodicity=order.periodicity,
-            preferred_days=order.preferred_days
+            preferred_days=order.preferred_days,
+            delivery_method=order.delivery_method,
+            address_comment=order.address_comment,
+            bouquet_type=order.bouquet_type,
+            composition_type=order.composition_type,
         )
         db.session.add(new_order)
         db.session.flush()  # Щоб отримати new_order.id
 
-        # --- ПРИВʼЯЗУЄМО ДОСТАВКИ ДО НОВОГО ORDER ---
-        unpaid_delivery.status = 'Очікує'
-        unpaid_delivery.is_subscription = True
-        unpaid_delivery.order_id = new_order.id
         # Відмічаємо старий order як продовжений
         order.is_subscription_extended = True
-        
-        # Створюємо 4 нові доставки
-        from app.services.order_service import WEEKDAY_MAP
-        import datetime
-        import calendar
-        
-        last_delivery = Delivery.query.filter_by(order_id=order_id).order_by(Delivery.delivery_date.desc()).first()
-        if not last_delivery:
-            return jsonify({'success': False, 'error': 'Не знайдено доставки замовлення'}), 404
-        
-        prev_date = last_delivery.delivery_date
-        desired_weekday = WEEKDAY_MAP.get(order.delivery_day, 0)
-        deliveries = []
-        
-        for i in range(4):
-            if order.delivery_type == 'Weekly':
-                next_date = prev_date + datetime.timedelta(days=1)
-                while next_date.weekday() != desired_weekday:
-                    next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Bi-weekly':
-                next_date = prev_date + datetime.timedelta(days=8)
-                while next_date.weekday() != desired_weekday:
-                    next_date += datetime.timedelta(days=1)
-            elif order.delivery_type == 'Monthly':
-                year = prev_date.year + (prev_date.month // 12)
-                month = (prev_date.month % 12) + 1
-                c = calendar.Calendar()
-                month_days = [d for d in c.itermonthdates(year, month) if d.month == month and d.weekday() == desired_weekday]
-                next_date = None
-                for d in month_days:
-                    if d > prev_date:
-                        next_date = d
-                        break
-                if not next_date:
-                    next_date = prev_date + datetime.timedelta(days=30)
-            else:
-                next_date = prev_date + datetime.timedelta(weeks=1)
-            deliveries.append(next_date)
-            prev_date = next_date
-        
-        for i, d_date in enumerate(deliveries):
-            is_subscription = i < 3
-            status = 'Очікує' if is_subscription else 'Не оплачена'
+        order.subscription_followup_status = 'extended'
+        order.subscription_followup_at = datetime.utcnow()
+
+        for i, d_date in enumerate(next_cycle_dates):
+            delivery_time_from = order.time_from if i == 0 else None
+            delivery_time_to = order.time_to if i == 0 else None
             delivery = Delivery(
                 order_id=new_order.id,
                 client_id=order.client_id,
                 delivery_date=d_date,
-                status=status,
+                status='Очікує',
                 comment=order.comment if i == 0 else '',
+                preferences=order.preferences,
                 street=order.street if not order.is_pickup else None,
                 building_number=order.building_number if not order.is_pickup else None,
-                time_from=order.time_from,
-                time_to=order.time_to,
+                floor=order.floor if not order.is_pickup else None,
+                entrance=order.entrance if not order.is_pickup else None,
+                time_from=delivery_time_from,
+                time_to=delivery_time_to,
                 size=order.size,
                 phone=order.recipient_phone,
                 is_pickup=order.is_pickup,
                 delivery_type=order.delivery_type,
-                is_subscription=is_subscription
+                is_subscription=True,
+                delivery_method=order.delivery_method,
+                address_comment=order.address_comment,
+                bouquet_type=order.bouquet_type,
+                composition_type=order.composition_type,
             )
             db.session.add(delivery)
         db.session.commit()
@@ -642,7 +762,7 @@ def extend_form_from_delivery(delivery_id):
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
-        'extend_order_modal.html',
+        'orders/extend_modal.html',
         delivery=delivery,
         order=order,
         client=client,
@@ -650,4 +770,206 @@ def extend_form_from_delivery(delivery_id):
         delivery_types=delivery_types,
         sizes=sizes,
         for_whom=for_whom
-    ) 
+    )
+
+
+@orders_bp.route('/subscriptions', methods=['GET'])
+@login_required
+def subscriptions_list():
+    subscription_orders = (
+        Order.query
+        .options(joinedload(Order.client), joinedload(Order.deliveries))
+        .filter(Order.delivery_type.in_(SUBSCRIPTION_TYPES))
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    search_query = request.args.get('q', '').strip()
+    city_filter = request.args.get('city', '').strip()
+    type_filter = request.args.get('type', '').strip()
+    page = int(request.args.get('page', 1))
+    per_page = 30
+
+    data = []
+    for order in subscription_orders:
+        if search_query:
+            q = search_query.lower()
+            searchable_values = [
+                order.client.instagram if order.client else '',
+                order.client.phone if order.client else '',
+                order.recipient_name,
+                order.recipient_phone,
+                order.recipient_social,
+                order.city,
+            ]
+            if not any(value and q in str(value).lower() for value in searchable_values):
+                continue
+        if city_filter and order.city != city_filter:
+            continue
+        if type_filter and order.delivery_type != type_filter:
+            continue
+        total = len(order.deliveries)
+        completed = sum(1 for d in order.deliveries if d.status == 'Доставлено')
+        data.append({'order': order, 'total': total, 'completed': completed})
+
+    active_count = sum(1 for s in data if s['completed'] < s['total'])
+    completed_count = sum(1 for s in data if s['total'] > 0 and s['completed'] >= s['total'])
+    total_count = len(data)
+    start_idx = (page - 1) * per_page
+    end_idx = start_idx + per_page
+    data_page = data[start_idx:end_idx]
+    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+
+    return render_template(
+        'subscriptions/list.html',
+        subscriptions=data_page,
+        active_count=active_count,
+        completed_count=completed_count,
+        total_count=total_count,
+        per_page=per_page,
+        page=page,
+        cities=cities,
+        search_query=search_query,
+        city_filter=city_filter,
+        type_filter=type_filter,
+        delivery_types=delivery_types,
+        sizes=sizes,
+        for_whom=for_whom,
+    )
+
+
+@orders_bp.route('/subscriptions/<int:order_id>', methods=['GET'])
+@login_required
+def subscription_detail(order_id):
+    def format_address(street='', building_number='', floor='', entrance='', address_comment=''):
+        parts = []
+        line = ' '.join(part for part in [street, building_number] if part)
+        if line:
+            parts.append(line)
+        if floor:
+            parts.append(f'поверх {floor}')
+        if entrance:
+            parts.append(f'підʼїзд {entrance}')
+        if address_comment:
+            parts.append(address_comment)
+        return ', '.join(part for part in parts if part)
+
+    order = (
+        Order.query
+        .options(joinedload(Order.client), joinedload(Order.deliveries))
+        .get_or_404(order_id)
+    )
+
+    if order.delivery_type not in SUBSCRIPTION_TYPES:
+        return jsonify({'error': 'Це замовлення не є підпискою'}), 400
+
+    deliveries = sorted(order.deliveries, key=lambda delivery: (delivery.delivery_date, delivery.id))
+    total_deliveries = len(deliveries)
+    completed_deliveries = sum(1 for delivery in deliveries if delivery.status == 'Доставлено')
+    next_delivery = next((delivery for delivery in deliveries if delivery.status in ['Очікує', 'Розподілено']), None)
+    final_delivery = deliveries[-1] if deliveries else None
+    can_extend = not getattr(order, 'is_subscription_extended', False)
+
+    related_orders = (
+            Order.query
+            .options(joinedload(Order.deliveries))
+            .filter(
+                Order.client_id == order.client_id,
+                Order.delivery_type.in_(SUBSCRIPTION_TYPES),
+                Order.recipient_name == order.recipient_name,
+                Order.recipient_phone == order.recipient_phone,
+            )
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    return jsonify({
+        'id': order.id,
+        'client': {
+            'instagram': order.client.instagram if order.client else '',
+            'phone': order.client.phone if order.client else '',
+            'telegram': order.client.telegram if order.client else '',
+        },
+        'recipient': {
+            'name': order.recipient_name,
+            'phone': order.recipient_phone,
+            'social': order.recipient_social or '',
+        },
+        'delivery': {
+            'city': order.city,
+            'address': 'Самовивіз' if order.is_pickup else format_address(
+                order.street,
+                order.building_number,
+                order.floor,
+                order.entrance,
+                order.address_comment,
+            ),
+            'delivery_type': order.delivery_type,
+            'size': order.size,
+            'custom_amount': order.custom_amount,
+            'delivery_day': order.delivery_day,
+            'first_delivery_date': order.first_delivery_date.strftime('%d.%m.%Y') if order.first_delivery_date else '',
+            'time_from': order.time_from or '',
+            'time_to': order.time_to or '',
+            'delivery_method': order.delivery_method or 'courier',
+            'is_pickup': order.is_pickup,
+            'for_whom': order.for_whom or '',
+        },
+        'notes': {
+            'comment': order.comment or '',
+            'preferences': order.preferences or '',
+            'address_comment': order.address_comment or '',
+            'bouquet_type': order.bouquet_type or '',
+            'composition_type': order.composition_type or '',
+        },
+        'stats': {
+            'total_deliveries': total_deliveries,
+            'completed_deliveries': completed_deliveries,
+            'active_deliveries': max(total_deliveries - completed_deliveries, 0),
+            'can_extend': can_extend,
+            'is_extended': bool(getattr(order, 'is_subscription_extended', False)),
+            'next_delivery_date': next_delivery.delivery_date.strftime('%d.%m.%Y') if next_delivery and next_delivery.delivery_date else '',
+            'final_delivery_date': final_delivery.delivery_date.strftime('%d.%m.%Y') if final_delivery and final_delivery.delivery_date else '',
+        },
+        'deliveries': [
+            {
+                'id': delivery.id,
+                'delivery_date': delivery.delivery_date.strftime('%d.%m.%Y') if delivery.delivery_date else '',
+                'status': delivery.status,
+                'time_from': delivery.time_from or '',
+                'time_to': delivery.time_to or '',
+                'address': 'Самовивіз' if delivery.is_pickup else format_address(
+                    delivery.street or order.street,
+                    delivery.building_number or order.building_number,
+                    delivery.floor or order.floor,
+                    delivery.entrance or order.entrance,
+                    delivery.address_comment or order.address_comment,
+                ),
+                'phone': delivery.phone or order.recipient_phone or '',
+                'comment': delivery.comment or '',
+                'preferences': delivery.preferences or order.preferences or '',
+                'delivery_method': delivery.delivery_method or order.delivery_method or 'courier',
+                'is_subscription': bool(delivery.is_subscription),
+            }
+            for delivery in deliveries
+        ],
+        'related_orders': [
+            {
+                'id': related_order.id,
+                'is_current': related_order.id == order.id,
+                'created_at': related_order.created_at.strftime('%d.%m.%Y %H:%M') if related_order.created_at else '',
+                'first_delivery_date': related_order.first_delivery_date.strftime('%d.%m.%Y') if related_order.first_delivery_date else '',
+                'delivery_type': related_order.delivery_type,
+                'size': related_order.size,
+                'city': related_order.city,
+                'is_extended': bool(getattr(related_order, 'is_subscription_extended', False)),
+                'recipient_name': related_order.recipient_name,
+                'deliveries_total': len(related_order.deliveries),
+                'deliveries_completed': sum(1 for related_delivery in related_order.deliveries if related_delivery.status == 'Доставлено'),
+            }
+            for related_order in related_orders
+        ],
+    })

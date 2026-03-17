@@ -97,7 +97,7 @@ def saved_routes():
     )
 
     return render_template(
-        'saved_routes.html',
+        'routes/saved.html',
         routes=routes,
         couriers=couriers,
         date_filter=date_filter,
@@ -113,26 +113,63 @@ def assign_route(route_id):
     route = DeliveryRoute.query.get_or_404(route_id)
     courier_id = request.form.get('courier_id', type=int)
     delivery_price = request.form.get('delivery_price', type=int)
-    route.courier_id = courier_id or None
+
+    # Notify old courier if route was sent and courier is being changed
+    old_courier_id = route.courier_id
+    new_courier_id = courier_id or None
+    if old_courier_id and old_courier_id != new_courier_id and route.telegram_message_id:
+        old_courier = Courier.query.get(old_courier_id)
+        if old_courier and old_courier.telegram_chat_id:
+            bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+            cancel_text = (
+                f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
+                f"Призначення було змінено. Ця пропозиція скасована."
+            )
+            _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+        route.telegram_message_id = None
+        route.status = 'draft'
+
+    route.courier_id = new_courier_id
     if delivery_price is not None:
         route.delivery_price = delivery_price
     db.session.commit()
     return redirect(url_for('routes.saved_routes'))
 
 
-@routes_bp.route('/routes/<int:route_id>/send', methods=['POST'])
-@login_required
-def send_route(route_id):
-    route = DeliveryRoute.query.get_or_404(route_id)
 
-    if not route.courier_id:
-        flash('Спочатку призначте кур\'єра та вкажіть ціну', 'warning')
+@routes_bp.route('/routes/<int:route_id>/assign-and-send', methods=['POST'])
+@login_required
+def assign_and_send_route(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    courier_id = request.form.get('courier_id', type=int)
+    delivery_price = request.form.get('delivery_price', type=int)
+
+    if not courier_id:
+        flash('Оберіть кур\'єра', 'warning')
         return redirect(url_for('routes.saved_routes'))
 
-    courier = Courier.query.get(route.courier_id)
+    courier = Courier.query.get(courier_id)
     if not courier or not courier.telegram_chat_id:
         flash('Кур\'єр не зареєстрований в Telegram', 'danger')
         return redirect(url_for('routes.saved_routes'))
+
+    # Notify old courier if route was already sent and courier is being changed
+    old_courier_id = route.courier_id
+    if old_courier_id and old_courier_id != courier_id and route.telegram_message_id:
+        old_courier = Courier.query.get(old_courier_id)
+        if old_courier and old_courier.telegram_chat_id:
+            bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
+            cancel_text = (
+                f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
+                f"Призначення було змінено. Ця пропозиція скасована."
+            )
+            _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+        route.telegram_message_id = None
+
+    route.courier_id = courier_id
+    if delivery_price is not None:
+        route.delivery_price = delivery_price
+    db.session.commit()
 
     stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
 
@@ -140,7 +177,6 @@ def send_route(route_id):
     text += f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
     if route.delivery_price:
         text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
-
     text += "\n<b>Маршрут:</b>\n"
     for stop in stops:
         d = stop.delivery
@@ -152,7 +188,6 @@ def send_route(route_id):
         addr_parts = [p for p in [city, street, build] if p]
         text += f"\n{stop.stop_order}. {', '.join(addr_parts)} — {arrival}"
 
-    # Build Google Maps multi-stop URL
     depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
     gmaps_parts = []
     if depot_address:
@@ -171,20 +206,17 @@ def send_route(route_id):
 
     inline_keyboard = []
     if gmaps_url:
-        inline_keyboard.append([
-            {'text': '🗺 Переглянути маршрут на Google Maps', 'url': gmaps_url}
-        ])
+        inline_keyboard.append([{'text': '🗺 Переглянути маршрут на Google Maps', 'url': gmaps_url}])
     inline_keyboard.append([
         {'text': '✅ Прийняти', 'callback_data': f'route_accept_{route_id}'},
         {'text': '❌ Відхилити', 'callback_data': f'route_reject_{route_id}'},
     ])
-    reply_markup = {'inline_keyboard': inline_keyboard}
 
     bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
-    msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, reply_markup)
+    msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, {'inline_keyboard': inline_keyboard})
 
     if not msg_id:
-        flash('Помилка надсилання в Telegram. Перевірте токен та chat_id кур\'єра.', 'danger')
+        flash('Кур\'єра призначено, але надіслати в Telegram не вдалось. Перевірте токен та chat_id.', 'warning')
         return redirect(url_for('routes.saved_routes'))
 
     route.status = 'sent'
@@ -192,7 +224,7 @@ def send_route(route_id):
     route.sent_at = datetime.utcnow()
     db.session.commit()
 
-    flash(f'Маршрут надіслано кур\'єру {courier.name}', 'success')
+    flash(f'Маршрут призначено та надіслано кур\'єру {courier.name}', 'success')
     return redirect(url_for('routes.saved_routes'))
 
 
@@ -200,6 +232,15 @@ def send_route(route_id):
 @login_required
 def delete_route(route_id):
     route = DeliveryRoute.query.get_or_404(route_id)
+
+    # Reset delivery statuses back to 'Очікує' before deleting
+    delivery_ids = [stop.delivery_id for stop in route.stops]
+    if delivery_ids:
+        from app.models.delivery import Delivery
+        Delivery.query.filter(Delivery.id.in_(delivery_ids)).update(
+            {'status': 'Очікує'}, synchronize_session=False
+        )
+
     db.session.delete(route)
     db.session.commit()
     flash('Маршрут видалено', 'success')

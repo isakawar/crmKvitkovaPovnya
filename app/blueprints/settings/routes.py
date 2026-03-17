@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required
-from app.models import Settings
+from app.models import Settings, Price
+from app.models.courier import Courier
 from app.extensions import db
 from app.utils.decorators import permission_required
 
@@ -11,7 +12,20 @@ bp = Blueprint('settings', __name__)
 @permission_required('view_settings')
 def settings_page():
     settings = Settings.query.first()
-    return render_template('settings.html', settings=settings)
+    couriers = Courier.query.order_by(Courier.name).all()
+    active_couriers = [c for c in couriers if c.active]
+    telegram_couriers = [c for c in couriers if c.telegram_registered]
+    courier_stats = {
+        'total': len(couriers),
+        'active': len(active_couriers),
+        'telegram': len(telegram_couriers),
+    }
+    return render_template(
+        'settings/index.html',
+        settings=settings,
+        couriers=couriers,
+        courier_stats=courier_stats
+    )
 
 @bp.route('/settings/update', methods=['POST'])
 @login_required
@@ -119,4 +133,40 @@ def add_marketing_source():
     item = Settings(type='marketing_source', value=value)
     db.session.add(item)
     db.session.commit()
-    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}}) 
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+
+@bp.route('/settings/prices', methods=['GET'])
+def get_prices():
+    sub_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    prices = Price.query.all()
+    price_map = {(p.subscription_type_id, p.size_id): p.price for p in prices}
+    return jsonify({
+        'subscription_types': [{'id': s.id, 'value': s.value} for s in sub_types],
+        'sizes': [{'id': s.id, 'value': s.value} for s in sizes],
+        'prices': {f'{k[0]}_{k[1]}': v for k, v in price_map.items()},
+    })
+
+
+@bp.route('/settings/prices', methods=['POST'])
+def save_prices():
+    data = request.get_json()
+    # data: { "sub_id_size_id": price_value, ... }
+    for key, value in data.items():
+        parts = key.split('_')
+        if len(parts) != 2:
+            continue
+        try:
+            sub_id = int(parts[0])
+            size_id = int(parts[1])
+            price_val = int(value)
+        except (ValueError, TypeError):
+            continue
+        existing = Price.query.filter_by(subscription_type_id=sub_id, size_id=size_id).first()
+        if existing:
+            existing.price = price_val
+        else:
+            db.session.add(Price(subscription_type_id=sub_id, size_id=size_id, price=price_val))
+    db.session.commit()
+    return jsonify({'success': True}) 

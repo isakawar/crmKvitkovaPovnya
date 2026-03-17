@@ -1,0 +1,180 @@
+{% extends 'layout.html' %}
+
+{% block content %}
+<!-- Header -->
+<section class="mb-6 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Клієнти</h1>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+        Усього: {{ clients_count }}
+      </div>
+      <button class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+              data-bs-toggle="modal" data-bs-target="#clientModal">
+        <i class="bi bi-plus"></i>
+        Додати клієнта
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Filters -->
+<form method="get" action="" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
+  <div class="relative min-w-[280px] flex-1 md:max-w-md">
+    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+    <input
+      type="text"
+      name="q"
+      value="{{ search_query }}"
+      placeholder="Пошук за Instagram, Telegram або телефоном..."
+      class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+      autocomplete="off"
+    />
+  </div>
+  <select name="sub"
+          onchange="this.form.submit()"
+          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+    <option value="" {% if sub_filter == '' %}selected{% endif %}>Всі клієнти</option>
+    <option value="active" {% if sub_filter == 'active' %}selected{% endif %}>Активна підписка</option>
+    <option value="inactive" {% if sub_filter == 'inactive' %}selected{% endif %}>Без підписки</option>
+  </select>
+  <button type="submit"
+          class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
+    Фільтрувати
+  </button>
+  {% if search_query or sub_filter %}
+  <a href="{{ url_for('clients.clients_list') }}"
+     class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
+    Скинути
+  </a>
+  {% endif %}
+</form>
+
+<!-- Card grid -->
+{% if clients %}
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+  {% for client in clients %}
+  <div class="bg-white border border-stone-200 rounded-xl p-4 hover:shadow-md hover:border-amber-200 transition-all cursor-pointer"
+       data-client-id="{{ client.id }}">
+
+    <!-- Top row: name + subscription dot -->
+    <div class="flex items-start justify-between mb-3">
+      <div class="flex items-center gap-2">
+        {% set icons = ['bi-person', 'bi-flower1', 'bi-star', 'bi-emoji-smile', 'bi-gem'] %}
+        <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="bi {{ icons[client.id % icons|length] }} text-stone-500 text-sm"></i>
+        </div>
+        <span class="font-medium text-stone-900 text-sm break-all">{{ client.instagram }}</span>
+      </div>
+      <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if client.id in active_sub_client_ids else 'bg-stone-300' }}"
+           title="{{ 'Є активна підписка' if client.id in active_sub_client_ids else 'Без підписки' }}">
+      </div>
+    </div>
+
+    <!-- Phone & Telegram -->
+    <div class="space-y-1 mb-3">
+      {% if client.phone %}
+      <div class="flex items-center gap-2 text-sm text-stone-500">
+        <i class="bi bi-telephone text-xs"></i>
+        <span>{{ client.phone }}</span>
+      </div>
+      {% endif %}
+      {% if client.telegram %}
+      <div class="flex items-center gap-2 text-sm text-stone-500">
+        <i class="bi bi-telegram text-xs"></i>
+        <span>{{ client.telegram }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Footer: credits + discount -->
+    <div class="border-t border-stone-100 pt-3 flex items-center justify-between">
+      <div class="flex items-center gap-1 text-xs text-stone-400">
+        <i class="bi bi-wallet2"></i>
+        <span class="text-stone-600 font-medium">{{ client.credits }}</span>
+        <span>₴</span>
+      </div>
+      <div class="flex items-center gap-2">
+        {% if client.marketing_source %}
+        <span class="text-xs text-stone-400 bg-stone-50 px-2 py-0.5 rounded">{{ client.marketing_source }}</span>
+        {% endif %}
+        {% if client.personal_discount %}
+        <span class="inline-flex items-center px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
+          {{ client.personal_discount }}%
+        </span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="flex flex-col items-center justify-center py-20 text-stone-400">
+  <i class="bi bi-people text-5xl mb-4"></i>
+  <p class="text-lg font-medium">Клієнтів не знайдено</p>
+  <p class="text-sm mt-1">{% if search_query %}Спробуйте інший запит{% else %}Додайте першого клієнта{% endif %}</p>
+</div>
+{% endif %}
+
+<!-- Pagination -->
+{% set total_pages = (clients_count // 30) + (1 if clients_count % 30 else 0) %}
+{% if total_pages > 1 %}
+<nav class="flex items-center justify-center gap-2 mt-8">
+  <a href="?{{ update_query(1) }}"
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == 1 %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-left"></i>
+  </a>
+
+  {% if page > 3 %}
+    <a href="?{{ update_query(1) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">1</a>
+    {% if page > 4 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
+  {% endif %}
+
+  {% for p in range(page-2, page+3) %}
+    {% if 1 <= p <= total_pages %}
+      <a href="?{{ update_query(p) }}"
+         class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-3 text-sm transition-colors {% if p == page %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
+        {{ p }}
+      </a>
+    {% endif %}
+  {% endfor %}
+
+  {% if page < total_pages - 2 %}
+    {% if page < total_pages - 3 %}
+      <span class="inline-flex h-10 min-w-10 items-center justify-center text-sm text-stone-400">…</span>
+    {% endif %}
+    <a href="?{{ update_query(total_pages) }}" class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:bg-stone-50">{{ total_pages }}</a>
+  {% endif %}
+
+  <a href="?{{ update_query(total_pages) }}"
+     class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-500 transition-colors hover:bg-stone-50 {% if page == total_pages %}pointer-events-none opacity-40{% endif %}">
+    <i class="bi bi-chevron-double-right"></i>
+  </a>
+</nav>
+{% endif %}
+
+{% include 'clients/modal.html' %}
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+{% endblock %}
+
+{% macro update_query(page_num) %}
+    {%- set args = request.args.copy() -%}
+    {%- set _ = args.pop('page', None) -%}
+    {%- set _ = args.update({'page': page_num}) -%}
+    {%- set qs = [] -%}
+    {%- for k, v in args.items() -%}
+        {%- if v %}
+            {%- set _ = qs.append(k ~ '=' ~ v|urlencode) -%}
+        {%- endif %}
+    {%- endfor -%}
+    {{ qs|join('&') }}
+{% endmacro %}
