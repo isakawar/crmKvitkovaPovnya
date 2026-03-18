@@ -181,6 +181,35 @@
     border-radius: 20px; background: #f5f5f4; color: #57534e; flex-shrink: 0;
   }
 
+  .picker-time {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background 0.12s;
+  }
+  .picker-time:hover { background: #f5f5f4; }
+  .picker-time-edit {
+    display: flex; align-items: center; gap: 4px; min-width: 160px; flex-shrink: 0;
+  }
+  .picker-time-input {
+    width: 68px; padding: 3px 6px; border: 1px solid #d6d3d1; border-radius: 6px;
+    font-size: 0.82rem; font-weight: 600; color: #1c1917; outline: none;
+    transition: border-color 0.12s;
+  }
+  .picker-time-input:focus { border-color: #1c1917; }
+  .picker-time-save {
+    padding: 3px 8px; background: #1c1917; color: #fff; border: none;
+    border-radius: 6px; font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    transition: background 0.12s;
+  }
+  .picker-time-save:hover { background: #44403c; }
+  .picker-time-cancel {
+    padding: 3px 6px; background: none; color: #a8a29e; border: none;
+    border-radius: 6px; font-size: 0.78rem; cursor: pointer;
+  }
+  .picker-time-cancel:hover { color: #57534e; }
+
   .picker-footer {
     display: flex;
     flex-wrap: wrap;
@@ -558,6 +587,84 @@ function updatePickerFooter() {
   btn.style.cursor = checked === 0 ? 'not-allowed' : 'pointer';
 }
 
+function formatTimeLabel(d) {
+  return d.time_from
+    ? (d.time_to ? `${d.time_from}–${d.time_to}` : d.time_from)
+    : 'Час не вказано';
+}
+
+async function savePickerTime(deliveryId, timeFrom, timeTo, timeSpan, d) {
+  const body = { delivery_ids: [deliveryId], time_from: timeFrom, time_to: timeTo };
+  try {
+    const resp = await fetch('/orders/deliveries/time', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (data.success) {
+      d.time_from = timeFrom;
+      d.time_to = timeTo;
+      timeSpan.textContent = formatTimeLabel(d);
+      timeSpan.style.color = '';
+    } else {
+      timeSpan.style.color = '#dc2626';
+      timeSpan.textContent = 'Помилка';
+      setTimeout(() => { timeSpan.textContent = formatTimeLabel(d); timeSpan.style.color = ''; }, 1500);
+    }
+  } catch(e) {
+    timeSpan.textContent = formatTimeLabel(d);
+  }
+}
+
+function openTimeEditor(timeSpan, d, row) {
+  const current = timeSpan.textContent;
+  const editEl = document.createElement('div');
+  editEl.className = 'picker-time-edit';
+  editEl.innerHTML = `
+    <input class="picker-time-input" type="time" value="${d.time_from || ''}" placeholder="09:00">
+    <span style="color:#a8a29e;font-size:0.8rem;">–</span>
+    <input class="picker-time-input" type="time" value="${d.time_to || ''}" placeholder="12:00">
+    <button class="picker-time-save">OK</button>
+    <button class="picker-time-cancel">✕</button>
+  `;
+
+  timeSpan.replaceWith(editEl);
+  editEl.querySelectorAll('input')[0].focus();
+
+  function restore() {
+    editEl.replaceWith(timeSpan);
+  }
+
+  editEl.querySelector('.picker-time-cancel').addEventListener('click', function(e) {
+    e.preventDefault(); e.stopPropagation(); restore();
+  });
+
+  editEl.querySelector('.picker-time-save').addEventListener('click', async function(e) {
+    e.preventDefault(); e.stopPropagation();
+    const inputs = editEl.querySelectorAll('input');
+    const newFrom = inputs[0].value;
+    const newTo = inputs[1].value;
+    editEl.replaceWith(timeSpan);
+    await savePickerTime(d.id, newFrom, newTo, timeSpan, d);
+  });
+
+  editEl.addEventListener('keydown', async function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const inputs = editEl.querySelectorAll('input');
+      const newFrom = inputs[0].value;
+      const newTo = inputs[1].value;
+      editEl.replaceWith(timeSpan);
+      await savePickerTime(d.id, newFrom, newTo, timeSpan, d);
+    } else if (e.key === 'Escape') {
+      restore();
+    }
+  });
+
+  editEl.addEventListener('click', function(e) { e.stopPropagation(); });
+}
+
 function renderPickerList(deliveries) {
   const list = document.getElementById('picker-list');
   document.getElementById('picker-loading').style.display = 'none';
@@ -569,10 +676,6 @@ function renderPickerList(deliveries) {
   }
 
   deliveries.forEach(function(d) {
-    const timeLabel = d.time_from
-      ? (d.time_to ? `${d.time_from}–${d.time_to}` : d.time_from)
-      : 'Час не вказано';
-
     const addrParts = [d.city, d.street, d.building_number].filter(Boolean);
     const addr = addrParts.join(', ');
     const meta = [d.recipient_name, d.phone, d.instagram].filter(Boolean).join(' · ');
@@ -581,13 +684,20 @@ function renderPickerList(deliveries) {
     row.className = 'picker-row';
     row.innerHTML = `
       <input type="checkbox" value="${d.id}" checked>
-      <span class="picker-time">${timeLabel}</span>
+      <span class="picker-time" title="Натисніть щоб змінити час">${formatTimeLabel(d)}</span>
       <span style="flex:1;">
         <div class="picker-addr">${addr || '—'}</div>
         ${meta ? `<div class="picker-meta">${meta}</div>` : ''}
       </span>
       <span class="picker-badge">${d.size || '—'}</span>
     `;
+
+    const timeSpan = row.querySelector('.picker-time');
+    timeSpan.addEventListener('click', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      openTimeEditor(timeSpan, d, row);
+    });
+
     row.querySelector('input').addEventListener('change', function() {
       row.classList.toggle('unchecked', !this.checked);
       updatePickerFooter();

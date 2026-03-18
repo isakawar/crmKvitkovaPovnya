@@ -231,6 +231,11 @@ def order_edit(order_id):
             can_extend_subscription = True
     else:
         can_extend_subscription = False
+    delivery_comment = next((d.comment for d in order.deliveries if d.comment), None)
+    delivery_preferences = next((d.preferences for d in order.deliveries if d.preferences), None)
+    delivery_address_comment = next((d.address_comment for d in order.deliveries if d.address_comment), None)
+    delivery_bouquet_type = next((d.bouquet_type for d in order.deliveries if d.bouquet_type), None)
+    delivery_composition_type = next((d.composition_type for d in order.deliveries if d.composition_type), None)
     return jsonify({
         'id': order.id,
         'client_instagram': order.client.instagram,
@@ -250,10 +255,13 @@ def order_edit(order_id):
         'delivery_day': order.delivery_day,
         'time_from': order.time_from,
         'time_to': order.time_to,
-        'comment': order.comment,
-        'preferences': order.preferences,
+        'comment': order.comment or delivery_comment,
+        'preferences': order.preferences or delivery_preferences,
         'for_whom': order.for_whom,
         'delivery_method': order.delivery_method or 'courier',
+        'address_comment': order.address_comment or delivery_address_comment,
+        'bouquet_type': order.bouquet_type or delivery_bouquet_type,
+        'composition_type': order.composition_type or delivery_composition_type,
         'can_extend_subscription': can_extend_subscription
     })
 
