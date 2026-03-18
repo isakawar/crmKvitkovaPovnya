@@ -67,7 +67,7 @@
         <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
           <i class="bi {{ icons[client.id % icons|length] }} text-stone-500 text-sm"></i>
         </div>
-        <span class="font-medium text-stone-900 text-sm break-all">{{ client.instagram }}</span>
+        <span class="font-medium text-stone-900 text-sm break-all">{{ client.instagram.lstrip('@') }}</span>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if client.id in active_sub_client_ids else 'bg-stone-300' }}"
            title="{{ 'Є активна підписка' if client.id in active_sub_client_ids else 'Без підписки' }}">

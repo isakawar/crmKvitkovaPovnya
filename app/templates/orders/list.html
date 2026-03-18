@@ -271,7 +271,7 @@
               <td class="px-4 py-4">
                 <div class="space-y-1">
                   <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
-                  <p class="text-sm text-stone-500">{{ delivery.client.instagram if delivery.client else 'Без клієнта' }}</p>
+                  <p class="text-sm text-stone-500">{{ delivery.client.instagram.lstrip('@') if delivery.client and delivery.client.instagram else 'Без клієнта' }}</p>
                   {% if order and order.recipient_social %}
                   <p class="text-sm text-stone-400">{{ order.recipient_social }}</p>
                   {% endif %}
