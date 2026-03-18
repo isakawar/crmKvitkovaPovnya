@@ -336,6 +336,19 @@ def search_clients():
 @login_required
 def route_generator():
     selected_date_str = request.form.get('delivery_date') if request.method == 'POST' else request.args.get('delivery_date')
+
+    # Edit mode: load existing route
+    edit_route_id = request.args.get('edit', type=int)
+    editing_route = None
+    editing_delivery_ids = []
+    if edit_route_id:
+        from app.models.delivery_route import DeliveryRoute
+        editing_route = DeliveryRoute.query.get(edit_route_id)
+        if editing_route:
+            if not selected_date_str:
+                selected_date_str = editing_route.route_date.isoformat()
+            editing_delivery_ids = [stop.delivery_id for stop in editing_route.stops]
+
     if not selected_date_str:
         selected_date_str = date.today().isoformat()
 
@@ -356,7 +369,15 @@ def route_generator():
         delivery_ids_raw = request.form.getlist('delivery_ids')
         delivery_ids = [int(x) for x in delivery_ids_raw if x.isdigit()]
 
-        already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+        post_editing_route_id = request.form.get('editing_route_id', type=int)
+        if post_editing_route_id:
+            already_routed = (
+                db.session.query(RouteDelivery.delivery_id)
+                .filter(RouteDelivery.route_id != post_editing_route_id)
+                .scalar_subquery()
+            )
+        else:
+            already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
         base_query = (
             Delivery.query
             .options(joinedload(Delivery.order), joinedload(Delivery.client))
@@ -386,6 +407,9 @@ def route_generator():
     return render_template(
         'routes/generator.html',
         selected_date=selected_date_str,
+        editing_route=editing_route,
+        edit_route_id=edit_route_id,
+        editing_delivery_ids=editing_delivery_ids,
     )
 
 
@@ -457,7 +481,15 @@ def route_generator_deliveries():
     except ValueError:
         return jsonify({'error': 'invalid date'}), 400
 
-    already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+    editing_route_id = request.args.get('editing_route_id', type=int)
+    if editing_route_id:
+        already_routed = (
+            db.session.query(RouteDelivery.delivery_id)
+            .filter(RouteDelivery.route_id != editing_route_id)
+            .scalar_subquery()
+        )
+    else:
+        already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
 
     deliveries = (
         Delivery.query
@@ -541,21 +573,44 @@ def route_generator_save():
         if key:
             addr_to_delivery_id[key] = d.id
 
+    editing_route_id = data.get('editing_route_id')
+
     saved_route_ids = []
     for route_data in routes:
         stops = route_data.get('stops', [])
         if not stops:
             continue
 
-        dr = DeliveryRoute(
-            route_date=selected_date,
-            status='draft',
-            deliveries_count=len(stops),
-            total_distance_km=route_data.get('totalDistanceKm'),
-            estimated_duration_min=route_data.get('totalDriveMin'),
-        )
-        db.session.add(dr)
-        db.session.flush()
+        # Edit mode: update existing route instead of creating new
+        if editing_route_id:
+            dr = DeliveryRoute.query.get(editing_route_id)
+            if dr:
+                # Reset old deliveries to 'Очікує'
+                old_delivery_ids = [s.delivery_id for s in dr.stops]
+                if old_delivery_ids:
+                    Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
+                        {'status': 'Очікує'}, synchronize_session=False
+                    )
+                RouteDelivery.query.filter_by(route_id=dr.id).delete()
+                # Update metrics, preserve courier/status/telegram
+                dr.route_date = selected_date
+                dr.deliveries_count = len(stops)
+                dr.total_distance_km = route_data.get('totalDistanceKm')
+                dr.estimated_duration_min = route_data.get('totalDriveMin')
+                db.session.flush()
+            else:
+                editing_route_id = None  # fallback to create new
+
+        if not editing_route_id or not dr:
+            dr = DeliveryRoute(
+                route_date=selected_date,
+                status='draft',
+                deliveries_count=len(stops),
+                total_distance_km=route_data.get('totalDistanceKm'),
+                estimated_duration_min=route_data.get('totalDriveMin'),
+            )
+            db.session.add(dr)
+            db.session.flush()
 
         for i, stop in enumerate(stops):
             # Try direct id first, fall back to address matching
@@ -591,7 +646,7 @@ def route_generator_save():
         saved_route_ids.append(dr.id)
 
     db.session.commit()
-    return jsonify({'success': True, 'route_ids': saved_route_ids, 'count': len(saved_route_ids)})
+    return jsonify({'success': True, 'route_ids': saved_route_ids, 'count': len(saved_route_ids), 'editing_route_id': editing_route_id})
 
 
 @orders_bp.route('/route-generator/export-csv', methods=['POST'])

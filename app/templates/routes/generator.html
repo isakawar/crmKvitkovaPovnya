@@ -277,6 +277,15 @@
     </div>
   </section>
 
+  {% if editing_route %}
+  <div class="flex flex-wrap items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-3">
+    <i class="bi bi-pencil-square text-blue-500"></i>
+    <span class="text-sm font-medium text-blue-900">Редагування маршруту від {{ editing_route.route_date.strftime('%d.%m.%Y') }}</span>
+    {% if editing_route.courier %}<span class="text-xs text-blue-600">Курʼєр: {{ editing_route.courier.name }}</span>{% endif %}
+    <a href="/routes" class="ml-auto text-xs font-medium text-blue-600 hover:text-blue-800">← Повернутись без змін</a>
+  </div>
+  {% endif %}
+
   <!-- Tabs + Form -->
   <div class="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
     <div class="flex border-b border-stone-200 px-5 pt-4 gap-1">
@@ -293,6 +302,7 @@
     <!-- CRM panel -->
     <div id="panel-crm" class="px-5 py-4" {% if csv_mode %}style="display:none;"{% endif %}>
       <form method="post" id="optimizer-form" class="flex flex-wrap items-end gap-4">
+        {% if edit_route_id %}<input type="hidden" name="editing_route_id" value="{{ edit_route_id }}">{% endif %}
         <div class="flex flex-col gap-1.5">
           <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Дата доставок</label>
           <input type="date" name="delivery_date" value="{{ selected_date }}"
@@ -474,6 +484,10 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script>
+// ── Edit mode ─────────────────────────────────────────────────────────────────
+const EDITING_ROUTE_ID = {{ edit_route_id | tojson }};
+const EDITING_DELIVERY_IDS = {{ editing_delivery_ids | tojson }};
+
 // ── Job polling ──────────────────────────────────────────────────────────────
 function startJobPolling(jobId, csvMode, date) {
   if (date && window.renderResult) {
@@ -678,8 +692,9 @@ function renderPickerList(deliveries) {
   deliveries.forEach(function(d) {
     const addrParts = [d.city, d.street, d.building_number].filter(Boolean);
     const addr = addrParts.join(', ');
-    const meta = [d.recipient_name, d.phone, d.instagram].filter(Boolean).join(' · ');
+    const meta = [d.recipient_name, d.phone, (d.instagram || '').replace(/^@/, '')].filter(Boolean).join(' · ');
 
+    const isCurrentRoute = EDITING_ROUTE_ID && EDITING_DELIVERY_IDS.includes(d.id);
     const row = document.createElement('label');
     row.className = 'picker-row';
     row.innerHTML = `
@@ -689,6 +704,7 @@ function renderPickerList(deliveries) {
         <div class="picker-addr">${addr || '—'}</div>
         ${meta ? `<div class="picker-meta">${meta}</div>` : ''}
       </span>
+      ${isCurrentRoute ? '<span class="picker-badge" style="background:#dbeafe;color:#1d4ed8;">В маршруті</span>' : ''}
       <span class="picker-badge">${d.size || '—'}</span>
     `;
 
@@ -731,7 +747,9 @@ document.getElementById('btn-open-picker').addEventListener('click', async funct
   pickerModal().show();
 
   try {
-    const resp = await fetch(`/route-generator/deliveries?date=${dateVal}`);
+    let deliveriesUrl = `/route-generator/deliveries?date=${dateVal}`;
+    if (EDITING_ROUTE_ID) deliveriesUrl += `&editing_route_id=${EDITING_ROUTE_ID}`;
+    const resp = await fetch(deliveriesUrl);
     pickerDeliveries = await resp.json();
     document.getElementById('picker-count').textContent = `Всього доставок: ${pickerDeliveries.length}`;
     renderPickerList(pickerDeliveries);
@@ -1084,17 +1102,24 @@ document.addEventListener('click', function(e) {
     btn.innerHTML = '<i class="bi bi-hourglass me-1"></i>Збереження…';
 
     try {
+      const savePayload = {
+        result_json: JSON.stringify(resultToSave),
+        selected_date: selectedDate,
+      };
+      if (EDITING_ROUTE_ID) savePayload.editing_route_id = EDITING_ROUTE_ID;
+
       const resp = await fetch('{{ url_for("orders.route_generator_save") }}', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          result_json: JSON.stringify(resultToSave),
-          selected_date: selectedDate,
-        }),
+        body: JSON.stringify(savePayload),
       });
       const data = await resp.json();
       if (!resp.ok || data.error) {
         alert('Помилка збереження: ' + (data.error || resp.status));
+        return;
+      }
+      if (EDITING_ROUTE_ID) {
+        window.location.href = '/routes';
         return;
       }
       btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Збережено!';
@@ -1233,6 +1258,11 @@ document.addEventListener('click', function(e) {
     );
     document.getElementById('export-selected-date').value = selectedDate;
   });
+
+  // Auto-open picker in edit mode
+  if (EDITING_ROUTE_ID) {
+    document.getElementById('btn-open-picker').click();
+  }
 
   window.renderResult = function(result, csvMode) {
     isCsvMode = !!csvMode;
