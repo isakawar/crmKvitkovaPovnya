@@ -258,7 +258,8 @@
             {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
-            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40"
+            {% set time_confirmed = delivery.time_from %}
+            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ '' if time_confirmed else 'bg-stone-100' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -305,6 +306,12 @@
                     {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
                     {{ delivery.status }}
                   </span>
+                  {% if time_confirmed %}
+                  <span class="inline-flex items-center gap-1 rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700">
+                    <i class="bi bi-clock-fill text-[10px]"></i>
+                    Погоджено час
+                  </span>
+                  {% endif %}
                   <p class="text-sm leading-6 text-stone-700">
                     {% if delivery.is_pickup %}
                     {% elif delivery.street %}
