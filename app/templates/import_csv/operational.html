@@ -1,10 +1,10 @@
 {% extends 'layout.html' %}
 {% block content %}
 <div class="d-flex align-items-center gap-3 mb-4">
-  <h2 class="mb-0">Імпорт клієнтів з CSV</h2>
+  <h2 class="mb-0">Імпорт операційного CSV (Відвантаження)</h2>
   <span class="badge bg-secondary">Технічна сторінка</span>
-  <a href="/import/operational" class="btn btn-outline-primary btn-sm ms-auto">
-    <i class="bi bi-table me-1"></i>Операційний формат (Відвантаження) ↗
+  <a href="/import" class="btn btn-outline-secondary btn-sm ms-auto">
+    <i class="bi bi-arrow-left me-1"></i>Стандартний імпорт
   </a>
 </div>
 
@@ -12,27 +12,9 @@
 <div class="card p-4 mb-4" style="max-width: 640px; border-radius: 16px;">
   <h5 class="mb-3">Крок 1 — Завантажте CSV файл</h5>
   <div class="mb-3">
-    <label class="form-label fw-semibold">CSV файл</label>
+    <label class="form-label fw-semibold">CSV файл (формат Відвантаження)</label>
     <input type="file" class="form-control" id="csvFile" accept=".csv">
-    <div class="form-text">Формат: Клієнт, Тип підписки, Розмір, Коробка/Букет, Тип композиції, Загальні побажання, Коментарі, Час доставки, Імʼя отримувача, Адреса, Телефон отримувача</div>
-  </div>
-  <div class="row g-3 mb-3">
-    <div class="col-sm-6">
-      <label class="form-label fw-semibold">Дата першої доставки</label>
-      <input type="date" class="form-control" id="firstDeliveryDate">
-    </div>
-    <div class="col-sm-6">
-      <label class="form-label fw-semibold">День доставки</label>
-      <select class="form-select" id="deliveryDay">
-        <option value="ПН">ПН — Понеділок</option>
-        <option value="ВТ">ВТ — Вівторок</option>
-        <option value="СР">СР — Середа</option>
-        <option value="ЧТ">ЧТ — Четвер</option>
-        <option value="ПТ">ПТ — Пʼятниця</option>
-        <option value="СБ">СБ — Субота</option>
-        <option value="НД">НД — Неділя</option>
-      </select>
-    </div>
+    <div class="form-text">Формат: Клієнт, Побажання, Імʼя отримувача, Тип підписки, Адреса, Номер телефону, Коментарі, Розмір, Дата, Тип букету, Коментар до адреси</div>
   </div>
   <button class="btn btn-primary" id="previewBtn">
     <i class="bi bi-eye me-1"></i>Переглянути
@@ -40,7 +22,7 @@
   <div id="previewError" class="text-danger mt-2" style="display:none;"></div>
 </div>
 
-<!-- Datalists for suggestions -->
+<!-- Datalists -->
 <datalist id="dl-bouquet">
   <option value="коробка 📦">
   <option value="букет 🌸">
@@ -60,7 +42,7 @@
     <h5 class="mb-0">Крок 2 — Перевірте та відредагуйте дані</h5>
     <div id="summaryBadges" class="d-flex gap-2 flex-wrap"></div>
   </div>
-  <p class="text-muted mb-3" style="font-size:0.88rem;"><i class="bi bi-pencil-square me-1"></i>Усі поля редагуються прямо в таблиці. Зміни збережуться при імпорті.</p>
+  <p class="text-muted mb-3" style="font-size:0.88rem;"><i class="bi bi-pencil-square me-1"></i>Усі поля редагуються прямо в таблиці. Дата кожного рядка — індивідуальна. Зміни збережуться при імпорті.</p>
 
   <div class="table-responsive mb-3" style="max-height: 560px; overflow-y: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
     <table class="table table-bordered mb-0 import-table">
@@ -80,6 +62,7 @@
           <th style="min-width:180px">Вулиця</th>
           <th style="min-width:180px">Коментар адреси</th>
           <th style="min-width:120px">Метод</th>
+          <th style="min-width:110px">Дата доставки</th>
           <th style="min-width:80px">Час від</th>
           <th style="min-width:80px">Час до</th>
           <th style="min-width:160px">Побажання</th>
@@ -143,14 +126,13 @@
 .tr-new   td { background: #eff6ff !important; }
 .tr-exists td { background: #f0fdf4 !important; }
 .tr-warn  td { background: #fffbeb !important; }
+.tr-no-date td { background: #fef2f2 !important; }
 </style>
 {% endblock %}
 
 {% block scripts %}
 <script>
 let parsedRows = [];
-
-document.getElementById('firstDeliveryDate').value = new Date().toISOString().slice(0, 10);
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -180,8 +162,6 @@ function sel(i, field, options, value) {
     onchange="upd(${i},'${field}',this.value)">${opts}</select>`;
 }
 
-// Client identifier: one select for type + one input for value.
-// On type change → clear old fields, set new field.
 function clientTypeSel(i, row) {
   const types = [['instagram','Instagram'],['telegram','Telegram'],['phone','Телефон']];
   const opts = types.map(([v,l]) =>
@@ -213,7 +193,6 @@ function changeClientId(i, val) {
   parsedRows[i][type]     = val;
 }
 
-// Delivery method select (courier / nova_poshta / pickup)
 function methodSel(i, row) {
   const cur = row.is_pickup ? 'pickup' : (row.delivery_method || 'courier');
   const opts = [
@@ -243,6 +222,7 @@ function renderPreview(rows, summary) {
     <span class="badge bg-primary" style="font-size:.82rem;padding:5px 10px">${summary.new_clients} нових клієнтів</span>
     <span class="badge bg-success" style="font-size:.82rem;padding:5px 10px">${summary.existing_clients} існуючих</span>
     ${summary.warnings > 0 ? `<span class="badge bg-warning text-dark" style="font-size:.82rem;padding:5px 10px">${summary.warnings} ⚠ попереджень</span>` : ''}
+    ${summary.date_missing > 0 ? `<span class="badge bg-danger" style="font-size:.82rem;padding:5px 10px">${summary.date_missing} без дати</span>` : ''}
   `;
 
   const tbody = document.getElementById('previewTableBody');
@@ -250,7 +230,12 @@ function renderPreview(rows, summary) {
 
   rows.forEach(function(row, i) {
     const hasWarn = row.warnings && row.warnings.length > 0;
-    const trClass = row.client_status === 'exists' ? 'tr-exists' : (hasWarn ? 'tr-warn' : 'tr-new');
+    const noDate = !row.first_delivery_date;
+    let trClass;
+    if (noDate) trClass = 'tr-no-date';
+    else if (row.client_status === 'exists') trClass = 'tr-exists';
+    else if (hasWarn) trClass = 'tr-warn';
+    else trClass = 'tr-new';
 
     const statusBadge = row.client_status === 'exists'
       ? '<span class="badge bg-success" style="font-size:.84rem;padding:5px 10px">Існує</span>'
@@ -281,6 +266,7 @@ function renderPreview(rows, summary) {
       `<td>${inp(i, 'street', row.street)}</td>`,
       `<td>${inp(i, 'address_comment', row.address_comment)}</td>`,
       `<td>${methodSel(i, row)}</td>`,
+      `<td>${inp(i, 'first_delivery_date', row.first_delivery_date, {type:'date'})}</td>`,
       `<td>${inp(i, 'time_from', row.time_from, {type:'time'})}</td>`,
       `<td>${inp(i, 'time_to', row.time_to, {type:'time'})}</td>`,
       `<td>${inp(i, 'preferences', row.preferences)}</td>`,
@@ -309,7 +295,7 @@ document.getElementById('previewBtn').addEventListener('click', async function (
   this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Завантаження...';
 
   try {
-    const res = await fetch('/import/preview', { method: 'POST', body: formData });
+    const res = await fetch('/import/operational/preview', { method: 'POST', body: formData });
     const data = await res.json();
     if (!res.ok || data.error) { errEl.textContent = data.error || 'Помилка'; errEl.style.display = 'block'; return; }
     parsedRows = data.rows;
@@ -330,18 +316,15 @@ document.getElementById('previewBtn').addEventListener('click', async function (
 document.getElementById('importBtn').addEventListener('click', async function () {
   const errEl = document.getElementById('importError');
   errEl.style.display = 'none';
-  const firstDeliveryDate = document.getElementById('firstDeliveryDate').value;
-  const deliveryDay = document.getElementById('deliveryDay').value;
-  if (!firstDeliveryDate) { errEl.textContent = 'Вкажіть дату першої доставки'; errEl.style.display = 'block'; return; }
 
   this.disabled = true;
   document.getElementById('importSpinner').style.display = 'inline-block';
 
   try {
-    const res = await fetch('/import/execute', {
+    const res = await fetch('/import/operational/execute', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rows: parsedRows, first_delivery_date: firstDeliveryDate, delivery_day: deliveryDay })
+      body: JSON.stringify({ rows: parsedRows })
     });
     const data = await res.json();
     if (!res.ok || data.error) { errEl.textContent = data.error || 'Помилка'; errEl.style.display = 'block'; return; }
