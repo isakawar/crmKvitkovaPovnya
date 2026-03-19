@@ -308,6 +308,11 @@
     @apply pl-11;
   }
 
+  .order-input--invalid,
+  .order-select--invalid {
+    @apply border-red-400 bg-red-50 ring-2 ring-red-200 focus:border-red-400 focus:ring-red-200;
+  }
+
   .order-two-col {
     @apply grid gap-4 md:grid-cols-2;
   }

@@ -227,14 +227,14 @@
                 <input type="checkbox" id="select-all-deliveries"
                        class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900">
               </th>
-              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Клієнт</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Отримувач</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Адреса</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Телефон</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Розмір</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Підписка</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Коментар</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Побажання</th>
-              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Дата і час</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Час</th>
             </tr>
           </thead>
           <tbody>
@@ -255,7 +255,7 @@
 
             {% for delivery in items %}
             {% set order = delivery.order %}
-            {% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to if delivery.time_from and delivery.time_to else (delivery.time_from or 'Без часу') %}
+            {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
             <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40"
@@ -269,11 +269,23 @@
                        value="{{ delivery.id }}">
               </td>
               <td class="px-4 py-4">
-                <div class="space-y-1">
+                <div class="space-y-1.5">
                   <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
-                  <p class="text-sm text-stone-500">{{ delivery.client.instagram.lstrip('@') if delivery.client and delivery.client.instagram else 'Без клієнта' }}</p>
                   {% if order and order.recipient_social %}
-                  <p class="text-sm text-stone-400">{{ order.recipient_social }}</p>
+                  {% set is_telegram = order.recipient_social.startswith('@') %}
+                  {% set social_handle = order.recipient_social.lstrip('@') %}
+                  <button type="button"
+                    class="copy-handle-btn group flex items-center gap-1.5 text-left"
+                    data-handle="{{ social_handle }}"
+                    title="Скопіювати {{ social_handle }}">
+                    {% if is_telegram %}
+                    <i class="bi bi-telegram text-xs text-stone-400 group-hover:text-sky-500 transition-colors"></i>
+                    {% else %}
+                    <i class="bi bi-instagram text-xs text-stone-400 group-hover:text-pink-500 transition-colors"></i>
+                    {% endif %}
+                    <span class="text-sm text-stone-500 group-hover:text-stone-800 transition-colors">{{ social_handle }}</span>
+                    <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
+                  </button>
                   {% endif %}
                 </div>
               </td>
@@ -351,10 +363,7 @@
                 <button type="button"
                         class="delivery-time-cell w-full text-left rounded-lg border border-transparent px-2 py-1 transition-colors hover:border-stone-200 hover:bg-stone-50"
                         data-delivery-id="{{ delivery.id }}">
-                  <div class="space-y-1">
-                    <p class="text-sm font-semibold text-stone-900">{{ date.strftime('%d.%m.%Y') }}</p>
-                    <p class="delivery-time-slot text-sm text-stone-500">{{ time_slot }}</p>
-                  </div>
+                  <p class="delivery-time-slot text-sm text-stone-500">{{ time_slot }}</p>
                 </button>
               </td>
             </tr>
@@ -439,7 +448,13 @@
             <input type="date" id="delivery-edit-date"
                    class="mt-1 w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
           </div>
-          <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="delivery-edit-anytime" class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-amber-400">
+              <span class="text-sm font-medium text-stone-700">Будь-який час <span class="text-stone-400">(∞)</span></span>
+            </label>
+          </div>
+          <div id="delivery-edit-time-fields" class="grid grid-cols-2 gap-3">
             <div>
               <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">Час з</label>
               <input type="time" id="delivery-edit-from"
@@ -487,6 +502,23 @@
 {% block scripts %}
 {{ toast_script() }}
 {% include 'orders/_composer_script.html' %}
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.copy-handle-btn');
+    if (!btn) return;
+    const handle = btn.dataset.handle;
+    if (!handle) return;
+    navigator.clipboard.writeText(handle).then(function () {
+      const icon = btn.querySelector('.bi-copy');
+      if (icon) {
+        icon.classList.replace('bi-copy', 'bi-check2');
+        setTimeout(() => icon.classList.replace('bi-check2', 'bi-copy'), 1500);
+      }
+    });
+  });
+})();
+</script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
@@ -567,6 +599,7 @@
   const checkboxes = () => Array.from(document.querySelectorAll('.delivery-select'));
 
   function buildTimeLabel(from, to) {
+    if (from === '∞') return '∞';
     if (from && to) return `${from} - ${to}`;
     if (from) return from;
     if (to) return to;
@@ -623,12 +656,26 @@
     return editModalInstance;
   }
 
+  const anytimeCheckbox = document.getElementById('delivery-edit-anytime');
+  const timeFieldsDiv = document.getElementById('delivery-edit-time-fields');
+
+  anytimeCheckbox.addEventListener('change', function () {
+    timeFieldsDiv.style.display = this.checked ? 'none' : '';
+    if (this.checked) {
+      editFromInput.value = '';
+      editToInput.value = '';
+    }
+  });
+
   function openEditModalForRow(row) {
     const id = row.dataset.deliveryId;
+    const isAnytime = row.dataset.timeFrom === '∞';
     editIdInput.value = id;
     editDateInput.value = row.dataset.deliveryDate || '';
-    editFromInput.value = row.dataset.timeFrom || '';
-    editToInput.value = row.dataset.timeTo || '';
+    anytimeCheckbox.checked = isAnytime;
+    timeFieldsDiv.style.display = isAnytime ? 'none' : '';
+    editFromInput.value = isAnytime ? '' : (row.dataset.timeFrom || '');
+    editToInput.value = isAnytime ? '' : (row.dataset.timeTo || '');
     const instance = ensureModalInstance();
     if (instance) {
       instance.show();
@@ -703,8 +750,8 @@
     editSaveBtn.addEventListener('click', async function () {
       const id = editIdInput.value;
       if (!id) return;
-      const fromValue = editFromInput.value;
-      const toValue = editToInput.value;
+      const fromValue = anytimeCheckbox.checked ? '∞' : editFromInput.value;
+      const toValue = anytimeCheckbox.checked ? '' : editToInput.value;
       const dateValue = editDateInput.value;
       const prevRow = document.querySelector(`tr[data-delivery-id="${id}"]`);
       const prevDate = prevRow ? prevRow.dataset.deliveryDate : '';
