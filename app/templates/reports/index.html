@@ -1,81 +1,470 @@
 {% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .report-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.4rem;
+    background: #fff;
+    box-shadow: 0 12px 26px rgba(28, 25, 23, 0.05);
+  }
+
+  .report-kpi {
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fafaf9;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.78rem;
+    color: #57534e;
+    font-weight: 600;
+  }
+
+  .report-chart-wrap {
+    position: relative;
+    height: 240px;
+  }
+
+  .report-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 240px;
+    border: 1px dashed #d6d3d1;
+    border-radius: 1rem;
+    color: #a8a29e;
+    font-size: 0.9rem;
+    background: #fafaf9;
+  }
+
+  .report-grid-two {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .report-line-wrap {
+    position: relative;
+    height: 290px;
+  }
+
+  .report-switch {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e7e5e4;
+    border-radius: 0.9rem;
+    padding: 0.18rem;
+    background: #fff;
+  }
+
+  .report-switch-btn {
+    border: none;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: #78716c;
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.4rem 0.75rem;
+    transition: 0.15s ease;
+  }
+
+  .report-switch-btn.is-active {
+    background: #1c1917;
+    color: #fff;
+  }
+
+  @media (max-width: 1100px) {
+    .report-grid-two {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+{% endblock %}
+
 {% block content %}
-<h2 class="mb-4">Звіти</h2>
-<div class="row mb-4">
-  <div class="col-md-8">
-    <div class="row">
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 mb-3">
-          <div class="card-body text-center">
-            <div class="fs-1 text-primary"><i class="bi bi-truck"></i></div>
-            <div class="fs-4">Всього доставок за тиждень</div>
-            <div class="fs-2 fw-bold">{{ deliveries_stats.week }}</div>
-            <div class="text-muted">за останні 7 днів</div>
-          </div>
-        </div>
+<div class="flex flex-col gap-6">
+  <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+          <i class="bi bi-bar-chart"></i>
+          Reports
+        </p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Звіти</h1>
+        <p class="mt-1 text-sm text-stone-500">Актуальна аналітика джерел, сценаріїв оформлення та популярних параметрів замовлень.</p>
       </div>
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 mb-3">
-          <div class="card-body text-center">
-            <div class="fs-1 text-success"><i class="bi bi-truck"></i></div>
-            <div class="fs-4">Всього доставок за місяць</div>
-            <div class="fs-2 fw-bold">{{ deliveries_stats.month }}</div>
-            <div class="text-muted">за останні 30 днів</div>
-          </div>
-        </div>
+
+      <form method="get" class="flex items-center gap-2">
+        <label for="reports-month" class="text-sm font-medium text-stone-600">Місяць</label>
+        <input
+          id="reports-month"
+          type="month"
+          name="month"
+          value="{{ selected_month }}"
+          class="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+        <button type="submit"
+                class="inline-flex h-10 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+          Оновити
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <section class="report-card p-4">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
+        <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
       </div>
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 mb-3">
-          <div class="card-body text-center">
-            <div class="fs-1 text-info"><i class="bi bi-clipboard-data"></i></div>
-            <div class="fs-4">Нових замовлень за тиждень</div>
-            <div class="fs-2 fw-bold">{{ orders_stats.week }}</div>
-            <div class="text-muted">за останні 7 днів</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-6">
-        <div class="card shadow-sm border-0 mb-3">
-          <div class="card-body text-center">
-            <div class="fs-1 text-info"><i class="bi bi-clipboard-data"></i></div>
-            <div class="fs-4">Нових замовлень за місяць</div>
-            <div class="fs-2 fw-bold">{{ orders_stats.month }}</div>
-            <div class="text-muted">за останні 30 днів</div>
-          </div>
-        </div>
+      <div class="flex items-center gap-2">
+        <span class="report-kpi">Замовлень: {{ monthly_orders_total }}</span>
+        <span class="report-kpi">Підписок: {{ monthly_subscriptions_total }}</span>
       </div>
     </div>
-  </div>
-  <div class="col-md-4 d-flex align-items-stretch">
-    <div class="card shadow-sm border-0 w-100">
-      <div class="card-body">
-        <h4 class="mb-3"><i class="bi bi-people me-2"></i>Статистика по кур'єрам</h4>
-        <div class="table-responsive">
-          <table class="table table-bordered align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th>Кур'єр</th>
-                <th>Доставок за тиждень</th>
-                <th>Доставок за місяць</th>
-                <th>Всього доставок</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for c in courier_stats %}
-              <tr>
-                <td>{{ c.name }}</td>
-                <td class="text-center fw-bold">{{ c.week }}</td>
-                <td class="text-center fw-bold">{{ c.month }}</td>
-                <td class="text-center">{{ c.total }}</td>
-              </tr>
-              {% else %}
-              <tr><td colspan="4" class="text-center text-muted">Немає даних</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
+    {% if monthly_orders_trend_chart['labels'] %}
+    <div class="report-line-wrap"><canvas id="monthlyOrdersTrendChart"></canvas></div>
+    {% else %}
+    <div class="report-empty">Поки немає даних для помісячної динаміки</div>
+    {% endif %}
+  </section>
+
+  <section class="report-grid-two">
+    <article class="report-card p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Звідки дізнались</h2>
+          <p id="marketing-period" class="text-sm text-stone-500">За весь час</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="report-switch" id="marketing-switch">
+            <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
+            <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+          </div>
+          <span id="marketing-total" class="report-kpi">Всього: {{ marketing_all_total }}</span>
         </div>
       </div>
-    </div>
-  </div>
+
+      {% if marketing_all_chart['labels'] or marketing_month_chart['labels'] %}
+      <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
+      {% else %}
+      <div class="report-empty">Немає даних для графіка</div>
+      {% endif %}
+    </article>
+
+    <article class="report-card p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Хто кому купує</h2>
+          <p id="for-whom-period" class="text-sm text-stone-500">За весь час</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="report-switch" id="for-whom-switch">
+            <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
+            <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+          </div>
+          <span id="for-whom-total" class="report-kpi">Всього: {{ for_whom_all_total }}</span>
+        </div>
+      </div>
+
+      {% if for_whom_all_chart['labels'] or for_whom_month_chart['labels'] %}
+      <div class="report-chart-wrap"><canvas id="forWhomChart"></canvas></div>
+      {% else %}
+      <div class="report-empty">Немає даних по полю “Для кого”</div>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="report-grid-two">
+    <article class="report-card p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Співвідношення типів підписок</h2>
+          <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші</p>
+        </div>
+        <span class="report-kpi">Всього: {{ delivery_type_total }}</span>
+      </div>
+
+      {% if delivery_type_chart['labels'] %}
+      <div class="report-chart-wrap"><canvas id="deliveryTypeChart"></canvas></div>
+      {% else %}
+      <div class="report-empty">Немає даних по типах замовлень</div>
+      {% endif %}
+    </article>
+
+    <article class="report-card p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Співвідношення розмірів</h2>
+          <p class="text-sm text-stone-500">L, XL, XXL та інші</p>
+        </div>
+        <span class="report-kpi">Всього: {{ size_total }}</span>
+      </div>
+
+      {% if size_chart['labels'] %}
+      <div class="report-chart-wrap"><canvas id="sizeChart"></canvas></div>
+      {% else %}
+      <div class="report-empty">Немає даних по розмірах</div>
+      {% endif %}
+    </article>
+  </section>
 </div>
-{% endblock %} 
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    function createBarChart(canvasId, labels, values, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || !labels || !labels.length) return;
+
+      const ctx = canvas.getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: values,
+            backgroundColor: color,
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 46
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1c1917',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              displayColors: false
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#78716c',
+                font: { size: 11 }
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                color: '#a8a29e',
+                font: { size: 11 }
+              },
+              grid: {
+                color: '#f1f5f9'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || !labels || !labels.length) return;
+
+      const ctx = canvas.getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Нові замовлення',
+              data: ordersValues,
+              borderColor: 'rgba(17, 24, 39, 0.88)',
+              backgroundColor: 'rgba(17, 24, 39, 0.12)',
+              pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              tension: 0.28,
+              fill: false,
+            },
+            {
+              label: 'Нові підписки',
+              data: subscriptionsValues,
+              borderColor: 'rgba(16, 185, 129, 0.9)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              tension: 0.28,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#57534e',
+                boxWidth: 12,
+                usePointStyle: true,
+              }
+            },
+            tooltip: {
+              backgroundColor: '#1c1917',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#78716c',
+                maxRotation: 40,
+                minRotation: 0,
+                font: { size: 11 }
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                color: '#a8a29e',
+                font: { size: 11 }
+              },
+              grid: { color: '#f1f5f9' }
+            }
+          }
+        }
+      });
+    }
+
+    function createSwitchableChart(canvasId, datasets, color) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return null;
+      const ctx = canvas.getContext('2d');
+      const initial = datasets.all;
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: initial.labels,
+          datasets: [{
+            data: initial.values,
+            backgroundColor: color,
+            borderRadius: 8,
+            borderSkipped: false,
+            maxBarThickness: 46
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1c1917',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              displayColors: false
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#78716c',
+                font: { size: 11 }
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                color: '#a8a29e',
+                font: { size: 11 }
+              },
+              grid: { color: '#f1f5f9' }
+            }
+          }
+        }
+      });
+    }
+
+    function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets) {
+      const wrap = document.getElementById(buttonWrapId);
+      if (!wrap || !chart) return;
+      const period = document.getElementById(periodLabelId);
+      const total = document.getElementById(totalLabelId);
+      const buttons = Array.from(wrap.querySelectorAll('.report-switch-btn'));
+      const monthTitle = 'За {{ selected_month_label }}';
+
+      function applyMode(mode) {
+        const data = mode === 'month' ? datasets.month : datasets.all;
+        chart.data.labels = data.labels;
+        chart.data.datasets[0].data = data.values;
+        chart.update();
+
+        if (period) period.textContent = mode === 'month' ? monthTitle : 'За весь час';
+        if (total) total.textContent = `Всього: ${data.total}`;
+        buttons.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.mode === mode));
+      }
+
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => applyMode(btn.dataset.mode));
+      });
+    }
+
+    const marketingDatasets = {
+      all: {
+        labels: {{ marketing_all_chart['labels']|tojson }},
+        values: {{ marketing_all_chart['values']|tojson }},
+        total: {{ marketing_all_total|tojson }}
+      },
+      month: {
+        labels: {{ marketing_month_chart['labels']|tojson }},
+        values: {{ marketing_month_chart['values']|tojson }},
+        total: {{ marketing_month_total|tojson }}
+      }
+    };
+
+    const forWhomDatasets = {
+      all: {
+        labels: {{ for_whom_all_chart['labels']|tojson }},
+        values: {{ for_whom_all_chart['values']|tojson }},
+        total: {{ for_whom_all_total|tojson }}
+      },
+      month: {
+        labels: {{ for_whom_month_chart['labels']|tojson }},
+        values: {{ for_whom_month_chart['values']|tojson }},
+        total: {{ for_whom_month_total|tojson }}
+      }
+    };
+
+    const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
+    const forWhomChart = createSwitchableChart('forWhomChart', forWhomDatasets, 'rgba(59, 130, 246, 0.72)');
+
+    bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets);
+    bindSwitch('for-whom-switch', 'for-whom-period', 'for-whom-total', forWhomChart, forWhomDatasets);
+
+    createLineTrendChart(
+      'monthlyOrdersTrendChart',
+      {{ monthly_orders_trend_chart['labels']|tojson }},
+      {{ monthly_orders_trend_chart['orders_values']|tojson }},
+      {{ monthly_orders_trend_chart['subscriptions_values']|tojson }}
+    );
+
+    createBarChart('deliveryTypeChart', {{ delivery_type_chart['labels']|tojson }}, {{ delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
+    createBarChart('sizeChart', {{ size_chart['labels']|tojson }}, {{ size_chart['values']|tojson }}, 'rgba(139, 92, 246, 0.72)');
+  });
+</script>
+{% endblock %}

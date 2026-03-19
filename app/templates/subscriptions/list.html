@@ -125,7 +125,7 @@
     <!-- Top: client + status dot -->
     <div class="flex items-start justify-between mb-3">
       <div>
-        <p class="font-medium text-stone-900 text-sm">{{ order.client.instagram }}</p>
+        <p class="font-medium text-stone-900 text-sm">{{ order.client.instagram.lstrip('@') }}</p>
         <p class="text-xs text-stone-400 mt-0.5">{{ order.recipient_name }}</p>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if is_active else 'bg-stone-300' }}"
@@ -547,9 +547,10 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error(data.error || 'Не вдалося завантажити підписку');
       }
 
-      document.getElementById('subscriptionDetailModalLabel').textContent = `Підписка (${data.client.instagram || 'без Instagram'})`;
+      const igDisplay = (data.client.instagram || '').replace(/^@/, '');
+      document.getElementById('subscriptionDetailModalLabel').textContent = `Підписка (${igDisplay || 'без Instagram'})`;
       document.getElementById('subscription-detail-subtitle').textContent = `Цикл ${data.delivery.delivery_type} · старт ${data.delivery.first_delivery_date || '—'} · ${data.stats.total_deliveries} доставок`;
-      document.getElementById('subscription-client-instagram').textContent = data.client.instagram || '—';
+      document.getElementById('subscription-client-instagram').textContent = igDisplay || '—';
       document.getElementById('subscription-client-phone').textContent = data.client.phone || 'Телефон не вказано';
       document.getElementById('subscription-client-telegram').textContent = data.client.telegram || 'Telegram не вказано';
       document.getElementById('subscription-recipient-name').textContent = data.recipient.name || '—';

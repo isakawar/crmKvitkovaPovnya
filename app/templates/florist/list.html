@@ -1,213 +1,670 @@
 {% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
 
 {% block head %}
 {{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
-body { background: #f8f9fc; }
-.florist-header { background: linear-gradient(135deg, #ff6b9d 0%, #c44dff 100%); color: #fff; border-radius: 16px; padding: 28px 32px; margin-bottom: 28px; }
-.route-block { border-radius: 14px; border: 1.5px solid #e3eafc; background: #fff; margin-bottom: 24px; overflow: hidden; }
-.route-block-header { padding: 14px 20px; background: #f7f9fc; border-bottom: 1.5px solid #e3eafc; display: flex; align-items: center; gap: 12px; }
-.courier-badge { background: #e0f0ff; color: #1a73e8; border-radius: 20px; padding: 3px 12px; font-size: 0.82rem; font-weight: 600; }
-.stop-card { padding: 14px 20px; border-bottom: 1px solid #f0f2f7; display: flex; gap: 14px; align-items: flex-start; }
-.stop-card:last-child { border-bottom: none; }
-.stop-num-big { width: 36px; height: 36px; border-radius: 50%; background: #3388ff; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; flex-shrink: 0; }
-.bouquet-tag { display: inline-block; background: #fff0f6; color: #c0286b; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; margin-top: 4px; }
-.pref-tag { display: inline-block; background: #f5f0ff; color: #7c3aed; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; margin-top: 4px; margin-left: 4px; }
-.time-tag { display: inline-block; background: #e8f5e9; color: #2e7d32; border-radius: 8px; padding: 2px 10px; font-size: 0.8rem; }
+  .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
+
+  .florist-section {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.5rem;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(28, 25, 23, 0.06);
+    overflow: hidden;
+  }
+
+  .florist-table-wrap {
+    overflow-x: auto;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .florist-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1040px;
+  }
+
+  .florist-table th {
+    background: #fafaf9;
+    color: #a8a29e;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+    text-align: left;
+  }
+
+  .florist-table td {
+    padding: 0.9rem 1rem;
+    border-bottom: 1px solid #f5f5f4;
+    color: #44403c;
+    vertical-align: top;
+    font-size: 0.9rem;
+  }
+
+  .florist-table tbody tr:last-child td { border-bottom: none; }
+  .florist-table tbody tr:hover td { background: #fcfcfb; }
+
+  .florist-stop-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.85rem;
+    height: 1.85rem;
+    border-radius: 999px;
+    background: #1c1917;
+    color: #fff;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+
+  .florist-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.36rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    padding: 0.35rem 0.68rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #57534e;
+  }
+
+  .florist-badge-status-awaiting { background: #f5f5f4; color: #57534e; }
+  .florist-badge-status-assigned { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+  .florist-badge-status-delivered { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+  .florist-badge-status-cancelled { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .florist-badge-status-draft { background: #f5f5f4; color: #57534e; }
+  .florist-badge-status-sent { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
+  .florist-badge-status-accepted { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+  .florist-badge-status-rejected { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .florist-badge-status-completed { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+
+  .florist-badge-prep-empty { background: #f5f5f4; color: #78716c; }
+  .florist-badge-prep-assembled { background: #fff7ed; color: #b45309; border-color: #fed7aa; }
+  .florist-badge-prep-handoff { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+  .florist-badge-prep-delivered { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+
+  .florist-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fafaf9;
+    color: #57534e;
+    padding: 0.18rem 0.55rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin: 0.1rem 0.18rem 0.1rem 0;
+  }
+
+  .florist-tag-size-l { background: #ecfdf5; color: #047857; border-color: #bbf7d0; }
+  .florist-tag-size-xl { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+  .florist-tag-size-xxl { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+  .florist-tag-subscription { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+
+  .florist-disclosure {
+    border-top: 1px solid #f1f5f9;
+    background: #fff;
+  }
+
+  .florist-disclosure summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .florist-disclosure summary::-webkit-details-marker { display: none; }
+
+  .florist-disclosure-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.2rem;
+    background: #fafaf9;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .florist-disclosure[open] .florist-disclosure-head {
+    background: #fff8eb;
+  }
+
+  .florist-disclosure-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #44403c;
+    transition: transform 0.2s ease;
+  }
+
+  .florist-disclosure[open] .florist-disclosure-toggle { transform: rotate(180deg); }
+
+  .florist-empty {
+    border: 1px dashed #d6d3d1;
+    border-radius: 1.3rem;
+    background: #fff;
+    padding: 2.25rem 1.5rem;
+    text-align: center;
+  }
+
+  @media (max-width: 1024px) {
+    .florist-table { min-width: 860px; }
+  }
 </style>
 {% endblock %}
 
-{% block content %}
-<div class="florist-header">
-  <div style="font-size:1.5rem;font-weight:700;">🌸 {% if selected_date == today %}Маршрути на сьогодні{% else %}Маршрути на {{ selected_date.strftime('%d.%m.%Y') }}{% endif %}</div>
-  <div style="opacity:.85;margin-top:4px;">{{ selected_date.strftime('%d.%m.%Y') }} · Послідовність збирання букетів</div>
+{% macro delivery_status_badge(status) %}
+  {% if status == 'Очікує' %}
+    <span class="florist-badge florist-badge-status-awaiting">Очікує</span>
+  {% elif status == 'Розподілено' %}
+    <span class="florist-badge florist-badge-status-assigned">Розподілено</span>
+  {% elif status == 'Доставлено' %}
+    <span class="florist-badge florist-badge-status-delivered">Доставлено</span>
+  {% elif status == 'Скасовано' %}
+    <span class="florist-badge florist-badge-status-cancelled">Скасовано</span>
+  {% else %}
+    <span class="florist-badge">{{ status or '—' }}</span>
+  {% endif %}
+{% endmacro %}
 
-  <!-- Date nav -->
-  <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
-    {% set prev_date = selected_date - timedelta(days=1) %}
-    {% set next_date = selected_date + timedelta(days=1) %}
-    <a href="?date={{ prev_date.isoformat() }}" class="btn btn-sm" style="background:rgba(255,255,255,.25);color:#fff;border:none;border-radius:8px;padding:4px 12px;">
-      ← {{ prev_date.strftime('%d.%m') }}
-    </a>
-    {% if selected_date != today %}
-    <a href="{{ url_for('florist.florist_routes') }}" class="btn btn-sm" style="background:rgba(255,255,255,.35);color:#fff;border:none;border-radius:8px;padding:4px 12px;font-weight:600;">
-      Сьогодні
-    </a>
-    {% endif %}
-    <a href="?date={{ next_date.isoformat() }}" class="btn btn-sm" style="background:rgba(255,255,255,.25);color:#fff;border:none;border-radius:8px;padding:4px 12px;">
-      {{ next_date.strftime('%d.%m') }} →
-    </a>
-    <form method="get" class="d-flex align-items-center gap-1 ms-2">
-      <input type="date" name="date" value="{{ selected_date.isoformat() }}"
-             style="height:30px;font-size:0.8rem;border:none;border-radius:8px;padding:0 8px;background:rgba(255,255,255,.3);color:#fff;cursor:pointer;"
-             onchange="this.form.submit()">
-    </form>
-  </div>
-</div>
+{% macro florist_status_badge(status) %}
+  {% if status == 'Зібрано' %}
+    <span class="florist-badge florist-badge-prep-assembled">Зібрано</span>
+  {% elif status == "Передано кур'єру" %}
+    <span class="florist-badge florist-badge-prep-handoff">Передано кур'єру</span>
+  {% elif status == 'Доставлено' %}
+    <span class="florist-badge florist-badge-prep-delivered">Доставлено</span>
+  {% else %}
+    <span class="florist-badge florist-badge-prep-empty">Не проставлено</span>
+  {% endif %}
+{% endmacro %}
 
-{% if not routes %}
-<div class="text-center py-5 text-muted">
-  <i class="bi bi-flower1" style="font-size:3rem;color:#ff6b9d;"></i>
-  <div class="mt-3 fs-5">На {{ selected_date.strftime('%d.%m.%Y') }} маршрутів немає</div>
-</div>
-{% else %}
+{% macro route_status_badge(status) %}
+  {% if status == 'draft' %}
+    <span class="florist-badge florist-badge-status-draft">Чернетка</span>
+  {% elif status == 'sent' %}
+    <span class="florist-badge florist-badge-status-sent">Відправлено</span>
+  {% elif status == 'accepted' %}
+    <span class="florist-badge florist-badge-status-accepted">Прийнято</span>
+  {% elif status == 'rejected' %}
+    <span class="florist-badge florist-badge-status-rejected">Відхилено</span>
+  {% elif status == 'completed' %}
+    <span class="florist-badge florist-badge-status-completed">Завершено</span>
+  {% else %}
+    <span class="florist-badge">{{ status or '—' }}</span>
+  {% endif %}
+{% endmacro %}
 
-{% for route in routes %}
-<div class="route-block shadow-sm">
-  <div class="route-block-header">
-    <div style="font-weight:700;font-size:1rem;">
-      Маршрут #{{ loop.index }}
-    </div>
-    {% if route.courier %}
-    <span class="courier-badge">
-      <i class="bi bi-person-badge me-1"></i>{{ route.courier.name }}
-    </span>
-    {% endif %}
-    <div class="text-muted small ms-auto d-flex gap-3">
-      <span><i class="bi bi-box-seam me-1"></i>{{ route.deliveries_count }} доставок</span>
-      {% if route.total_distance_km %}
-      <span><i class="bi bi-geo me-1"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+{% macro delivery_row(delivery, stop_order='—') %}
+  {% set order = delivery.order %}
+  {% set client = delivery.client %}
+  {% set recipient_phone = delivery.phone or (order.recipient_phone if order else '') %}
+  {% set recipient_name = (order.recipient_name if order else '') or '—' %}
+  {% set city = (order.city if order else '') or '' %}
+  {% set street = delivery.street or (order.street if order else '') %}
+  {% set building = delivery.building_number or (order.building_number if order else '') %}
+  {% set size = delivery.bouquet_size or delivery.size or (order.size if order else '') %}
+  {% set comment_text = delivery.comment or (order.comment if order else '') %}
+  {% set preferences_text = delivery.preferences or (order.preferences if order else '') %}
+  {% set time_slot = (delivery.time_from ~ ' - ' ~ delivery.time_to) if (delivery.time_from and delivery.time_to) else (delivery.time_from or delivery.time_to or 'Без часу') %}
+  {% set is_subscription = order and order.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+  {% set subscription_idx = subscription_delivery_index.get(delivery.id) %}
+  <tr data-delivery-row-id="{{ delivery.id }}">
+    <td class="w-10">
+      <input
+        type="checkbox"
+        class="florist-delivery-checkbox h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900"
+        data-delivery-id="{{ delivery.id }}"
+      >
+    </td>
+    <td>
+      {% if stop_order != '—' %}
+        <span class="florist-stop-num">{{ stop_order }}</span>
+      {% else %}
+        <span class="text-xs font-semibold text-stone-400">—</span>
       {% endif %}
-    </div>
-  </div>
-
-  {% for stop in route.stops %}
-  {% set d = stop.delivery %}
-  {% set order = d.order if d else none %}
-  {% set client = d.client if d else none %}
-  <div class="stop-card">
-    <div class="stop-num-big">{{ stop.stop_order }}</div>
-    <div style="flex:1;">
-
-      <!-- Address & time -->
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <span style="font-weight:600;font-size:0.97rem;">
-          {% if order %}
-            {% if order.city %}{{ order.city }}, {% endif %}
-            {{ d.street or order.street or '—' }}
-            {% if d.building_number or order.building_number %}
-              {{ d.building_number or order.building_number }}
-            {% endif %}
-            {% if d.floor or order.floor %}, пов. {{ d.floor or order.floor }}{% endif %}
-            {% if d.entrance or order.entrance %}, п/їзд {{ d.entrance or order.entrance }}{% endif %}
-          {% else %}—{% endif %}
-        </span>
-        {% if stop.planned_arrival %}
-        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ stop.planned_arrival.strftime('%H:%M') }}</span>
-        {% elif d and (d.time_from or d.time_to) %}
-        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ d.time_from or '?' }}–{{ d.time_to or '?' }}</span>
-        {% endif %}
+    </td>
+    <td>
+      <div class="font-semibold text-stone-900 break-all">
+        {% if client and client.instagram %}@{{ client.instagram.lstrip('@') }}{% else %}—{% endif %}
       </div>
-
-      <!-- Bouquet info -->
-      <div class="mt-1">
-        {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
+      <div class="mt-1 text-xs text-stone-500 break-all">{{ recipient_name }}</div>
+    </td>
+    <td class="whitespace-nowrap">{{ recipient_phone or '—' }}</td>
+    <td class="max-w-[260px] break-words">
+      {% if delivery.is_pickup %}
+        <span class="florist-badge">Самовивіз</span>
+      {% elif delivery.delivery_method == 'nova_poshta' %}
+        <span class="florist-badge">Нова пошта</span>
+        {% if street %}
+          <div class="mt-1.5">{{ street }}{% if building %}, {{ building }}{% endif %}</div>
+        {% endif %}
+      {% else %}
+        {% if street %}
+          {{ city ~ ', ' if city else '' }}{{ street }}{% if building %}, {{ building }}{% endif %}
+        {% else %}
+          —
+        {% endif %}
+      {% endif %}
+    </td>
+    <td class="whitespace-nowrap">{{ time_slot }}</td>
+    <td>{{ florist_status_badge(delivery.florist_status) }}</td>
+    <td>{{ delivery_status_badge(delivery.status) }}</td>
+    <td>
+      <div class="flex flex-wrap items-center gap-1.5">
         {% if size %}
-        <span class="bouquet-tag">🌷 {{ size }}</span>
+          <span class="florist-tag {% if size == 'L' %}florist-tag-size-l{% elif size == 'XL' %}florist-tag-size-xl{% elif size == 'XXL' %}florist-tag-size-xxl{% endif %}">{{ size }}</span>
         {% endif %}
+        {% if order and order.delivery_type %}
+          <span class="florist-tag">{{ order.delivery_type }}</span>
+        {% endif %}
+        {% if is_subscription and subscription_idx %}
+          <span class="florist-tag florist-tag-subscription">{{ subscription_idx }}/4 доставка</span>
+        {% endif %}
+      </div>
+      {% if preferences_text %}
+        <div class="mt-1.5 text-xs text-stone-500 break-words">{{ preferences_text }}</div>
+      {% endif %}
+      {% if comment_text %}
+        <div class="mt-1 text-xs text-stone-400 break-words">
+          <i class="bi bi-chat-left-text me-1"></i>{{ comment_text }}
+        </div>
+      {% endif %}
+    </td>
+  </tr>
+{% endmacro %}
 
-        {% set prefs = d.preferences or (order.preferences if order else '') %}
-        {% if prefs %}
-        {% for p in prefs.split(',') %}
-        <span class="pref-tag">{{ p.strip() }}</span>
+{% macro delivery_table_head() %}
+  <thead>
+    <tr>
+      <th class="w-10"></th>
+      <th>#</th>
+      <th>Клієнт / Отримувач</th>
+      <th>Телефон</th>
+      <th>Адреса</th>
+      <th>Час</th>
+      <th>Букет</th>
+      <th>Логістика</th>
+      <th>Деталі</th>
+    </tr>
+  </thead>
+{% endmacro %}
+
+{% block content %}
+{{ render_toast() }}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="mb-4 flex flex-col gap-2">
+      {% for category, message in messages %}
+        <div class="rounded-2xl border px-4 py-3 text-sm
+          {% if category in ['success'] %}border-emerald-200 bg-emerald-50 text-emerald-700
+          {% elif category in ['danger', 'error'] %}border-red-200 bg-red-50 text-red-700
+          {% elif category in ['warning'] %}border-amber-200 bg-amber-50 text-amber-700
+          {% else %}border-blue-200 bg-blue-50 text-blue-700{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+{% set date_display = weekday_map[selected_date.weekday()] ~ ', ' ~ selected_date.strftime('%d.%m.%Y') %}
+{% set prev_date = selected_date - timedelta(days=1) %}
+{% set next_date = selected_date + timedelta(days=1) %}
+
+<div class="flex flex-col gap-5">
+  <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+          <i class="bi bi-flower1"></i>
+          Флорист
+        </p>
+        <h1 class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">План доставок</h1>
+        <p class="mt-1 text-sm text-stone-500">Вибрана дата: {{ date_display }}</p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <a href="?date={{ prev_date.isoformat() }}"
+           class="inline-flex h-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900">
+          <i class="bi bi-chevron-left"></i>
+        </a>
+        <a href="{{ url_for('florist.florist_routes') }}"
+           class="inline-flex h-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+          Сьогодні
+        </a>
+        <a href="?date={{ next_date.isoformat() }}"
+           class="inline-flex h-10 items-center justify-center rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900">
+          <i class="bi bi-chevron-right"></i>
+        </a>
+
+        <form method="get" id="florist-date-form" class="relative">
+          <i class="bi bi-calendar3 absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+          <input
+            id="florist-date-picker"
+            type="text"
+            value="{{ selected_date.isoformat() }}"
+            class="h-10 w-[170px] rounded-xl border border-stone-200 bg-white py-2 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            placeholder="Оберіть дату"
+            readonly
+          >
+          <input id="florist-date-value" type="hidden" name="date" value="{{ selected_date.isoformat() }}">
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Доставок</p>
+      <p class="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{{ total_deliveries }}</p>
+      <p class="mt-1 text-xs text-stone-500">Всього на вибрану дату</p>
+    </article>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Виконано</p>
+      <p class="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">{{ delivered_count }}</p>
+      <p class="mt-1 text-xs text-stone-500">Логістичний статус: Доставлено</p>
+    </article>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Ще в роботі</p>
+      <p class="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{{ pending_count }}</p>
+      <p class="mt-1 text-xs text-stone-500">Очікують виконання</p>
+    </article>
+    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Маршрути</p>
+      <p class="mt-1 text-2xl font-semibold tracking-tight text-stone-900">{{ routes_count }}</p>
+      <p class="mt-1 text-xs text-stone-500">{{ routed_deliveries_count }} доставок у маршрутах</p>
+    </article>
+  </section>
+
+  <section class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+    <div class="flex flex-wrap items-center gap-3">
+      <label class="inline-flex items-center gap-2 text-sm text-stone-600">
+        <input id="select-all-deliveries" type="checkbox" class="h-4 w-4 rounded border-stone-300 text-stone-900 focus:ring-stone-900">
+        Обрати всі на сторінці
+      </label>
+
+      <div class="h-6 w-px bg-stone-200"></div>
+
+      <label for="bulk-florist-status" class="text-sm font-medium text-stone-700">Статус букетів</label>
+      <select id="bulk-florist-status"
+              class="rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+        <option value="">Оберіть статус</option>
+        {% for key, label in florist_status_options.items() %}
+          <option value="{{ key }}">{{ label }}</option>
         {% endfor %}
-        {% endif %}
-      </div>
-
-      <!-- Recipient info -->
-      <div class="mt-2 text-muted" style="font-size:0.85rem;">
-        {% if order and order.recipient_name %}
-        <span><i class="bi bi-person me-1"></i>{{ order.recipient_name }}</span>
-        {% endif %}
-        {% if d and d.phone %}
-        <span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>
-        {% elif order and order.recipient_phone %}
-        <span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ order.recipient_phone }}</span>
-        {% endif %}
-        {% if order and order.comment %}
-        <div class="mt-1"><i class="bi bi-chat-text me-1"></i><i>{{ order.comment }}</i></div>
-        {% endif %}
-      </div>
-
+      </select>
+      <button id="apply-florist-status" type="button" disabled
+              class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-stone-700">
+        <i class="bi bi-check2-circle"></i>
+        Застосувати
+      </button>
+      <button id="clear-florist-selection" type="button"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-500 transition-colors hover:bg-stone-50 hover:text-stone-900"
+              title="Очистити вибір">
+        <i class="bi bi-x-lg"></i>
+      </button>
+      <span id="selected-deliveries-count" class="ml-auto text-sm text-stone-500">Обрано: 0</span>
     </div>
-  </div>
-  {% endfor %}
-</div>
-{% endfor %}
-{% endif %}
+  </section>
 
-{% if nova_poshta_deliveries %}
-<div class="route-block shadow-sm mt-4">
-  <div class="route-block-header">
-    <span style="font-weight:700;font-size:1rem;color:#e65c00;"><i class="bi bi-truck me-1"></i>Нова Пошта</span>
-    <span class="ms-2 text-muted small">{{ nova_poshta_deliveries|length }} букет{{ 'и' if nova_poshta_deliveries|length in [2,3,4] else ('ів' if nova_poshta_deliveries|length != 1 else '') }}</span>
-  </div>
-  {% for d in nova_poshta_deliveries %}
-  {% set order = d.order %}
-  <div class="stop-card">
-    <div class="stop-num-big" style="background:#e65c00;">{{ loop.index }}</div>
-    <div style="flex:1;">
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <span style="font-weight:600;font-size:0.97rem;">
-          {% if order %}
-            {% if order.city %}{{ order.city }}, {% endif %}
-            {{ d.street or order.street or '—' }}
-            {% if d.building_number or order.building_number %} {{ d.building_number or order.building_number }}{% endif %}
-          {% else %}—{% endif %}
-        </span>
-        {% if d.time_from or d.time_to %}
-        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ d.time_from or '?' }}–{{ d.time_to or '?' }}</span>
-        {% endif %}
+  {% if routes %}
+    <section class="florist-section">
+      <div class="flex items-center justify-between gap-3 px-5 py-4">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">Маршрути кур'єрів</h2>
+          <p class="mt-1 text-sm text-stone-500">Доставки, які вже входять до сформованих маршрутів.</p>
+        </div>
+        <span class="florist-badge">{{ routes|length }} маршрутів</span>
       </div>
-      <div class="mt-1">
-        {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
-        {% if size %}<span class="bouquet-tag">🌷 {{ size }}</span>{% endif %}
-        {% set prefs = d.preferences or (order.preferences if order else '') %}
-        {% if prefs %}{% for p in prefs.split(',') %}<span class="pref-tag">{{ p.strip() }}</span>{% endfor %}{% endif %}
-      </div>
-      <div class="mt-2 text-muted" style="font-size:0.85rem;">
-        {% if order and order.recipient_name %}<span><i class="bi bi-person me-1"></i>{{ order.recipient_name }}</span>{% endif %}
-        {% if d.phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>{% elif order and order.recipient_phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ order.recipient_phone }}</span>{% endif %}
-        {% if order and order.comment %}<div class="mt-1"><i class="bi bi-chat-text me-1"></i><i>{{ order.comment }}</i></div>{% endif %}
-      </div>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
 
-{% if pickup_deliveries %}
-<div class="route-block shadow-sm mt-4">
-  <div class="route-block-header">
-    <span style="font-weight:700;font-size:1rem;color:#7c3aed;"><i class="bi bi-bag-check me-1"></i>Самовивіз</span>
-    <span class="ms-2 text-muted small">{{ pickup_deliveries|length }} букет{{ 'и' if pickup_deliveries|length in [2,3,4] else ('ів' if pickup_deliveries|length != 1 else '') }}</span>
-  </div>
-  {% for d in pickup_deliveries %}
-  {% set order = d.order %}
-  <div class="stop-card">
-    <div class="stop-num-big" style="background:#7c3aed;">{{ loop.index }}</div>
-    <div style="flex:1;">
-      <div class="d-flex align-items-center gap-2 flex-wrap">
-        <span style="font-weight:600;font-size:0.97rem;">Самовивіз</span>
-        {% if d.time_from or d.time_to %}
-        <span class="time-tag"><i class="bi bi-clock me-1"></i>{{ d.time_from or '?' }}–{{ d.time_to or '?' }}</span>
-        {% endif %}
-      </div>
-      <div class="mt-1">
-        {% set size = d.bouquet_size or d.size or (order.size if order else '') %}
-        {% if size %}<span class="bouquet-tag">🌷 {{ size }}</span>{% endif %}
-        {% set prefs = d.preferences or (order.preferences if order else '') %}
-        {% if prefs %}{% for p in prefs.split(',') %}<span class="pref-tag">{{ p.strip() }}</span>{% endfor %}{% endif %}
-      </div>
-      <div class="mt-2 text-muted" style="font-size:0.85rem;">
-        {% if order and order.recipient_name %}<span><i class="bi bi-person me-1"></i>{{ order.recipient_name }}</span>{% endif %}
-        {% if d.phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ d.phone }}</span>{% elif order and order.recipient_phone %}<span class="ms-2"><i class="bi bi-telephone me-1"></i>{{ order.recipient_phone }}</span>{% endif %}
-        {% if order and order.comment %}<div class="mt-1"><i class="bi bi-chat-text me-1"></i><i>{{ order.comment }}</i></div>{% endif %}
-      </div>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
+      {% for route in routes %}
+        <details class="florist-disclosure" open>
+          <summary class="florist-disclosure-head">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-base font-semibold text-stone-900">Маршрут #{{ loop.index }}</span>
+              {{ route_status_badge(route.status) }}
+              {% if route.courier %}
+                <span class="florist-badge"><i class="bi bi-person-badge"></i>{{ route.courier.name }}</span>
+              {% else %}
+                <span class="florist-badge">Кур'єр не призначений</span>
+              {% endif %}
+              <span class="florist-badge"><i class="bi bi-box-seam"></i>{{ route.stops|length }} доставок</span>
+              {% if route.total_distance_km %}
+                <span class="florist-badge"><i class="bi bi-signpost"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+              {% endif %}
+            </div>
+            <span class="florist-disclosure-toggle"><i class="bi bi-chevron-down"></i></span>
+          </summary>
 
+          <div class="florist-table-wrap">
+            <table class="florist-table">
+              {{ delivery_table_head() }}
+              <tbody>
+                {% for stop in route.stops %}
+                  {% if stop.delivery %}
+                    {{ delivery_row(stop.delivery, stop.stop_order) }}
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  {% if unrouted_courier_deliveries %}
+    <section class="florist-section">
+      <div class="flex items-center justify-between gap-3 px-5 py-4">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">Нерозподілені кур'єрські доставки</h2>
+          <p class="mt-1 text-sm text-stone-500">Ці доставки ще не додані до маршруту.</p>
+        </div>
+        <span class="florist-badge">{{ unrouted_courier_deliveries|length }} доставок</span>
+      </div>
+      <div class="florist-table-wrap">
+        <table class="florist-table">
+          {{ delivery_table_head() }}
+          <tbody>
+            {% for delivery in unrouted_courier_deliveries %}
+              {{ delivery_row(delivery) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if nova_poshta_deliveries %}
+    <section class="florist-section">
+      <div class="flex items-center justify-between gap-3 px-5 py-4">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">Нова пошта</h2>
+          <p class="mt-1 text-sm text-stone-500">Відправки через відділення або поштомат.</p>
+        </div>
+        <span class="florist-badge">{{ nova_poshta_deliveries|length }} доставок</span>
+      </div>
+      <div class="florist-table-wrap">
+        <table class="florist-table">
+          {{ delivery_table_head() }}
+          <tbody>
+            {% for delivery in nova_poshta_deliveries %}
+              {{ delivery_row(delivery) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if pickup_deliveries %}
+    <section class="florist-section">
+      <div class="flex items-center justify-between gap-3 px-5 py-4">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">Самовивіз</h2>
+          <p class="mt-1 text-sm text-stone-500">Замовлення, які клієнт забирає самостійно.</p>
+        </div>
+        <span class="florist-badge">{{ pickup_deliveries|length }} доставок</span>
+      </div>
+      <div class="florist-table-wrap">
+        <table class="florist-table">
+          {{ delivery_table_head() }}
+          <tbody>
+            {% for delivery in pickup_deliveries %}
+              {{ delivery_row(delivery) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
+  {% if not routes and not unrouted_courier_deliveries and not nova_poshta_deliveries and not pickup_deliveries %}
+    <section class="florist-empty">
+      <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-stone-400">
+        <i class="bi bi-flower1 text-xl"></i>
+      </div>
+      <h2 class="text-xl font-semibold text-stone-900">На вибрану дату доставок немає</h2>
+      <p class="mt-2 text-sm text-stone-500">Оберіть інший день у дата-пікері або поверніться до сьогоднішньої дати.</p>
+    </section>
+  {% endif %}
+</div>
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+{{ toast_script() }}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const picker = document.getElementById('florist-date-picker');
+    const hiddenDate = document.getElementById('florist-date-value');
+    const dateForm = document.getElementById('florist-date-form');
+
+    if (picker && hiddenDate && dateForm && window.flatpickr) {
+      flatpickr(picker, {
+        dateFormat: 'Y-m-d',
+        defaultDate: hiddenDate.value,
+        onChange: function(selectedDates, dateStr) {
+          hiddenDate.value = dateStr;
+          dateForm.submit();
+        },
+      });
+    }
+
+    const statusSelect = document.getElementById('bulk-florist-status');
+    const applyBtn = document.getElementById('apply-florist-status');
+    const clearBtn = document.getElementById('clear-florist-selection');
+    const countEl = document.getElementById('selected-deliveries-count');
+    const selectAll = document.getElementById('select-all-deliveries');
+    const checkboxes = Array.from(document.querySelectorAll('.florist-delivery-checkbox'));
+
+    function selectedIds() {
+      return checkboxes
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => Number(checkbox.dataset.deliveryId));
+    }
+
+    function updateSelectionUi() {
+      const ids = selectedIds();
+      countEl.textContent = `Обрано: ${ids.length}`;
+      applyBtn.disabled = ids.length === 0 || !statusSelect.value;
+      if (selectAll) {
+        const allChecked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+        selectAll.checked = allChecked;
+      }
+    }
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = selectAll.checked;
+        });
+        updateSelectionUi();
+      });
+    }
+
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener('change', updateSelectionUi);
+    });
+
+    statusSelect.addEventListener('change', updateSelectionUi);
+
+    clearBtn.addEventListener('click', function() {
+      checkboxes.forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+      if (selectAll) {
+        selectAll.checked = false;
+      }
+      statusSelect.value = '';
+      updateSelectionUi();
+    });
+
+    applyBtn.addEventListener('click', async function() {
+      const ids = selectedIds();
+      const statusKey = statusSelect.value;
+      if (!ids.length || !statusKey) {
+        return;
+      }
+
+      applyBtn.disabled = true;
+      applyBtn.classList.add('opacity-60');
+
+      try {
+        const response = await fetch('/florist/deliveries/status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            delivery_ids: ids,
+            status_key: statusKey,
+          }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload.success) {
+          const message = payload.error || 'Не вдалося оновити статуси';
+          if (typeof showToast === 'function') {
+            showToast(message, 'danger');
+          } else {
+            alert(message);
+          }
+          return;
+        }
+
+        if (typeof showToast === 'function') {
+          showToast(`Оновлено ${payload.updated_count} доставок`, 'success');
+        }
+        window.setTimeout(() => window.location.reload(), 350);
+      } catch (error) {
+        if (typeof showToast === 'function') {
+          showToast('Помилка мережі при оновленні статусів', 'danger');
+        } else {
+          alert('Помилка мережі при оновленні статусів');
+        }
+      } finally {
+        applyBtn.classList.remove('opacity-60');
+        updateSelectionUi();
+      }
+    });
+
+    updateSelectionUi();
+  });
+</script>
+{% endblock %}
+

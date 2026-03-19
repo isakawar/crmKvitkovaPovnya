@@ -122,7 +122,7 @@ def dashboard_page():
         .join(last_delivery_subq, last_delivery_subq.c.order_id == Order.id)
         .filter(
             Order.delivery_type.in_(SUBSCRIPTION_TYPES),
-            last_delivery_subq.c.last_delivery_date < today,
+            last_delivery_subq.c.last_delivery_date <= today - timedelta(days=4),
             Order.is_subscription_extended.is_(False),
             or_(Order.subscription_followup_status.is_(None), Order.subscription_followup_status == 'pending'),
         )

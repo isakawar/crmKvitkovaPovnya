@@ -551,7 +551,7 @@
         {% set urgency_class = 'dash-ended-card--danger' if item.days_overdue >= 6 else ('dash-ended-card--warn' if item.days_overdue >= 3 else '') %}
         <div class="dash-ended-card {{ urgency_class }}" data-ended-id="{{ item.order_id }}">
           <div class="dash-ended-meta">
-            <strong>@{{ item.client_instagram }}</strong>
+            <strong>{{ item.client_instagram.lstrip('@') if item.client_instagram else '—' }}</strong>
             <span>{{ item.recipient_name }} · {{ item.client_phone }}</span>
             <span>Остання доставка: {{ item.last_delivery_date.strftime('%d.%m.%Y') }} · {{ item.days_overdue }} днів тому</span>
           </div>

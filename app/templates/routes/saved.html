@@ -649,6 +649,12 @@
         </div>
 
         <div class="routes-board-actions">
+          <a href="{{ url_for('orders.route_generator') }}?edit={{ route.id }}"
+             class="routes-action-btn"
+             onclick="event.stopPropagation()">
+            <i class="bi bi-pencil"></i>
+            Редагувати
+          </a>
           <button type="button"
                   class="routes-action-btn route-assign-trigger"
                   data-route-id="{{ route.id }}"
@@ -715,7 +721,7 @@
               {% set client = d.client if d else none %}
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
-                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
                 <td class="whitespace-nowrap">{{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
@@ -787,7 +793,7 @@
             {% for d in nova_poshta_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
@@ -825,7 +831,7 @@
             {% for d in pickup_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">@{{ client.instagram }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>

@@ -135,10 +135,6 @@ class TelegramService:
         if detailed and delivery.preferences:
             text += f"⭐ {delivery.preferences}\n"
         
-        # Ціна (тільки для детального відображення)
-        if detailed and delivery.price_at_delivery:
-            text += f"💰 До сплати: {delivery.price_at_delivery}₴\n"
-        
         return text
     
     @staticmethod

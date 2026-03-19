@@ -251,9 +251,26 @@ def update_order(order, form):
     order.time_to = form.get('time_to')
     order.comment = form.get('comment')
     order.preferences = form.get('preferences')
-    order.for_whom = form['for_whom']
+    order.for_whom = form.get('for_whom') or order.for_whom
     if form.get('delivery_method'):
         order.delivery_method = form.get('delivery_method')
+
+    # Синхронізуємо майбутні/активні доставки, щоб дані в списку замовлень були актуальні
+    for delivery in order.deliveries:
+        if delivery.status in ['Доставлено', 'Скасовано']:
+            continue
+        delivery.comment = order.comment
+        delivery.preferences = order.preferences
+        delivery.address_comment = order.address_comment
+        delivery.street = order.street if not order.is_pickup else None
+        delivery.building_number = order.building_number if not order.is_pickup else None
+        delivery.floor = order.floor if not order.is_pickup else None
+        delivery.entrance = order.entrance if not order.is_pickup else None
+        delivery.is_pickup = order.is_pickup
+        delivery.phone = order.recipient_phone
+        delivery.delivery_method = order.delivery_method
+        delivery.bouquet_type = order.bouquet_type
+        delivery.composition_type = order.composition_type
     db.session.commit()
     return order
 
