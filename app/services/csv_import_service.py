@@ -449,6 +449,326 @@ def preview_import(file_stream) -> tuple[list[dict], str | None]:
 # Execute import
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Operational CSV (Відвантаження) — parsers
+# ---------------------------------------------------------------------------
+
+OPERATIONAL_COLUMN_MAP = {
+    'клієнт': 'raw_client',
+    'побажання': 'preferences_raw',
+    "ім'я отримувача": 'recipient_name',
+    "ім\u2019я отримувача": 'recipient_name',
+    'тип підписки': 'delivery_type_raw',
+    'адреса': 'address_raw',
+    'номер телефону': 'recipient_phone_raw',
+    'коментарі': 'comment_raw',
+    'розмір': 'size',
+    'дата': 'date_raw',
+    'тип букету': 'bouquet_type',
+    'коментар до адреси': 'address_comment_raw',
+}
+
+OPERATIONAL_IMPORT_YEAR = 2026
+
+
+def parse_operational_date(raw: str) -> str | None:
+    """Parse "21.03" or "21.03.2026" → "2026-03-21"."""
+    raw = (raw or '').strip()
+    if not raw:
+        return None
+    for fmt in ('%d.%m.%Y', '%d.%m.%y', '%d.%m'):
+        try:
+            d = datetime.datetime.strptime(raw, fmt)
+            return d.replace(year=OPERATIONAL_IMPORT_YEAR).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
+def parse_operational_comment(raw: str) -> tuple[str | None, str | None, str]:
+    """
+    Extract time from operational CSV "Коментарі" column.
+    Returns (time_from, time_to, remaining_comment).
+
+    Examples:
+      "2а, 10-13"          → ("10:00", "13:00", "2а")
+      "1а, 8:30"           → ("08:30", None,    "1а")
+      "4а, 10%, 11-12"     → ("11:00", "12:00", "4а, 10%")
+      "3а"                 → (None,    None,    "3а")
+    """
+    if not raw:
+        return None, None, ''
+    raw = raw.strip()
+
+    # 1. HH:MM-HH:MM
+    time_from, time_to = parse_time_range(raw)
+    if time_from:
+        cleaned = re.sub(r'\d{1,2}:\d{2}\s*[-–]\s*\d{1,2}:\d{2}', '', raw)
+        cleaned = re.sub(r',\s*,+', ',', cleaned).strip(' ,')
+        return time_from, time_to, cleaned
+
+    # 2. HH-HH (e.g. "10-13", "9-12") — only valid hour ranges
+    m = re.search(r'(?<!\d)(\d{1,2})\s*[-–]\s*(\d{1,2})(?!\d)', raw)
+    if m:
+        h1, h2 = int(m.group(1)), int(m.group(2))
+        if 0 <= h1 <= 23 and 0 <= h2 <= 23 and h1 < h2:
+            time_from = f'{h1:02d}:00'
+            time_to = f'{h2:02d}:00'
+            cleaned = (raw[:m.start()] + raw[m.end():])
+            cleaned = re.sub(r',\s*,+', ',', cleaned).strip(' ,')
+            return time_from, time_to, cleaned
+
+    # 3. Single HH:MM
+    m = re.search(r'(?<!\d)(\d{1,2}):(\d{2})(?!\d)', raw)
+    if m:
+        time_from = f'{int(m.group(1)):02d}:{m.group(2)}'
+        cleaned = (raw[:m.start()] + raw[m.end():])
+        cleaned = re.sub(r',\s*,+', ',', cleaned).strip(' ,')
+        return time_from, None, cleaned
+
+    return None, None, raw
+
+
+def parse_csv_rows_operational(file_stream) -> tuple[list[dict], str | None]:
+    """Parse operational CSV (Відвантаження format) → list of raw row dicts."""
+    try:
+        content = file_stream.read()
+        if isinstance(content, bytes):
+            content = content.decode('utf-8-sig')
+        reader = csv.DictReader(io.StringIO(content))
+
+        # Normalize header keys
+        if reader.fieldnames is None:
+            return [], 'CSV файл порожній або неправильний формат'
+
+        norm_headers = {h.strip().lower(): h for h in reader.fieldnames}
+
+        def get_col(row, key):
+            orig = norm_headers.get(key)
+            return row.get(orig, '').strip() if orig else ''
+
+        rows = []
+        for i, row in enumerate(reader, start=2):
+            client_raw = get_col(row, 'клієнт')
+            if not client_raw or client_raw == '#N/A':
+                continue
+            # Also try Ukrainian apostrophe variant for recipient name
+            recipient_name = get_col(row, "ім'я отримувача") or get_col(row, "ім\u2019я отримувача")
+            rows.append({
+                'row_num': i,
+                'raw_client': client_raw,
+                'preferences_raw': get_col(row, 'побажання'),
+                'recipient_name': recipient_name,
+                'delivery_type_raw': get_col(row, 'тип підписки'),
+                'address_raw': get_col(row, 'адреса'),
+                'recipient_phone_raw': get_col(row, 'номер телефону'),
+                'comment_raw': get_col(row, 'коментарі'),
+                'size': get_col(row, 'розмір'),
+                'date_raw': get_col(row, 'дата'),
+                'bouquet_type': get_col(row, 'тип букету'),
+                'address_comment_raw': get_col(row, 'коментар до адреси'),
+            })
+        return rows, None
+    except Exception as e:
+        logger.error(f'Operational CSV parse error: {e}')
+        return [], f'Помилка читання CSV: {e}'
+
+
+_REVERSE_WEEKDAY = {0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'НД'}
+
+
+def build_preview_row_operational(raw: dict) -> dict:
+    """Enrich an operational raw row with parsed fields and client lookup."""
+    client_info = parse_client_field(raw['raw_client'])
+    addr = parse_address(raw['address_raw'])
+
+    # If CSV already has address_comment — prefer it over parsed one
+    address_comment_override = (raw.get('address_comment_raw') or '').strip()
+    if address_comment_override and address_comment_override != '#N/A':
+        addr['address_comment'] = address_comment_override
+
+    time_from, time_to, clean_comment = parse_operational_comment(raw.get('comment_raw', ''))
+    recipient_phone = normalize_phone(raw.get('recipient_phone_raw', ''))
+    delivery_type = normalize_delivery_type(raw.get('delivery_type_raw', ''))
+
+    first_delivery_date = parse_operational_date(raw.get('date_raw', ''))
+    delivery_day = 'ПН'
+    if first_delivery_date:
+        try:
+            d = datetime.datetime.strptime(first_delivery_date, '%Y-%m-%d').date()
+            delivery_day = _REVERSE_WEEKDAY.get(d.weekday(), 'ПН')
+        except ValueError:
+            pass
+
+    size = raw.get('size', 'M')
+    if not size or size == '#N/A':
+        size = 'M'
+
+    bouquet_type = raw.get('bouquet_type', '')
+    if bouquet_type in ('#N/A', ''):
+        bouquet_type = None
+
+    preferences = raw.get('preferences_raw', '')
+    if preferences in ('#N/A', ''):
+        preferences = None
+
+    existing = find_existing_client(
+        instagram=client_info['instagram'],
+        phone=client_info['phone'],
+        telegram=client_info['telegram'],
+    )
+
+    warnings = []
+    if not client_info['instagram']:
+        warnings.append('Не вдалося визначити ідентифікатор клієнта')
+    if not recipient_phone and raw.get('recipient_phone_raw'):
+        warnings.append(f'Не вдалося нормалізувати телефон: {raw["recipient_phone_raw"][:30]}')
+    if not first_delivery_date:
+        warnings.append(f'Не вдалося розпарсити дату: {raw.get("date_raw", "")}')
+
+    return {
+        'row_num': raw['row_num'],
+        'raw_client': raw['raw_client'],
+        'instagram': client_info['instagram'],
+        'phone': client_info['phone'],
+        'telegram': client_info['telegram'],
+        'client_type': (
+            'telegram' if client_info['telegram'] else
+            'phone' if (client_info['phone'] and client_info['instagram'] == client_info['phone']) else
+            'instagram'
+        ),
+        'existing_client_id': existing.id if existing else None,
+        'client_status': 'exists' if existing else 'new',
+        'delivery_type': delivery_type,
+        'delivery_type_raw': raw.get('delivery_type_raw', ''),
+        'size': size,
+        'bouquet': None,
+        'recipient_name': raw.get('recipient_name', '') if raw.get('recipient_name') != '#N/A' else '',
+        'recipient_phone': recipient_phone,
+        'city': addr['city'],
+        'street': addr['street'],
+        'address_comment': addr['address_comment'],
+        'address': raw.get('address_raw', ''),
+        'delivery_method': addr['delivery_method'],
+        'is_pickup': addr['is_pickup'],
+        'time_from': time_from,
+        'time_to': time_to,
+        'bouquet_type': bouquet_type,
+        'composition_type': None,
+        'preferences': preferences,
+        'comment': clean_comment if clean_comment else None,
+        'first_delivery_date': first_delivery_date,
+        'delivery_day': delivery_day,
+        'warnings': warnings,
+    }
+
+
+def preview_import_operational(file_stream) -> tuple[list[dict], str | None]:
+    """Parse operational CSV and build enriched preview rows."""
+    raw_rows, error = parse_csv_rows_operational(file_stream)
+    if error:
+        return [], error
+    return [build_preview_row_operational(r) for r in raw_rows], None
+
+
+def execute_import_operational(preview_rows: list[dict]) -> dict:
+    """
+    Import operational CSV rows. Uses per-row first_delivery_date and delivery_day.
+    Creates new clients if not found.
+    """
+    from app.services.order_service import create_order_and_deliveries
+
+    created_clients = 0
+    existing_clients = 0
+    created_orders = 0
+    errors = []
+
+    for row in preview_rows:
+        try:
+            existing = find_existing_client(
+                instagram=row['instagram'],
+                phone=row['phone'],
+                telegram=row['telegram'],
+            )
+
+            if existing:
+                client = existing
+                existing_clients += 1
+            else:
+                if not row['instagram']:
+                    errors.append(f'Рядок {row["row_num"]}: неможливо визначити ідентифікатор клієнта, пропущено')
+                    continue
+                instagram_id = _strip_suffix(row['instagram'])
+                existing_stripped = Client.query.filter_by(instagram=instagram_id).first()
+                if existing_stripped:
+                    client = existing_stripped
+                    existing_clients += 1
+                else:
+                    client = Client(
+                        instagram=instagram_id,
+                        phone=row['phone'],
+                        telegram=row['telegram'],
+                    )
+                    db.session.add(client)
+                    db.session.flush()
+                    created_clients += 1
+
+            first_delivery_date = row.get('first_delivery_date') or datetime.date.today().isoformat()
+            delivery_day = row.get('delivery_day') or 'ПН'
+
+            form = {
+                'recipient_name': row['recipient_name'] or '',
+                'recipient_phone': row['recipient_phone'] or '',
+                'recipient_social': '',
+                'city': row.get('city') or 'Київ',
+                'street': row.get('street') or row.get('address') or '',
+                'address_comment': row.get('address_comment') or '',
+                'building_number': '',
+                'floor': '',
+                'entrance': '',
+                'is_pickup': 'on' if row['is_pickup'] else '',
+                'delivery_type': row['delivery_type'],
+                'size': row['size'],
+                'custom_amount': '',
+                'first_delivery_date': first_delivery_date,
+                'delivery_day': delivery_day,
+                'time_from': row['time_from'] or '',
+                'time_to': row['time_to'] or '',
+                'comment': row['comment'] or '',
+                'preferences': row['preferences'] or '',
+                'bouquet_type': row.get('bouquet_type') or '',
+                'composition_type': row.get('composition_type') or '',
+                'for_whom': '',
+                'delivery_method': row['delivery_method'],
+            }
+
+            create_order_and_deliveries(client, form)
+            created_orders += 1
+
+        except Exception as e:
+            logger.error(f'Operational import error row {row["row_num"]}: {e}', exc_info=True)
+            errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): {e}')
+            db.session.rollback()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Commit error: {e}', exc_info=True)
+        errors.append(f'Помилка збереження в БД: {e}')
+
+    return {
+        'created_clients': created_clients,
+        'existing_clients': existing_clients,
+        'created_orders': created_orders,
+        'errors': errors,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Original execute_import (kept for existing /import route)
+# ---------------------------------------------------------------------------
+
 def execute_import(preview_rows: list[dict], first_delivery_date_str: str, delivery_day: str) -> dict:
     """
     For each preview row:
