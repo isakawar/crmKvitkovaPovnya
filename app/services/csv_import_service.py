@@ -719,7 +719,7 @@ def execute_import_operational(preview_rows: list[dict]) -> dict:
             form = {
                 'recipient_name': row['recipient_name'] or '',
                 'recipient_phone': row['recipient_phone'] or '',
-                'recipient_social': '',
+                'recipient_social': row.get('raw_client') or '',
                 'city': row.get('city') or 'Київ',
                 'street': row.get('street') or row.get('address') or '',
                 'address_comment': row.get('address_comment') or '',

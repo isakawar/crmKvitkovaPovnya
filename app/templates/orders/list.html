@@ -516,13 +516,26 @@
     if (!btn) return;
     const handle = btn.dataset.handle;
     if (!handle) return;
-    navigator.clipboard.writeText(handle).then(function () {
-      const icon = btn.querySelector('.bi-copy');
+    const icon = btn.querySelector('.bi-copy');
+    function onCopied() {
       if (icon) {
         icon.classList.replace('bi-copy', 'bi-check2');
         setTimeout(() => icon.classList.replace('bi-check2', 'bi-copy'), 1500);
       }
-    });
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(handle).then(onCopied);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = handle;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      onCopied();
+    }
   });
 })();
 </script>
