@@ -176,6 +176,15 @@
 
     <!-- Nav -->
     <nav class="flex flex-col w-full px-2 gap-0.5 flex-1">
+        {% if current_user.user_type == 'florist' %}
+        <a href="/florist"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Флорист">
+            <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
+            <span class="nav-label">Флорист</span>
+        </a>
+        {% else %}
         <a href="/dashboard"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
@@ -225,6 +234,15 @@
             <i class="bi bi-grid text-lg flex-shrink-0"></i>
             <span class="nav-label">Звіти</span>
         </a>
+        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        <a href="/florist"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Флорист">
+            <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
+            <span class="nav-label">Флорист</span>
+        </a>
+        {% endif %}
 
         <!-- Spacer -->
         <div class="flex-1"></div>
@@ -236,7 +254,9 @@
             <i class="bi bi-gear text-lg flex-shrink-0"></i>
             <span class="nav-label">Налаштування</span>
         </a>
+        {% endif %}
 
+        {% if current_user.user_type != 'florist' %}
         <!-- Version -->
         <a href="#" id="version-link"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-xs text-stone-400 hover:bg-stone-200 transition-colors mb-3"
@@ -244,6 +264,7 @@
             <i class="bi bi-clock-history text-base flex-shrink-0"></i>
             <span class="nav-label">v{{ app_version }}</span>
         </a>
+        {% endif %}
     </nav>
 </div>
 

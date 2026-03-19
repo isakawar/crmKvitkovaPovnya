@@ -6,7 +6,9 @@ from . import bp
 @bp.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('orders.orders_list'))
+        if getattr(current_user, 'user_type', None) == 'florist':
+            return redirect(url_for('florist.florist_routes'))
+        return redirect(url_for('dashboard.dashboard_page'))
     
     if request.method == 'POST':
         username = request.form.get('username')
@@ -20,7 +22,10 @@ def login():
             # Перенаправлення на сторінку, яку користувач намагався відвідати
             next_page = request.args.get('next')
             if not next_page or not next_page.startswith('/'):
-                next_page = url_for('orders.orders_list')
+                if getattr(user, 'user_type', None) == 'florist':
+                    next_page = url_for('florist.florist_routes')
+                else:
+                    next_page = url_for('dashboard.dashboard_page')
             return redirect(next_page)
         
         flash('Невірний логін або пароль', 'danger')

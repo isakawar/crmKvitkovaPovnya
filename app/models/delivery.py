@@ -43,6 +43,7 @@ class Delivery(db.Model):
 
     # Подписка
     is_subscription = db.Column(db.Boolean, default=False)
+    florist_status = db.Column(db.String(32), nullable=True)
     
     # Побажання
     preferences = db.Column(db.Text)
