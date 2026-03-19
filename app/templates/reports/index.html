@@ -44,6 +44,11 @@
     gap: 1rem;
   }
 
+  .report-line-wrap {
+    position: relative;
+    height: 290px;
+  }
+
   .report-switch {
     display: inline-flex;
     align-items: center;
@@ -105,6 +110,24 @@
         </button>
       </form>
     </div>
+  </section>
+
+  <section class="report-card p-4">
+    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
+        <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="report-kpi">Замовлень: {{ monthly_orders_total }}</span>
+        <span class="report-kpi">Підписок: {{ monthly_subscriptions_total }}</span>
+      </div>
+    </div>
+    {% if monthly_orders_trend_chart['labels'] %}
+    <div class="report-line-wrap"><canvas id="monthlyOrdersTrendChart"></canvas></div>
+    {% else %}
+    <div class="report-empty">Поки немає даних для помісячної динаміки</div>
+    {% endif %}
   </section>
 
   <section class="report-grid-two">
@@ -247,6 +270,85 @@
       });
     }
 
+    function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas || !labels || !labels.length) return;
+
+      const ctx = canvas.getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Нові замовлення',
+              data: ordersValues,
+              borderColor: 'rgba(17, 24, 39, 0.88)',
+              backgroundColor: 'rgba(17, 24, 39, 0.12)',
+              pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              tension: 0.28,
+              fill: false,
+            },
+            {
+              label: 'Нові підписки',
+              data: subscriptionsValues,
+              borderColor: 'rgba(16, 185, 129, 0.9)',
+              backgroundColor: 'rgba(16, 185, 129, 0.12)',
+              pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              borderWidth: 2,
+              tension: 0.28,
+              fill: false,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                color: '#57534e',
+                boxWidth: 12,
+                usePointStyle: true,
+              }
+            },
+            tooltip: {
+              backgroundColor: '#1c1917',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+            }
+          },
+          scales: {
+            x: {
+              ticks: {
+                color: '#78716c',
+                maxRotation: 40,
+                minRotation: 0,
+                font: { size: 11 }
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              ticks: {
+                precision: 0,
+                color: '#a8a29e',
+                font: { size: 11 }
+              },
+              grid: { color: '#f1f5f9' }
+            }
+          }
+        }
+      });
+    }
+
     function createSwitchableChart(canvasId, datasets, color) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return null;
@@ -353,6 +455,13 @@
 
     bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets);
     bindSwitch('for-whom-switch', 'for-whom-period', 'for-whom-total', forWhomChart, forWhomDatasets);
+
+    createLineTrendChart(
+      'monthlyOrdersTrendChart',
+      {{ monthly_orders_trend_chart['labels']|tojson }},
+      {{ monthly_orders_trend_chart['orders_values']|tojson }},
+      {{ monthly_orders_trend_chart['subscriptions_values']|tojson }}
+    );
 
     createBarChart('deliveryTypeChart', {{ delivery_type_chart['labels']|tojson }}, {{ delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
     createBarChart('sizeChart', {{ size_chart['labels']|tojson }}, {{ size_chart['values']|tojson }}, 'rgba(139, 92, 246, 0.72)');

@@ -21,6 +21,16 @@ UNSPECIFIED_TOKENS = {
     'немає',
 }
 
+UNSPECIFIED_CANONICAL = {
+    'none',
+    'null',
+    'na',
+    'невказано',
+    'немає',
+    'нема',
+}
+SUBSCRIPTION_TYPES = {'Weekly', 'Monthly', 'Bi-weekly'}
+
 
 def _compact(raw_value):
     return ' '.join((raw_value or '').strip().split())
@@ -29,7 +39,8 @@ def _compact(raw_value):
 def _label_key(raw_value):
     compact = _compact(raw_value)
     lowered = compact.lower()
-    if lowered in UNSPECIFIED_TOKENS:
+    canonical = ''.join(ch for ch in lowered if ch.isalnum())
+    if lowered in UNSPECIFIED_TOKENS or canonical in UNSPECIFIED_CANONICAL:
         return '__unspecified__'
     return lowered
 
@@ -104,9 +115,61 @@ def _total(items):
     return sum(item['count'] for item in items)
 
 
+def _month_start(d):
+    return date(d.year, d.month, 1)
+
+
+def _next_month(d):
+    if d.month == 12:
+        return date(d.year + 1, 1, 1)
+    return date(d.year, d.month + 1, 1)
+
+
+def _monthly_orders_trend():
+    rows = (
+        db.session.query(Order.created_at, Order.delivery_type)
+        .filter(Order.created_at.isnot(None))
+        .order_by(Order.created_at.asc())
+        .all()
+    )
+    if not rows:
+        return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
+
+    monthly = {}
+    for created_at, delivery_type in rows:
+        month = _month_start(created_at.date())
+        bucket = monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})
+        bucket['orders'] += 1
+        if (delivery_type or '') in SUBSCRIPTION_TYPES:
+            bucket['subscriptions'] += 1
+
+    first_month = min(monthly.keys())
+    today = datetime.utcnow().date()
+    last_month = _month_start(today)
+
+    labels = []
+    orders_values = []
+    subscriptions_values = []
+
+    cursor = first_month
+    while cursor <= last_month:
+        values = monthly.get(cursor, {'orders': 0, 'subscriptions': 0})
+        labels.append(cursor.strftime('%m.%Y'))
+        orders_values.append(values['orders'])
+        subscriptions_values.append(values['subscriptions'])
+        cursor = _next_month(cursor)
+
+    return {
+        'labels': labels,
+        'orders_values': orders_values,
+        'subscriptions_values': subscriptions_values,
+    }
+
+
 def get_reports_data(selected_month_raw=None):
     month_start = _parse_month(selected_month_raw)
     month_start_dt, month_end_dt = _month_bounds(month_start)
+    monthly_orders_trend_chart = _monthly_orders_trend()
 
     marketing_all_rows = (
         db.session.query(Client.marketing_source, func.count(Order.id))
@@ -176,10 +239,13 @@ def get_reports_data(selected_month_raw=None):
         'for_whom_month_total': _total(for_whom_month),
         'delivery_type_total': _total(delivery_type_all),
         'size_total': _total(size_all),
+        'monthly_orders_total': sum(monthly_orders_trend_chart['orders_values']),
+        'monthly_subscriptions_total': sum(monthly_orders_trend_chart['subscriptions_values']),
         'marketing_all_chart': _items_to_chart(marketing_all),
         'marketing_month_chart': _items_to_chart(marketing_month),
         'for_whom_all_chart': _items_to_chart(for_whom_all),
         'for_whom_month_chart': _items_to_chart(for_whom_month),
         'delivery_type_chart': _items_to_chart(delivery_type_all),
         'size_chart': _items_to_chart(size_all),
+        'monthly_orders_trend_chart': monthly_orders_trend_chart,
     }
