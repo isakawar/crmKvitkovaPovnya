@@ -481,9 +481,39 @@ document.addEventListener('DOMContentLoaded', function() {
         recipientPhoneInput.value = value.slice(0, 13);
     }
 
+    function clearFieldInvalid(el) {
+        el.classList.remove('order-input--invalid', 'order-select--invalid');
+    }
+
+    function markRequiredFields() {
+        const fields = addOrderForm.querySelectorAll('[required]:not([disabled])');
+        let hasInvalid = false;
+        fields.forEach(el => {
+            const isEmpty = !el.value.trim();
+            const invalidClass = (el.tagName === 'SELECT') ? 'order-select--invalid' : 'order-input--invalid';
+            if (isEmpty) {
+                el.classList.add(invalidClass);
+                if (!el._invalidListener) {
+                    el._invalidListener = () => clearFieldInvalid(el);
+                    el.addEventListener('input', el._invalidListener);
+                    el.addEventListener('change', el._invalidListener);
+                }
+                hasInvalid = true;
+            } else {
+                clearFieldInvalid(el);
+            }
+        });
+        return hasInvalid;
+    }
+
     async function submitComposerForm(event) {
         event.preventDefault();
         clearOrderError();
+
+        if (markRequiredFields()) {
+            showOrderError('Заповніть усі обовʼязкові поля');
+            return;
+        }
 
         const phoneValue = recipientPhoneInput.value.trim();
         const phonePattern = /^\+380[0-9]{9}$/;

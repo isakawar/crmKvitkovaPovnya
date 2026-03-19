@@ -256,9 +256,10 @@ def update_order(order, form):
         order.delivery_method = form.get('delivery_method')
 
     # Синхронізуємо майбутні/активні доставки, щоб дані в списку замовлень були актуальні
-    for delivery in order.deliveries:
-        if delivery.status in ['Доставлено', 'Скасовано']:
-            continue
+    active_deliveries = [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']]
+    for i, delivery in enumerate(sorted(active_deliveries, key=lambda d: d.delivery_date or datetime.date.min)):
+        if i == 0:
+            delivery.delivery_date = resolved_first_delivery_date
         delivery.comment = order.comment
         delivery.preferences = order.preferences
         delivery.address_comment = order.address_comment

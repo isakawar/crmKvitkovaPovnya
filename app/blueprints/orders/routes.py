@@ -287,17 +287,18 @@ def update_delivery_times():
     if not time_from and not time_to and not clear_time and not delivery_date_raw:
         return jsonify({'success': False, 'error': 'Вкажіть час доставки'}), 400
 
-    def parse_time(value):
-        return datetime.strptime(value, '%H:%M').time()
+    if time_from != '∞':
+        def parse_time(value):
+            return datetime.strptime(value, '%H:%M').time()
 
-    try:
-        parsed_from = parse_time(time_from) if time_from else None
-        parsed_to = parse_time(time_to) if time_to else None
-    except ValueError:
-        return jsonify({'success': False, 'error': 'Невірний формат часу. Використовуйте HH:MM'}), 400
+        try:
+            parsed_from = parse_time(time_from) if time_from else None
+            parsed_to = parse_time(time_to) if time_to else None
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Невірний формат часу. Використовуйте HH:MM'}), 400
 
-    if parsed_from and parsed_to and parsed_from > parsed_to:
-        return jsonify({'success': False, 'error': 'Час "з" має бути меншим за час "до"'}), 400
+        if parsed_from and parsed_to and parsed_from > parsed_to:
+            return jsonify({'success': False, 'error': 'Час "з" має бути меншим за час "до"'}), 400
 
     delivery_date = None
     if delivery_date_raw:
