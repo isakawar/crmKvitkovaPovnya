@@ -277,5 +277,10 @@ def update_order(order, form):
 
 def delete_order(order):
     logger.warning(f'Видалення замовлення {order.id}')
+    from app.models.delivery_route import RouteDelivery
+    for delivery in list(order.deliveries):
+        RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+        db.session.delete(delivery)
+    db.session.flush()
     db.session.delete(order)
-    db.session.commit() 
+    db.session.commit()

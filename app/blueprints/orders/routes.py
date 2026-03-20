@@ -265,6 +265,30 @@ def order_edit(order_id):
         'can_extend_subscription': can_extend_subscription
     })
 
+@orders_bp.route('/orders/<int:order_id>/dependencies', methods=['GET'])
+@login_required
+def order_dependencies(order_id):
+    order = Order.query.get_or_404(order_id)
+    from app.models.delivery_route import RouteDelivery, DeliveryRoute
+    deliveries = order.deliveries
+    routes_info = []
+    seen_route_ids = set()
+    for d in deliveries:
+        for rs in d.route_stops:
+            if rs.route_id not in seen_route_ids:
+                seen_route_ids.add(rs.route_id)
+                route = rs.route
+                routes_info.append({
+                    'id': route.id,
+                    'date': route.route_date.strftime('%d.%m.%Y'),
+                    'courier': route.courier.name if route.courier else 'Не призначено',
+                    'status': route.status,
+                })
+    return jsonify({
+        'deliveries_count': len(deliveries),
+        'routes': routes_info,
+    })
+
 @orders_bp.route('/orders/<int:order_id>/delete', methods=['POST'])
 @login_required
 def order_delete(order_id):

@@ -130,6 +130,18 @@ def client_update(client_id):
         return jsonify({'success': False, 'error': error}), 400
     return jsonify({'success': True})
 
+@clients_bp.route('/clients/<int:client_id>/delete', methods=['POST'])
+def client_delete(client_id):
+    from app.models.client import Client
+    from app.models.delivery import Delivery
+    client = Client.query.get_or_404(client_id)
+    has_deliveries = Delivery.query.filter_by(client_id=client_id).first() is not None
+    if has_deliveries:
+        return jsonify({'success': False, 'error': 'Неможливо видалити клієнта з існуючими доставками'}), 400
+    db.session.delete(client)
+    db.session.commit()
+    return jsonify({'success': True})
+
 @clients_bp.route('/clients/json', methods=['GET'])
 def clients_json():
     return jsonify(get_clients_json())
