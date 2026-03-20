@@ -274,17 +274,17 @@
                   <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
                   {% if order and order.recipient_social %}
                   {% set is_telegram = order.recipient_social.startswith('@') %}
-                  {% set social_handle = order.recipient_social.lstrip('@') %}
+                  {% set social_display = order.recipient_social.lstrip('@') %}
                   <button type="button"
                     class="copy-handle-btn group flex items-center gap-1.5 text-left"
-                    data-handle="{{ social_handle }}"
-                    title="Скопіювати {{ social_handle }}">
+                    data-handle="{{ order.recipient_social }}"
+                    title="Скопіювати {{ order.recipient_social }}">
                     {% if is_telegram %}
                     <i class="bi bi-telegram text-xs text-stone-400 group-hover:text-sky-500 transition-colors"></i>
                     {% else %}
                     <i class="bi bi-instagram text-xs text-stone-400 group-hover:text-pink-500 transition-colors"></i>
                     {% endif %}
-                    <span class="text-sm text-stone-500 group-hover:text-stone-800 transition-colors">{{ social_handle }}</span>
+                    <span class="text-sm text-stone-500 group-hover:text-stone-800 transition-colors">{{ social_display }}</span>
                     <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
                   </button>
                   {% endif %}
