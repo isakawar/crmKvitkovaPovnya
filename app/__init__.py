@@ -1,7 +1,10 @@
 import os
+import datetime as _dt_module
 from flask import Flask, render_template, send_file, Response, redirect, url_for, request
 from dotenv import load_dotenv
 from flask_login import current_user
+
+_last_route_cache_cleanup = None
 
 # Load environment variables from .env file
 load_dotenv()
@@ -52,6 +55,24 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(florist_bp)
     app.register_blueprint(import_csv_bp)
     app.register_blueprint(dashboard_bp)
+
+    # Cleanup old route cache (раз на добу, старше 7 днів)
+    @app.before_request
+    def cleanup_route_cache():
+        global _last_route_cache_cleanup
+        now = _dt_module.datetime.utcnow()
+        if _last_route_cache_cleanup and (now - _last_route_cache_cleanup).total_seconds() < 86400:
+            return
+        _last_route_cache_cleanup = now
+        try:
+            from app.models.delivery_route import DeliveryRoute
+            cutoff = now - _dt_module.timedelta(days=7)
+            (DeliveryRoute.query
+                .filter(DeliveryRoute.cached_at != None, DeliveryRoute.cached_at < cutoff)
+                .update({'cached_result_json': None, 'cached_at': None}, synchronize_session=False))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
     # Захист всіх маршрутів за замовчуванням
     @app.before_request

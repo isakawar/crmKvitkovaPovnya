@@ -487,6 +487,11 @@
 // ── Edit mode ─────────────────────────────────────────────────────────────────
 const EDITING_ROUTE_ID = {{ edit_route_id | tojson }};
 const EDITING_DELIVERY_IDS = {{ editing_delivery_ids | tojson }};
+{% if editing_cached_result %}
+const EDITING_CACHED_RESULT = {{ editing_cached_result | tojson }};
+{% else %}
+const EDITING_CACHED_RESULT = null;
+{% endif %}
 
 // ── Job polling ──────────────────────────────────────────────────────────────
 function startJobPolling(jobId, csvMode, date) {
@@ -695,10 +700,11 @@ function renderPickerList(deliveries) {
     const meta = [d.recipient_name, d.phone, (d.instagram || '').replace(/^@/, '')].filter(Boolean).join(' · ');
 
     const isCurrentRoute = EDITING_ROUTE_ID && EDITING_DELIVERY_IDS.includes(d.id);
+    const shouldCheck = EDITING_ROUTE_ID ? isCurrentRoute : true;
     const row = document.createElement('label');
-    row.className = 'picker-row';
+    row.className = 'picker-row' + (shouldCheck ? '' : ' unchecked');
     row.innerHTML = `
-      <input type="checkbox" value="${d.id}" checked>
+      <input type="checkbox" value="${d.id}" ${shouldCheck ? 'checked' : ''}>
       <span class="picker-time" title="Натисніть щоб змінити час">${formatTimeLabel(d)}</span>
       <span style="flex:1;">
         <div class="picker-addr">${addr || '—'}</div>
@@ -1259,11 +1265,6 @@ document.addEventListener('click', function(e) {
     document.getElementById('export-selected-date').value = selectedDate;
   });
 
-  // Auto-open picker in edit mode
-  if (EDITING_ROUTE_ID) {
-    document.getElementById('btn-open-picker').click();
-  }
-
   window.renderResult = function(result, csvMode) {
     isCsvMode = !!csvMode;
     originalResult = result;
@@ -1282,6 +1283,22 @@ document.addEventListener('click', function(e) {
     document.getElementById('export-result-json').value = JSON.stringify(result);
     document.getElementById('changes-banner').classList.remove('visible');
   };
+
+  // Auto-load cached route in edit mode (після визначення renderResult)
+  if (EDITING_ROUTE_ID && EDITING_CACHED_RESULT) {
+    try {
+      const cached = typeof EDITING_CACHED_RESULT === 'string'
+        ? JSON.parse(EDITING_CACHED_RESULT)
+        : EDITING_CACHED_RESULT;
+      cached._selectedDate = selectedDate;
+      window.renderResult(cached);
+    } catch(e) {
+      console.warn('Failed to load cached route:', e);
+      document.getElementById('btn-open-picker').click();
+    }
+  } else if (EDITING_ROUTE_ID) {
+    document.getElementById('btn-open-picker').click();
+  }
 })();
 </script>
 {% endblock %}
