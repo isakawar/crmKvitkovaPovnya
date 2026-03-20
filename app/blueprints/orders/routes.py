@@ -51,7 +51,7 @@ def orders_list():
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
     page = int(request.args.get('page', 1))
-    per_page = 30
+    per_page = 100
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     all_orders_count = Order.query.count()
@@ -296,6 +296,40 @@ def order_delete(order_id):
     delete_order(order)
     return jsonify({'success': True})
 
+@orders_bp.route('/orders/deliveries/<int:delivery_id>/dependencies', methods=['GET'])
+@login_required
+def delivery_dependencies(delivery_id):
+    delivery = Delivery.query.get_or_404(delivery_id)
+    from app.models.delivery_route import DeliveryRoute
+    routes_info = []
+    seen_route_ids = set()
+    for rs in delivery.route_stops:
+        if rs.route_id not in seen_route_ids:
+            seen_route_ids.add(rs.route_id)
+            route = rs.route
+            routes_info.append({
+                'id': route.id,
+                'date': route.route_date.strftime('%d.%m.%Y'),
+                'courier': route.courier.name if route.courier else 'Не призначено',
+                'status': route.status,
+            })
+    return jsonify({'deliveries_count': 1, 'routes': routes_info})
+
+@orders_bp.route('/orders/deliveries/<int:delivery_id>/delete', methods=['POST'])
+@login_required
+def delivery_delete(delivery_id):
+    delivery = Delivery.query.get_or_404(delivery_id)
+    order = delivery.order
+    from app.models.delivery_route import RouteDelivery
+    RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+    db.session.delete(delivery)
+    db.session.flush()
+    remaining = Delivery.query.filter_by(order_id=order.id).count()
+    if remaining == 0:
+        db.session.delete(order)
+    db.session.commit()
+    return jsonify({'success': True})
+
 @orders_bp.route('/orders/deliveries/time', methods=['POST'])
 @login_required
 def update_delivery_times():
@@ -535,6 +569,10 @@ def route_generator_deliveries():
             Delivery.is_pickup == False,
             Delivery.status.in_(['Очікує', 'Розподілено']),
             Delivery.delivery_method != 'nova_poshta',
+            db.or_(
+                db.and_(Delivery.time_from != None, Delivery.time_from != ''),
+                db.and_(Delivery.time_to != None, Delivery.time_to != ''),
+            ),
             ~Delivery.id.in_(already_routed)
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())

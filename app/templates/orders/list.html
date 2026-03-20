@@ -258,7 +258,7 @@
             {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
-            {% set time_confirmed = delivery.time_from %}
+            {% set time_confirmed = delivery.time_from or delivery.time_to %}
             <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ '' if time_confirmed else 'bg-stone-100' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
@@ -745,11 +745,14 @@
       ids.forEach(id => {
         const row = document.querySelector(`tr[data-delivery-id="${id}"]`);
         if (!row) return;
-        row.dataset.timeFrom = clear ? '' : fromValue;
+        const newTimeFrom = clear ? '' : fromValue;
+        row.dataset.timeFrom = newTimeFrom;
         row.dataset.timeTo = clear ? '' : toValue;
         if (deliveryDate) {
           row.dataset.deliveryDate = deliveryDate;
         }
+        const newTimeTo = clear ? '' : toValue;
+        row.classList.toggle('bg-stone-100', !newTimeFrom && !newTimeTo);
         const slot = row.querySelector('.delivery-time-slot');
         if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
       });
@@ -802,7 +805,10 @@
     const orderId = row.dataset.orderId;
     if (!orderId) return;
     if (!window.orderComposerApi || !window.orderComposerApi.openOrderEditor) return;
-    window.orderComposerApi.openOrderEditor(orderId);
+    window.orderComposerApi.openOrderEditor(orderId, {
+        deliveryId: row.dataset.deliveryId || null,
+        forceOrderTitle: true,
+    });
   });
 })();
 </script>
