@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let isScenarioLocked = false;
     let returnModalInstance = null;
     window.currentOrderId = null;
+    window.currentDeliveryId = null;
 
     const composerContent = {
         order: {
@@ -239,7 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
             deliveryDaySelect.required = currentComposerFlow === 'subscription';
         }
         if (firstDeliveryLabel) {
-            firstDeliveryLabel.innerHTML = currentComposerFlow === 'subscription'
+            const isExtendMode = addOrderForm.getAttribute('data-extend-mode') === 'true';
+            const showFirstDelivery = currentComposerFlow === 'subscription' && (!isEditing || isExtendMode);
+            firstDeliveryLabel.innerHTML = showFirstDelivery
                 ? '<i class="bi bi-calendar-event"></i> Перша доставка <span class="text-red-500">*</span>'
                 : '<i class="bi bi-calendar-event"></i> Дата доставки <span class="text-red-500">*</span>';
         }
@@ -327,10 +330,19 @@ document.addEventListener('DOMContentLoaded', function() {
         clientResults.innerHTML = '';
     }
 
+    function toggleDeleteOrderBtn(show) {
+        const btn = document.getElementById('delete-order-btn');
+        if (!btn) return;
+        btn.classList.toggle('hidden', !show);
+        btn.classList.toggle('inline-flex', show);
+    }
+
     function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
         addOrderForm.removeAttribute('data-edit-id');
         addOrderForm.removeAttribute('data-extend-mode');
+        window.currentDeliveryId = null;
+        toggleDeleteOrderBtn(false);
         if (extendFromInput) {
             extendFromInput.value = '';
         }
@@ -370,6 +382,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const orderData = await response.json();
         populateComposerForm(orderData, orderId, {
             preserveReturnContext: Boolean(options.returnToModalId),
+            deliveryId: options.deliveryId || null,
+            forceOrderTitle: options.forceOrderTitle || false,
         });
     }
 
@@ -607,7 +621,11 @@ document.addEventListener('DOMContentLoaded', function() {
             setDeliveryMode('courier');
         }
         syncCustomAmountState();
+        window.currentDeliveryId = options.deliveryId || null;
         setComposerFlow(flow, true);
+        if (options.forceOrderTitle && orderModalTitle) {
+            orderModalTitle.textContent = 'Редагувати замовлення';
+        }
 
         if (extendHeaderBtn) {
             if (flow === 'subscription' && orderData.can_extend_subscription) {
@@ -619,6 +637,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        toggleDeleteOrderBtn(true);
         addOrderModal.show();
     }
 
@@ -798,5 +817,76 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     maybeLaunchComposerFromQuery();
+
+    const deleteOrderBtn = document.getElementById('delete-order-btn');
+    const deleteOrderConfirmModalEl = document.getElementById('deleteOrderConfirmModal');
+    const confirmDeleteOrderBtn = document.getElementById('confirm-delete-order-btn');
+    const deleteOrderDepsInfo = document.getElementById('delete-order-deps-info');
+    const deleteOrderConfirmModal = deleteOrderConfirmModalEl
+        ? bootstrap.Modal.getOrCreateInstance(deleteOrderConfirmModalEl)
+        : null;
+
+    if (deleteOrderBtn && deleteOrderConfirmModal) {
+        deleteOrderBtn.addEventListener('click', async function () {
+            const orderId = addOrderForm.getAttribute('data-edit-id');
+            if (!orderId) return;
+
+            const deliveryId = window.currentDeliveryId;
+            const depsUrl = deliveryId
+                ? `/orders/deliveries/${deliveryId}/dependencies`
+                : `/orders/${orderId}/dependencies`;
+
+            let deps = { deliveries_count: 0, routes: [] };
+            try {
+                const resp = await fetch(depsUrl);
+                if (resp.ok) deps = await resp.json();
+            } catch (e) { /* show modal anyway */ }
+
+            const lines = [];
+            lines.push(`<p>Буде видалено <strong>${deps.deliveries_count}</strong> доставк${deps.deliveries_count === 1 ? 'у' : deps.deliveries_count < 5 ? 'и' : 'ок'}.</p>`);
+            if (deps.routes && deps.routes.length > 0) {
+                lines.push('<p class="mt-2 font-medium text-red-600"><i class="bi bi-exclamation-triangle me-1"></i>Замовлення входить до маршрутів:</p>');
+                lines.push('<ul class="mt-1 space-y-1 pl-1">');
+                deps.routes.forEach(r => {
+                    lines.push(`<li class="flex items-center gap-2"><i class="bi bi-geo-alt text-stone-400"></i><span>Маршрут #${r.id} — ${r.date}, кур'єр: ${r.courier} (${r.status})</span></li>`);
+                });
+                lines.push('</ul>');
+            }
+            if (deleteOrderDepsInfo) deleteOrderDepsInfo.innerHTML = lines.join('');
+
+            if (confirmDeleteOrderBtn) {
+                confirmDeleteOrderBtn.dataset.orderId = orderId;
+                confirmDeleteOrderBtn.dataset.deliveryId = deliveryId || '';
+            }
+
+            deleteOrderConfirmModal.show();
+        });
+    }
+
+    if (confirmDeleteOrderBtn) {
+        confirmDeleteOrderBtn.addEventListener('click', async function () {
+            const deliveryId = this.dataset.deliveryId;
+            const orderId = this.dataset.orderId;
+            const deleteUrl = deliveryId
+                ? `/orders/deliveries/${deliveryId}/delete`
+                : `/orders/${orderId}/delete`;
+            if (!deleteUrl) return;
+            try {
+                const resp = await fetch(deleteUrl, { method: 'POST' });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success) {
+                    if (deleteOrderConfirmModal) deleteOrderConfirmModal.hide();
+                    alert(data.error || 'Не вдалося видалити замовлення');
+                    return;
+                }
+                if (deleteOrderConfirmModal) deleteOrderConfirmModal.hide();
+                addOrderModal.hide();
+                showToast('Замовлення видалено', 'success');
+                setTimeout(() => location.reload(), 900);
+            } catch (e) {
+                alert('Помилка зʼєднання');
+            }
+        });
+    }
 });
 </script>

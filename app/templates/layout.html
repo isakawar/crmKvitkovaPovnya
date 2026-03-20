@@ -354,5 +354,20 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% block scripts %}{% endblock %}
+<script>
+function disableAutocomplete(root) {
+  (root || document).querySelectorAll('input, select, textarea').forEach(function(el) {
+    if (!el.closest('.auth-form')) el.setAttribute('autocomplete', 'off');
+  });
+}
+disableAutocomplete();
+new MutationObserver(function(mutations) {
+  mutations.forEach(function(m) {
+    m.addedNodes.forEach(function(node) {
+      if (node.nodeType === 1) disableAutocomplete(node);
+    });
+  });
+}).observe(document.body, { childList: true, subtree: true });
+</script>
 </body>
 </html>

@@ -51,7 +51,7 @@ def orders_list():
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
     page = int(request.args.get('page', 1))
-    per_page = 30
+    per_page = 100
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     all_orders_count = Order.query.count()
@@ -265,11 +265,69 @@ def order_edit(order_id):
         'can_extend_subscription': can_extend_subscription
     })
 
+@orders_bp.route('/orders/<int:order_id>/dependencies', methods=['GET'])
+@login_required
+def order_dependencies(order_id):
+    order = Order.query.get_or_404(order_id)
+    from app.models.delivery_route import RouteDelivery, DeliveryRoute
+    deliveries = order.deliveries
+    routes_info = []
+    seen_route_ids = set()
+    for d in deliveries:
+        for rs in d.route_stops:
+            if rs.route_id not in seen_route_ids:
+                seen_route_ids.add(rs.route_id)
+                route = rs.route
+                routes_info.append({
+                    'id': route.id,
+                    'date': route.route_date.strftime('%d.%m.%Y'),
+                    'courier': route.courier.name if route.courier else 'Не призначено',
+                    'status': route.status,
+                })
+    return jsonify({
+        'deliveries_count': len(deliveries),
+        'routes': routes_info,
+    })
+
 @orders_bp.route('/orders/<int:order_id>/delete', methods=['POST'])
 @login_required
 def order_delete(order_id):
     order = Order.query.get_or_404(order_id)
     delete_order(order)
+    return jsonify({'success': True})
+
+@orders_bp.route('/orders/deliveries/<int:delivery_id>/dependencies', methods=['GET'])
+@login_required
+def delivery_dependencies(delivery_id):
+    delivery = Delivery.query.get_or_404(delivery_id)
+    from app.models.delivery_route import DeliveryRoute
+    routes_info = []
+    seen_route_ids = set()
+    for rs in delivery.route_stops:
+        if rs.route_id not in seen_route_ids:
+            seen_route_ids.add(rs.route_id)
+            route = rs.route
+            routes_info.append({
+                'id': route.id,
+                'date': route.route_date.strftime('%d.%m.%Y'),
+                'courier': route.courier.name if route.courier else 'Не призначено',
+                'status': route.status,
+            })
+    return jsonify({'deliveries_count': 1, 'routes': routes_info})
+
+@orders_bp.route('/orders/deliveries/<int:delivery_id>/delete', methods=['POST'])
+@login_required
+def delivery_delete(delivery_id):
+    delivery = Delivery.query.get_or_404(delivery_id)
+    order = delivery.order
+    from app.models.delivery_route import RouteDelivery
+    RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+    db.session.delete(delivery)
+    db.session.flush()
+    remaining = Delivery.query.filter_by(order_id=order.id).count()
+    if remaining == 0:
+        db.session.delete(order)
+    db.session.commit()
     return jsonify({'success': True})
 
 @orders_bp.route('/orders/deliveries/time', methods=['POST'])
@@ -342,13 +400,21 @@ def route_generator():
     edit_route_id = request.args.get('edit', type=int)
     editing_route = None
     editing_delivery_ids = []
+    editing_cached_result = None
+    editing_courier = None
+    editing_couriers = []
     if edit_route_id:
         from app.models.delivery_route import DeliveryRoute
+        from app.models.courier import Courier
         editing_route = DeliveryRoute.query.get(edit_route_id)
         if editing_route:
             if not selected_date_str:
                 selected_date_str = editing_route.route_date.isoformat()
             editing_delivery_ids = [stop.delivery_id for stop in editing_route.stops]
+            if editing_route.cached_result_json:
+                editing_cached_result = editing_route.cached_result_json
+            editing_courier = editing_route.courier
+            editing_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
 
     if not selected_date_str:
         selected_date_str = date.today().isoformat()
@@ -411,6 +477,9 @@ def route_generator():
         editing_route=editing_route,
         edit_route_id=edit_route_id,
         editing_delivery_ids=editing_delivery_ids,
+        editing_cached_result=editing_cached_result,
+        editing_courier=editing_courier,
+        editing_couriers=editing_couriers,
     )
 
 
@@ -500,6 +569,10 @@ def route_generator_deliveries():
             Delivery.is_pickup == False,
             Delivery.status.in_(['Очікує', 'Розподілено']),
             Delivery.delivery_method != 'nova_poshta',
+            db.or_(
+                db.and_(Delivery.time_from != None, Delivery.time_from != ''),
+                db.and_(Delivery.time_to != None, Delivery.time_to != ''),
+            ),
             ~Delivery.id.in_(already_routed)
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
@@ -582,9 +655,17 @@ def route_generator_save():
         if not stops:
             continue
 
-        # Edit mode: update existing route instead of creating new
+        # Build single-route cache (only this courier's route, not the full multi-route result)
+        single_route_cache = json.dumps({
+            **{k: v for k, v in result.items() if k != 'routes'},
+            'routes': [route_data],
+        })
+
+        dr = None
+        # Edit mode: update existing route instead of creating new (only for first route)
         if editing_route_id:
             dr = DeliveryRoute.query.get(editing_route_id)
+            editing_route_id = None  # consume — next routes will be created as new
             if dr:
                 # Reset old deliveries to 'Очікує'
                 old_delivery_ids = [s.delivery_id for s in dr.stops]
@@ -598,17 +679,21 @@ def route_generator_save():
                 dr.deliveries_count = len(stops)
                 dr.total_distance_km = route_data.get('totalDistanceKm')
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
+                dr.cached_result_json = single_route_cache
+                dr.cached_at = datetime.utcnow()
                 db.session.flush()
             else:
-                editing_route_id = None  # fallback to create new
+                dr = None  # fallback to create new below
 
-        if not editing_route_id or not dr:
+        if not dr:
             dr = DeliveryRoute(
                 route_date=selected_date,
                 status='draft',
                 deliveries_count=len(stops),
                 total_distance_km=route_data.get('totalDistanceKm'),
                 estimated_duration_min=route_data.get('totalDriveMin'),
+                cached_result_json=single_route_cache,
+                cached_at=datetime.utcnow(),
             )
             db.session.add(dr)
             db.session.flush()

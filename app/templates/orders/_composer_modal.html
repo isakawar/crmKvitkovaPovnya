@@ -1,7 +1,7 @@
 <div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable order-composer-dialog">
     <div class="modal-content order-composer-content">
-      <form id="addOrderForm" novalidate>
+      <form id="addOrderForm" novalidate autocomplete="off">
         <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <input type="hidden" name="extend_from_order_id" id="extend-from-order-id" value="">
         <div class="order-composer-shell">
@@ -237,7 +237,7 @@
                     <div class="order-field">
                       <label class="order-label" for="first-delivery-date-input" id="first-delivery-label">
                         <i class="bi bi-calendar-event"></i>
-                        Перша доставка <span class="text-red-500">*</span>
+                        Дата доставки <span class="text-red-500">*</span>
                       </label>
                       <input type="date" id="first-delivery-date-input" name="first_delivery_date" class="order-input" required>
                     </div>
@@ -328,15 +328,56 @@
               Для підписки система створить серію доставок автоматично. Для разового замовлення буде створена одна доставка.
             </p>
 
-            <div class="order-footer-actions">
-              <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-              <button type="submit" class="order-btn-primary" id="order-submit-btn">
-                <span id="order-submit-btn-text">Створити замовлення</span>
+            <div class="flex items-center justify-between gap-3 w-full">
+              <button type="button" id="delete-order-btn"
+                      class="hidden items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:border-red-300"
+                      title="Видалити замовлення">
+                <i class="bi bi-trash3"></i>
               </button>
+              <div class="order-footer-actions ml-auto">
+                <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="submit" class="order-btn-primary" id="order-submit-btn">
+                  <span id="order-submit-btn-text">Створити замовлення</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Order Delete Confirmation Modal -->
+<div class="modal fade" id="deleteOrderConfirmModal" tabindex="-1" aria-labelledby="deleteOrderConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content rounded-2xl border-0 shadow-lg" style="overflow: hidden;">
+      <div class="modal-header border-0 pb-0 px-5 pt-5">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-red-50 text-red-500 flex-shrink-0">
+            <i class="bi bi-trash3 text-lg"></i>
+          </div>
+          <div>
+            <h5 class="modal-title font-semibold text-stone-900 text-base" id="deleteOrderConfirmLabel">Видалити замовлення?</h5>
+            <p class="text-sm text-stone-500 mt-0.5">Цю дію не можна скасувати</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body px-5 py-4">
+        <div id="delete-order-deps-info" class="space-y-2 text-sm text-stone-700">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-5 pb-5 pt-2">
+        <div class="order-footer-actions w-full">
+          <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="button" id="confirm-delete-order-btn"
+                  class="order-btn-primary !bg-red-500 hover:!bg-red-600">
+            <i class="bi bi-trash3"></i>
+            Видалити
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

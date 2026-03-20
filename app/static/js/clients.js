@@ -98,6 +98,8 @@ document.addEventListener('DOMContentLoaded', function () {
     resetForm();
   });
 
+  const deleteClientBtn = document.getElementById('delete-client-btn');
+
   function renderMode() {
     const content = isEditMode ? modeContent.edit : modeContent.create;
     modalTitle.textContent = isEditMode && currentClientLabel
@@ -110,6 +112,31 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtnText.textContent = content.submit;
     }
     updateSubscriptionButtonState();
+    if (deleteClientBtn) {
+      deleteClientBtn.classList.toggle('hidden', !isEditMode);
+      deleteClientBtn.classList.toggle('inline-flex', isEditMode);
+    }
+  }
+
+  if (deleteClientBtn) {
+    deleteClientBtn.addEventListener('click', async function () {
+      const clientId = clientIdInput.value;
+      if (!clientId) return;
+      if (!confirm(`Видалити клієнта "${currentClientLabel}"? Цю дію не можна скасувати.`)) return;
+      try {
+        const resp = await fetch(`/clients/${clientId}/delete`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+          alert(data.error || 'Не вдалося видалити клієнта');
+          return;
+        }
+        modalInstance.hide();
+        showToast('Клієнта видалено', 'success');
+        setTimeout(() => location.reload(), 900);
+      } catch (e) {
+        alert('Помилка з\'єднання');
+      }
+    });
   }
 
   function resetForm() {

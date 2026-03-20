@@ -193,16 +193,23 @@
               Поля зі зірочкою потрібні для створення картки. Інші дані можна оновити будь-коли.
             </p>
 
-            <div class="flex flex-col-reverse gap-3 sm:flex-row">
-              <button type="button" class="client-btn-secondary" data-bs-dismiss="modal">
-                Скасувати
+            <div class="flex items-center justify-between gap-3 w-full">
+              <button type="button" id="delete-client-btn"
+                      class="hidden items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:border-red-300"
+                      title="Видалити клієнта">
+                <i class="bi bi-trash3"></i>
               </button>
-              <button type="button" id="add-subscription-btn" class="client-btn-subscription" disabled>
-                Додати підписку
-              </button>
-              <button type="submit" id="submit-btn" class="client-btn-primary">
-                <span id="submit-btn-text">Створити клієнта</span>
-              </button>
+              <div class="flex flex-col-reverse gap-3 sm:flex-row ml-auto">
+                <button type="button" class="client-btn-secondary" data-bs-dismiss="modal">
+                  Скасувати
+                </button>
+                <button type="button" id="add-subscription-btn" class="client-btn-subscription" disabled>
+                  Додати підписку
+                </button>
+                <button type="submit" id="submit-btn" class="client-btn-primary">
+                  <span id="submit-btn-text">Створити клієнта</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

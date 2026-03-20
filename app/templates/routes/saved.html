@@ -768,6 +768,46 @@
   </section>
   {% endif %}
 
+  {% if unrouted_deliveries %}
+  <section class="route-ops-grid">
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500"><i class="bi bi-exclamation-circle"></i></span>
+            <div>
+              <p class="route-ops-title">Не розподілені</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ unrouted_deliveries|length }} доставок без маршруту</p>
+            </div>
+          </div>
+          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+        </div>
+      </summary>
+      <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
+        <table class="route-table">
+          <thead>
+            <tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr>
+          </thead>
+          <tbody>
+            {% for d in unrouted_deliveries %}
+            {% set order = d.order %}{% set client = d.client %}
+            <tr>
+              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+              <td class="whitespace-nowrap">{% if d.time_from == '∞' %}∞{% elif d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+              <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+  {% endif %}
+
   {% if nova_poshta_deliveries or pickup_deliveries %}
   <section class="route-ops-grid">
     {% if nova_poshta_deliveries %}
