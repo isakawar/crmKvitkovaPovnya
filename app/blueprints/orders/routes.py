@@ -343,8 +343,11 @@ def route_generator():
     editing_route = None
     editing_delivery_ids = []
     editing_cached_result = None
+    editing_courier = None
+    editing_couriers = []
     if edit_route_id:
         from app.models.delivery_route import DeliveryRoute
+        from app.models.courier import Courier
         editing_route = DeliveryRoute.query.get(edit_route_id)
         if editing_route:
             if not selected_date_str:
@@ -352,6 +355,8 @@ def route_generator():
             editing_delivery_ids = [stop.delivery_id for stop in editing_route.stops]
             if editing_route.cached_result_json:
                 editing_cached_result = editing_route.cached_result_json
+            editing_courier = editing_route.courier
+            editing_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
 
     if not selected_date_str:
         selected_date_str = date.today().isoformat()
@@ -415,6 +420,8 @@ def route_generator():
         edit_route_id=edit_route_id,
         editing_delivery_ids=editing_delivery_ids,
         editing_cached_result=editing_cached_result,
+        editing_courier=editing_courier,
+        editing_couriers=editing_couriers,
     )
 
 
@@ -586,9 +593,17 @@ def route_generator_save():
         if not stops:
             continue
 
-        # Edit mode: update existing route instead of creating new
+        # Build single-route cache (only this courier's route, not the full multi-route result)
+        single_route_cache = json.dumps({
+            **{k: v for k, v in result.items() if k != 'routes'},
+            'routes': [route_data],
+        })
+
+        dr = None
+        # Edit mode: update existing route instead of creating new (only for first route)
         if editing_route_id:
             dr = DeliveryRoute.query.get(editing_route_id)
+            editing_route_id = None  # consume — next routes will be created as new
             if dr:
                 # Reset old deliveries to 'Очікує'
                 old_delivery_ids = [s.delivery_id for s in dr.stops]
@@ -602,20 +617,20 @@ def route_generator_save():
                 dr.deliveries_count = len(stops)
                 dr.total_distance_km = route_data.get('totalDistanceKm')
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
-                dr.cached_result_json = result_json if isinstance(result_json, str) else json.dumps(result_json)
+                dr.cached_result_json = single_route_cache
                 dr.cached_at = datetime.utcnow()
                 db.session.flush()
             else:
-                editing_route_id = None  # fallback to create new
+                dr = None  # fallback to create new below
 
-        if not editing_route_id or not dr:
+        if not dr:
             dr = DeliveryRoute(
                 route_date=selected_date,
                 status='draft',
                 deliveries_count=len(stops),
                 total_distance_km=route_data.get('totalDistanceKm'),
                 estimated_duration_min=route_data.get('totalDriveMin'),
-                cached_result_json=result_json if isinstance(result_json, str) else json.dumps(result_json),
+                cached_result_json=single_route_cache,
                 cached_at=datetime.utcnow(),
             )
             db.session.add(dr)

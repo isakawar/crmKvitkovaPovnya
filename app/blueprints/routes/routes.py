@@ -96,6 +96,22 @@ def saved_routes():
         .all()
     )
 
+    # Unrouted courier deliveries for selected date
+    already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+    unrouted_deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == np_date,
+            Delivery.is_pickup == False,
+            Delivery.delivery_method != 'nova_poshta',
+            Delivery.status.in_(['Очікує', 'Розподілено']),
+            ~Delivery.id.in_(already_routed),
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
     return render_template(
         'routes/saved.html',
         routes=routes,
@@ -103,6 +119,7 @@ def saved_routes():
         date_filter=date_filter,
         nova_poshta_deliveries=nova_poshta_deliveries,
         pickup_deliveries=pickup_deliveries,
+        unrouted_deliveries=unrouted_deliveries,
         np_date=np_date,
     )
 
@@ -153,17 +170,23 @@ def assign_and_send_route(route_id):
         flash('Кур\'єр не зареєстрований в Telegram', 'danger')
         return redirect(url_for('routes.saved_routes'))
 
-    # Notify old courier if route was already sent and courier is being changed
+    bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
     old_courier_id = route.courier_id
-    if old_courier_id and old_courier_id != courier_id and route.telegram_message_id:
-        old_courier = Courier.query.get(old_courier_id)
-        if old_courier and old_courier.telegram_chat_id:
-            bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
-            cancel_text = (
-                f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
-                f"Призначення було змінено. Ця пропозиція скасована."
-            )
-            _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+    if route.telegram_message_id:
+        if old_courier_id and old_courier_id != courier_id:
+            # Courier changed — cancel old message
+            old_courier = Courier.query.get(old_courier_id)
+            if old_courier and old_courier.telegram_chat_id:
+                cancel_text = (
+                    f"⚠️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} більше не актуальний.</b>\n\n"
+                    f"Призначення було змінено. Ця пропозиція скасована."
+                )
+                _telegram_edit(bot_token, old_courier.telegram_chat_id, route.telegram_message_id, cancel_text)
+        elif old_courier_id == courier_id:
+            # Same courier — cancel old message before resending updated one
+            if courier.telegram_chat_id:
+                _telegram_edit(bot_token, courier.telegram_chat_id, route.telegram_message_id,
+                    f"♻️ <b>Маршрут на {route.route_date.strftime('%d.%m.%Y')} оновлено.</b>\n\nНижче актуальна версія.")
         route.telegram_message_id = None
 
     route.courier_id = courier_id
@@ -212,7 +235,6 @@ def assign_and_send_route(route_id):
         {'text': '❌ Відхилити', 'callback_data': f'route_reject_{route_id}'},
     ])
 
-    bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
     msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, {'inline_keyboard': inline_keyboard})
 
     if not msg_id:
