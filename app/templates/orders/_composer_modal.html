@@ -321,6 +321,36 @@
                 </div>
               </div>
             </section>
+
+            <!-- Certificate section -->
+            <input type="hidden" name="certificate_code" id="order-certificate-code" value="">
+            <section class="order-panel order-panel-notes mt-4">
+              <span class="order-section-kicker order-section-kicker-muted">
+                <i class="bi bi-award"></i>
+                Сертифікат
+              </span>
+              <div class="mt-3 flex flex-col gap-3">
+                <div class="flex gap-2">
+                  <div class="flex-1 order-field">
+                    <label class="order-label" for="order-cert-code-input">
+                      <i class="bi bi-upc-scan"></i>
+                      Код сертифіката
+                    </label>
+                    <input type="text" id="order-cert-code-input" class="order-input font-mono uppercase"
+                           placeholder="KVIT-XXXX-XXXX"
+                           autocomplete="off" maxlength="50">
+                  </div>
+                  <div class="flex items-end pb-0.5">
+                    <button type="button" id="cert-validate-btn"
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-stone-200 bg-white text-sm text-stone-700 hover:bg-stone-50 transition-colors whitespace-nowrap">
+                      Перевірити
+                    </button>
+                  </div>
+                </div>
+                <!-- Certificate result -->
+                <div id="cert-result" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
+              </div>
+            </section>
           </div>
 
           <div class="order-composer-footer">

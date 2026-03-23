@@ -810,6 +810,16 @@
         forceOrderTitle: true,
     });
   });
+
+  const openParam = new URLSearchParams(window.location.search).get('open');
+  if (openParam) {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.orderComposerApi?.openOrderEditor) {
+        window.orderComposerApi.openOrderEditor(openParam, { forceOrderTitle: true });
+        history.replaceState(null, '', window.location.pathname);
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}

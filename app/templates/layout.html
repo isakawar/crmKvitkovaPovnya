@@ -213,7 +213,7 @@
             <i class="bi bi-truck text-lg flex-shrink-0"></i>
             <span class="nav-label">Замовлення</span>
         </a>
-<a href="/route-generator"
+        <a href="/route-generator"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Оптимізатор маршрутів">
@@ -243,6 +243,13 @@
             <span class="nav-label">Флорист</span>
         </a>
         {% endif %}
+        <a href="/certificates"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/certificates') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Сертифікати">
+            <i class="bi bi-award text-lg flex-shrink-0"></i>
+            <span class="nav-label">Сертифікати</span>
+        </a>
 
         <!-- Spacer -->
         <div class="flex-1"></div>

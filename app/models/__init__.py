@@ -10,5 +10,6 @@ from .settings import Settings
 from .user import User, Role
 from .delivery_route import DeliveryRoute, RouteDelivery
 from .price import Price
+from .certificate import Certificate
 
-__all__ = ['Client', 'Courier', 'Delivery', 'Order', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price'] 
+__all__ = ['Client', 'Courier', 'Delivery', 'Order', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price', 'Certificate']

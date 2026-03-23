@@ -1,0 +1,325 @@
+<style>
+  .cert-detail-dialog {
+    max-width: 700px;
+    margin: 0.9rem auto;
+  }
+
+  .cert-detail-content {
+    border: 1px solid #e7e5e4;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 24px 56px rgba(28, 25, 23, 0.18);
+  }
+
+  .cert-detail-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.2rem 1.4rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+  }
+
+  .cert-detail-title {
+    margin: 0.15rem 0 0;
+    font-size: 32px;
+    line-height: 1.05;
+    font-weight: 700;
+    color: #1c1917;
+  }
+
+  .cert-detail-subtitle {
+    margin-top: 0.35rem;
+    font-size: 14px;
+    color: #78716c;
+  }
+
+  .cert-detail-close {
+    width: 44px;
+    height: 44px;
+    border-radius: 16px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #a8a29e;
+    transition: all .18s ease;
+  }
+
+  .cert-detail-close:hover {
+    border-color: #d6d3d1;
+    color: #57534e;
+    background: #fafaf9;
+  }
+
+  .cert-detail-body {
+    padding: 1rem 1.4rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+
+  .cert-detail-status {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  .cert-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .cert-detail-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid #f5f5f4;
+  }
+
+  .cert-detail-row:last-child {
+    border-bottom: 0;
+  }
+
+  .cert-detail-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .cert-detail-value {
+    font-size: 14px;
+    color: #1c1917;
+    font-weight: 500;
+    text-align: right;
+    max-width: 68%;
+    word-break: break-word;
+  }
+
+  .cert-detail-comment {
+    display: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    border: 1px solid #e7e5e4;
+    background: #fafaf9;
+    border-radius: 14px;
+    padding: 0.7rem 0.8rem;
+  }
+
+  .cert-detail-comment-text {
+    font-size: 13px;
+    color: #57534e;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .cert-detail-footer {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #f1f5f9;
+    padding: 0.9rem 1.4rem 1rem;
+  }
+
+  .cert-detail-btn {
+    height: 42px;
+    min-width: 130px;
+    border-radius: 14px;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #57534e;
+    font-size: 15px;
+    font-weight: 600;
+    transition: all .18s ease;
+  }
+
+  .cert-detail-btn:hover {
+    border-color: #d6d3d1;
+    background: #fafaf9;
+  }
+
+  @media (min-width: 768px) {
+    .cert-detail-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7rem 1.2rem;
+    }
+  }
+</style>
+
+<div class="modal fade" id="certDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cert-detail-dialog">
+    <div class="modal-content cert-detail-content">
+      <div class="cert-detail-header">
+        <div>
+          <span class="cert-modal-chip">
+            <i class="bi bi-file-earmark-text"></i>
+            Деталі
+          </span>
+          <h2 class="cert-detail-title" id="certDetailCode">—</h2>
+          <p class="cert-detail-subtitle" id="certDetailTypeValue">—</p>
+        </div>
+        <button type="button" class="cert-detail-close d-inline-flex align-items-center justify-content-center" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="cert-detail-body">
+        <div id="certDetailStatusWrap" class="cert-detail-status"></div>
+
+        <div class="cert-detail-grid">
+          <div class="cert-detail-row">
+            <span class="cert-detail-label">Термін дії</span>
+            <span class="cert-detail-value" id="certDetailExpires">—</span>
+          </div>
+          <div class="cert-detail-row">
+            <span class="cert-detail-label">Створено</span>
+            <span class="cert-detail-value" id="certDetailCreatedAt">—</span>
+          </div>
+          <div class="cert-detail-row">
+            <span class="cert-detail-label">Ким створено</span>
+            <span class="cert-detail-value" id="certDetailCreatedBy">—</span>
+          </div>
+          <div id="certDetailUsedAtRow" class="cert-detail-row" style="display:none;">
+            <span class="cert-detail-label">Використано</span>
+            <span class="cert-detail-value" id="certDetailUsedAt">—</span>
+          </div>
+          <div id="certDetailClientRow" class="cert-detail-row" style="display:none;">
+            <span class="cert-detail-label">Клієнт</span>
+            <span class="cert-detail-value" id="certDetailClient">—</span>
+          </div>
+          <div id="certDetailOrderRow" class="cert-detail-row" style="display:none;">
+            <span class="cert-detail-label" id="certDetailOrderLabel">Замовлення</span>
+            <a id="certDetailOrderLink" href="#" class="cert-detail-value text-amber-700 text-decoration-underline">—</a>
+          </div>
+        </div>
+
+        <div id="certDetailCommentRow" class="cert-detail-comment">
+          <span class="cert-detail-label">Коментар</span>
+          <span id="certDetailComment" class="cert-detail-comment-text">—</span>
+        </div>
+      </div>
+
+      <div class="cert-detail-footer">
+        <button type="button" data-bs-dismiss="modal" class="cert-detail-btn">Закрити</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const STATUS_HTML = {
+    active: '<span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"><i class="bi bi-check2-circle"></i>Активний</span>',
+    used: '<span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700"><i class="bi bi-check2-square"></i>Використаний</span>',
+    expired: '<span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700"><i class="bi bi-exclamation-circle"></i>Прострочений</span>',
+  };
+
+  function showRow(element) {
+    if (!element) return;
+    element.style.display = '';
+  }
+
+  function hideRow(element) {
+    if (!element) return;
+    element.style.display = 'none';
+  }
+
+  function setText(id, value, fallback = '—') {
+    const node = document.getElementById(id);
+    if (!node) return;
+    node.textContent = value || fallback;
+  }
+
+  function resetDetailModal() {
+    setText('certDetailCode', '—');
+    setText('certDetailTypeValue', '—');
+    setText('certDetailExpires', '—');
+    setText('certDetailCreatedAt', '—');
+    setText('certDetailCreatedBy', '—');
+    setText('certDetailUsedAt', '—');
+    setText('certDetailClient', '—');
+    setText('certDetailComment', '—');
+    const statusWrap = document.getElementById('certDetailStatusWrap');
+    if (statusWrap) statusWrap.innerHTML = '';
+
+    hideRow(document.getElementById('certDetailUsedAtRow'));
+    hideRow(document.getElementById('certDetailClientRow'));
+    hideRow(document.getElementById('certDetailOrderRow'));
+    hideRow(document.getElementById('certDetailCommentRow'));
+  }
+
+  async function openCertDetail(certId) {
+    if (!certId) return;
+    const modalEl = document.getElementById('certDetailModal');
+    if (!modalEl) return;
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    resetDetailModal();
+    modal.show();
+
+    try {
+      const resp = await fetch(`/certificates/${certId}/detail`);
+      if (!resp.ok) {
+        throw new Error('Помилка завантаження');
+      }
+      const d = await resp.json();
+
+      setText('certDetailCode', d.code);
+      setText('certDetailTypeValue', `${d.type_display || '—'} · ${d.value_display || '—'}`);
+      setText('certDetailExpires', d.expires_at);
+      setText('certDetailCreatedAt', d.created_at);
+      setText('certDetailCreatedBy', d.created_by);
+
+      const statusWrap = document.getElementById('certDetailStatusWrap');
+      if (statusWrap) {
+        statusWrap.innerHTML = STATUS_HTML[d.status] || `<span class="text-sm text-stone-500">${d.status_display || ''}</span>`;
+      }
+
+      if (d.used_at) {
+        setText('certDetailUsedAt', d.used_at);
+        showRow(document.getElementById('certDetailUsedAtRow'));
+      }
+
+      if (d.order) {
+        if (d.order.client_name) {
+          setText('certDetailClient', d.order.client_name);
+          showRow(document.getElementById('certDetailClientRow'));
+        }
+
+        const orderLabel = document.getElementById('certDetailOrderLabel');
+        if (orderLabel) {
+          orderLabel.textContent = d.order.is_subscription ? 'Підписка' : 'Замовлення';
+        }
+        const orderLink = document.getElementById('certDetailOrderLink');
+        if (orderLink) {
+          orderLink.textContent = `#${d.order.id}`;
+          orderLink.href = d.order.is_subscription
+            ? `/subscriptions?open=${d.order.id}`
+            : `/orders?open=${d.order.id}`;
+        }
+        showRow(document.getElementById('certDetailOrderRow'));
+      }
+
+      if (d.comment) {
+        setText('certDetailComment', d.comment);
+        showRow(document.getElementById('certDetailCommentRow'));
+      }
+    } catch (error) {
+      setText('certDetailCode', 'Помилка');
+      setText('certDetailTypeValue', error.message || 'Не вдалося завантажити деталі');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-cert-detail]').forEach(function (trigger) {
+      trigger.addEventListener('click', function () {
+        openCertDetail(this.getAttribute('data-cert-detail'));
+      });
+    });
+  });
+})();
+</script>

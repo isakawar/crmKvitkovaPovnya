@@ -1,0 +1,303 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block content %}
+<section class="mb-6 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+  <div class="flex flex-wrap items-end justify-between gap-4">
+    <div>
+      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Сертифікати</h1>
+    </div>
+    <div class="flex flex-wrap items-center gap-3">
+      <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+        Всього: {{ counts.all }}
+      </div>
+      <button type="button" id="openCreateCertModal" class="inline-flex min-w-[220px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+        <i class="bi bi-plus-circle"></i>
+        Додати сертифікат
+      </button>
+    </div>
+  </div>
+</section>
+
+<section class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600"><i class="bi bi-award"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ counts.all }}</p>
+      </div>
+    </div>
+  </article>
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><i class="bi bi-check-circle"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Активні</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ counts.active }}</p>
+      </div>
+    </div>
+  </article>
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><i class="bi bi-bag-check"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Використані</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ counts.used }}</p>
+      </div>
+    </div>
+  </article>
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500"><i class="bi bi-clock-history"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Прострочені</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ counts.expired }}</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="mb-5 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
+  <div class="flex flex-wrap items-center gap-2">
+    {% set tabs = [('all', 'Всі'), ('active', 'Активні'), ('used', 'Використані'), ('expired', 'Прострочені')] %}
+    {% for val, label in tabs %}
+    <a href="{{ url_for('certificates.certificates_list', status=val) }}"
+       class="inline-flex items-center rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors {% if status_filter == val %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+  {% if certificates %}
+  <div class="w-full overflow-x-auto">
+    <table class="w-full table-fixed text-sm">
+      <thead>
+        <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
+          <th class="w-[120px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Код</th>
+          <th class="w-[130px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Тип</th>
+          <th class="w-[130px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Номінал</th>
+          <th class="w-[120px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Термін дії</th>
+          <th class="w-[130px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Статус</th>
+          <th class="w-[110px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Привʼязка</th>
+          <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Коментар</th>
+          <th class="w-[110px] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Дії</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stone-100">
+        {% for cert in certificates %}
+        {% set eff_status = cert.effective_status() %}
+        <tr class="transition-colors hover:bg-stone-50/70">
+          <td class="px-4 py-3 font-mono font-semibold tracking-wider text-stone-900">{{ cert.code }}</td>
+          <td class="px-4 py-3 text-stone-700">{{ cert.type_display() }}</td>
+          <td class="px-4 py-3 text-stone-700">{{ cert.value_display() }}</td>
+          <td class="px-4 py-3 text-stone-600">{{ cert.expires_at.strftime('%d.%m.%Y') }}</td>
+          <td class="px-4 py-3">
+            {% if eff_status == 'active' %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <i class="bi bi-check2-circle"></i>
+              Активний
+            </span>
+            {% elif eff_status == 'used' %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+              <i class="bi bi-check2-square"></i>
+              Використаний
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">
+              <i class="bi bi-exclamation-circle"></i>
+              Прострочений
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            {% if cert.order_id %}
+            {% set is_sub = cert.order and cert.order.delivery_type in ('Weekly', 'Monthly', 'Bi-weekly') %}
+            <a href="{{ url_for('orders.subscriptions_list') if is_sub else url_for('orders.orders_list') }}?open={{ cert.order_id }}"
+               class="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900">
+              #{{ cert.order_id }}
+            </a>
+            {% else %}
+            <span class="text-stone-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-xs text-stone-500">
+            <div class="max-w-full truncate">{{ cert.comment or '—' }}</div>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50" data-cert-detail="{{ cert.id }}">
+              <i class="bi bi-eye"></i>
+              Деталі
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-20 text-stone-400">
+    <i class="bi bi-award mb-3 text-5xl"></i>
+    <p class="text-base font-medium">Сертифікати не знайдено</p>
+    <p class="mt-1 text-sm">Створіть перший сертифікат, щоб почати роботу.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% include 'certificates/_create_modal.html' %}
+{% include 'certificates/_detail_modal.html' %}
+
+{{ render_toast() }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const openBtn = document.getElementById('openCreateCertModal');
+  const modalEl = document.getElementById('createCertModal');
+  const form = document.getElementById('createCertForm');
+  const certType = document.getElementById('certType');
+  const certTypeHint = document.getElementById('certTypeHint');
+  const fieldAmount = document.getElementById('fieldAmount');
+  const fieldSize = document.getElementById('fieldSize');
+  const valueAmount = document.getElementById('valueAmount');
+  const valueSize = document.getElementById('valueSize');
+  const certCode = document.getElementById('certCode');
+  const certComment = document.getElementById('certComment');
+  const regenCodeBtn = document.getElementById('regenCodeBtn');
+  const createBtn = document.getElementById('createCertBtn');
+  const createBtnLabel = createBtn ? createBtn.querySelector('span') : null;
+  const errorsEl = document.getElementById('certErrors');
+
+  if (!openBtn || !modalEl || !form || !certType || !createBtn || !errorsEl) {
+    return;
+  }
+
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const typeHints = {
+    amount: 'Сертифікат з фіксованою сумою, яку можна використати при оформленні.',
+    size: 'Сертифікат на конкретний розмір букета.',
+    subscription: 'Сертифікат на підписку обраного розміру.',
+  };
+
+  function setSubmitLoading(isLoading) {
+    createBtn.disabled = isLoading;
+    if (createBtnLabel) {
+      createBtnLabel.textContent = isLoading ? 'Збереження...' : 'Створити';
+    }
+  }
+
+  function renderErrors(messages) {
+    const normalized = Array.isArray(messages) ? messages : [messages];
+    errorsEl.innerHTML = normalized
+      .filter(Boolean)
+      .map(message => `<p class="leading-relaxed">${message}</p>`)
+      .join('');
+    errorsEl.classList.remove('hidden');
+  }
+
+  function clearErrors() {
+    errorsEl.innerHTML = '';
+    errorsEl.classList.add('hidden');
+  }
+
+  async function generateCertCode() {
+    const type = certType.value;
+    try {
+      const response = await fetch(`/certificates/generate-code?type=${encodeURIComponent(type)}`);
+      const data = await response.json();
+      if (response.ok && data.code) {
+        certCode.value = data.code;
+      }
+    } catch (error) {
+      console.error('Не вдалося згенерувати код сертифіката:', error);
+    }
+  }
+
+  function syncTypeFields() {
+    const type = certType.value;
+    const isAmount = type === 'amount';
+    fieldAmount.classList.toggle('hidden', !isAmount);
+    fieldSize.classList.toggle('hidden', isAmount);
+    fieldAmount.style.display = isAmount ? 'flex' : 'none';
+    fieldSize.style.display = isAmount ? 'none' : 'flex';
+    valueAmount.required = isAmount;
+    valueSize.required = !isAmount;
+    if (isAmount) {
+      valueSize.value = '';
+    } else {
+      valueAmount.value = '';
+    }
+    if (certTypeHint) {
+      certTypeHint.textContent = typeHints[type] || '';
+    }
+  }
+
+  async function resetModalState() {
+    form.reset();
+    clearErrors();
+    setSubmitLoading(false);
+    syncTypeFields();
+    await generateCertCode();
+    if (certComment) {
+      certComment.value = '';
+    }
+  }
+
+  openBtn.addEventListener('click', async function() {
+    await resetModalState();
+    modal.show();
+  });
+
+  regenCodeBtn.addEventListener('click', generateCertCode);
+
+  certType.addEventListener('change', async function() {
+    syncTypeFields();
+    await generateCertCode();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', function() {
+    clearErrors();
+    setSubmitLoading(false);
+  });
+
+  syncTypeFields();
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    clearErrors();
+    setSubmitLoading(true);
+
+    const type = certType.value;
+    const payload = {
+      code: certCode.value.trim(),
+      type: type,
+      comment: certComment ? certComment.value.trim() : '',
+      value_amount: type === 'amount' ? valueAmount.value : null,
+      value_size: type !== 'amount' ? valueSize.value : null,
+    };
+
+    try {
+      const response = await fetch('/certificates/create', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        renderErrors(data.errors || data.error || 'Помилка створення сертифіката');
+        setSubmitLoading(false);
+        return;
+      }
+      window.location.reload();
+    } catch (error) {
+      console.error('Помилка створення сертифіката:', error);
+      renderErrors('Не вдалося зберегти сертифікат. Спробуйте ще раз.');
+      setSubmitLoading(false);
+    }
+  });
+});
+</script>
+
+{{ toast_script() }}
+{% endblock %}

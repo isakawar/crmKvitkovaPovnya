@@ -44,6 +44,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.florist.routes import florist_bp
     from app.blueprints.import_csv.routes import import_csv_bp
     from app.blueprints.dashboard.routes import dashboard_bp
+    from app.blueprints.certificates import certificates_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -55,6 +56,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(florist_bp)
     app.register_blueprint(import_csv_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(certificates_bp)
 
     # Cleanup old route cache (раз на добу, старше 7 днів)
     @app.before_request
