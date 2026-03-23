@@ -326,7 +326,9 @@
               </td>
 
               <td class="px-4 py-4">
-                <p class="text-sm font-medium text-stone-700">{{ delivery.phone or order.recipient_phone or 'Телефон не вказано' }}</p>
+                {% set primary = delivery.phone or order.recipient_phone or '' %}
+                {% set all_phones = ([primary] + (order.additional_phones | map(attribute='phone') | list)) if order else [primary] %}
+                <p class="text-sm font-medium text-stone-700">{{ all_phones | select | join(' / ') or 'Телефон не вказано' }}</p>
               </td>
 
               <td class="px-4 py-4">

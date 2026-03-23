@@ -114,7 +114,14 @@
                             <i class="bi bi-telephone"></i>
                             Телефон отримувача <span class="text-red-500">*</span>
                           </label>
-                          <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
+                          <div class="flex items-center gap-1.5">
+                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" maxlength="13">
+                            <button type="button" id="add-extra-phone-btn" title="Додати телефон"
+                                    class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 hover:border-stone-300 transition-colors">
+                              <i class="bi bi-plus text-base"></i>
+                            </button>
+                          </div>
+                          <div id="extra-phones-container"></div>
                         </div>
 
                         <div class="order-field">

@@ -1,5 +1,6 @@
 from app.extensions import db
 from app.models import Client, Order, Delivery
+from app.models.recipient_phone import RecipientPhone
 import datetime
 import logging
 import calendar
@@ -126,7 +127,11 @@ def create_order_and_deliveries(client, form):
         composition_type=form.get('composition_type'),
     )
     db.session.add(order)
-    db.session.commit()
+    db.session.flush()  # get order.id before commit
+
+    for i, ph in enumerate(form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []), start=1):
+        if ph.strip():
+            db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=i))
 
     deliveries = build_delivery_dates(order.first_delivery_date, order.delivery_type, order.delivery_day)
 
@@ -232,6 +237,11 @@ def update_order(order, form):
     order.recipient_name = form['recipient_name']
     order.recipient_phone = form['recipient_phone']
     order.recipient_social = form.get('recipient_social')
+
+    RecipientPhone.query.filter_by(order_id=order.id).delete()
+    for i, ph in enumerate(form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []), start=1):
+        if ph.strip():
+            db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=i))
     order.city = form['city']
     is_pickup = form.get('is_pickup') == 'on'
     order.street = 'Самовивіз' if is_pickup else form['street']

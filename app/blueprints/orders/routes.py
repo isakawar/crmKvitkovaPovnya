@@ -297,7 +297,8 @@ def order_edit(order_id):
         'address_comment': order.address_comment or delivery_address_comment,
         'bouquet_type': order.bouquet_type or delivery_bouquet_type,
         'composition_type': order.composition_type or delivery_composition_type,
-        'can_extend_subscription': can_extend_subscription
+        'can_extend_subscription': can_extend_subscription,
+        'additional_phones': [rp.phone for rp in sorted(order.additional_phones, key=lambda x: x.position)],
     })
 
 @orders_bp.route('/orders/<int:order_id>/dependencies', methods=['GET'])

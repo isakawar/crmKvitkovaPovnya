@@ -210,7 +210,9 @@
 {% macro delivery_row(delivery, stop_order='—') %}
   {% set order = delivery.order %}
   {% set client = delivery.client %}
-  {% set recipient_phone = delivery.phone or (order.recipient_phone if order else '') %}
+  {% set _primary = delivery.phone or (order.recipient_phone if order else '') %}
+  {% set _extras = (order.additional_phones | map(attribute='phone') | list) if order else [] %}
+  {% set recipient_phone = ([_primary] + _extras) | select | join(' / ') %}
   {% set recipient_name = (order.recipient_name if order else '') or '—' %}
   {% set city = (order.city if order else '') or '' %}
   {% set street = delivery.street or (order.street if order else '') %}
