@@ -610,6 +610,12 @@ document.addEventListener('DOMContentLoaded', function() {
       openSubscriptionDetail(this.getAttribute('data-subscription-id'));
     });
   });
+
+  const openParam = new URLSearchParams(window.location.search).get('open');
+  if (openParam) {
+    openSubscriptionDetail(openParam);
+    history.replaceState(null, '', window.location.pathname);
+  }
 });
 </script>
 {% endblock %}

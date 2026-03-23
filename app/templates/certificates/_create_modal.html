@@ -1,0 +1,302 @@
+<style>
+  .cert-modal-dialog {
+    max-width: 500px;
+    margin: 1rem auto;
+  }
+
+  .cert-modal-content {
+    border: 1px solid #e7e5e4;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 20px 48px rgba(28, 25, 23, 0.14);
+  }
+
+  .cert-modal-header {
+    padding: 1.1rem 1.25rem 1rem;
+    border-bottom: 1px solid #f1f0ef;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .cert-modal-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .cert-modal-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b45309;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .cert-modal-title {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: #1c1917;
+    line-height: 1.2;
+  }
+
+  .cert-modal-subtitle {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    color: #a8a29e;
+    line-height: 1.3;
+  }
+
+  .cert-close-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid #e7e5e4;
+    background: #ffffff;
+    color: #a8a29e;
+    transition: all .15s ease;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .cert-close-btn:hover {
+    border-color: #d6d3d1;
+    color: #57534e;
+    background: #fafaf9;
+  }
+
+  .cert-modal-body {
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .cert-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .cert-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+
+  .cert-input,
+  .cert-select,
+  .cert-textarea {
+    width: 100%;
+    border: 1px solid #d6d3d1;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1c1917;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+
+  .cert-input,
+  .cert-select {
+    height: 40px;
+    padding: 0 0.8rem;
+    font-size: 14px;
+  }
+
+  .cert-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2.2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23a8a29e' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    cursor: pointer;
+  }
+
+  .cert-textarea {
+    min-height: 72px;
+    padding: 0.6rem 0.8rem;
+    font-size: 14px;
+    resize: none;
+  }
+
+  .cert-input:focus,
+  .cert-select:focus,
+  .cert-textarea:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+  }
+
+  .cert-help {
+    font-size: 11.5px;
+    color: #a8a29e;
+    line-height: 1.4;
+  }
+
+  .cert-code-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .cert-code-row .cert-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cert-code-regenerate {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: 1px solid #d6d3d1;
+    background: #ffffff;
+    color: #78716c;
+    transition: all .15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+  }
+
+  .cert-code-regenerate:hover {
+    border-color: #a8a29e;
+    color: #44403c;
+    background: #fafaf9;
+  }
+
+  .cert-modal-footer {
+    border-top: 1px solid #f1f0ef;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .cert-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: 10px;
+    padding: 0 1rem;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid transparent;
+    transition: all .15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+  }
+
+  .cert-btn--ghost {
+    background: #ffffff;
+    border-color: #e7e5e4;
+    color: #57534e;
+  }
+
+  .cert-btn--ghost:hover {
+    background: #fafaf9;
+    border-color: #d6d3d1;
+  }
+
+  .cert-btn--primary {
+    background: #1c1917;
+    color: #ffffff;
+  }
+
+  .cert-btn--primary:hover {
+    background: #292524;
+  }
+</style>
+
+<div class="modal fade" id="createCertModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered cert-modal-dialog">
+    <div class="modal-content cert-modal-content">
+
+      <div class="cert-modal-header">
+        <div class="cert-modal-header-left">
+          <div class="cert-modal-icon">
+            <i class="bi bi-award"></i>
+          </div>
+          <div>
+            <h2 class="cert-modal-title">Новий сертифікат</h2>
+            <p class="cert-modal-subtitle">Заповніть поля та збережіть</p>
+          </div>
+        </div>
+        <button type="button" class="cert-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form id="createCertForm" novalidate autocomplete="off">
+        <div class="cert-modal-body">
+          <div id="certErrors" class="hidden rounded-3 border border-danger-subtle bg-danger-subtle px-3 py-2 text-danger small"></div>
+
+          <div class="cert-field">
+            <label class="cert-label">Тип сертифіката</label>
+            <select id="certType" name="type" required class="cert-select">
+              <option value="amount">На суму (грн)</option>
+              <option value="size">На розмір букету</option>
+              <option value="subscription">На підписку</option>
+            </select>
+            <p id="certTypeHint" class="cert-help">Сертифікат з фіксованою сумою, яку можна використати при оформленні.</p>
+          </div>
+
+          <div id="fieldAmount" class="cert-field">
+            <label class="cert-label">Сума (грн)</label>
+            <input type="number" id="valueAmount" name="value_amount" min="1" step="1" required placeholder="Наприклад: 500" class="cert-input">
+          </div>
+
+          <div id="fieldSize" class="hidden cert-field">
+            <label class="cert-label">Розмір букету</label>
+            <select id="valueSize" name="value_size" class="cert-select">
+              <option value="">Оберіть розмір</option>
+              <option value="S">S</option>
+              <option value="M">M</option>
+              <option value="L">L</option>
+              <option value="XL">XL</option>
+              <option value="XXL">XXL</option>
+            </select>
+          </div>
+
+          <div class="cert-field">
+            <label class="cert-label">Код сертифіката</label>
+            <div class="cert-code-row">
+              <input type="text" id="certCode" name="code" required placeholder="П0001 / Р0001" class="cert-input font-monospace fw-semibold">
+              <button type="button" id="regenCodeBtn" class="cert-code-regenerate" title="Згенерувати новий код">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+            </div>
+            <p class="cert-help">П — підписка, Р — разове/на суму. Або введіть свій код.</p>
+          </div>
+
+          <div class="cert-field">
+            <label class="cert-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
+            <textarea id="certComment" name="comment" class="cert-textarea" placeholder="Наприклад: День народження Олени"></textarea>
+          </div>
+        </div>
+
+        <div class="cert-modal-footer">
+          <button type="button" data-bs-dismiss="modal" class="cert-btn cert-btn--ghost">Скасувати</button>
+          <button type="submit" id="createCertBtn" class="cert-btn cert-btn--primary">
+            <i class="bi bi-plus-circle"></i>
+            <span>Зберегти</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>

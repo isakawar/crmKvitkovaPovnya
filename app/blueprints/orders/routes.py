@@ -194,6 +194,32 @@ def order_create():
             flash(error_msg, 'danger')
             return redirect('/orders/new')
     
+    # Перевіряємо сертифікат (якщо вказаний)
+    certificate_code = (request.form.get('certificate_code') or '').strip().upper()
+    certificate = None
+    if certificate_code:
+        from app.models.certificate import Certificate
+        from datetime import date as _date
+        certificate = Certificate.query.filter_by(code=certificate_code).first()
+        if not certificate:
+            error_msg = f'Сертифікат з кодом "{certificate_code}" не знайдено'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+        if certificate.status == 'used':
+            error_msg = 'Цей сертифікат вже використано'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+        if certificate.expires_at < _date.today():
+            error_msg = 'Термін дії сертифіката закінчився'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+
     # Отримуємо клієнта
     client_instagram = request.form['client_instagram']
     client, error = get_or_create_client(client_instagram)
@@ -202,11 +228,20 @@ def order_create():
             return jsonify({'success': False, 'error': error}), 400
         flash(error, 'danger')
         return redirect('/orders/new')
-    
+
     # Створюємо замовлення
     order = create_order_and_deliveries(client, request.form)
     logging.info(f'Order created: {order.id}')
-    
+
+    # Застосовуємо сертифікат
+    if certificate:
+        from datetime import datetime as _dt
+        certificate.status = 'used'
+        certificate.used_at = _dt.utcnow()
+        certificate.order_id = order.id
+        db.session.commit()
+        logging.info(f'Certificate {certificate.code} applied to order {order.id}')
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'order_id': order.id})
     flash('Замовлення створено, доставки додано!', 'success')

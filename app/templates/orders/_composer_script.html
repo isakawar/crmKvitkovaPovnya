@@ -213,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (currentComposerFlow === 'subscription' && !subscriptionTypes.includes(deliveryTypeSelect.value)) {
-            deliveryTypeSelect.value = 'Monthly';
+            deliveryTypeSelect.value = '';
         }
     }
 
@@ -249,7 +249,7 @@ document.addEventListener('DOMContentLoaded', function() {
         syncDeliveryTypeOptions();
         if (currentComposerFlow === 'subscription') {
             if (!subscriptionTypes.includes(deliveryTypeSelect.value)) {
-                deliveryTypeSelect.value = 'Monthly';
+                deliveryTypeSelect.value = '';
             }
             if (!isEditing && !deliveryDaySelect.value) {
                 deliveryDaySelect.value = 'ПН';
@@ -885,6 +885,113 @@ document.addEventListener('DOMContentLoaded', function() {
                 setTimeout(() => location.reload(), 900);
             } catch (e) {
                 alert('Помилка зʼєднання');
+            }
+        });
+    }
+
+    // ── Certificate validation ──────────────────────────────────────────
+    const certCodeInput = document.getElementById('order-cert-code-input');
+    const certValidateBtn = document.getElementById('cert-validate-btn');
+    const certResult = document.getElementById('cert-result');
+    const certHiddenInput = document.getElementById('order-certificate-code');
+
+    function clearCertificate() {
+        if (certCodeInput) certCodeInput.value = '';
+        if (certHiddenInput) certHiddenInput.value = '';
+        if (certResult) {
+            certResult.classList.add('hidden');
+            certResult.className = 'hidden rounded-2xl border px-4 py-3 text-sm';
+            certResult.innerHTML = '';
+        }
+    }
+
+    // Clear certificate when form resets
+    const origReset = resetComposerForm;
+    // Patch: clear cert on every reset
+    addOrderModalElement.addEventListener('hidden.bs.modal', clearCertificate);
+
+    if (certCodeInput) {
+        certCodeInput.addEventListener('input', function() {
+            // Clear validated state when user changes the code
+            if (certHiddenInput) certHiddenInput.value = '';
+            if (certResult) certResult.classList.add('hidden');
+        });
+        certCodeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); certValidateBtn && certValidateBtn.click(); }
+        });
+    }
+
+    if (certValidateBtn) {
+        certValidateBtn.addEventListener('click', async function() {
+            const code = (certCodeInput ? certCodeInput.value : '').trim();
+            if (!code) {
+                certResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                certResult.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Введіть код сертифіката';
+                certResult.classList.remove('hidden');
+                return;
+            }
+            certValidateBtn.disabled = true;
+            certValidateBtn.textContent = '...';
+            try {
+                const resp = await fetch('/certificates/validate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code}),
+                });
+                const data = await resp.json();
+                if (data.valid) {
+                    certHiddenInput.value = data.code;
+
+                    // Auto-fill form fields based on certificate type
+                    if (data.type === 'amount') {
+                        // Set size to "Власний" and fill custom amount
+                        if (sizeSelect) {
+                            sizeSelect.value = 'Власний';
+                            sizeSelect.dispatchEvent(new Event('change'));
+                        }
+                        if (customAmountInput && data.value_amount) {
+                            customAmountInput.value = data.value_amount;
+                        }
+                    } else if (data.type === 'size') {
+                        // Set size
+                        if (sizeSelect && data.value_size) {
+                            sizeSelect.value = data.value_size;
+                            sizeSelect.dispatchEvent(new Event('change'));
+                        }
+                    } else if (data.type === 'subscription') {
+                        // Switch scenario to subscription if not already
+                        setComposerFlow('subscription', false);
+                        // Clear delivery type — admin chooses manually
+                        if (deliveryTypeSelect) deliveryTypeSelect.value = '';
+                        // Set size
+                        if (sizeSelect && data.value_size) {
+                            sizeSelect.value = data.value_size;
+                            sizeSelect.dispatchEvent(new Event('change'));
+                        }
+                    }
+
+                    certResult.className = 'rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm';
+                    certResult.innerHTML = `<div class="flex items-start gap-2">
+                      <i class="bi bi-check-circle-fill text-emerald-500 mt-0.5"></i>
+                      <div>
+                        <span class="font-semibold">${data.type_display}</span>: ${data.value_display}
+                        <span class="text-emerald-600 ml-2 text-xs">· діє до ${data.expires_at}</span>
+                        <p class="text-xs text-emerald-700 mt-0.5 opacity-75">Параметри підтягнуто автоматично — можна редагувати</p>
+                      </div>
+                    </div>`;
+                } else {
+                    certHiddenInput.value = '';
+                    certResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                    certResult.innerHTML = `<i class="bi bi-x-circle me-1"></i>${data.error}`;
+                }
+                certResult.classList.remove('hidden');
+            } catch(e) {
+                certResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                certResult.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Помилка з\'єднання';
+                certResult.classList.remove('hidden');
+            } finally {
+                certValidateBtn.disabled = false;
+                certValidateBtn.textContent = 'Перевірити';
             }
         });
     }
