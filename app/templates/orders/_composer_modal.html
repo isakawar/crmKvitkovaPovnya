@@ -149,23 +149,6 @@
 
                 <div class="mt-6 space-y-4">
                   <div class="order-field">
-                    <label class="order-label" for="order-city-select">
-                      <i class="bi bi-geo-alt"></i>
-                      Місто <span class="text-red-500">*</span>
-                    </label>
-                    <select name="city" id="order-city-select" class="order-select" required>
-                      <option value="">Оберіть місто</option>
-                      {% if cities and cities|length > 0 %}
-                          {% for city in cities %}
-                              <option value="{{ city.value }}">{{ city.value }}</option>
-                          {% endfor %}
-                      {% else %}
-                          <option disabled>Додайте міста у налаштуваннях</option>
-                      {% endif %}
-                    </select>
-                  </div>
-
-                  <div class="order-field">
                     <div class="flex items-center justify-between gap-3">
                       <label class="order-label" for="delivery-mode-switch">
                         <i class="bi bi-truck"></i>
@@ -185,15 +168,40 @@
                     <input type="hidden" name="is_pickup" id="is-pickup-input" value="">
                   </div>
 
+                  <div class="order-field">
+                    <label class="order-label" for="order-city-select">
+                      <i class="bi bi-geo-alt"></i>
+                      Місто <span class="text-red-500">*</span>
+                    </label>
+                    <select name="city" id="order-city-select" class="order-select" required>
+                      <option value="">Оберіть місто</option>
+                      {% if cities and cities|length > 0 %}
+                          {% for city in cities %}
+                              <option value="{{ city.value }}">{{ city.value }}</option>
+                          {% endfor %}
+                      {% else %}
+                          <option disabled>Додайте міста у налаштуваннях</option>
+                      {% endif %}
+                    </select>
+                  </div>
+
                   <div class="order-field" id="address-field">
                     <label class="order-label" for="address-input" id="address-label">
                       <i class="bi bi-signpost-2"></i>
                       Адреса <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок, квартира">
+                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок">
                     <p class="order-helper-copy" id="address-hint">
                       Вкажіть повну адресу доставки, щоб кур'єр міг швидко оформити маршрут.
                     </p>
+                  </div>
+
+                  <div class="order-field hidden" id="address-comment-field">
+                    <label class="order-label" for="address-comment-input">
+                      <i class="bi bi-chat-left-text"></i>
+                      Коментар до адреси
+                    </label>
+                    <input type="text" name="address_comment" id="address-comment-input" class="order-input" placeholder="Під'їзд, квартира, поверх, код домофону...">
                   </div>
 
                   <div class="order-two-col">
