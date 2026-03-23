@@ -1,0 +1,144 @@
+<div class="modal fade" id="writeoffModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered txn-modal-dialog">
+    <div class="modal-content txn-modal-content">
+
+      <div class="txn-modal-header">
+        <div class="txn-modal-header-left">
+          <div class="txn-modal-icon" style="background:#fff1f2;border-color:#fecdd3;color:#e11d48;">
+            <i class="bi bi-dash-circle"></i>
+          </div>
+          <div>
+            <h2 class="txn-modal-title">Списання</h2>
+            <p class="txn-modal-subtitle">Витрати, що зменшують баланс</p>
+          </div>
+        </div>
+        <button type="button" class="txn-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form id="writeoffForm" novalidate autocomplete="off">
+        <div class="txn-modal-body">
+          <div id="writeoffErrors" class="hidden rounded-3 border border-danger-subtle bg-danger-subtle px-3 py-2 text-danger small"></div>
+
+          <div class="txn-field">
+            <label class="txn-label">Сума (грн)</label>
+            <input type="number" id="writeoffAmount" name="amount" min="1" step="1" required placeholder="Наприклад: 200" class="txn-input">
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Тип витрати</label>
+            <select id="writeoffExpenseType" name="expense_type" required class="txn-select">
+              <option value="">Оберіть тип</option>
+              <option value="Витрати на матеріали">Витрати на матеріали</option>
+              <option value="Комунальні послуги">Комунальні послуги</option>
+              <option value="Оренда">Оренда</option>
+              <option value="Зарплата">Зарплата</option>
+              <option value="Реклама">Реклама</option>
+              <option value="Інше">Інше</option>
+            </select>
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
+            <input type="text" id="writeoffComment" name="comment" placeholder="Опис витрати" class="txn-input">
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Дата</label>
+            <input type="date" id="writeoffDate" name="date" required class="txn-input">
+          </div>
+        </div>
+
+        <div class="txn-modal-footer">
+          <button type="button" data-bs-dismiss="modal" class="txn-btn txn-btn--ghost">Скасувати</button>
+          <button type="submit" id="saveWriteoffBtn" class="txn-btn txn-btn--primary" style="background:#e11d48;">
+            <i class="bi bi-dash-circle"></i>
+            <span>Списати</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const openBtn = document.getElementById('openWriteoffModal');
+  const modalEl = document.getElementById('writeoffModal');
+  const form = document.getElementById('writeoffForm');
+  const saveBtn = document.getElementById('saveWriteoffBtn');
+  const saveBtnLabel = saveBtn ? saveBtn.querySelector('span') : null;
+  const errorsEl = document.getElementById('writeoffErrors');
+  const writeoffDate = document.getElementById('writeoffDate');
+
+  if (!openBtn || !modalEl || !form) return;
+
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function setLoading(isLoading) {
+    saveBtn.disabled = isLoading;
+    if (saveBtnLabel) saveBtnLabel.textContent = isLoading ? 'Збереження...' : 'Списати';
+  }
+
+  function showErrors(messages) {
+    const list = Array.isArray(messages) ? messages : [messages];
+    errorsEl.innerHTML = list.filter(Boolean).map(m => `<p class="leading-relaxed">${m}</p>`).join('');
+    errorsEl.classList.remove('hidden');
+  }
+
+  function clearErrors() {
+    errorsEl.innerHTML = '';
+    errorsEl.classList.add('hidden');
+  }
+
+  openBtn.addEventListener('click', function () {
+    form.reset();
+    clearErrors();
+    setLoading(false);
+    writeoffDate.value = todayISO();
+    modal.show();
+  });
+
+  modalEl.addEventListener('hidden.bs.modal', function () {
+    clearErrors();
+    setLoading(false);
+  });
+
+  form.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    clearErrors();
+    setLoading(true);
+
+    const payload = {
+      amount: document.getElementById('writeoffAmount').value,
+      expense_type: document.getElementById('writeoffExpenseType').value,
+      comment: document.getElementById('writeoffComment').value,
+      date: writeoffDate.value,
+    };
+
+    try {
+      const res = await fetch('/transactions/writeoff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showErrors(data.errors || data.error || 'Помилка збереження');
+        setLoading(false);
+        return;
+      }
+      window.location.reload();
+    } catch (err) {
+      showErrors('Не вдалося зберегти. Спробуйте ще раз.');
+      setLoading(false);
+    }
+  });
+});
+</script>
