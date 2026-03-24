@@ -15,16 +15,10 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('transaction', sa.Column('transaction_type', sa.String(length=16), nullable=False, server_default='credit'))
-    op.add_column('transaction', sa.Column('expense_type', sa.String(length=64), nullable=True))
-    op.add_column('transaction', sa.Column('comment', sa.Text(), nullable=True))
-
-    # Make client_id nullable to support debit transactions without a client
+    # Columns transaction_type, expense_type, comment are already created in add_transactions_table.
+    # Only ensure client_id is nullable to support debit transactions without a client.
     op.alter_column('transaction', 'client_id', nullable=True)
 
 
 def downgrade():
     op.alter_column('transaction', 'client_id', nullable=False)
-    op.drop_column('transaction', 'comment')
-    op.drop_column('transaction', 'expense_type')
-    op.drop_column('transaction', 'transaction_type')
