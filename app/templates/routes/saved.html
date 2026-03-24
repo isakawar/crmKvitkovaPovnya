@@ -639,6 +639,28 @@
           <div class="flex flex-wrap items-center gap-3">
             <h2 class="text-xl font-semibold text-stone-900">{{ formatted_date }}</h2>
             <span class="route-badge route-badge-status-{{ route.status }}">{{ status_labels.get(route.status, route.status) }}</span>
+            <span class="route-start-time-wrap" data-route-id="{{ route.id }}" onclick="event.stopPropagation()">
+              <span class="route-badge route-start-time-display"
+                    style="cursor:pointer; gap:0.3rem;"
+                    title="Час виїзду з депо — клікніть для зміни"
+                    onclick="openStartTimeEdit(this)">
+                <i class="bi bi-clock"></i>
+                {% if route.start_time %}{{ route.start_time.strftime('%H:%M') }}{% else %}Час виїзду{% endif %}
+              </span>
+              <span class="route-start-time-editor" style="display:none; align-items:center; gap:0.35rem;">
+                <input type="time" class="route-start-time-input"
+                       value="{{ route.start_time.strftime('%H:%M') if route.start_time else '' }}"
+                       style="border:1px solid #e7e5e4; border-radius:0.5rem; padding:0.25rem 0.5rem; font-size:0.82rem; color:#1c1917;">
+                <button type="button" class="route-start-time-save" onclick="saveStartTime(this)"
+                        style="background:#1c1917; color:#fff; border:none; border-radius:0.5rem; padding:0.25rem 0.65rem; font-size:0.82rem; cursor:pointer; white-space:nowrap;">
+                  Зберегти
+                </button>
+                <button type="button" onclick="closeStartTimeEdit(this)"
+                        style="background:transparent; border:1px solid #e7e5e4; border-radius:0.5rem; padding:0.25rem 0.5rem; font-size:0.82rem; cursor:pointer; line-height:1;">
+                  &#x2715;
+                </button>
+              </span>
+            </span>
           </div>
           <div class="routes-route-badges">
             <span class="route-badge"><i class="bi bi-box-seam"></i>{{ route.deliveries_count }} доставок</span>
@@ -722,7 +744,7 @@
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
                 <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-                <td class="whitespace-nowrap">{{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}</td>
+                <td class="whitespace-nowrap">{{ d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
                   {% if d and d.is_pickup %}
@@ -742,8 +764,8 @@
                     {% endif %}
                   {% else %}—{% endif %}
                 </td>
-                <td class="whitespace-nowrap">{{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}</td>
-                <td class="whitespace-nowrap">
+                <td class="whitespace-nowrap">{% set _rp = d.phone if d and d.phone else (order.recipient_phone if order else '') %}{% set _re = (order.additional_phones | map(attribute='phone') | list) if order else [] %}{{ ([_rp] + _re) | select | join(' / ') or '—' }}</td>
+                <td class="whitespace-nowrap" data-stop-id="{{ stop.id }}">
                   {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
                   {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
                   {% else %}—{% endif %}
@@ -793,9 +815,9 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              {% set _rp2 = d.phone or (order.recipient_phone if order else '') %}{% set _re2 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp2] + _re2) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap">{% if d.time_from == '∞' %}∞{% elif d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
               <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
@@ -834,9 +856,9 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
               <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
@@ -872,9 +894,9 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
               <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
@@ -1039,5 +1061,46 @@ document.querySelectorAll('.route-assign-trigger').forEach(function(button) {
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
   new bootstrap.Tooltip(el);
 });
+
+function openStartTimeEdit(displayEl) {
+  const wrap = displayEl.closest('.route-start-time-wrap');
+  displayEl.style.display = 'none';
+  const editor = wrap.querySelector('.route-start-time-editor');
+  editor.style.display = 'inline-flex';
+  editor.querySelector('.route-start-time-input').focus();
+}
+
+function closeStartTimeEdit(btn) {
+  const wrap = btn.closest('.route-start-time-wrap');
+  wrap.querySelector('.route-start-time-editor').style.display = 'none';
+  wrap.querySelector('.route-start-time-display').style.display = '';
+}
+
+function saveStartTime(btn) {
+  const wrap = btn.closest('.route-start-time-wrap');
+  const routeId = wrap.dataset.routeId;
+  const input = wrap.querySelector('.route-start-time-input');
+  const timeVal = input.value;
+
+  fetch('/routes/' + routeId + '/start-time', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+    body: JSON.stringify({start_time: timeVal})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.success) { alert(data.error || 'Помилка збереження'); return; }
+    const displayEl = wrap.querySelector('.route-start-time-display');
+    displayEl.innerHTML = '<i class="bi bi-clock"></i> ' + (timeVal || 'Час виїзду');
+    closeStartTimeEdit(btn);
+    if (data.arrivals) {
+      Object.entries(data.arrivals).forEach(function([stopId, time]) {
+        const td = document.querySelector('[data-stop-id="' + stopId + '"]');
+        if (td) td.textContent = time || '—';
+      });
+    }
+  })
+  .catch(function() { alert('Помилка збереження'); });
+}
 </script>
 {% endblock %}

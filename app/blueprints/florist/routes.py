@@ -105,7 +105,11 @@ def florist_bulk_update_status():
             if not delivery.delivered_at:
                 delivery.delivered_at = now_utc
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
     return jsonify({'success': True, 'updated_count': updated_count})
 
 

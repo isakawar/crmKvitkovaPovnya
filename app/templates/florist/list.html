@@ -210,16 +210,18 @@
 {% macro delivery_row(delivery, stop_order='—') %}
   {% set order = delivery.order %}
   {% set client = delivery.client %}
-  {% set recipient_phone = delivery.phone or (order.recipient_phone if order else '') %}
+  {% set _primary = delivery.phone or (order.recipient_phone if order else '') %}
+  {% set _extras = (order.additional_phones | map(attribute='phone') | list) if order else [] %}
+  {% set recipient_phone = ([_primary] + _extras) | select | join(' / ') %}
   {% set recipient_name = (order.recipient_name if order else '') or '—' %}
   {% set city = (order.city if order else '') or '' %}
   {% set street = delivery.street or (order.street if order else '') %}
   {% set building = delivery.building_number or (order.building_number if order else '') %}
-  {% set size = delivery.bouquet_size or delivery.size or (order.size if order else '') %}
+  {% set size = delivery.size or (order.size if order else '') %}
   {% set comment_text = delivery.comment or (order.comment if order else '') %}
   {% set preferences_text = delivery.preferences or (order.preferences if order else '') %}
   {% set time_slot = (delivery.time_from ~ ' - ' ~ delivery.time_to) if (delivery.time_from and delivery.time_to) else (delivery.time_from or delivery.time_to or 'Без часу') %}
-  {% set is_subscription = order and order.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+  {% set is_subscription = order and order.subscription_id %}
   {% set subscription_idx = subscription_delivery_index.get(delivery.id) %}
   <tr data-delivery-row-id="{{ delivery.id }}">
     <td class="w-10">
@@ -238,7 +240,7 @@
     </td>
     <td>
       <div class="font-semibold text-stone-900 break-all">
-        {% if client and client.instagram %}@{{ client.instagram.lstrip('@') }}{% else %}—{% endif %}
+        {% if client and client.instagram %}{{ ('@' + client.instagram.lstrip('@')) if client.instagram.startswith('@') else client.instagram }}{% else %}—{% endif %}
       </div>
       <div class="mt-1 text-xs text-stone-500 break-all">{{ recipient_name }}</div>
     </td>
@@ -267,8 +269,8 @@
         {% if size %}
           <span class="florist-tag {% if size == 'L' %}florist-tag-size-l{% elif size == 'XL' %}florist-tag-size-xl{% elif size == 'XXL' %}florist-tag-size-xxl{% endif %}">{{ size }}</span>
         {% endif %}
-        {% if order and order.delivery_type %}
-          <span class="florist-tag">{{ order.delivery_type }}</span>
+        {% if order and order.subscription %}
+          <span class="florist-tag">{{ order.subscription.type }}</span>
         {% endif %}
         {% if is_subscription and subscription_idx %}
           <span class="florist-tag florist-tag-subscription">{{ subscription_idx }}/4 доставка</span>
@@ -444,6 +446,9 @@
               <span class="florist-badge"><i class="bi bi-box-seam"></i>{{ route.stops|length }} доставок</span>
               {% if route.total_distance_km %}
                 <span class="florist-badge"><i class="bi bi-signpost"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
+              {% endif %}
+              {% if route.start_time %}
+                <span class="florist-badge"><i class="bi bi-clock"></i>Виїзд {{ route.start_time.strftime('%H:%M') }}</span>
               {% endif %}
             </div>
             <span class="florist-disclosure-toggle"><i class="bi bi-chevron-down"></i></span>

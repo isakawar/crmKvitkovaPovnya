@@ -257,9 +257,9 @@
             {% set order = delivery.order %}
             {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
-            {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
+            {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
-            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ '' if time_confirmed else 'bg-stone-100' }}"
+            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ 'bg-green-50' if time_confirmed else 'bg-stone-100' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -322,11 +322,17 @@
                       Адресу не вказано
                     {% endif %}
                   </p>
+                  {% set addr_comment = delivery.address_comment or (order.address_comment if order else '') %}
+                  {% if addr_comment %}
+                  <p class="text-xs text-stone-400">{{ addr_comment }}</p>
+                  {% endif %}
                 </div>
               </td>
 
               <td class="px-4 py-4">
-                <p class="text-sm font-medium text-stone-700">{{ delivery.phone or order.recipient_phone or 'Телефон не вказано' }}</p>
+                {% set primary = delivery.phone or order.recipient_phone or '' %}
+                {% set all_phones = ([primary] + (order.additional_phones | map(attribute='phone') | list)) if order else [primary] %}
+                <p class="text-sm font-medium text-stone-700">{{ all_phones | select | join(' / ') or 'Телефон не вказано' }}</p>
               </td>
 
               <td class="px-4 py-4">
@@ -752,7 +758,9 @@
           row.dataset.deliveryDate = deliveryDate;
         }
         const newTimeTo = clear ? '' : toValue;
-        row.classList.toggle('bg-stone-100', !newTimeFrom && !newTimeTo);
+        const hasTime = !!(newTimeFrom || newTimeTo);
+        row.classList.toggle('bg-stone-100', !hasTime);
+        row.classList.toggle('bg-green-50', hasTime);
         const slot = row.querySelector('.delivery-time-slot');
         if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
       });

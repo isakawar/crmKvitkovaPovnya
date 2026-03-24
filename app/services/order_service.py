@@ -1,81 +1,16 @@
 from app.extensions import db
 from app.models import Client, Order, Delivery
+from app.models.recipient_phone import RecipientPhone
 import datetime
 import logging
-import calendar
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
-WEEKDAY_MAP = {'ПН':0, 'ВТ':1, 'СР':2, 'ЧТ':3, 'ПТ':4, 'СБ':5, 'НД':6}
-REVERSE_WEEKDAY_MAP = {value: key for key, value in WEEKDAY_MAP.items()}
+# Kept for imports in other modules
 SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
-DELIVERY_TYPE_MAP = {
-    'Weekly': 7,
-    'Bi-weekly': 14,
-    'Monthly': 30,
-    'One-time': 1
-}
 
-
-def detect_order_scenario(form):
-    scenario = (form.get('order_scenario') or '').strip()
-    delivery_type = (form.get('delivery_type') or '').strip()
-    if scenario in ['subscription', 'order']:
-        return scenario
-    return 'subscription' if delivery_type in SUBSCRIPTION_TYPES else 'order'
-
-
-def resolve_delivery_type(form, scenario):
-    raw_delivery_type = (form.get('delivery_type') or '').strip()
-    if scenario == 'subscription':
-        return raw_delivery_type or 'Monthly'
-    return raw_delivery_type or 'One-time'
-
-
-def resolve_delivery_day(form, first_date, scenario):
-    raw_delivery_day = (form.get('delivery_day') or '').strip()
-    if scenario == 'subscription' and raw_delivery_day:
-        return raw_delivery_day
-    return REVERSE_WEEKDAY_MAP.get(first_date.weekday(), 'ПН')
-
-
-def calculate_next_delivery_date(previous_date, delivery_type, desired_weekday):
-    if delivery_type == 'Weekly':
-        next_date = previous_date + datetime.timedelta(days=7)
-        while next_date.weekday() != desired_weekday:
-            next_date += datetime.timedelta(days=1)
-        return next_date
-
-    if delivery_type == 'Bi-weekly':
-        next_date = previous_date + datetime.timedelta(days=14)
-        while next_date.weekday() != desired_weekday:
-            next_date += datetime.timedelta(days=1)
-        return next_date
-
-    if delivery_type == 'Monthly':
-        base_date = previous_date + datetime.timedelta(days=28)
-        days_forward = (desired_weekday - base_date.weekday()) % 7
-        days_backward = (base_date.weekday() - desired_weekday) % 7
-        if days_forward <= days_backward:
-            return base_date + datetime.timedelta(days=days_forward)
-        return base_date - datetime.timedelta(days=days_backward)
-
-    return previous_date
-
-
-def build_delivery_dates(first_date, delivery_type, delivery_day):
-    deliveries = [first_date]
-    if delivery_type not in SUBSCRIPTION_TYPES:
-        return deliveries
-
-    desired_weekday = WEEKDAY_MAP.get(delivery_day, first_date.weekday())
-    previous_date = first_date
-    for _ in range(3):
-        next_date = calculate_next_delivery_date(previous_date, delivery_type, desired_weekday)
-        deliveries.append(next_date)
-        previous_date = next_date
-    return deliveries
 
 def get_or_create_client(instagram):
     client = Client.query.filter_by(instagram=instagram).first()
@@ -83,107 +18,90 @@ def get_or_create_client(instagram):
         return None, 'Клієнт з таким Instagram не знайдений!'
     return client, None
 
-def check_and_spend_credits(client, bouquet, delivery_count):
-    credits_needed = 0
-    if client.credits < credits_needed:
-        return False, credits_needed
-    client.credits -= credits_needed
-    db.session.commit()
-    return True, credits_needed
 
 def create_order_and_deliveries(client, form):
-    logger.info(f'Створення замовлення для клієнта {client.id}')
-    
+    """Create a single (one-time) order with one delivery."""
+    logger.info(f'Creating one-time order for client {client.id}')
+
     is_pickup = form.get('is_pickup') == 'on'
-    scenario = detect_order_scenario(form)
-    first_delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
-    delivery_type = resolve_delivery_type(form, scenario)
-    delivery_day = resolve_delivery_day(form, first_delivery_date, scenario)
+    delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
+
+    custom_amount_raw = (form.get('custom_amount') or '').strip()
+    custom_amount = int(custom_amount_raw) if custom_amount_raw else None
+
     order = Order(
         client_id=client.id,
         recipient_name=form['recipient_name'],
         recipient_phone=form['recipient_phone'],
-        recipient_social=form.get('recipient_social'),
+        recipient_social=form.get('recipient_social') or None,
         city=form['city'],
-        street='Самовивіз' if is_pickup else form['street'],
-        building_number=form.get('building_number'),
-        floor=form.get('floor'),
-        entrance=form.get('entrance'),
+        street='Самовивіз' if is_pickup else (form.get('street') or ''),
+        building_number=form.get('building_number') or None,
+        floor=form.get('floor') or None,
+        entrance=form.get('entrance') or None,
         is_pickup=is_pickup,
-        address_comment=form.get('address_comment'),
-        delivery_type=delivery_type,
+        address_comment=form.get('address_comment') or None,
+        delivery_method=form.get('delivery_method') or 'courier',
         size=form['size'],
-        custom_amount=int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None,
-        first_delivery_date=first_delivery_date,
-        delivery_day=delivery_day,
-        time_from=form.get('time_from'),
-        time_to=form.get('time_to'),
-        comment=form.get('comment'),
-        preferences=form.get('preferences'),
+        custom_amount=custom_amount,
+        delivery_date=delivery_date,
+        time_from=form.get('time_from') or None,
+        time_to=form.get('time_to') or None,
+        bouquet_type=form.get('bouquet_type') or None,
+        composition_type=form.get('composition_type') or None,
         for_whom=form.get('for_whom') or '',
-        delivery_method=form.get('delivery_method', 'courier'),
-        bouquet_type=form.get('bouquet_type'),
-        composition_type=form.get('composition_type'),
+        comment=form.get('comment') or None,
+        preferences=form.get('preferences') or None,
     )
     db.session.add(order)
-    db.session.commit()
+    db.session.flush()
 
-    deliveries = build_delivery_dates(order.first_delivery_date, order.delivery_type, order.delivery_day)
+    for i, ph in enumerate(
+        form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []),
+        start=1
+    ):
+        if ph.strip():
+            db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=i))
 
-    extend_from_id = (form.get('extend_from_order_id') or '').strip()
-    extend_from_order = None
-    if extend_from_id:
-        try:
-            extend_from_order = Order.query.get(int(extend_from_id))
-        except (TypeError, ValueError):
-            extend_from_order = None
-
-    for i, d_date in enumerate(deliveries):
-        delivery_time_from = order.time_from if i == 0 else None
-        delivery_time_to = order.time_to if i == 0 else None
-        delivery = Delivery(
-            order_id=order.id,
-            client_id=client.id,
-            delivery_date=d_date,
-            status='Очікує',
-            comment=order.comment if i == 0 else '',
-            preferences=order.preferences,
-            street=order.street if not order.is_pickup else None,
-            building_number=order.building_number if not order.is_pickup else None,
-            time_from=delivery_time_from,
-            time_to=delivery_time_to,
-            size=order.size,
-            phone=order.recipient_phone,
-            is_pickup=order.is_pickup,
-            delivery_type=order.delivery_type,
-            is_subscription=order.delivery_type in SUBSCRIPTION_TYPES,
-            delivery_method=order.delivery_method,
-            address_comment=order.address_comment,
-            bouquet_type=order.bouquet_type,
-            composition_type=order.composition_type,
-        )
-        db.session.add(delivery)
-
-    if extend_from_order and not getattr(extend_from_order, 'is_subscription_extended', False):
-        extend_from_order.is_subscription_extended = True
-        extend_from_order.subscription_followup_status = 'extended'
-        extend_from_order.subscription_followup_at = datetime.datetime.utcnow()
+    delivery = Delivery(
+        order_id=order.id,
+        client_id=client.id,
+        delivery_date=delivery_date,
+        status='Очікує',
+        comment=order.comment,
+        preferences=order.preferences,
+        street=order.street if not order.is_pickup else None,
+        building_number=order.building_number if not order.is_pickup else None,
+        floor=order.floor if not order.is_pickup else None,
+        entrance=order.entrance if not order.is_pickup else None,
+        time_from=order.time_from,
+        time_to=order.time_to,
+        size=order.size,
+        phone=order.recipient_phone,
+        is_pickup=order.is_pickup,
+        delivery_method=order.delivery_method,
+        address_comment=order.address_comment,
+        bouquet_type=order.bouquet_type,
+        composition_type=order.composition_type,
+    )
+    db.session.add(delivery)
     db.session.commit()
     return order
 
-def get_orders(q=None, phone=None, instagram=None, city=None, delivery_type=None, size=None, date_from=None, date_to=None):
-    logger.info(f'Фільтрація замовлень: q={q}, phone={phone}, instagram={instagram}, city={city}, delivery_type={delivery_type}, size={size}, date_from={date_from}, date_to={date_to}')
-    query = Order.query.join(Client)
+
+def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None):
+    from app.models.subscription import Subscription as _Subscription
+    query = Order.query.options(joinedload(Order.client)).join(Client)
     if q:
-        like_query = f'%{q}%'
+        like_q = f'%{q}%'
         query = query.filter(or_(
-            Client.instagram.ilike(like_query),
-            Client.phone.ilike(like_query),
-            Order.recipient_name.ilike(like_query),
-            Order.recipient_phone.ilike(like_query),
-            Order.recipient_social.ilike(like_query),
-            Order.city.ilike(like_query),
-            Order.street.ilike(like_query),
+            Client.instagram.ilike(like_q),
+            Client.phone.ilike(like_q),
+            Order.recipient_name.ilike(like_q),
+            Order.recipient_phone.ilike(like_q),
+            Order.recipient_social.ilike(like_q),
+            Order.city.ilike(like_q),
+            Order.street.ilike(like_q),
         ))
     if phone:
         query = query.filter(Order.recipient_phone.contains(phone))
@@ -191,75 +109,88 @@ def get_orders(q=None, phone=None, instagram=None, city=None, delivery_type=None
         query = query.filter(Client.instagram.contains(instagram))
     if city:
         query = query.filter(Order.city == city)
-    if delivery_type:
-        query = query.filter(Order.delivery_type == delivery_type)
     if size:
         query = query.filter(Order.size == size)
+    if delivery_type:
+        if delivery_type in SUBSCRIPTION_TYPES:
+            query = query.join(_Subscription, _Subscription.id == Order.subscription_id).filter(_Subscription.type == delivery_type)
+        elif delivery_type == 'One-time':
+            query = query.filter(Order.subscription_id.is_(None))
     if date_from or date_to:
         query = query.join(Delivery)
         if date_from:
             try:
-                parsed_date_from = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
-                query = query.filter(Delivery.delivery_date >= parsed_date_from)
+                parsed = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()
+                query = query.filter(Delivery.delivery_date >= parsed)
             except ValueError:
-                logger.warning(f'Некоректний date_from у фільтрі замовлень: {date_from}')
+                pass
         if date_to:
             try:
-                parsed_date_to = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
-                query = query.filter(Delivery.delivery_date <= parsed_date_to)
+                parsed = datetime.datetime.strptime(date_to, '%Y-%m-%d').date()
+                query = query.filter(Delivery.delivery_date <= parsed)
             except ValueError:
-                logger.warning(f'Некоректний date_to у фільтрі замовлень: {date_to}')
+                pass
         query = query.distinct()
     return query.order_by(Order.id.desc()).all()
+
 
 def paginate_orders(orders, page=1, per_page=10):
     start = (page - 1) * per_page
     end = start + per_page
     return orders[start:end], end < len(orders)
 
+
 def update_order(order, form):
-    # Оновлення клієнта, якщо змінено Instagram
     new_instagram = form.get('client_instagram')
     if new_instagram and new_instagram != order.client.instagram:
         new_client = Client.query.filter_by(instagram=new_instagram).first()
         if not new_client:
             raise ValueError('Клієнта з таким Instagram не знайдено!')
         order.client_id = new_client.id
-    scenario = detect_order_scenario(form)
-    resolved_delivery_type = resolve_delivery_type(form, scenario)
-    resolved_first_delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
-    resolved_delivery_day = resolve_delivery_day(form, resolved_first_delivery_date, scenario)
+
+    delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
+    is_pickup = form.get('is_pickup') == 'on'
+
     order.recipient_name = form['recipient_name']
     order.recipient_phone = form['recipient_phone']
-    order.recipient_social = form.get('recipient_social')
+    order.recipient_social = form.get('recipient_social') or None
+
+    RecipientPhone.query.filter_by(order_id=order.id).delete()
+    for i, ph in enumerate(
+        form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []),
+        start=1
+    ):
+        if ph.strip():
+            db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=i))
+
     order.city = form['city']
-    is_pickup = form.get('is_pickup') == 'on'
-    order.street = 'Самовивіз' if is_pickup else form['street']
-    order.building_number = form.get('building_number')
-    order.floor = form.get('floor')
-    order.entrance = form.get('entrance')
+    order.street = 'Самовивіз' if is_pickup else (form.get('street') or '')
+    order.building_number = form.get('building_number') or None
+    order.floor = form.get('floor') or None
+    order.entrance = form.get('entrance') or None
     order.is_pickup = is_pickup
-    order.address_comment = form.get('address_comment')
-    order.bouquet_type = form.get('bouquet_type')
-    order.composition_type = form.get('composition_type')
-    order.delivery_type = resolved_delivery_type
+    order.address_comment = form.get('address_comment') or None
+    order.bouquet_type = form.get('bouquet_type') or None
+    order.composition_type = form.get('composition_type') or None
     order.size = form['size']
-    order.custom_amount = int(form.get('custom_amount')) if form.get('custom_amount') and form.get('custom_amount').strip() else None
-    order.first_delivery_date = resolved_first_delivery_date
-    order.delivery_day = resolved_delivery_day
-    order.time_from = form.get('time_from')
-    order.time_to = form.get('time_to')
-    order.comment = form.get('comment')
-    order.preferences = form.get('preferences')
+    order.custom_amount = (
+        int(form.get('custom_amount'))
+        if form.get('custom_amount') and str(form.get('custom_amount')).strip()
+        else None
+    )
+    order.delivery_date = delivery_date
+    order.time_from = form.get('time_from') or None
+    order.time_to = form.get('time_to') or None
+    order.comment = form.get('comment') or None
+    order.preferences = form.get('preferences') or None
     order.for_whom = form.get('for_whom') or order.for_whom
     if form.get('delivery_method'):
         order.delivery_method = form.get('delivery_method')
 
-    # Синхронізуємо майбутні/активні доставки, щоб дані в списку замовлень були актуальні
     active_deliveries = [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']]
     for i, delivery in enumerate(sorted(active_deliveries, key=lambda d: d.delivery_date or datetime.date.min)):
         if i == 0:
-            delivery.delivery_date = resolved_first_delivery_date
+            delivery.delivery_date = delivery_date
         delivery.comment = order.comment
         delivery.preferences = order.preferences
         delivery.address_comment = order.address_comment
@@ -272,15 +203,18 @@ def update_order(order, form):
         delivery.delivery_method = order.delivery_method
         delivery.bouquet_type = order.bouquet_type
         delivery.composition_type = order.composition_type
+
     db.session.commit()
     return order
 
+
 def delete_order(order):
-    logger.warning(f'Видалення замовлення {order.id}')
+    logger.warning(f'Deleting order {order.id}')
     from app.models.delivery_route import RouteDelivery
     for delivery in list(order.deliveries):
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
         db.session.delete(delivery)
+    RecipientPhone.query.filter_by(order_id=order.id).delete()
     db.session.flush()
     db.session.delete(order)
     db.session.commit()

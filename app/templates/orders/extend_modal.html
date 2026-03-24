@@ -36,7 +36,7 @@
             <label>Тип доставки</label>
             <select name="delivery_type" class="form-select" required>
               {% for t in delivery_types %}
-                <option value="{{ t.value }}" {% if order.delivery_type == t.value %}selected{% endif %}>{{ t.value }}</option>
+                <option value="{{ t.value }}" {% if order.subscription and order.subscription.type == t.value %}selected{% endif %}>{{ t.value }}</option>
               {% endfor %}
             </select>
           </div>
@@ -52,13 +52,13 @@
           <div class="mb-3">
             <label>День тижня</label>
             <select name="delivery_day" class="form-select" required>
-              <option value="ПН" {% if order.delivery_day == 'ПН' %}selected{% endif %}>ПН</option>
-              <option value="ВТ" {% if order.delivery_day == 'ВТ' %}selected{% endif %}>ВТ</option>
-              <option value="СР" {% if order.delivery_day == 'СР' %}selected{% endif %}>СР</option>
-              <option value="ЧТ" {% if order.delivery_day == 'ЧТ' %}selected{% endif %}>ЧТ</option>
-              <option value="ПТ" {% if order.delivery_day == 'ПТ' %}selected{% endif %}>ПТ</option>
-              <option value="СБ" {% if order.delivery_day == 'СБ' %}selected{% endif %}>СБ</option>
-              <option value="НД" {% if order.delivery_day == 'НД' %}selected{% endif %}>НД</option>
+              <option value="ПН" {% if order.subscription and order.subscription.delivery_day == 'ПН' %}selected{% endif %}>ПН</option>
+              <option value="ВТ" {% if order.subscription and order.subscription.delivery_day == 'ВТ' %}selected{% endif %}>ВТ</option>
+              <option value="СР" {% if order.subscription and order.subscription.delivery_day == 'СР' %}selected{% endif %}>СР</option>
+              <option value="ЧТ" {% if order.subscription and order.subscription.delivery_day == 'ЧТ' %}selected{% endif %}>ЧТ</option>
+              <option value="ПТ" {% if order.subscription and order.subscription.delivery_day == 'ПТ' %}selected{% endif %}>ПТ</option>
+              <option value="СБ" {% if order.subscription and order.subscription.delivery_day == 'СБ' %}selected{% endif %}>СБ</option>
+              <option value="НД" {% if order.subscription and order.subscription.delivery_day == 'НД' %}selected{% endif %}>НД</option>
             </select>
           </div>
           <div class="mb-3">

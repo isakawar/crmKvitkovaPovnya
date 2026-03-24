@@ -250,6 +250,45 @@ def assign_and_send_route(route_id):
     return redirect(url_for('routes.saved_routes'))
 
 
+@routes_bp.route('/routes/<int:route_id>/start-time', methods=['POST'])
+@login_required
+def update_start_time(route_id):
+    from datetime import datetime as dt, timedelta
+    route = DeliveryRoute.query.get_or_404(route_id)
+    data = request.get_json()
+    time_str = (data.get('start_time') or '').strip()
+
+    if not time_str:
+        route.start_time = None
+        db.session.commit()
+        return jsonify({'success': True, 'recalculated': 0, 'arrivals': {}})
+
+    try:
+        parsed = dt.strptime(time_str, '%H:%M').time()
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Невірний формат часу'}), 400
+
+    route.start_time = parsed
+
+    stops = sorted(route.stops, key=lambda s: s.stop_order)
+    current_dt = dt.combine(route.route_date, parsed)
+    arrivals = {}
+    recalculated = 0
+
+    for stop in stops:
+        if stop.duration_from_previous_min is not None:
+            current_dt = current_dt + timedelta(minutes=stop.duration_from_previous_min)
+            stop.planned_arrival = current_dt
+            arrivals[stop.id] = current_dt.strftime('%H:%M')
+            recalculated += 1
+        else:
+            stop.planned_arrival = None
+            arrivals[stop.id] = None
+
+    db.session.commit()
+    return jsonify({'success': True, 'recalculated': recalculated, 'arrivals': arrivals})
+
+
 @routes_bp.route('/routes/<int:route_id>/delete', methods=['POST'])
 @login_required
 def delete_route(route_id):

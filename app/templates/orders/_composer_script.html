@@ -19,6 +19,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const addressField = document.getElementById('address-field');
     const addressLabel = document.getElementById('address-label');
     const addressHint = document.getElementById('address-hint');
+    const addressCommentField = document.getElementById('address-comment-field');
+    const addressCommentInput = document.getElementById('address-comment-input');
+    const citySelect = document.getElementById('order-city-select');
+    const cityField = citySelect ? citySelect.closest('.order-field') : null;
     const deliveryMethodInput = document.getElementById('delivery-method-input');
     const pickupInput = document.getElementById('is-pickup-input');
     const deliveryModeHint = document.getElementById('delivery-mode-hint');
@@ -36,6 +40,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const customAmountDiv = document.getElementById('custom-amount-div');
     const customAmountInput = document.getElementById('custom-amount-input');
     const recipientPhoneInput = document.getElementById('recipient-phone-input');
+    const addExtraPhoneBtn = document.getElementById('add-extra-phone-btn');
+    const extraPhonesContainer = document.getElementById('extra-phones-container');
     const orderModalTitle = document.getElementById('order-modal-title');
     const orderModalDescription = document.getElementById('order-modal-description');
     const orderFlowChip = document.getElementById('order-flow-chip');
@@ -285,8 +291,11 @@ document.addEventListener('DOMContentLoaded', function() {
             addressInput.removeAttribute('required');
             addressInput.classList.add('input-disabled');
             addressField.classList.add('hidden');
+            addressCommentField.classList.add('hidden');
+            if (cityField) cityField.classList.add('hidden');
+            if (citySelect) { citySelect.removeAttribute('required'); citySelect.value = 'Київ'; }
             addressLabel.innerHTML = '<i class="bi bi-signpost-2"></i> Адреса <span class="text-red-500">*</span>';
-            addressInput.placeholder = 'Вулиця, будинок, квартира';
+            addressInput.placeholder = 'Вулиця, будинок';
             addressHint.textContent = 'Поле приховано, бо для самовивозу адреса не потрібна.';
             deliveryModeHint.textContent = 'Клієнт забере замовлення самостійно, без адреси та маршруту курʼєра.';
             return;
@@ -297,9 +306,12 @@ document.addEventListener('DOMContentLoaded', function() {
         addressInput.setAttribute('required', 'required');
         addressInput.classList.remove('input-disabled');
         addressField.classList.remove('hidden');
+        if (cityField) cityField.classList.remove('hidden');
+        if (citySelect) citySelect.setAttribute('required', 'required');
 
         if (mode === 'nova_poshta') {
             deliveryMethodInput.value = 'nova_poshta';
+            addressCommentField.classList.add('hidden');
             addressLabel.innerHTML = '<i class="bi bi-box-seam"></i> Адреса доставки <span class="text-red-500">*</span>';
             addressInput.placeholder = 'Відділення, поштомат або повна адреса Нової Пошти';
             addressHint.textContent = 'Вкажіть відділення, поштомат або адресу доставки Нової Пошти в одному полі.';
@@ -308,10 +320,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         deliveryMethodInput.value = 'courier';
+        addressCommentField.classList.remove('hidden');
         addressLabel.innerHTML = '<i class="bi bi-signpost-2"></i> Адреса <span class="text-red-500">*</span>';
-        addressInput.placeholder = 'Вулиця, будинок, квартира';
-        addressHint.textContent = 'Вкажіть повну адресу доставки, щоб курʼєр міг швидко оформити маршрут.';
-        deliveryModeHint.textContent = 'Курʼєр доставить букет за вказаною адресою отримувача.';
+        addressInput.placeholder = 'Вулиця, будинок';
+        addressHint.textContent = '';
+        deliveryModeHint.textContent = '';
     }
 
     function syncCustomAmountState() {
@@ -339,6 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
+        clearExtraPhones();
         addOrderForm.removeAttribute('data-edit-id');
         addOrderForm.removeAttribute('data-extend-mode');
         window.currentDeliveryId = null;
@@ -399,9 +413,11 @@ document.addEventListener('DOMContentLoaded', function() {
         clientSearch.value = orderData.client_instagram || '';
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
         recipientPhoneInput.value = orderData.recipient_phone || '';
+        renderExtraPhones(orderData.additional_phones || []);
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
+        if (addressCommentInput) addressCommentInput.value = orderData.address_comment || '';
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
@@ -495,6 +511,35 @@ document.addEventListener('DOMContentLoaded', function() {
         recipientPhoneInput.value = value.slice(0, 13);
     }
 
+    function clearExtraPhones() {
+        if (extraPhonesContainer) extraPhonesContainer.innerHTML = '';
+    }
+
+    function addExtraPhoneRow(value = '') {
+        if (!extraPhonesContainer) return;
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-1.5 mt-1.5 extra-phone-row';
+        row.innerHTML = `
+            <input type="text" class="order-input flex-1 extra-phone-input" placeholder="+380XXXXXXXXX" maxlength="13" value="${value}">
+            <button type="button" class="remove-extra-phone flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-400 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-colors" title="Видалити">
+              <i class="bi bi-x text-base"></i>
+            </button>`;
+        row.querySelector('.remove-extra-phone').addEventListener('click', () => row.remove());
+        const input = row.querySelector('.extra-phone-input');
+        input.addEventListener('focus', () => { if (!input.value) input.value = '+38'; });
+        input.addEventListener('input', () => {
+            let v = input.value.replace(/[^\d+]/g, '');
+            if (!v.startsWith('+')) v = '+' + v.replace(/^\+/, '');
+            input.value = v.slice(0, 13);
+        });
+        extraPhonesContainer.appendChild(row);
+    }
+
+    function renderExtraPhones(phones) {
+        clearExtraPhones();
+        (phones || []).forEach(ph => { if (ph) addExtraPhoneRow(ph); });
+    }
+
     function clearFieldInvalid(el) {
         el.classList.remove('order-input--invalid', 'order-select--invalid');
     }
@@ -564,10 +609,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const url = isEditing ? `/orders/${orderId}/edit` : '/orders/new';
 
         try {
+            const fd = new FormData(addOrderForm);
+            if (extraPhonesContainer) {
+                extraPhonesContainer.querySelectorAll('.extra-phone-input').forEach(inp => {
+                    const v = inp.value.trim();
+                    if (v) fd.append('additional_phones', v);
+                });
+            }
             const response = await fetch(url, {
                 method: 'POST',
                 headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                body: new FormData(addOrderForm),
+                body: fd,
             });
             const data = await response.json().catch(() => ({}));
 
@@ -600,9 +652,11 @@ document.addEventListener('DOMContentLoaded', function() {
         clientSearch.value = orderData.client_instagram || '';
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
         recipientPhoneInput.value = orderData.recipient_phone || '';
+        renderExtraPhones(orderData.additional_phones || []);
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
+        if (addressCommentInput) addressCommentInput.value = orderData.address_comment || '';
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
@@ -661,6 +715,10 @@ document.addEventListener('DOMContentLoaded', function() {
     setDeliveryMode('courier');
     syncCustomAmountState();
     setComposerFlow('order', false);
+
+    if (addExtraPhoneBtn) {
+        addExtraPhoneBtn.addEventListener('click', () => addExtraPhoneRow());
+    }
 
     recipientPhoneInput.addEventListener('focus', function() {
         if (!recipientPhoneInput.value) {

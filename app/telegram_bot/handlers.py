@@ -626,9 +626,7 @@ class CourierHandlers:
                 text += f"📞 {phone}\n"
             
             # Розмір букета
-            if delivery.bouquet_size:
-                text += f"💐 {delivery.bouquet_size}\n"
-            elif delivery.size:
+            if delivery.size:
                 text += f"💐 {delivery.size}\n"
             
             text += "\n"
@@ -1072,7 +1070,7 @@ class CourierHandlers:
 
                 recipient = (order.recipient_name if order else '') or ''
                 phone = (d.phone or (order.recipient_phone if order else '')) or ''
-                size = d.bouquet_size or d.size or (order.size if order else '') or ''
+                size = d.size or (order.size if order else '') or ''
 
                 if stop.planned_arrival:
                     time_str = stop.planned_arrival.strftime('%H:%M')

@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', function () {
     creditsInput.value = client.credits ?? 0;
     marketingSourceInput.value = client.marketing_source || '';
     personalDiscountInput.value = client.personal_discount || '';
+    const createdAtDisplay = document.getElementById('client-created-at-display');
+    if (createdAtDisplay) createdAtDisplay.value = client.created_at || '—';
     clearAllErrors();
     toggleClearPhoneButton();
   }
@@ -112,6 +114,8 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtnText.textContent = content.submit;
     }
     updateSubscriptionButtonState();
+    const createdAtRow = document.getElementById('client-created-at-row');
+    if (createdAtRow) createdAtRow.classList.toggle('hidden', !isEditMode);
     if (deleteClientBtn) {
       deleteClientBtn.classList.toggle('hidden', !isEditMode);
       deleteClientBtn.classList.toggle('inline-flex', isEditMode);

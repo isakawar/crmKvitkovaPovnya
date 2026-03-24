@@ -2,10 +2,13 @@ from datetime import datetime, date
 
 from flask import render_template, request, jsonify
 from flask_login import current_user, login_required
+from sqlalchemy.orm import joinedload
 
 from app.blueprints.certificates import certificates_bp
 from app.extensions import db
 from app.models.certificate import Certificate, generate_certificate_code
+from app.models.order import Order
+from app.models.client import Client
 
 
 @certificates_bp.route('/certificates', methods=['GET'])
@@ -27,7 +30,9 @@ def certificates_list():
             ((Certificate.status == 'active') & (Certificate.expires_at < today))
         )
 
-    certificates = query.all()
+    certificates = query.options(
+        joinedload(Certificate.order).joinedload(Order.client)
+    ).all()
 
     counts = {
         'all': Certificate.query.count(),
@@ -126,19 +131,18 @@ def create_certificate():
 def certificate_detail(cert_id):
     cert = Certificate.query.get_or_404(cert_id)
 
-    SUBSCRIPTION_TYPES = ('Weekly', 'Monthly', 'Bi-weekly')
-
     order_info = None
     if cert.order_id and cert.order:
         order = cert.order
-        is_subscription = order.delivery_type in SUBSCRIPTION_TYPES
+        is_subscription = order.subscription_id is not None
+        delivery_type = order.subscription.type if order.subscription else 'One-time'
         client_name = None
         if order.client:
             client_name = order.client.instagram or f'#{order.client.id}'
         order_info = {
             'id': order.id,
             'is_subscription': is_subscription,
-            'delivery_type': order.delivery_type,
+            'delivery_type': delivery_type,
             'client_name': client_name,
         }
 

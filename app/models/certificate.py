@@ -21,7 +21,7 @@ class Certificate(db.Model):
     expires_at = db.Column(db.Date, nullable=False)
 
     # active | used | expired
-    status = db.Column(db.String(20), nullable=False, default='active')
+    status = db.Column(db.String(20), nullable=False, default='active', index=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used_at = db.Column(db.DateTime, nullable=True)
