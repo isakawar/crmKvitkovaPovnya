@@ -978,7 +978,10 @@ document.addEventListener('click', function(e) {
       const stopsCount = route.stops.length;
       const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
       const departureTime = route.departureTime || calcDeparture(route.stops);
-      if (!route.departureTime && departureTime) route.departureTime = departureTime;
+      if (!route.departureTime && departureTime) {
+        route.departureTime = departureTime;
+        route.stops = recalcETAs(route.stops, departureTime);
+      }
 
       card.innerHTML = `
         <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
