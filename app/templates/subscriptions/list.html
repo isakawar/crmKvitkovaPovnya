@@ -96,7 +96,7 @@
     Фільтрувати
   </button>
   {% if search_query or city_filter or type_filter %}
-  <a href="{{ url_for('orders.subscriptions_list') }}"
+  <a href="{{ url_for('subscriptions.subscriptions_list') }}"
      class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
     Скинути
   </a>
@@ -107,7 +107,7 @@
 {% if subscriptions %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
   {% for item in subscriptions %}
-  {% set order = item.order %}
+  {% set sub = item.subscription %}
   {% set total = item.total %}
   {% set completed = item.completed %}
   {% set progress = ((completed / total * 100) | int) if total > 0 else 0 %}
@@ -118,15 +118,15 @@
     <button
       type="button"
       class="absolute inset-0 z-10"
-      data-subscription-id="{{ order.id }}"
-      aria-label="Відкрити підписку {{ order.client.instagram }}"
+      data-subscription-id="{{ sub.id }}"
+      aria-label="Відкрити підписку {{ sub.client.instagram }}"
     ></button>
 
     <!-- Top: client + status dot -->
     <div class="flex items-start justify-between mb-3">
       <div>
-        <p class="font-medium text-stone-900 text-sm">{{ order.client.instagram.lstrip('@') }}</p>
-        <p class="text-xs text-stone-400 mt-0.5">{{ order.recipient_name }}</p>
+        <p class="font-medium text-stone-900 text-sm">{{ sub.client.instagram.lstrip('@') }}</p>
+        <p class="text-xs text-stone-400 mt-0.5">{{ sub.recipient_name }}</p>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if is_active else 'bg-stone-300' }}"
            title="{{ 'Активна' if is_active else 'Завершена' }}"></div>
@@ -135,23 +135,23 @@
     <!-- Badges: type + size -->
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
-                   {% if order.delivery_type == 'Weekly' %}bg-blue-50 border-blue-200 text-blue-700
-                   {% elif order.delivery_type == 'Monthly' %}bg-purple-50 border-purple-200 text-purple-700
+                   {% if sub.type == 'Weekly' %}bg-blue-50 border-blue-200 text-blue-700
+                   {% elif sub.type == 'Monthly' %}bg-purple-50 border-purple-200 text-purple-700
                    {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
-        {{ order.delivery_type }}
+        {{ sub.type }}
       </span>
-      {% if order.size %}
+      {% if sub.size %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
-                   {% if order.size == 'L' %}bg-green-50 border-green-200 text-green-700
-                   {% elif order.size == 'XL' %}bg-amber-50 border-amber-200 text-amber-700
-                   {% elif order.size == 'XXL' %}bg-red-50 border-red-200 text-red-700
+                   {% if sub.size == 'L' %}bg-green-50 border-green-200 text-green-700
+                   {% elif sub.size == 'XL' %}bg-amber-50 border-amber-200 text-amber-700
+                   {% elif sub.size == 'XXL' %}bg-red-50 border-red-200 text-red-700
                    {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
-        {{ order.size }}
+        {{ sub.size }}
       </span>
       {% endif %}
-      {% if order.delivery_day %}
+      {% if sub.delivery_day %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-50 border border-stone-200 text-stone-500 text-xs">
-        {{ order.delivery_day }}
+        {{ sub.delivery_day }}
       </span>
       {% endif %}
     </div>
@@ -173,10 +173,10 @@
     <div class="border-t border-stone-100 pt-3 flex items-center justify-between">
       <div class="flex items-center gap-1.5 text-xs text-stone-400">
         <i class="bi bi-geo-alt"></i>
-        <span>{{ order.city }}</span>
+        <span>{{ sub.city }}</span>
       </div>
-      {% if order.first_delivery_date %}
-      <span class="text-xs text-stone-400">з {{ order.first_delivery_date.strftime('%d.%m.%Y') }}</span>
+      {% if sub.created_at %}
+      <span class="text-xs text-stone-400">з {{ sub.created_at.strftime('%d.%m.%Y') }}</span>
       {% endif %}
     </div>
   </div>
@@ -458,11 +458,11 @@ document.addEventListener('DOMContentLoaded', function() {
             <p class="mt-1 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">Створено: ${escapeHtml(order.created_at || '—')}</p>
           </div>
           <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium ${order.is_current ? 'bg-white/10 text-white' : 'bg-white text-stone-600 border border-stone-200'}">
-            ${escapeHtml(order.delivery_type)} · ${escapeHtml(order.size || '—')}
+            ${escapeHtml(order.delivery_type)} · ${escapeHtml(order.size || '—')} · #${escapeHtml(order.sequence_number || '?')}
           </span>
         </div>
         <div class="mt-3 flex items-center gap-3 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">
-          <span>Старт: ${escapeHtml(order.first_delivery_date || '—')}</span>
+          <span>Дата: ${escapeHtml(order.first_delivery_date || '—')}</span>
           <span>Виконано: ${escapeHtml(order.deliveries_completed || 0)}/${escapeHtml(order.deliveries_total || 0)}</span>
           ${order.is_extended ? '<span>Продовжено</span>' : ''}
         </div>
@@ -495,7 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
         : (delivery.time_from || 'Без часу');
       const deliveryMode = delivery.delivery_method === 'nova_poshta'
         ? 'Нова пошта'
-        : (delivery.address === 'Самовивіз' ? 'Самовивіз' : (delivery.is_subscription ? 'Оплачена' : 'На продовження'));
+        : (delivery.address === 'Самовивіз' ? 'Самовивіз' : 'Підписка');
       const statusClass = delivery.status === 'Доставлено'
         ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
         : delivery.status === 'Не оплачена'
@@ -527,7 +527,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="text-sm text-stone-600">
             <p class="font-medium text-stone-900 md:hidden">Тип доставки</p>
             <p class="mt-1 md:mt-0">${escapeHtml(deliveryMode)}</p>
-            <p class="mt-1 text-xs text-stone-400">${delivery.is_subscription ? 'Входить в оплачений цикл' : 'Доставка на продовження'}</p>
+            <p class="mt-1 text-xs text-stone-400">Входить в підписку</p>
           </div>
         </div>
       `;
@@ -587,12 +587,16 @@ document.addEventListener('DOMContentLoaded', function() {
       extendBtn.disabled = !data.stats.can_extend;
       extendBtn.classList.toggle('opacity-50', !data.stats.can_extend);
       extendBtn.onclick = async () => {
+        if (!data.stats.can_extend) return;
         try {
+          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
+          const result = await resp.json();
+          if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка');
+          showToast(result.message || 'Підписку продовжено', 'success');
           detailModal.hide();
-          await window.orderComposerApi?.openSubscriptionExtension(data.id, { returnToModalId: 'subscriptionDetailModal' });
+          setTimeout(() => location.reload(), 900);
         } catch (error) {
-          showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
-          detailModal.show();
+          showToast(error.message || 'Не вдалося продовжити підписку', 'error');
         }
       };
 

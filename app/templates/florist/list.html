@@ -217,11 +217,11 @@
   {% set city = (order.city if order else '') or '' %}
   {% set street = delivery.street or (order.street if order else '') %}
   {% set building = delivery.building_number or (order.building_number if order else '') %}
-  {% set size = delivery.bouquet_size or delivery.size or (order.size if order else '') %}
+  {% set size = delivery.size or (order.size if order else '') %}
   {% set comment_text = delivery.comment or (order.comment if order else '') %}
   {% set preferences_text = delivery.preferences or (order.preferences if order else '') %}
   {% set time_slot = (delivery.time_from ~ ' - ' ~ delivery.time_to) if (delivery.time_from and delivery.time_to) else (delivery.time_from or delivery.time_to or 'Без часу') %}
-  {% set is_subscription = order and order.delivery_type in ['Weekly', 'Monthly', 'Bi-weekly'] %}
+  {% set is_subscription = order and order.subscription_id %}
   {% set subscription_idx = subscription_delivery_index.get(delivery.id) %}
   <tr data-delivery-row-id="{{ delivery.id }}">
     <td class="w-10">
@@ -269,8 +269,8 @@
         {% if size %}
           <span class="florist-tag {% if size == 'L' %}florist-tag-size-l{% elif size == 'XL' %}florist-tag-size-xl{% elif size == 'XXL' %}florist-tag-size-xxl{% endif %}">{{ size }}</span>
         {% endif %}
-        {% if order and order.delivery_type %}
-          <span class="florist-tag">{{ order.delivery_type }}</span>
+        {% if order and order.subscription %}
+          <span class="florist-tag">{{ order.subscription.type }}</span>
         {% endif %}
         {% if is_subscription and subscription_idx %}
           <span class="florist-tag florist-tag-subscription">{{ subscription_idx }}/4 доставка</span>

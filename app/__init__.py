@@ -46,6 +46,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.dashboard.routes import dashboard_bp
     from app.blueprints.certificates import certificates_bp
     from app.blueprints.transactions import transactions_bp
+    from app.blueprints.subscriptions import subscriptions_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -59,6 +60,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(certificates_bp)
     app.register_blueprint(transactions_bp)
+    app.register_blueprint(subscriptions_bp)
 
     # Cleanup old route cache (раз на добу, старше 7 днів)
     @app.before_request

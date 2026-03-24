@@ -591,9 +591,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const status = this.getAttribute('data-followup-status');
         if (status === 'extended') {
           try {
-            await window.orderComposerApi?.openSubscriptionExtension(orderId);
+            const response = await fetch(`/subscriptions/${orderId}/extend`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || 'Не вдалося продовжити підписку');
+            }
+            card.remove();
+            showToast('Підписку продовжено', 'success');
           } catch (error) {
-            showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
+            showToast(error.message || 'Не вдалося продовжити підписку', 'error');
           }
           return;
         }

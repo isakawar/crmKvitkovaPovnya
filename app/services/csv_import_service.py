@@ -677,6 +677,7 @@ def execute_import_operational(preview_rows: list[dict]) -> dict:
     Creates new clients if not found.
     """
     from app.services.order_service import create_order_and_deliveries
+    from app.services.subscription_service import create_subscription, SUBSCRIPTION_TYPES
 
     created_clients = 0
     existing_clients = 0
@@ -742,7 +743,10 @@ def execute_import_operational(preview_rows: list[dict]) -> dict:
                 'delivery_method': row['delivery_method'],
             }
 
-            create_order_and_deliveries(client, form)
+            if row['delivery_type'] in SUBSCRIPTION_TYPES:
+                create_subscription(client, form)
+            else:
+                create_order_and_deliveries(client, form)
             created_orders += 1
 
         except Exception as e:
@@ -773,10 +777,11 @@ def execute_import(preview_rows: list[dict], first_delivery_date_str: str, deliv
     """
     For each preview row:
       1. Find or create Client
-      2. Create Order + Deliveries via order_service logic
+      2. Create Order + Deliveries via order_service / subscription_service logic
     Returns summary dict.
     """
     from app.services.order_service import create_order_and_deliveries
+    from app.services.subscription_service import create_subscription, SUBSCRIPTION_TYPES
 
     try:
         first_delivery_date = datetime.datetime.strptime(first_delivery_date_str, '%Y-%m-%d').date()
@@ -850,7 +855,10 @@ def execute_import(preview_rows: list[dict], first_delivery_date_str: str, deliv
                 'delivery_method': row['delivery_method'],
             }
 
-            create_order_and_deliveries(client, form)
+            if row['delivery_type'] in SUBSCRIPTION_TYPES:
+                create_subscription(client, form)
+            else:
+                create_order_and_deliveries(client, form)
             created_orders += 1
 
         except Exception as e:

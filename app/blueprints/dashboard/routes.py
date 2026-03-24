@@ -6,9 +6,9 @@ from sqlalchemy import func, case, and_, or_
 from . import dashboard_bp
 from app.extensions import db
 from app.models import Delivery, Order, Client
+from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.models.delivery_route import DeliveryRoute
-from app.services.order_service import SUBSCRIPTION_TYPES
 
 
 @dashboard_bp.route('/dashboard')
@@ -69,17 +69,17 @@ def dashboard_page():
     ).scalar() or 0
 
     new_orders_today = db.session.query(func.count(Order.id)).filter(
+        Order.subscription_id.is_(None),
         func.date(Order.created_at) == today
     ).scalar() or 0
-    new_subscriptions_today = db.session.query(func.count(Order.id)).filter(
-        func.date(Order.created_at) == today,
-        Order.delivery_type.in_(SUBSCRIPTION_TYPES)
+    new_subscriptions_today = db.session.query(func.count(Subscription.id)).filter(
+        func.date(Subscription.created_at) == today
     ).scalar() or 0
-    extended_today = db.session.query(func.count(Order.id)).filter(
-        Order.subscription_followup_status == 'extended',
-        func.date(Order.subscription_followup_at) == today
+    extended_today = db.session.query(func.count(Subscription.id)).filter(
+        Subscription.followup_status == 'extended',
+        func.date(Subscription.followup_at) == today
     ).scalar() or 0
-    one_time_today = max(new_orders_today - new_subscriptions_today, 0)
+    one_time_today = new_orders_today
 
     trend_start = today - timedelta(days=6)
     trend_rows = db.session.query(
@@ -106,25 +106,29 @@ def dashboard_page():
     ).scalar() or 0
     routes_without_courier = max(routes_total - routes_with_courier, 0)
 
+    # Find subscriptions whose last delivery is past and not yet extended
     last_delivery_subq = (
         db.session.query(
-            Delivery.order_id.label('order_id'),
+            Order.subscription_id.label('subscription_id'),
             func.max(Delivery.delivery_date).label('last_delivery_date')
         )
-        .filter(Delivery.status != 'Скасовано')
-        .group_by(Delivery.order_id)
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(
+            Order.subscription_id.isnot(None),
+            Delivery.status != 'Скасовано'
+        )
+        .group_by(Order.subscription_id)
         .subquery()
     )
 
-    ended_orders = (
-        db.session.query(Order, Client, last_delivery_subq.c.last_delivery_date)
-        .join(Client, Order.client_id == Client.id)
-        .join(last_delivery_subq, last_delivery_subq.c.order_id == Order.id)
+    ended_subs_rows = (
+        db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date)
+        .join(Client, Subscription.client_id == Client.id)
+        .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
         .filter(
-            Order.delivery_type.in_(SUBSCRIPTION_TYPES),
             last_delivery_subq.c.last_delivery_date <= today - timedelta(days=4),
-            Order.is_subscription_extended.is_(False),
-            or_(Order.subscription_followup_status.is_(None), Order.subscription_followup_status == 'pending'),
+            Subscription.is_extended.is_(False),
+            or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
         )
         .order_by(last_delivery_subq.c.last_delivery_date.asc())
         .limit(30)
@@ -132,15 +136,15 @@ def dashboard_page():
     )
 
     ended_subscriptions = []
-    for order, client, last_date in ended_orders:
+    for sub, client, last_date in ended_subs_rows:
         days_overdue = (today - last_date).days if last_date else 0
         ended_subscriptions.append({
-            'order_id': order.id,
+            'order_id': sub.id,
             'client_instagram': client.instagram,
             'client_phone': client.phone,
-            'recipient_name': order.recipient_name,
-            'delivery_type': order.delivery_type,
-            'size': order.size,
+            'recipient_name': sub.recipient_name,
+            'delivery_type': sub.type,
+            'size': sub.size,
             'last_delivery_date': last_date,
             'days_overdue': days_overdue,
         })
@@ -181,19 +185,19 @@ def dashboard_page():
     )
 
 
-@dashboard_bp.route('/dashboard/subscriptions/<int:order_id>/status', methods=['POST'])
+@dashboard_bp.route('/dashboard/subscriptions/<int:subscription_id>/status', methods=['POST'])
 @login_required
-def update_subscription_followup(order_id):
+def update_subscription_followup(subscription_id):
     payload = request.get_json() or {}
     status = (payload.get('status') or '').strip().lower()
     if status not in ['extended', 'declined']:
         return jsonify({'success': False, 'error': 'Невірний статус'}), 400
 
-    order = Order.query.get_or_404(order_id)
-    order.subscription_followup_status = status
-    order.subscription_followup_at = datetime.utcnow()
+    sub = Subscription.query.get_or_404(subscription_id)
+    sub.followup_status = status
+    sub.followup_at = datetime.utcnow()
     if status == 'extended':
-        order.is_subscription_extended = True
+        sub.is_extended = True
 
     db.session.commit()
     return jsonify({'success': True})

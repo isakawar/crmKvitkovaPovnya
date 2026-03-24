@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify, redirect, url_fo
 from app.extensions import db
 from app.services.client_service import get_all_clients, create_client, get_clients_json, get_client_by_id, update_client
 from app.models.settings import Settings
-from app.models.order import Order
+from app.models.subscription import Subscription
 
 clients_bp = Blueprint('clients', __name__)
 
@@ -16,9 +16,7 @@ def clients_list():
     all_clients = get_all_clients()
 
     active_sub_client_ids = set(
-        row[0] for row in db.session.query(Order.client_id)
-        .filter(Order.delivery_type.in_(['Weekly', 'Monthly', 'Bi-weekly']))
-        .distinct().all()
+        row[0] for row in db.session.query(Subscription.client_id).distinct().all()
     )
 
     if search_query:

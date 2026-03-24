@@ -34,15 +34,9 @@ class Delivery(db.Model):
     client = db.relationship('Client')
     courier = db.relationship('Courier', back_populates='deliveries')
     
-    # --- denormalized fields ---
-    bouquet_size = db.Column(db.String(16))
-    delivery_type = db.Column(db.String(32))
-    
     # Метод доставки: 'courier' | 'nova_poshta'
     delivery_method = db.Column(db.String(32), default='courier', nullable=False)
 
-    # Подписка
-    is_subscription = db.Column(db.Boolean, default=False)
     florist_status = db.Column(db.String(32), nullable=True)
     
     # Побажання

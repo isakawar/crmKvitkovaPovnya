@@ -103,14 +103,10 @@ def update_delivery(d, data):
         d.phone = data['phone']
     if 'size' in data:
         d.size = data['size']
-    if 'delivery_type' in data:
-        d.delivery_type = data['delivery_type']
     if 'status' in data:
         d.status = data['status']
     if 'is_pickup' in data:
         d.is_pickup = data['is_pickup']
-    if 'is_subscription' in data:
-        d.is_subscription = data['is_subscription']
     if 'comment' in data:
         d.comment = data['comment']
     if 'preferences' in data:

@@ -114,8 +114,8 @@
           </td>
           <td class="px-4 py-3">
             {% if cert.order_id %}
-            {% set is_sub = cert.order and cert.order.delivery_type in ('Weekly', 'Monthly', 'Bi-weekly') %}
-            <a href="{{ url_for('orders.subscriptions_list') if is_sub else url_for('orders.orders_list') }}?open={{ cert.order_id }}"
+            {% set is_sub = cert.order and cert.order.subscription_id %}
+            <a href="{{ url_for('subscriptions.subscriptions_list') if is_sub else url_for('orders.orders_list') }}?open={{ cert.order_id }}"
                class="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900">
               #{{ cert.order_id }}
             </a>

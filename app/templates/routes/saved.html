@@ -744,7 +744,7 @@
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
                 <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-                <td class="whitespace-nowrap">{{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}</td>
+                <td class="whitespace-nowrap">{{ d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
                   {% if d and d.is_pickup %}
@@ -815,7 +815,7 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp2 = d.phone or (order.recipient_phone if order else '') %}{% set _re2 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp2] + _re2) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
@@ -856,7 +856,7 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
@@ -894,7 +894,7 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>

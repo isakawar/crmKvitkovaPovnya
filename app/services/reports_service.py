@@ -1,8 +1,9 @@
 from datetime import date, datetime
-from sqlalchemy import func
+from sqlalchemy import func, case, literal
 
 from app.extensions import db
 from app.models import Client, Order, Settings
+from app.models.subscription import Subscription
 
 
 UNSPECIFIED_TOKENS = {
@@ -29,8 +30,6 @@ UNSPECIFIED_CANONICAL = {
     'немає',
     'нема',
 }
-SUBSCRIPTION_TYPES = {'Weekly', 'Monthly', 'Bi-weekly'}
-
 
 def _compact(raw_value):
     return ' '.join((raw_value or '').strip().split())
@@ -127,7 +126,7 @@ def _next_month(d):
 
 def _monthly_orders_trend():
     rows = (
-        db.session.query(Order.created_at, Order.delivery_type)
+        db.session.query(Order.created_at, Order.subscription_id)
         .filter(Order.created_at.isnot(None))
         .order_by(Order.created_at.asc())
         .all()
@@ -136,11 +135,11 @@ def _monthly_orders_trend():
         return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
 
     monthly = {}
-    for created_at, delivery_type in rows:
+    for created_at, subscription_id in rows:
         month = _month_start(created_at.date())
         bucket = monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})
         bucket['orders'] += 1
-        if (delivery_type or '') in SUBSCRIPTION_TYPES:
+        if subscription_id is not None:
             bucket['subscriptions'] += 1
 
     first_month = min(monthly.keys())
@@ -197,9 +196,14 @@ def get_reports_data(selected_month_raw=None):
         .all()
     )
 
+    sub_type_expr = case(
+        (Order.subscription_id.isnot(None), Subscription.type),
+        else_=literal('One-time')
+    )
     delivery_type_rows = (
-        db.session.query(Order.delivery_type, func.count(Order.id))
-        .group_by(Order.delivery_type)
+        db.session.query(sub_type_expr, func.count(Order.id))
+        .outerjoin(Subscription, Subscription.id == Order.subscription_id)
+        .group_by(sub_type_expr)
         .all()
     )
     size_rows = (
