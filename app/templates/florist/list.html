@@ -240,7 +240,7 @@
     </td>
     <td>
       <div class="font-semibold text-stone-900 break-all">
-        {% if client and client.instagram %}@{{ client.instagram.lstrip('@') }}{% else %}—{% endif %}
+        {% if client and client.instagram %}{{ ('@' + client.instagram.lstrip('@')) if client.instagram.startswith('@') else client.instagram }}{% else %}—{% endif %}
       </div>
       <div class="mt-1 text-xs text-stone-500 break-all">{{ recipient_name }}</div>
     </td>
