@@ -16,8 +16,9 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column('subscription', sa.Column('is_wedding', sa.Boolean(), nullable=False, server_default='false'))
+    # is_wedding already created in refactor_subscription_order migration
+    pass
 
 
 def downgrade():
-    op.drop_column('subscription', 'is_wedding')
+    pass
