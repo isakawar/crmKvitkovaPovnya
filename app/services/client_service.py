@@ -6,6 +6,36 @@ import re
 def get_all_clients():
     return Client.query.order_by(Client.id.desc()).all()
 
+
+def search_clients(q=None, sub_filter=None, page=1, per_page=28):
+    from app.models.subscription import Subscription
+    query = Client.query
+
+    if q:
+        like_q = f'%{q}%'
+        query = query.filter(
+            or_(
+                Client.instagram.ilike(like_q),
+                Client.telegram.ilike(like_q),
+                Client.phone.contains(q),
+            )
+        )
+
+    if sub_filter == 'active':
+        query = query.filter(
+            db.session.query(Subscription.id)
+            .filter(Subscription.client_id == Client.id)
+            .exists()
+        )
+    elif sub_filter == 'inactive':
+        query = query.filter(
+            ~db.session.query(Subscription.id)
+            .filter(Subscription.client_id == Client.id)
+            .exists()
+        )
+
+    return query.order_by(Client.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
 def get_client_by_id(client_id):
     return Client.query.get_or_404(client_id)
 

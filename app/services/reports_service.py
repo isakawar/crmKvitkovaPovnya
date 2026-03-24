@@ -125,9 +125,11 @@ def _next_month(d):
 
 
 def _monthly_orders_trend():
+    from datetime import timedelta
+    cutoff = datetime.utcnow() - timedelta(days=365)
     rows = (
         db.session.query(Order.created_at, Order.subscription_id)
-        .filter(Order.created_at.isnot(None))
+        .filter(Order.created_at.isnot(None), Order.created_at >= cutoff)
         .order_by(Order.created_at.asc())
         .all()
     )

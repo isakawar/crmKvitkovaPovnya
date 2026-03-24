@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 from app.extensions import db
-from app.services.client_service import get_all_clients, create_client, get_clients_json, get_client_by_id, update_client
+from app.services.client_service import get_all_clients, create_client, get_clients_json, get_client_by_id, update_client, search_clients
 from app.models.settings import Settings
 from app.models.subscription import Subscription
 
@@ -13,44 +13,29 @@ def clients_list():
     search_query = request.args.get('q', '').strip()
     sub_filter = request.args.get('sub', '')
 
-    all_clients = get_all_clients()
+    pagination = search_clients(q=search_query or None, sub_filter=sub_filter or None, page=page, per_page=per_page)
+    clients_on_page = pagination.items
 
-    active_sub_client_ids = set(
-        row[0] for row in db.session.query(Subscription.client_id).distinct().all()
-    )
-
-    if search_query:
-        q = search_query.lower()
-        all_clients = [
-            c for c in all_clients
-            if (c.instagram and q in c.instagram.lower())
-            or (c.telegram and q in c.telegram.lower())
-            or (c.phone and q in c.phone)
-        ]
-
-    if sub_filter == 'active':
-        all_clients = [c for c in all_clients if c.id in active_sub_client_ids]
-    elif sub_filter == 'inactive':
-        all_clients = [c for c in all_clients if c.id not in active_sub_client_ids]
-
-    total_clients = len(all_clients)
-    start_idx = (page - 1) * per_page
-    end_idx = start_idx + per_page
-    clients_on_page = all_clients[start_idx:end_idx]
-
-    has_next = end_idx < total_clients
-    prev_page = page - 1 if page > 1 else 1
-    next_page = page + 1
+    # Підвантажуємо dot-індикатори тільки для клієнтів поточної сторінки
+    client_ids_on_page = [c.id for c in clients_on_page]
+    if client_ids_on_page:
+        active_sub_client_ids = set(
+            row[0] for row in db.session.query(Subscription.client_id)
+            .filter(Subscription.client_id.in_(client_ids_on_page))
+            .distinct().all()
+        )
+    else:
+        active_sub_client_ids = set()
 
     marketing_sources = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
 
     return render_template('clients/list.html',
                          clients=clients_on_page,
-                         page=page,
-                         prev_page=prev_page,
-                         next_page=next_page,
-                         has_next=has_next,
-                         clients_count=total_clients,
+                         page=pagination.page,
+                         prev_page=pagination.page - 1 if pagination.page > 1 else 1,
+                         next_page=pagination.page + 1,
+                         has_next=pagination.has_next,
+                         clients_count=pagination.total,
                          marketing_sources=marketing_sources,
                          active_sub_client_ids=active_sub_client_ids,
                          search_query=search_query,

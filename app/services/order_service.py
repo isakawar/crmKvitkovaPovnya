@@ -4,6 +4,7 @@ from app.models.recipient_phone import RecipientPhone
 import datetime
 import logging
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ def create_order_and_deliveries(client, form):
 
 def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None):
     from app.models.subscription import Subscription as _Subscription
-    query = Order.query.join(Client)
+    query = Order.query.options(joinedload(Order.client)).join(Client)
     if q:
         like_q = f'%{q}%'
         query = query.filter(or_(

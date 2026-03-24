@@ -3,10 +3,10 @@ from app.extensions import db
 
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
 
     # Підписка (null для разових замовлень)
-    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'), nullable=True)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'), nullable=True, index=True)
     sequence_number = db.Column(db.Integer, nullable=True)  # 1-4 для замовлень підписки
 
     # Отримувач

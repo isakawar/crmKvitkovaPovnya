@@ -3,10 +3,10 @@ import datetime
 
 class Delivery(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
-    delivery_date = db.Column(db.Date, nullable=False)
-    status = db.Column(db.String(32), default='Очікує')  # Очікує, Доставлено, Скасовано
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False, index=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
+    delivery_date = db.Column(db.Date, nullable=False, index=True)
+    status = db.Column(db.String(32), default='Очікує', index=True)  # Очікує, Доставлено, Скасовано
     comment = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
@@ -25,7 +25,7 @@ class Delivery(db.Model):
     phone = db.Column(db.String(32))
     
     # Кур'єр
-    courier_id = db.Column(db.Integer, db.ForeignKey('courier.id'))
+    courier_id = db.Column(db.Integer, db.ForeignKey('courier.id'), index=True)
     delivered_at = db.Column(db.DateTime)
     status_changed_at = db.Column(db.DateTime)
     

@@ -2,10 +2,13 @@ from datetime import datetime, date
 
 from flask import render_template, request, jsonify
 from flask_login import current_user, login_required
+from sqlalchemy.orm import joinedload
 
 from app.blueprints.certificates import certificates_bp
 from app.extensions import db
 from app.models.certificate import Certificate, generate_certificate_code
+from app.models.order import Order
+from app.models.client import Client
 
 
 @certificates_bp.route('/certificates', methods=['GET'])
@@ -27,7 +30,9 @@ def certificates_list():
             ((Certificate.status == 'active') & (Certificate.expires_at < today))
         )
 
-    certificates = query.all()
+    certificates = query.options(
+        joinedload(Certificate.order).joinedload(Order.client)
+    ).all()
 
     counts = {
         'all': Certificate.query.count(),
