@@ -447,6 +447,9 @@
               {% if route.total_distance_km %}
                 <span class="florist-badge"><i class="bi bi-signpost"></i>{{ '%.1f'|format(route.total_distance_km) }} км</span>
               {% endif %}
+              {% if route.start_time %}
+                <span class="florist-badge"><i class="bi bi-clock"></i>Виїзд {{ route.start_time.strftime('%H:%M') }}</span>
+              {% endif %}
             </div>
             <span class="florist-disclosure-toggle"><i class="bi bi-chevron-down"></i></span>
           </summary>

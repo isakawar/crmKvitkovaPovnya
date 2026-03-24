@@ -909,6 +909,28 @@ document.addEventListener('click', function(e) {
   let isCsvMode = false;
   let selectedDate = '{{ selected_date }}';
 
+  function calcDeparture(stops) {
+    if (!stops || !stops.length) return '';
+    var first = stops[0];
+    if (!first.eta || first.driveMin == null) return '';
+    var parts = first.eta.split(':');
+    var depMin = parseInt(parts[0]) * 60 + parseInt(parts[1]) - first.driveMin;
+    if (depMin < 0) return '';
+    return String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+  }
+
+  function recalcETAs(stops, depTimeStr) {
+    if (!depTimeStr || !stops.length) return stops;
+    var parts = depTimeStr.split(':');
+    var cur = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    return stops.map(function(stop) {
+      cur += (stop.driveMin || 0);
+      var eta = String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0');
+      cur += (stop.waitMin || 0);
+      return Object.assign({}, stop, { eta: eta });
+    });
+  }
+
   function renderRoutes(routes) {
     const container = document.getElementById('routes-container');
     container.innerHTML = '';
@@ -922,7 +944,8 @@ document.addEventListener('click', function(e) {
 
       const stopsCount = route.stops.length;
       const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
-      const driveMin = route.totalDriveMin != null ? route.totalDriveMin + ' хв' : '—';
+      const departureTime = route.departureTime || calcDeparture(route.stops);
+      if (!route.departureTime && departureTime) route.departureTime = departureTime;
 
       card.innerHTML = `
         <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
@@ -930,8 +953,14 @@ document.addEventListener('click', function(e) {
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></span>
             <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">${EDITING_COURIER_NAME && idx === 0 ? EDITING_COURIER_NAME : 'Кур\'єр ' + route.courierId}</span>
           </div>
-          <span style="font-size:0.78rem;color:#a8a29e;">
-            <span class="stops-count">${stopsCount}</span> зупинок · ${distKm} · ${driveMin}
+          <span style="font-size:0.78rem;color:#a8a29e;display:flex;align-items:center;gap:5px;">
+            <span class="stops-count">${stopsCount}</span>&nbsp;зупинок · ${distKm} ·
+            <i class="bi bi-clock" style="font-size:0.85rem;"></i>
+            Виїзд:
+            <input type="time" class="departure-time-input"
+                   value="${departureTime}"
+                   style="border:1px solid #e7e5e4;border-radius:6px;padding:1px 5px;font-size:0.78rem;color:#1c1917;background:#fff;cursor:pointer;outline:none;"
+                   title="Час виїзду з депо">
           </span>
         </div>
         <div>
@@ -942,6 +971,21 @@ document.addEventListener('click', function(e) {
         </div>
       `;
       container.appendChild(card);
+
+      const depInput = card.querySelector('.departure-time-input');
+      depInput.addEventListener('click', function(e) { e.stopPropagation(); });
+      depInput.addEventListener('change', function(e) {
+        e.stopPropagation();
+        const newDep = this.value;
+        currentRoutes[idx].departureTime = newDep;
+        if (newDep && currentRoutes[idx].stops.length) {
+          currentRoutes[idx].stops = recalcETAs(currentRoutes[idx].stops, newDep);
+          const list = card.querySelector('.route-stops-list');
+          renderStops(list, currentRoutes[idx].stops, color);
+          initSortable(list);
+          updateEmptyHints();
+        }
+      });
 
       card.querySelector('.route-card-header').addEventListener('click', function(e) {
         if (e.target.closest('.btn-remove-stop')) return;
@@ -1034,7 +1078,12 @@ document.addEventListener('click', function(e) {
       listEl.querySelectorAll('.stop-row').forEach(function(row) {
         try { stops.push(JSON.parse(row.dataset.stopJson)); } catch(e) {}
       });
-      if (currentRoutes[routeIdx]) currentRoutes[routeIdx].stops = stops;
+      if (currentRoutes[routeIdx]) {
+        currentRoutes[routeIdx].stops = stops;
+        const card = listEl.closest('[data-route-idx]');
+        const inp = card && card.querySelector('.departure-time-input');
+        if (inp) currentRoutes[routeIdx].departureTime = inp.value;
+      }
     });
   }
 

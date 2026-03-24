@@ -717,17 +717,31 @@ def route_generator_save():
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
                 dr.cached_result_json = single_route_cache
                 dr.cached_at = datetime.utcnow()
+                dep_str = (route_data.get('departureTime') or '').strip()
+                if dep_str:
+                    try:
+                        dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
+                    except ValueError:
+                        pass
                 db.session.flush()
             else:
                 dr = None  # fallback to create new below
 
         if not dr:
+            start_time_val = None
+            dep_str = (route_data.get('departureTime') or '').strip()
+            if dep_str:
+                try:
+                    start_time_val = datetime.strptime(dep_str, '%H:%M').time()
+                except ValueError:
+                    pass
             dr = DeliveryRoute(
                 route_date=selected_date,
                 status='draft',
                 deliveries_count=len(stops),
                 total_distance_km=route_data.get('totalDistanceKm'),
                 estimated_duration_min=route_data.get('totalDriveMin'),
+                start_time=start_time_val,
                 cached_result_json=single_route_cache,
                 cached_at=datetime.utcnow(),
             )
