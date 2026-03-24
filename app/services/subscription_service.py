@@ -47,6 +47,20 @@ def build_delivery_dates(first_date, subscription_type, delivery_day):
     return dates
 
 
+def build_delivery_dates_n(first_date, subscription_type, delivery_day, n):
+    """Like build_delivery_dates but generates exactly n dates."""
+    if n <= 0:
+        return []
+    dates = [first_date]
+    desired_weekday = WEEKDAY_MAP.get(delivery_day, first_date.weekday())
+    previous_date = first_date
+    for _ in range(n - 1):
+        next_date = calculate_next_delivery_date(previous_date, subscription_type, desired_weekday)
+        dates.append(next_date)
+        previous_date = next_date
+    return dates
+
+
 def _create_delivery_for_order(order, client_id, is_first):
     return Delivery(
         order_id=order.id,
@@ -154,6 +168,116 @@ def create_subscription(client, form):
                 if hasattr(form, 'getlist')
                 else form.get('additional_phones', [])
             )
+            from app.models.recipient_phone import RecipientPhone
+            for j, ph in enumerate(additional_phones, start=1):
+                if ph.strip():
+                    db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=j))
+
+        delivery = _create_delivery_for_order(order, client.id, is_first=(i == 0))
+        db.session.add(delivery)
+
+    db.session.commit()
+    return subscription
+
+
+def create_subscription_from_import(client, form, delivery_number):
+    """
+    Create a subscription for import scenarios where delivery_number indicates
+    which delivery in the cycle this is (1-5).
+
+    delivery_number 1 → 4 deliveries (full cycle)
+    delivery_number 2 → 3 deliveries
+    delivery_number 3 → 2 deliveries
+    delivery_number 4 → 1 delivery
+    delivery_number 5 → 1 delivery + followup_status='pending'
+    """
+    logger.info(f'Creating import subscription for client {client.id}, delivery_number={delivery_number}')
+
+    is_pickup = form.get('is_pickup') == 'on'
+    sub_type = (form.get('delivery_type') or '').strip()
+    delivery_day = (form.get('delivery_day') or '').strip()
+    first_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
+
+    if not delivery_day:
+        delivery_day = REVERSE_WEEKDAY_MAP.get(first_date.weekday(), 'ПН')
+
+    custom_amount_raw = (form.get('custom_amount') or '').strip()
+    custom_amount = int(custom_amount_raw) if custom_amount_raw else None
+
+    is_wedding = form.get('is_wedding') in (True, 'true', 'True', '1', 'on')
+
+    subscription = Subscription(
+        client_id=client.id,
+        type=sub_type,
+        status='active',
+        delivery_day=delivery_day,
+        time_from=form.get('time_from') or None,
+        time_to=form.get('time_to') or None,
+        recipient_name=form.get('recipient_name') or '',
+        recipient_phone=form.get('recipient_phone') or '',
+        recipient_social=form.get('recipient_social') or None,
+        city=form.get('city') or 'Київ',
+        street='Самовивіз' if is_pickup else (form.get('street') or ''),
+        building_number=form.get('building_number') or None,
+        floor=form.get('floor') or None,
+        entrance=form.get('entrance') or None,
+        is_pickup=is_pickup,
+        address_comment=form.get('address_comment') or None,
+        delivery_method=form.get('delivery_method') or 'courier',
+        size=form.get('size') or 'M',
+        custom_amount=custom_amount,
+        bouquet_type=form.get('bouquet_type') or None,
+        composition_type=form.get('composition_type') or None,
+        for_whom=form.get('for_whom') or '',
+        comment=form.get('comment') or None,
+        preferences=form.get('preferences') or None,
+        is_wedding=is_wedding,
+    )
+
+    if delivery_number >= 5:
+        subscription.followup_status = 'pending'
+
+    db.session.add(subscription)
+    db.session.flush()
+
+    num_deliveries = max(1, 5 - delivery_number)
+    dates = build_delivery_dates_n(first_date, sub_type, delivery_day, num_deliveries)
+
+    for i, d_date in enumerate(dates):
+        seq = delivery_number + i
+        order = Order(
+            client_id=client.id,
+            subscription_id=subscription.id,
+            sequence_number=seq,
+            recipient_name=subscription.recipient_name,
+            recipient_phone=subscription.recipient_phone,
+            recipient_social=subscription.recipient_social,
+            city=subscription.city,
+            street=subscription.street,
+            building_number=subscription.building_number,
+            floor=subscription.floor,
+            entrance=subscription.entrance,
+            is_pickup=subscription.is_pickup,
+            address_comment=subscription.address_comment,
+            delivery_method=subscription.delivery_method,
+            size=subscription.size,
+            custom_amount=subscription.custom_amount,
+            delivery_date=d_date,
+            time_from=subscription.time_from if i == 0 else None,
+            time_to=subscription.time_to if i == 0 else None,
+            bouquet_type=subscription.bouquet_type,
+            composition_type=subscription.composition_type,
+            for_whom=subscription.for_whom,
+            comment=subscription.comment if i == 0 else None,
+            preferences=subscription.preferences,
+        )
+        db.session.add(order)
+        db.session.flush()
+
+        if i == 0:
+            additional_phones = form.get('additional_phones', [])
+            if isinstance(additional_phones, str):
+                additional_phones = [additional_phones] if additional_phones else []
             from app.models.recipient_phone import RecipientPhone
             for j, ph in enumerate(additional_phones, start=1):
                 if ph.strip():

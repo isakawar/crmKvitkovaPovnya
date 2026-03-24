@@ -879,3 +879,301 @@ def execute_import(preview_rows: list[dict], first_delivery_date_str: str, deliv
         'created_orders': created_orders,
         'errors': errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# Kvitkovapovnya 2026 operational CSV — new format
+# ---------------------------------------------------------------------------
+
+_DELIVERY_DAY_UA_MAP = {
+    'субота': 'СБ', 'неділя': 'НД', 'понеділок': 'ПН',
+    'вівторок': 'ВТ', 'середа': 'СР', 'четвер': 'ЧТ',
+    "п'ятниця": 'ПТ', 'пʼятниця': 'ПТ', 'пятниця': 'ПТ',
+}
+_REVERSE_WEEKDAY_SHORT = {0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'НД'}
+
+
+def parse_csv_rows_kvitkovapovnya(file_stream):
+    """Parse rows from the Kvitkovapovnya 2026 CSV format."""
+    import io
+    import csv as csv_module
+
+    content = file_stream.read()
+    if isinstance(content, bytes):
+        content = content.decode('utf-8-sig')
+
+    reader = csv_module.DictReader(io.StringIO(content))
+    rows = []
+    for i, row in enumerate(reader, start=2):
+        # Normalize keys
+        normalized = {k.strip(): v.strip() if isinstance(v, str) else (v or '') for k, v in row.items()}
+
+        raw_client = normalized.get('Name of clients', '').strip()
+        if not raw_client:
+            continue
+
+        phones_raw = normalized.get('Номер телефону отримувача', '')
+        phone_lines = [p.strip() for p in phones_raw.replace('\r', '').split('\n') if p.strip()]
+        recipient_phone = normalize_phone(phone_lines[0]) if phone_lines else ''
+        extra_phones = [normalize_phone(p) for p in phone_lines[1:] if normalize_phone(p)]
+
+        rows.append({
+            'row_num': i,
+            'raw_client': raw_client,
+            'recipient_name': normalized.get("Ім'я на кого доставка", '') or normalized.get('Імʼя на кого доставка', ''),
+            'delivery_type_raw': normalized.get('Вид підписки', ''),
+            'delivery_day_raw': normalized.get('Коли відправка', ''),
+            'size': normalized.get('Розмір', ''),
+            'city': normalized.get('Місто', ''),
+            'address_raw': normalized.get('Адреса', ''),
+            'address_comment_raw': normalized.get('Коментар до адреси', ''),
+            'recipient_phone': recipient_phone,
+            'recipient_phones_extra': extra_phones,
+            'marketing_source': normalized.get('Звідки дізнались про нас', ''),
+            'for_whom': normalized.get('Для кого', ''),
+            'planned_date_raw': normalized.get('Планова доставка', ''),
+            'delivery_number_raw': normalized.get('№ доставки', ''),
+            'is_wedding_raw': normalized.get('Відмітка якщо весільна', ''),
+            'discount_raw': normalized.get('Відсоток знижки', ''),
+        })
+    return rows
+
+
+def _parse_kvp_date(raw):
+    """Parse dd.mm.yyyy date string, return date or None."""
+    import datetime as dt
+    if not raw:
+        return None
+    raw = raw.strip()
+    for fmt in ('%d.%m.%Y', '%d.%m.%y'):
+        try:
+            return dt.datetime.strptime(raw, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
+def _parse_kvp_discount(raw):
+    """Parse discount like '10%' or '10', return int or None."""
+    if not raw:
+        return None
+    raw = raw.strip().rstrip('%').strip()
+    try:
+        val = int(float(raw))
+        return val if val > 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def build_preview_row_kvitkovapovnya(raw):
+    """Build a normalized preview row from raw parsed CSV data."""
+    planned_date = None
+    planned_date_raw = (raw.get('planned_date_raw') or '').strip()
+    if planned_date_raw.lower() not in ('', 'доставки не плануються'):
+        planned_date = _parse_kvp_date(planned_date_raw)
+
+    delivery_number = None
+    dn_raw = (raw.get('delivery_number_raw') or '').strip()
+    if dn_raw and dn_raw.lower() not in ('', 'доставки не плануються'):
+        try:
+            delivery_number = int(dn_raw)
+        except ValueError:
+            pass
+
+    delivery_day_raw = (raw.get('delivery_day_raw') or '').strip().lower()
+    delivery_day = _DELIVERY_DAY_UA_MAP.get(delivery_day_raw, '')
+    if not delivery_day and planned_date:
+        delivery_day = _REVERSE_WEEKDAY_SHORT.get(planned_date.weekday(), 'ПН')
+
+    discount = _parse_kvp_discount(raw.get('discount_raw'))
+    is_wedding = bool((raw.get('is_wedding_raw') or '').strip()) or (raw.get('for_whom') or '').strip().lower() == 'весільна підписка'
+
+    delivery_type_raw = (raw.get('delivery_type_raw') or '').strip()
+    delivery_type_map = {
+        'щотижнева': 'Weekly', 'weekly': 'Weekly',
+        'щодвотижнева': 'Bi-weekly', 'bi-weekly': 'Bi-weekly', 'двотижнева': 'Bi-weekly',
+        'щомісячна': 'Monthly', 'monthly': 'Monthly',
+    }
+    delivery_type = delivery_type_map.get(delivery_type_raw.lower(), delivery_type_raw)
+
+    # Determine action
+    if delivery_number is None:
+        action = 'client_only'
+    elif delivery_number == 0:
+        action = 'one_time'
+    elif delivery_number >= 5:
+        action = 'subscription_followup'
+    else:
+        action = 'subscription'
+
+    # If delivery_type is 'Test' or unknown, treat as client_only/one_time
+    if delivery_type.lower() == 'test' or (delivery_type not in SUBSCRIPTION_TYPES and action in ('subscription', 'subscription_followup')):
+        action = 'one_time' if delivery_number == 0 else 'client_only'
+
+    size_raw = (raw.get('size') or '').strip()
+    size_map = {'s': 'S', 'm': 'M', 'l': 'L', 'xl': 'XL', 'xxl': 'XXL'}
+    size = size_map.get(size_raw.lower(), size_raw) or 'M'
+
+    warnings = []
+    if action in ('one_time', 'subscription', 'subscription_followup') and not planned_date:
+        warnings.append('Відсутня планова дата доставки')
+    if action in ('subscription', 'subscription_followup') and not delivery_type:
+        warnings.append('Відсутній тип підписки')
+
+    return {
+        'row_num': raw['row_num'],
+        'raw_client': raw['raw_client'],
+        'recipient_name': (raw.get('recipient_name') or '').strip(),
+        'recipient_phone': raw.get('recipient_phone') or '',
+        'recipient_phones_extra': raw.get('recipient_phones_extra') or [],
+        'delivery_type': delivery_type,
+        'delivery_day': delivery_day,
+        'size': size,
+        'city': (raw.get('city') or 'Київ').strip() or 'Київ',
+        'address_raw': (raw.get('address_raw') or '').strip(),
+        'address_comment': (raw.get('address_comment_raw') or '').strip(),
+        'for_whom': (raw.get('for_whom') or '').strip(),
+        'marketing_source': (raw.get('marketing_source') or '').strip(),
+        'planned_date': planned_date.strftime('%Y-%m-%d') if planned_date else None,
+        'delivery_number': delivery_number,
+        'is_wedding': is_wedding,
+        'discount': discount,
+        'action': action,
+        'warnings': warnings,
+    }
+
+
+def preview_import_kvitkovapovnya(file_stream):
+    """Parse and preview the Kvitkovapovnya 2026 CSV file."""
+    raw_rows = parse_csv_rows_kvitkovapovnya(file_stream)
+    preview_rows = []
+    summary = {
+        'total': 0,
+        'new_clients': 0,
+        'existing_clients': 0,
+        'warnings': 0,
+        'client_only': 0,
+        'one_time': 0,
+        'subscriptions': 0,
+    }
+
+    for raw in raw_rows:
+        row = build_preview_row_kvitkovapovnya(raw)
+        instagram = _strip_suffix(raw['raw_client'])
+        existing = find_existing_client(instagram)
+        row['is_new_client'] = existing is None
+        row['instagram'] = instagram
+
+        summary['total'] += 1
+        if existing:
+            summary['existing_clients'] += 1
+        else:
+            summary['new_clients'] += 1
+        if row['warnings']:
+            summary['warnings'] += len(row['warnings'])
+        if row['action'] == 'client_only':
+            summary['client_only'] += 1
+        elif row['action'] == 'one_time':
+            summary['one_time'] += 1
+        else:
+            summary['subscriptions'] += 1
+
+        preview_rows.append(row)
+
+    return preview_rows, summary
+
+
+def execute_import_kvitkovapovnya(preview_rows):
+    """Execute the import from preview rows."""
+    from app.services.subscription_service import create_subscription_from_import
+    from app.services.order_service import create_order_and_deliveries
+
+    created_clients = 0
+    existing_clients = 0
+    created_orders = 0
+    errors = []
+
+    for row in preview_rows:
+        try:
+            instagram = row['instagram']
+            client = find_existing_client(instagram)
+            if not client:
+                client = Client(
+                    instagram=instagram,
+                    phone=row['recipient_phone'] or '',
+                )
+                db.session.add(client)
+                db.session.flush()
+                created_clients += 1
+            else:
+                existing_clients += 1
+
+            if row.get('marketing_source'):
+                client.marketing_source = row['marketing_source']
+            if row.get('discount'):
+                client.personal_discount = row['discount']
+
+            db.session.flush()
+
+            action = row['action']
+            if action == 'client_only':
+                continue
+
+            planned_date = row.get('planned_date')
+            if not planned_date:
+                errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): відсутня дата доставки')
+                continue
+
+            form = {
+                'recipient_name': row['recipient_name'] or '',
+                'recipient_phone': row['recipient_phone'] or '',
+                'additional_phones': row['recipient_phones_extra'] or [],
+                'city': row['city'],
+                'street': row['address_raw'],
+                'address_comment': row['address_comment'],
+                'building_number': '',
+                'floor': '',
+                'entrance': '',
+                'is_pickup': '',
+                'size': row['size'],
+                'custom_amount': '',
+                'first_delivery_date': planned_date,
+                'delivery_day': row['delivery_day'],
+                'time_from': '',
+                'time_to': '',
+                'comment': '',
+                'preferences': '',
+                'bouquet_type': '',
+                'composition_type': '',
+                'for_whom': row['for_whom'],
+                'delivery_method': 'courier',
+                'delivery_type': row['delivery_type'],
+                'is_wedding': 'on' if row.get('is_wedding') else '',
+            }
+
+            if action == 'one_time':
+                create_order_and_deliveries(client, form)
+                created_orders += 1
+            elif action in ('subscription', 'subscription_followup'):
+                delivery_number = row['delivery_number'] if action == 'subscription' else 5
+                create_subscription_from_import(client, form, delivery_number)
+                created_orders += 1
+
+        except Exception as e:
+            logger.error(f'KvP import error row {row["row_num"]}: {e}', exc_info=True)
+            errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): {e}')
+            db.session.rollback()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'KvP commit error: {e}', exc_info=True)
+        errors.append(f'Помилка збереження в БД: {e}')
+
+    return {
+        'created_clients': created_clients,
+        'existing_clients': existing_clients,
+        'created_orders': created_orders,
+        'errors': errors,
+    }
