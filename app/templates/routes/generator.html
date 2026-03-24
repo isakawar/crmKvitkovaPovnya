@@ -911,10 +911,33 @@ document.addEventListener('click', function(e) {
 
   function calcDeparture(stops) {
     if (!stops || !stops.length) return '';
+
+    // Optimal departure: latest time that ensures arrival exactly at each stop's
+    // timeStart (eliminates waiting). Formula per stop i: timeStart[i] - Σ driveMin[1..i]
+    var cumDrive = 0;
+    var candidates = [];
+    for (var i = 0; i < stops.length; i++) {
+      cumDrive += (stops[i].driveMin || 0);
+      var ts = stops[i].timeStart;
+      if (ts && ts !== '∞' && ts !== '?' && ts.indexOf(':') !== -1) {
+        var p = ts.split(':');
+        var tsMin = parseInt(p[0]) * 60 + parseInt(p[1]);
+        candidates.push(tsMin - cumDrive);
+      }
+      // Do NOT add waitMin — we're computing the ideal no-wait case
+    }
+    if (candidates.length) {
+      var optimal = Math.max.apply(null, candidates);
+      if (optimal >= 0 && optimal < 24 * 60) {
+        return String(Math.floor(optimal / 60)).padStart(2, '0') + ':' + String(optimal % 60).padStart(2, '0');
+      }
+    }
+
+    // Fallback: back-calculate from first stop ETA
     var first = stops[0];
     if (!first.eta || first.driveMin == null) return '';
-    var parts = first.eta.split(':');
-    var depMin = parseInt(parts[0]) * 60 + parseInt(parts[1]) - first.driveMin;
+    var fp = first.eta.split(':');
+    var depMin = parseInt(fp[0]) * 60 + parseInt(fp[1]) - first.driveMin;
     if (depMin < 0) return '';
     return String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
   }
@@ -925,9 +948,19 @@ document.addEventListener('click', function(e) {
     var cur = parseInt(parts[0]) * 60 + parseInt(parts[1]);
     return stops.map(function(stop) {
       cur += (stop.driveMin || 0);
-      var eta = String(Math.floor(cur / 60)).padStart(2, '0') + ':' + String(cur % 60).padStart(2, '0');
-      cur += (stop.waitMin || 0);
-      return Object.assign({}, stop, { eta: eta });
+      var arrival = cur;
+      var waitMin = 0;
+      var ts = stop.timeStart;
+      if (ts && ts !== '∞' && ts !== '?' && ts.indexOf(':') !== -1) {
+        var tp = ts.split(':');
+        var windowStart = parseInt(tp[0]) * 60 + parseInt(tp[1]);
+        if (arrival < windowStart) {
+          waitMin = windowStart - arrival;
+          cur = windowStart;
+        }
+      }
+      var eta = String(Math.floor(arrival / 60)).padStart(2, '0') + ':' + String(arrival % 60).padStart(2, '0');
+      return Object.assign({}, stop, { eta: eta, waitMin: waitMin });
     });
   }
 
