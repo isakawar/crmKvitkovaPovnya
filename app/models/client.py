@@ -1,8 +1,10 @@
 from app.extensions import db
+import datetime
 
 class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     instagram = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.Date, nullable=True, default=datetime.date.today)
     phone = db.Column(db.String(32), nullable=True)
     telegram = db.Column(db.String(128))
     credits = db.Column(db.Integer, default=0)

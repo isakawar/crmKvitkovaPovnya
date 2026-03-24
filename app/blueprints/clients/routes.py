@@ -97,7 +97,8 @@ def get_client(client_id):
         'telegram': client.telegram or '',
         'credits': client.credits,
         'marketing_source': client.marketing_source,
-        'personal_discount': client.personal_discount or ''
+        'personal_discount': client.personal_discount or '',
+        'created_at': client.created_at.strftime('%d.%m.%Y') if client.created_at else None,
     })
 
 @clients_bp.route('/clients/<int:client_id>', methods=['POST'])
