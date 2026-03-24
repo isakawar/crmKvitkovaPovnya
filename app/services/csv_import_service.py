@@ -967,6 +967,7 @@ def _parse_kvp_discount(raw):
 
 def build_preview_row_kvitkovapovnya(raw):
     """Build a normalized preview row from raw parsed CSV data."""
+    from app.services.subscription_service import SUBSCRIPTION_TYPES
     planned_date = None
     planned_date_raw = (raw.get('planned_date_raw') or '').strip()
     if planned_date_raw.lower() not in ('', 'доставки не плануються'):
