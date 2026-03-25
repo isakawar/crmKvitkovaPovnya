@@ -18,10 +18,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create logs directory
-RUN mkdir -p /app/logs && chmod 777 /app/logs
+RUN mkdir -p /app/logs && chmod 755 /app/logs
 
 # Create instance directory for application data
-RUN mkdir -p /app/instance && chmod 777 /app/instance
+RUN mkdir -p /app/instance && chmod 755 /app/instance
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -30,5 +30,8 @@ ENV FLASK_APP=run.py
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "140", "run:app"] 
+# Make entrypoint executable
+RUN chmod +x /app/entrypoint.sh
+
+# Run migrations then start the app
+ENTRYPOINT ["/app/entrypoint.sh"] 

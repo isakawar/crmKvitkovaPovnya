@@ -147,6 +147,31 @@ def dashboard_page():
             'size': sub.size,
             'last_delivery_date': last_date,
             'days_overdue': days_overdue,
+            'is_renewal_reminder': False,
+        })
+
+    # Renewal reminders from import (delivery_number >= 5, no orders created)
+    renewal_rows = (
+        db.session.query(Subscription, Client)
+        .join(Client, Subscription.client_id == Client.id)
+        .filter(
+            Subscription.is_renewal_reminder.is_(True),
+            or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
+        )
+        .order_by(Subscription.created_at.asc())
+        .all()
+    )
+    for sub, client in renewal_rows:
+        ended_subscriptions.append({
+            'order_id': sub.id,
+            'client_instagram': client.instagram,
+            'client_phone': client.phone,
+            'recipient_name': sub.recipient_name,
+            'delivery_type': sub.type,
+            'size': sub.size,
+            'last_delivery_date': None,
+            'days_overdue': 0,
+            'is_renewal_reminder': True,
         })
 
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()

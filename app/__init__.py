@@ -113,6 +113,40 @@ def create_app(config_class=DevelopmentConfig):
             dt = dt.replace(tzinfo=_dt.timezone.utc)
         return dt.astimezone(_kyiv_tz).strftime('%d.%m.%Y %H:%M')
 
+    @app.cli.command('create-admin')
+    def create_admin():
+        """Create admin user from env vars if not exists."""
+        from app.models.user import User, Role
+        username = os.environ.get('ADMIN_USERNAME', 'admin')
+        email = os.environ.get('ADMIN_EMAIL', 'admin@kvitkovapovnya.com')
+        password = os.environ.get('ADMIN_PASSWORD')
+
+        if not password:
+            print('ADMIN_PASSWORD is not set in .env — skipping admin creation')
+            return
+
+        if User.query.filter_by(username=username).first():
+            print(f'Admin user "{username}" already exists — skipping')
+            return
+
+        role = Role.query.filter_by(name='admin').first()
+        if not role:
+            role = Role(name='admin', description='Administrator')
+            db.session.add(role)
+            db.session.flush()
+
+        user = User(
+            username=username,
+            email=email,
+            user_type='admin',
+            is_active=True,
+        )
+        user.set_password(password)
+        user.roles.append(role)
+        db.session.add(user)
+        db.session.commit()
+        print(f'Admin user "{username}" created successfully')
+
     version = get_version()
     @app.context_processor
     def inject_version():

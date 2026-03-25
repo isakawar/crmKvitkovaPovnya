@@ -136,6 +136,16 @@ def add_marketing_source():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/<int:item_id>', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_setting(item_id):
+    item = Settings.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @bp.route('/settings/prices', methods=['GET'])
 def get_prices():
     sub_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
