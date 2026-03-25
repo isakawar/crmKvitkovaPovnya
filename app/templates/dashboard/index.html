@@ -549,16 +549,25 @@
       <div class="dash-ended-list">
         {% for item in ended_subscriptions %}
         {% set urgency_class = 'dash-ended-card--danger' if item.days_overdue >= 6 else ('dash-ended-card--warn' if item.days_overdue >= 3 else '') %}
-        <div class="dash-ended-card {{ urgency_class }}" data-ended-id="{{ item.order_id }}">
+        <div class="dash-ended-card {{ urgency_class }}" data-ended-id="{{ item.order_id }}" data-is-reminder="{{ 'true' if item.is_renewal_reminder else 'false' }}">
           <div class="dash-ended-meta">
             <strong>{{ item.client_instagram.lstrip('@') if item.client_instagram else '—' }}</strong>
             <span>{{ item.recipient_name }} · {{ item.client_phone }}</span>
+            {% if item.is_renewal_reminder %}
+            <span style="color:#b45309;font-weight:600;">Нагадування: зв'язатися для продовження</span>
+            {% else %}
             <span>Остання доставка: {{ item.last_delivery_date.strftime('%d.%m.%Y') }} · {{ item.days_overdue }} днів тому</span>
+            {% endif %}
           </div>
           <div class="dash-ended-tags">
+            {% if item.is_renewal_reminder %}
+            <span class="dash-tag" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">Нагадування з імпорту</span>
+            {% endif %}
             <span class="dash-tag">{{ item.delivery_type }}</span>
             <span class="dash-tag">Розмір: {{ item.size }}</span>
+            {% if not item.is_renewal_reminder %}
             <span class="dash-tag">Затримка: {{ item.days_overdue }} днів</span>
+            {% endif %}
           </div>
           <div class="dash-actions">
             <button class="dash-action-btn dash-action-btn--primary" data-followup-status="extended">Продовжено</button>
@@ -586,10 +595,11 @@
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('[data-ended-id]').forEach(card => {
     const orderId = card.getAttribute('data-ended-id');
+    const isReminder = card.getAttribute('data-is-reminder') === 'true';
     card.querySelectorAll('[data-followup-status]').forEach(button => {
       button.addEventListener('click', async function() {
         const status = this.getAttribute('data-followup-status');
-        if (status === 'extended') {
+        if (status === 'extended' && !isReminder) {
           try {
             const response = await fetch(`/subscriptions/${orderId}/extend`, {
               method: 'POST',

@@ -361,6 +361,11 @@
                     px-3 py-1 text-xs font-medium">
                     {{ delivery_type_label }}
                   </span>
+                  {% if order and order.sequence_number %}
+                  <span class="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-medium text-stone-500">
+                    {{ order.sequence_number }}/4
+                  </span>
+                  {% endif %}
                 </div>
               </td>
 

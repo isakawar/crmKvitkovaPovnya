@@ -598,6 +598,28 @@
     color: #292524;
   }
 
+  .settings-modal__item-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    margin-left: auto;
+    flex-shrink: 0;
+    border: 1px solid #fecaca;
+    border-radius: 0.6rem;
+    background: #fff;
+    color: #ef4444;
+    font-size: 0.85rem;
+    transition: 0.14s ease;
+    cursor: pointer;
+  }
+
+  .settings-modal__item-delete:hover {
+    background: #fee2e2;
+    border-color: #ef4444;
+  }
+
   .settings-modal__placeholder {
     justify-content: center;
     color: #a8a29e;
@@ -824,7 +846,7 @@
           Оновлюйте довідники CRM, цінову матрицю та службові параметри в одному місці. Без зайвих таблиць і перевантаженого інтерфейсу.
         </p>
       </div>
-      <a class="settings-hero__action" href="{{ url_for('import_csv.import_page') }}">
+      <a class="settings-hero__action" href="{{ url_for('import_csv.kvitkovapovnya_import_page') }}">
         <i class="bi bi-file-earmark-arrow-up"></i>
         Імпорт CSV
       </a>
@@ -1228,10 +1250,31 @@ function loadSettings(modalId, endpoint) {
                 <li class="settings-modal__list-item">
                     <span class="settings-modal__item-index">${index + 1}</span>
                     <span class="settings-modal__item-value">${escapeHtml(item.value)}</span>
+                    <button type="button" class="settings-modal__item-delete js-setting-delete"
+                            data-id="${item.id}" data-endpoint="${endpoint}" title="Видалити">
+                        <i class="bi bi-trash"></i>
+                    </button>
                 </li>
             `).join('');
         });
 }
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.js-setting-delete');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const endpoint = btn.dataset.endpoint;
+    if (!confirm('Видалити цей запис?')) return;
+    fetch(`/settings/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const modalEl = btn.closest('.modal');
+                const modalId = modalEl.id;
+                loadSettings(modalId, endpoint);
+            }
+        });
+});
 
 document.addEventListener('DOMContentLoaded', function() {
     [

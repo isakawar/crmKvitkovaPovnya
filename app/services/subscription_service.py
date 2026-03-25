@@ -235,10 +235,14 @@ def create_subscription_from_import(client, form, delivery_number):
     )
 
     if delivery_number >= 5:
+        subscription.is_renewal_reminder = True
         subscription.followup_status = 'pending'
 
     db.session.add(subscription)
     db.session.flush()
+
+    if delivery_number >= 5:
+        return subscription
 
     num_deliveries = max(1, 5 - delivery_number)
     dates = build_delivery_dates_n(first_date, sub_type, delivery_day, num_deliveries)

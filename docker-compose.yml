@@ -35,6 +35,9 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:-kvitkova_password}@postgres:5432/kvitkova_crm
       - DEPOT_ADDRESS=${DEPOT_ADDRESS:-}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@kvitkovapovnya.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
