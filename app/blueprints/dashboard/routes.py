@@ -121,10 +121,21 @@ def dashboard_page():
         .subquery()
     )
 
+    last_order_subq = (
+        db.session.query(
+            Order.subscription_id.label('subscription_id'),
+            func.max(Order.id).label('last_order_id')
+        )
+        .filter(Order.subscription_id.isnot(None))
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
     ended_subs_rows = (
-        db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date)
+        db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date, last_order_subq.c.last_order_id)
         .join(Client, Subscription.client_id == Client.id)
         .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
+        .outerjoin(last_order_subq, last_order_subq.c.subscription_id == Subscription.id)
         .filter(
             last_delivery_subq.c.last_delivery_date <= today - timedelta(days=4),
             Subscription.is_extended.is_(False),
@@ -136,10 +147,11 @@ def dashboard_page():
     )
 
     ended_subscriptions = []
-    for sub, client, last_date in ended_subs_rows:
+    for sub, client, last_date, last_order_id in ended_subs_rows:
         days_overdue = (today - last_date).days if last_date else 0
         ended_subscriptions.append({
             'order_id': sub.id,
+            'last_order_id': last_order_id,
             'client_instagram': client.instagram,
             'client_phone': client.phone,
             'recipient_name': sub.recipient_name,

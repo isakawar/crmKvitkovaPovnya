@@ -90,10 +90,10 @@ docker compose exec web flask db current
 
 ``` bash
 # Створити адміністратора
-docker compose exec web flask create-admin
+docker compose exec web flask ensure-admin
 
 # Створити флориста
-docker compose exec web flask create-florist
+docker compose exec web flask ensure-florist
 ```
 
 ------------------------------------------------------------------------

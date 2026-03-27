@@ -147,6 +147,37 @@ def create_app(config_class=DevelopmentConfig):
         """Створити адміністратора інтерактивно."""
         _create_user('admin', 'admin', 'Administrator')
 
+    @app.cli.command('ensure-admin')
+    def ensure_admin():
+        """Створити адміністратора з env змінних (для Docker)."""
+        import os
+        from app.models.user import User, Role
+
+        username = os.environ.get('ADMIN_USERNAME', 'admin')
+        email = os.environ.get('ADMIN_EMAIL', 'admin@kvitkovapovnya.com')
+        password = os.environ.get('ADMIN_PASSWORD', '')
+
+        if not password:
+            print('ADMIN_PASSWORD not set, skipping admin creation.')
+            return
+
+        if User.query.filter_by(username=username).first():
+            print(f'Admin "{username}" already exists, skipping.')
+            return
+
+        role = Role.query.filter_by(name='admin').first()
+        if not role:
+            role = Role(name='admin', description='Administrator')
+            db.session.add(role)
+            db.session.flush()
+
+        user = User(username=username, email=email, user_type='admin', is_active=True)
+        user.set_password(password)
+        user.roles.append(role)
+        db.session.add(user)
+        db.session.commit()
+        print(f'Admin "{username}" created.')
+
     @app.cli.command('create-florist')
     def create_florist():
         """Створити флориста інтерактивно."""

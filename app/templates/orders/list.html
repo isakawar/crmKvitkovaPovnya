@@ -9,6 +9,173 @@
   .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
   .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+  .delivery-time-confirmed-row:hover {
+    background: #86efac !important;
+  }
+  .reschedule-modal-dialog {
+    max-width: 760px;
+  }
+  .reschedule-modal-content {
+    overflow: hidden;
+    border: 0;
+    border-radius: 32px;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 24%),
+      linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+    box-shadow: 0 28px 80px rgba(28, 25, 23, 0.22);
+  }
+  .reschedule-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid #e7e5e4;
+  }
+  .reschedule-modal-body-shell {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+  .reschedule-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.5rem;
+    border-top: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .reschedule-close-btn {
+    display: inline-flex;
+    height: 52px;
+    width: 52px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    border: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, 0.92);
+    color: #78716c;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .reschedule-close-btn:hover {
+    border-color: #d6d3d1;
+    background: #f5f5f4;
+    color: #292524;
+  }
+  .reschedule-context-card {
+    border: 1px solid #fde68a;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.96));
+    padding: 1rem 1.1rem;
+  }
+  .reschedule-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #fcd34d;
+    background: rgba(255, 251, 235, 0.95);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b45309;
+  }
+  .reschedule-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.83rem;
+    font-weight: 600;
+  }
+  .reschedule-meta-pill.is-safe {
+    border: 1px solid #d6d3d1;
+    background: #fafaf9;
+    color: #57534e;
+  }
+  .reschedule-meta-pill.is-overlap {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+  }
+  .reschedule-rows {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .reschedule-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    border: 1px solid #e7e5e4;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.95rem 1rem;
+  }
+  .reschedule-row-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .reschedule-row-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+  .reschedule-row-dates {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #57534e;
+    font-size: 0.92rem;
+  }
+  .reschedule-row-current-date {
+    font-weight: 500;
+    color: #292524;
+  }
+  .reschedule-row-arrow {
+    color: #a8a29e;
+    font-size: 0.95rem;
+  }
+  .reschedule-date-input {
+    width: 168px;
+    border: 1px solid #fde68a;
+    border-radius: 16px;
+    background: #fffbeb;
+    padding: 0.7rem 0.85rem;
+    color: #1c1917;
+    font-size: 0.92rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+  .reschedule-date-input:focus {
+    border-color: #f59e0b;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  }
+  @media (max-width: 767.98px) {
+    .reschedule-modal-header,
+    .reschedule-modal-body-shell,
+    .reschedule-modal-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .reschedule-row {
+      grid-template-columns: 1fr;
+    }
+    .reschedule-date-input {
+      width: 100%;
+    }
+    .reschedule-modal-footer {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+  }
   .order-status-delivered {
     background: #059669;
     border-color: #059669;
@@ -259,7 +426,7 @@
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
-            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ 'bg-green-50' if time_confirmed else 'bg-stone-100' }}"
+            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row bg-green-50' if time_confirmed else 'bg-stone-100 hover:bg-amber-50/40' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -489,6 +656,46 @@
       <div class="modal-footer border-0 pt-0">
         <button type="button" class="btn btn-outline-secondary rounded-3" data-bs-dismiss="modal">Скасувати</button>
         <button type="button" class="btn btn-dark rounded-3" id="delivery-edit-save">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="rescheduleSubsequentModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered reschedule-modal-dialog">
+    <div class="modal-content reschedule-modal-content">
+      <div class="reschedule-modal-header">
+        <div class="space-y-3">
+          <span class="reschedule-chip">
+            <i class="bi bi-arrow-repeat"></i>
+            Графік доставок
+          </span>
+          <div>
+            <h5 class="modal-title text-xl font-semibold text-stone-900">Перенести наступні доставки?</h5>
+            <p class="mt-1 text-sm text-stone-500">
+              Ми підготували нові дати для решти циклу, щоб інтервал між доставками залишався логічним.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="reschedule-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="reschedule-modal-body-shell">
+        <div id="rescheduleModalBody" class="space-y-4"></div>
+      </div>
+      <div class="reschedule-modal-footer">
+        <button type="button"
+                class="inline-flex min-w-[170px] items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition-colors duration-200 hover:bg-stone-50 hover:text-stone-900"
+                data-bs-dismiss="modal">
+          Залишити як є
+        </button>
+        <button type="button"
+                class="inline-flex min-w-[190px] items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70"
+                id="rescheduleConfirmBtn">
+          <i class="bi bi-arrow-right-circle"></i>
+          Так, перенести
+        </button>
       </div>
     </div>
   </div>
@@ -766,11 +973,14 @@
         const hasTime = !!(newTimeFrom || newTimeTo);
         row.classList.toggle('bg-stone-100', !hasTime);
         row.classList.toggle('bg-green-50', hasTime);
+        row.classList.toggle('delivery-time-confirmed-row', hasTime);
+        row.classList.toggle('hover:bg-amber-50/40', !hasTime);
         const slot = row.querySelector('.delivery-time-slot');
         if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
       });
       showToast(clear ? 'Час доставки очищено' : 'Час доставки оновлено', 'success');
       updateSelectedCount();
+      return data;
     } catch (e) {
       showToast('Помилка зʼєднання', 'error');
     }
@@ -792,13 +1002,112 @@
       const prevRow = document.querySelector(`tr[data-delivery-id="${id}"]`);
       const prevDate = prevRow ? prevRow.dataset.deliveryDate : '';
 
-      await applyTime([id], fromValue, toValue, false, dateValue);
+      const result = await applyTime([id], fromValue, toValue, false, dateValue);
       if (editModalInstance) editModalInstance.hide();
-      if (dateValue && prevDate && dateValue !== prevDate) {
+
+      if (result && result.reschedule_suggestion) {
+        showRescheduleModal(result.reschedule_suggestion);
+      } else if (dateValue && prevDate && dateValue !== prevDate) {
         location.reload();
       }
     });
   }
+
+  function showRescheduleModal(suggestion) {
+    const body = document.getElementById('rescheduleModalBody');
+
+    const subTypeMap = { 'Weekly': 'Weekly (щотижнева)', 'Bi-weekly': 'Bi-weekly (кожні 2 тижні)', 'Monthly': 'Monthly (щомісячна)' };
+    const subTypeLabel = subTypeMap[suggestion.subscription_type] || suggestion.subscription_type;
+    const contextNote = suggestion.recipient_name
+      ? `<div class="reschedule-context-card">
+           <div class="flex flex-wrap items-center gap-2">
+             <span class="reschedule-chip">
+               <i class="bi bi-person"></i>
+               ${suggestion.recipient_name}
+             </span>
+             <span class="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600">
+               ${subTypeLabel}
+             </span>
+           </div>
+           <p class="mt-3 mb-0 text-sm leading-6 text-stone-600">
+             Поточну доставку перенесено з <strong class="text-stone-900">${suggestion.changed_from}</strong>
+             на <strong class="text-stone-900">${suggestion.changed_to}</strong>.
+             Нижче можна одразу підтвердити оновлений графік наступних доставок.
+           </p>
+         </div>`
+      : '';
+
+    const isOverlap = suggestion.gap_days < 0;
+    const gapText = isOverlap
+      ? `<span class="reschedule-meta-pill is-overlap"><i class="bi bi-exclamation-octagon"></i>Перекриття дат</span>`
+      : `<span class="reschedule-meta-pill is-safe"><i class="bi bi-check2-circle"></i>До наступної доставки залишилось ${suggestion.gap_days} дн.</span>`;
+
+    const rows = suggestion.deliveries.map(d =>
+      `<div class="reschedule-row">
+         <div class="reschedule-row-label">
+           <span class="reschedule-row-kicker">Доставка #${d.sequence_number}</span>
+           <div class="reschedule-row-dates">
+             <span class="reschedule-row-current-date">${d.current_date}</span>
+             <i class="bi bi-arrow-right reschedule-row-arrow"></i>
+           </div>
+         </div>
+         <div>
+           <input type="date"
+                  class="reschedule-date-input"
+                  data-order-id="${d.order_id}"
+                  value="${d.new_date_iso}">
+         </div>
+       </div>`
+    ).join('');
+
+    body.innerHTML = `
+      ${contextNote}
+      <div>${gapText}</div>
+      <div class="reschedule-rows">${rows}</div>`;
+
+    const oldBtn = document.getElementById('rescheduleConfirmBtn');
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+    newBtn.addEventListener('click', async () => {
+      newBtn.disabled = true;
+      newBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Переносимо...';
+
+      const modalEl = document.getElementById('rescheduleSubsequentModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+
+      try {
+        const dateInputs = body.querySelectorAll('.reschedule-date-input');
+        const dates = Array.from(dateInputs).map(inp => ({
+          order_id: inp.dataset.orderId,
+          new_date: inp.value,
+        }));
+        const resp = await fetch('/orders/deliveries/reschedule-subsequent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delivery_id: suggestion.changed_delivery_id, dates }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (data.success) {
+          showToast(`${data.rescheduled} доставок перенесено`, 'success');
+          location.reload();
+        } else {
+          showToast(data.error || 'Помилка перенесення', 'error');
+          newBtn.disabled = false;
+          newBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Так, перенести';
+        }
+      } catch {
+        showToast('Помилка зʼєднання', 'error');
+        newBtn.disabled = false;
+        newBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Так, перенести';
+      }
+    });
+
+    new bootstrap.Modal(document.getElementById('rescheduleSubsequentModal')).show();
+  }
+
+  window.showRescheduleModal = showRescheduleModal;
 
   updateSelectedCount();
 })();

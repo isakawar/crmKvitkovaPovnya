@@ -21,6 +21,8 @@ from app.services.order_service import (
 from app.services.subscription_service import (
     create_subscription,
     extend_subscription as svc_extend_subscription,
+    calculate_reschedule_plan,
+    apply_reschedule_plan,
 )
 from app.services.delivery_service import group_deliveries_by_date
 from app.services.route_optimizer_service import (
@@ -276,8 +278,28 @@ def order_edit(order_id):
     order = Order.query.get_or_404(order_id)
     if request.method == 'POST':
         logging.info(f'EDIT ORDER {order_id}')
+
+        # Capture first active delivery + its date before update
+        import datetime as _dt
+        active_before = sorted(
+            [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']],
+            key=lambda d: d.delivery_date or _dt.date.min,
+        )
+        first_delivery = active_before[0] if active_before else None
+        old_date = first_delivery.delivery_date if first_delivery else None
+
         update_order(order, request.form)
-        return jsonify({'success': True})
+
+        reschedule_suggestion = None
+        new_date_raw = (request.form.get('first_delivery_date') or '').strip()
+        if first_delivery and old_date and new_date_raw:
+            try:
+                new_date = _dt.datetime.strptime(new_date_raw, '%Y-%m-%d').date()
+                reschedule_suggestion = calculate_reschedule_plan(first_delivery, old_date, new_date)
+            except Exception:
+                pass
+
+        return jsonify({'success': True, 'reschedule_suggestion': reschedule_suggestion})
 
     delivery_comment = next((d.comment for d in order.deliveries if d.comment), None)
     delivery_preferences = next((d.preferences for d in order.deliveries if d.preferences), None)
@@ -380,6 +402,8 @@ def delivery_delete(delivery_id):
     db.session.flush()
     remaining = Delivery.query.filter_by(order_id=order.id).count()
     if remaining == 0:
+        from app.models.recipient_phone import RecipientPhone
+        RecipientPhone.query.filter_by(order_id=order.id).delete()
         db.session.delete(order)
     db.session.commit()
     return jsonify({'success': True})
@@ -423,7 +447,9 @@ def update_delivery_times():
     if not deliveries:
         return jsonify({'success': False, 'error': 'Доставки не знайдені'}), 404
 
+    old_dates = {}
     for delivery in deliveries:
+        old_dates[delivery.id] = delivery.delivery_date
         delivery.time_from = None if clear_time else (time_from or None)
         delivery.time_to = None if clear_time else (time_to or None)
         if delivery_date:
@@ -432,7 +458,67 @@ def update_delivery_times():
                 RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
                 delivery.status = 'Очікує'
     db.session.commit()
-    return jsonify({'success': True, 'updated': len(deliveries)})
+
+    reschedule_suggestion = None
+    if delivery_date and len(deliveries) == 1:
+        d = deliveries[0]
+        reschedule_suggestion = calculate_reschedule_plan(d, old_dates[d.id], delivery_date)
+
+    return jsonify({
+        'success': True,
+        'updated': len(deliveries),
+        'reschedule_suggestion': reschedule_suggestion,
+    })
+
+
+@orders_bp.route('/orders/deliveries/reschedule-subsequent', methods=['POST'])
+@login_required
+def reschedule_subsequent_deliveries():
+    from app.models.delivery_route import RouteDelivery
+    data = request.get_json() or {}
+    delivery_id = data.get('delivery_id')
+    custom_dates = data.get('dates')  # [{order_id, new_date: 'YYYY-MM-DD'}, ...]
+
+    if not delivery_id:
+        return jsonify({'success': False, 'error': 'Вкажіть delivery_id'}), 400
+
+    delivery = Delivery.query.get(delivery_id)
+    if not delivery:
+        return jsonify({'success': False, 'error': 'Доставку не знайдено'}), 404
+
+    order = delivery.order
+    if not order or not order.subscription_id or order.sequence_number is None:
+        return jsonify({'success': False, 'error': 'Доставка не належить до підписки'}), 400
+
+    if order.subscription.type == 'Monthly':
+        return jsonify({'success': False, 'error': 'Місячні підписки не підтримуються'}), 400
+
+    if custom_dates:
+        # Apply user-edited dates explicitly
+        date_map = {}
+        for item in custom_dates:
+            try:
+                date_map[int(item['order_id'])] = datetime.strptime(item['new_date'], '%Y-%m-%d').date()
+            except (KeyError, ValueError):
+                pass
+
+        count = 0
+        for order_id, new_date in date_map.items():
+            target_order = Order.query.get(order_id)
+            if not target_order:
+                continue
+            for d in target_order.deliveries:
+                if d.status not in ('Доставлено', 'Скасовано'):
+                    d.delivery_date = new_date
+                    if d.status == 'Розподілено':
+                        RouteDelivery.query.filter_by(delivery_id=d.id).delete()
+                        d.status = 'Очікує'
+                    count += 1
+        db.session.commit()
+        return jsonify({'success': True, 'rescheduled': count})
+
+    count = apply_reschedule_plan(delivery)
+    return jsonify({'success': True, 'rescheduled': count})
 
 
 @orders_bp.route('/clients/search', methods=['GET'])
