@@ -113,39 +113,44 @@ def create_app(config_class=DevelopmentConfig):
             dt = dt.replace(tzinfo=_dt.timezone.utc)
         return dt.astimezone(_kyiv_tz).strftime('%d.%m.%Y %H:%M')
 
-    @app.cli.command('create-admin')
-    def create_admin():
-        """Create admin user from env vars if not exists."""
+    def _create_user(user_type, role_name, role_description):
+        import click
         from app.models.user import User, Role
-        username = os.environ.get('ADMIN_USERNAME', 'admin')
-        email = os.environ.get('ADMIN_EMAIL', 'admin@kvitkovapovnya.com')
-        password = os.environ.get('ADMIN_PASSWORD')
 
-        if not password:
-            print('ADMIN_PASSWORD is not set in .env — skipping admin creation')
-            return
-
+        username = click.prompt('Username')
         if User.query.filter_by(username=username).first():
-            print(f'Admin user "{username}" already exists — skipping')
+            click.echo(f'Користувач "{username}" вже існує.')
             return
 
-        role = Role.query.filter_by(name='admin').first()
+        email = click.prompt('Email')
+        if User.query.filter_by(email=email).first():
+            click.echo(f'Email "{email}" вже використовується.')
+            return
+
+        password = click.prompt('Password', hide_input=True, confirmation_prompt=True)
+
+        role = Role.query.filter_by(name=role_name).first()
         if not role:
-            role = Role(name='admin', description='Administrator')
+            role = Role(name=role_name, description=role_description)
             db.session.add(role)
             db.session.flush()
 
-        user = User(
-            username=username,
-            email=email,
-            user_type='admin',
-            is_active=True,
-        )
+        user = User(username=username, email=email, user_type=user_type, is_active=True)
         user.set_password(password)
         user.roles.append(role)
         db.session.add(user)
         db.session.commit()
-        print(f'Admin user "{username}" created successfully')
+        click.echo(f'Створено {user_type} "{username}".')
+
+    @app.cli.command('create-admin')
+    def create_admin():
+        """Створити адміністратора інтерактивно."""
+        _create_user('admin', 'admin', 'Administrator')
+
+    @app.cli.command('create-florist')
+    def create_florist():
+        """Створити флориста інтерактивно."""
+        _create_user('florist', 'florist', 'Florist')
 
     version = get_version()
     @app.context_processor
