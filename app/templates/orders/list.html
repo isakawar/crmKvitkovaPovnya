@@ -9,8 +9,19 @@
   .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
   .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+  .delivery-time-confirmed-row {
+    background: #ffffff;
+    box-shadow: inset 4px 0 0 #34d399;
+  }
   .delivery-time-confirmed-row:hover {
-    background: #86efac !important;
+    background: #ecfdf5 !important;
+  }
+  .delivery-time-no-time-row {
+    background: #ffffff;
+    box-shadow: inset 4px 0 0 #fb7185;
+  }
+  .delivery-time-no-time-row:hover {
+    background: #fff1f2 !important;
   }
   .reschedule-modal-dialog {
     max-width: 760px;
@@ -177,11 +188,12 @@
     }
   }
   .order-status-delivered {
-    background: #059669;
-    border-color: #059669;
+    background: #16a34a;
+    border-color: #16a34a;
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    font-weight: 600;
   }
 </style>
 {% endblock %}
@@ -426,7 +438,7 @@
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
-            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row bg-green-50' if time_confirmed else 'bg-stone-100 hover:bg-amber-50/40' }}"
+            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row' if time_confirmed else 'delivery-time-no-time-row' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -467,7 +479,7 @@
                   {% endif %}
                   <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
                     {% if delivery.status == 'Доставлено' %}order-status-delivered
-                    {% elif delivery.status == 'Очікує' %}border border-stone-200 bg-stone-100 text-stone-600
+                    {% elif delivery.status == 'Очікує' %}border border-red-200 bg-red-50 text-red-400
                     {% elif delivery.status == 'Розподілено' %}border border-blue-200 bg-blue-50 text-blue-700
                     {% elif delivery.status == 'Не оплачена' %}border border-red-200 bg-red-50 text-red-700
                     {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
@@ -971,10 +983,8 @@
         }
         const newTimeTo = clear ? '' : toValue;
         const hasTime = !!(newTimeFrom || newTimeTo);
-        row.classList.toggle('bg-stone-100', !hasTime);
-        row.classList.toggle('bg-green-50', hasTime);
+        row.classList.toggle('delivery-time-no-time-row', !hasTime);
         row.classList.toggle('delivery-time-confirmed-row', hasTime);
-        row.classList.toggle('hover:bg-amber-50/40', !hasTime);
         const slot = row.querySelector('.delivery-time-slot');
         if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
       });
