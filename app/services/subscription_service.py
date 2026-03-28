@@ -61,6 +61,155 @@ def build_delivery_dates_n(first_date, subscription_type, delivery_day, n):
     return dates
 
 
+# ── Reschedule constants ───────────────────────────────────────────────────
+WEEKLY_MIN_GAP_DAYS = 4
+BIWEEKLY_MIN_GAP_DAYS = 9
+
+
+def _get_first_valid_date(new_date, sub_type, delivery_day):
+    """
+    Returns the first valid delivery date after new_date, anchored to
+    delivery_day weekday and respecting the minimum gap rule.
+    Single implementation shared by calculate_reschedule_plan and apply_reschedule_plan.
+    """
+    desired_weekday = WEEKDAY_MAP.get(delivery_day, new_date.weekday())
+    interval = 7 if sub_type == 'Weekly' else 14
+    threshold = WEEKLY_MIN_GAP_DAYS if sub_type == 'Weekly' else BIWEEKLY_MIN_GAP_DAYS
+
+    days_until = (desired_weekday - new_date.weekday()) % 7
+    if days_until == 0:
+        days_until = interval  # already on desired weekday → jump full cycle
+
+    first_candidate = new_date + datetime.timedelta(days=days_until)
+    if (first_candidate - new_date).days <= threshold:
+        return first_candidate + datetime.timedelta(days=interval)
+    return first_candidate
+
+
+def calculate_reschedule_plan(delivery, old_date, new_date):
+    """
+    Returns a reschedule suggestion dict if conditions are met, else None.
+    Reads delivery dates from Delivery records (source of truth).
+
+    Conditions:
+    - delivery belongs to a non-Monthly subscription
+    - date changed by > 2 days
+    - gap from new_date to next pending delivery <= threshold
+    """
+    order = delivery.order
+    if not order or not order.subscription_id or order.sequence_number is None:
+        return None
+
+    subscription = order.subscription
+    if subscription.type == 'Monthly':
+        return None
+
+    if abs((new_date - old_date).days) <= 2:
+        return None
+
+    next_orders = (
+        Order.query
+        .filter(
+            Order.subscription_id == order.subscription_id,
+            Order.sequence_number > order.sequence_number,
+        )
+        .order_by(Order.sequence_number)
+        .all()
+    )
+    pending_next = [
+        o for o in next_orders
+        if any(d.status not in ('Доставлено', 'Скасовано') for d in o.deliveries)
+    ]
+    if not pending_next:
+        return None
+
+    def get_delivery_date(o):
+        pending = [d for d in o.deliveries if d.status not in ('Доставлено', 'Скасовано')]
+        return pending[0].delivery_date if pending else o.delivery_date
+
+    threshold = WEEKLY_MIN_GAP_DAYS if subscription.type == 'Weekly' else BIWEEKLY_MIN_GAP_DAYS
+    gap_days = (get_delivery_date(pending_next[0]) - new_date).days
+    if gap_days > threshold:
+        return None
+
+    interval = 7 if subscription.type == 'Weekly' else 14
+    first_valid = _get_first_valid_date(new_date, subscription.type, subscription.delivery_day)
+
+    # Determine skipped date for UX explanation
+    desired_weekday_num = WEEKDAY_MAP.get(subscription.delivery_day, new_date.weekday())
+    days_until_raw = (desired_weekday_num - new_date.weekday()) % 7 or interval
+    first_candidate = new_date + datetime.timedelta(days=days_until_raw)
+    skipped_date = first_candidate.strftime('%d.%m') if first_candidate != first_valid else None
+
+    suggested = []
+    current = first_valid
+    for o in pending_next:
+        suggested.append({
+            'order_id': o.id,
+            'sequence_number': o.sequence_number,
+            'current_date': get_delivery_date(o).strftime('%d.%m'),
+            'new_date': current.strftime('%d.%m'),
+            'new_date_iso': current.strftime('%Y-%m-%d'),
+        })
+        current += datetime.timedelta(days=interval)
+
+    return {
+        'subscription_type': subscription.type,
+        'gap_days': gap_days,
+        'skipped_date': skipped_date,
+        'desired_weekday': subscription.delivery_day,
+        'count': len(suggested),
+        'deliveries': suggested,
+        'changed_delivery_id': delivery.id,
+        'recipient_name': order.recipient_name,
+        'changed_from': old_date.strftime('%d.%m'),
+        'changed_to': new_date.strftime('%d.%m'),
+    }
+
+
+def apply_reschedule_plan(delivery):
+    """
+    Rebuilds the schedule for all subsequent pending deliveries using the same
+    _get_first_valid_date logic as calculate_reschedule_plan.
+    Updates only Delivery.delivery_date (source of truth).
+    Returns count of updated Delivery records.
+    """
+    from app.models.delivery_route import RouteDelivery
+
+    order = delivery.order
+    subscription = order.subscription
+    interval = 7 if subscription.type == 'Weekly' else 14
+
+    first_valid = _get_first_valid_date(
+        delivery.delivery_date, subscription.type, subscription.delivery_day
+    )
+
+    next_orders = (
+        Order.query
+        .filter(
+            Order.subscription_id == order.subscription_id,
+            Order.sequence_number > order.sequence_number,
+        )
+        .order_by(Order.sequence_number)
+        .all()
+    )
+
+    count = 0
+    current = first_valid
+    for next_order in next_orders:
+        for d in next_order.deliveries:
+            if d.status not in ('Доставлено', 'Скасовано'):
+                d.delivery_date = current
+                if d.status == 'Розподілено':
+                    RouteDelivery.query.filter_by(delivery_id=d.id).delete()
+                    d.status = 'Очікує'
+                count += 1
+        current += datetime.timedelta(days=interval)
+
+    db.session.commit()
+    return count
+
+
 def _create_delivery_for_order(order, client_id, is_first):
     return Delivery(
         order_id=order.id,

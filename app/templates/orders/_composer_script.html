@@ -633,7 +633,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
                 : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
             showToast(successMessage, 'success');
-            setTimeout(() => location.reload(), 900);
+            if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
+                window.showRescheduleModal(data.reschedule_suggestion);
+            } else {
+                setTimeout(() => location.reload(), 900);
+            }
         } catch (error) {
             console.error('Помилка збереження:', error);
             showOrderError('Помилка зʼєднання з сервером');

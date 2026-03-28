@@ -163,7 +163,7 @@ def update_order(order, form):
         if ph.strip():
             db.session.add(RecipientPhone(order_id=order.id, phone=ph.strip(), position=i))
 
-    order.city = form['city']
+    order.city = form.get('city') or order.city
     order.street = 'Самовивіз' if is_pickup else (form.get('street') or '')
     order.building_number = form.get('building_number') or None
     order.floor = form.get('floor') or None
