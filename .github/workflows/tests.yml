@@ -24,5 +24,5 @@ jobs:
       - name: Run unit tests
         env:
           SECRET_KEY: test-secret-key
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
         run: pytest tests/unit/ -v --tb=short
