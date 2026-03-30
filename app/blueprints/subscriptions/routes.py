@@ -1,3 +1,5 @@
+import datetime as dt
+
 from flask import jsonify, render_template, request
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
@@ -9,6 +11,9 @@ from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.services.subscription_service import (
     get_subscriptions,
+    get_draft_subscriptions,
+    create_draft_subscription,
+    update_draft_subscription,
     extend_subscription,
     delete_subscription,
 )
@@ -46,6 +51,8 @@ def subscriptions_list():
         sub_type=type_filter or None,
     )
 
+    drafts = get_draft_subscriptions()
+
     data = []
     for sub in subscriptions:
         all_deliveries = [d for order in sub.orders for d in order.deliveries]
@@ -69,6 +76,8 @@ def subscriptions_list():
     return render_template(
         'subscriptions/list.html',
         subscriptions=data_page,
+        drafts=drafts,
+        today=dt.date.today(),
         active_count=active_count,
         completed_count=completed_count,
         total_count=total_count,
@@ -83,6 +92,70 @@ def subscriptions_list():
         for_whom=for_whom,
         marketing_sources=[],
     )
+
+
+@subscriptions_bp.route('/subscriptions/draft', methods=['POST'])
+@login_required
+def subscription_create_draft():
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+    instagram = (request.form.get('client_instagram') or '').strip()
+    contact_date_raw = (request.form.get('contact_date') or '').strip()
+
+    if not instagram or not contact_date_raw:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Вкажіть клієнта і дату контакту'}), 400
+        return '', 400
+
+    client = Client.query.filter_by(instagram=instagram).first()
+    if not client:
+        if is_ajax:
+            return jsonify({'success': False, 'error': f'Клієнта {instagram} не знайдено'}), 404
+        return '', 404
+
+    draft_comment = (request.form.get('draft_comment') or '').strip() or None
+    draft_bank_link = (request.form.get('draft_bank_link') or '').strip() or None
+    draft_wedding_date_raw = (request.form.get('draft_wedding_date') or '').strip()
+
+    try:
+        contact_date = dt.datetime.strptime(contact_date_raw, '%Y-%m-%d').date()
+        draft_wedding_date = dt.datetime.strptime(draft_wedding_date_raw, '%Y-%m-%d').date() if draft_wedding_date_raw else None
+        sub = create_draft_subscription(client, contact_date, draft_comment, draft_bank_link, draft_wedding_date)
+        if is_ajax:
+            return jsonify({'success': True, 'id': sub.id})
+        return '', 200
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error creating draft subscription: {e}')
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Помилка при створенні чернетки'}), 500
+        return '', 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/draft/edit', methods=['POST'])
+@login_required
+def subscription_draft_edit(subscription_id):
+    subscription = Subscription.query.get_or_404(subscription_id)
+    if subscription.status != 'draft':
+        return jsonify({'success': False, 'error': 'Не чернетка'}), 400
+
+    contact_date_raw = (request.form.get('contact_date') or '').strip()
+    if not contact_date_raw:
+        return jsonify({'success': False, 'error': 'Дата обов\'язкова'}), 400
+
+    draft_comment = (request.form.get('draft_comment') or '').strip() or None
+    draft_bank_link = (request.form.get('draft_bank_link') or '').strip() or None
+    draft_wedding_date_raw = (request.form.get('draft_wedding_date') or '').strip()
+
+    try:
+        contact_date = dt.datetime.strptime(contact_date_raw, '%Y-%m-%d').date()
+        draft_wedding_date = dt.datetime.strptime(draft_wedding_date_raw, '%Y-%m-%d').date() if draft_wedding_date_raw else None
+        update_draft_subscription(subscription, contact_date, draft_comment, draft_bank_link, draft_wedding_date)
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error editing draft subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при оновленні'}), 500
 
 
 @subscriptions_bp.route('/subscriptions/<int:subscription_id>', methods=['GET'])
