@@ -529,8 +529,50 @@ def delete_subscription(subscription):
     db.session.commit()
 
 
+def create_draft_subscription(client, contact_date, draft_comment=None, draft_bank_link=None, draft_wedding_date=None):
+    logger.info(f'Creating draft subscription for client {client.id}')
+    subscription = Subscription(
+        client_id=client.id,
+        status='draft',
+        type='',
+        delivery_day='',
+        recipient_name='',
+        recipient_phone='',
+        city='',
+        street='',
+        size='',
+        for_whom='',
+        contact_date=contact_date,
+        draft_comment=draft_comment or None,
+        draft_bank_link=draft_bank_link or None,
+        draft_wedding_date=draft_wedding_date,
+    )
+    db.session.add(subscription)
+    db.session.commit()
+    return subscription
+
+
+def get_draft_subscriptions():
+    return (
+        Subscription.query
+        .join(Client)
+        .filter(Subscription.status == 'draft')
+        .order_by(Subscription.contact_date.asc())
+        .all()
+    )
+
+
+def update_draft_subscription(subscription, contact_date, draft_comment=None, draft_bank_link=None, draft_wedding_date=None):
+    subscription.contact_date = contact_date
+    subscription.draft_comment = draft_comment or None
+    subscription.draft_bank_link = draft_bank_link or None
+    subscription.draft_wedding_date = draft_wedding_date
+    db.session.commit()
+    return subscription
+
+
 def get_subscriptions(q=None, city=None, sub_type=None):
-    query = Subscription.query.join(Client)
+    query = Subscription.query.join(Client).filter(Subscription.status != 'draft')
     if q:
         like_q = f'%{q}%'
         query = query.filter(or_(

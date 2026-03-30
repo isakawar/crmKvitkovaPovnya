@@ -10,7 +10,7 @@ class Subscription(db.Model):
 
     # Тип і статус
     type = db.Column(db.String(32), nullable=False)  # Weekly, Monthly, Bi-weekly
-    status = db.Column(db.String(32), default='active', nullable=False)  # active, completed, cancelled
+    status = db.Column(db.String(32), default='active', nullable=False)  # active, completed, cancelled, draft
 
     # Розклад
     delivery_day = db.Column(db.String(16), nullable=False)  # ПН/ВТ/СР/ЧТ/ПТ/СБ/НД
@@ -57,6 +57,12 @@ class Subscription(db.Model):
 
     # Нагадування про продовження (без замовлень, тільки для дашборду)
     is_renewal_reminder = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Чернетка
+    contact_date = db.Column(db.Date, nullable=True)
+    draft_comment = db.Column(db.Text, nullable=True)
+    draft_bank_link = db.Column(db.String(512), nullable=True)
+    draft_wedding_date = db.Column(db.Date, nullable=True)
 
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())
