@@ -16,6 +16,7 @@
 - Telegram бот для кур'єрів
 - Рольова система (admin / manager / florist)
 - Подарункові сертифікати
+- Транзакції
 
 ---
 
@@ -110,16 +111,64 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 
 ## Backup
 
+### Створити бекап
+
 ```bash
 docker compose exec web python scripts/database_backup.py create
+```
+
+Файл зберігається в `./backups/` з іменем `kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql`.
+
+### Список наявних бекапів
+
+```bash
+docker compose exec web python scripts/database_backup.py list
+```
+
+### Відновити з бекапу
+
+```bash
+docker compose exec web python scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+```
+
+**Якщо отримуєш помилки `already exists`** (старий бекап без `--clean`):
+
+```bash
+# 1. Очистити схему
+docker compose exec postgres psql -U kvitkova_user -d kvitkova_crm \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# 2. Відновити
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
+  < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+
+# 3. Застосувати міграції
+docker compose exec web flask db upgrade
+```
+
+### Повністю видалити БД та почати з нуля
+
+```bash
+# 1. Зупинити контейнери
+docker compose down
+
+# 2. Видалити volume з даними (дізнатись назву: docker volume ls | grep postgres)
+docker volume rm crmkvitkovapovnya_postgres_data
+
+# 3. Запустити — БД і міграції застосуються автоматично
+docker compose up -d
+
+# 4. Наповнити початковими налаштуваннями
+docker compose exec web python scripts/seed_settings.py
+
+# 5. Створити адміна
+docker compose exec web flask ensure-admin
 ```
 
 ---
 
 ## Import
 
-- `/import`
-- `/import/operational`
 - `/import/kvitkovapovnya`
 
 ---
