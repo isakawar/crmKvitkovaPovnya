@@ -111,27 +111,24 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 
 ## Backup
 
+> Всі команди виконуються на хості (не через `docker compose exec web`).
+> Shell-редиректи `>` і `<` працюють з файлами на хості.
+
 ### Створити бекап
 
 ```bash
-docker compose exec web python scripts/database_backup.py create
+mkdir -p backups && docker compose exec -T postgres pg_dump --clean --if-exists -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
-Файл зберігається в `./backups/` з іменем `kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql`.
-
-### Список наявних бекапів
-
-```bash
-docker compose exec web python scripts/database_backup.py list
-```
+Файл збережеться в `./backups/` на хості.
 
 ### Відновити з бекапу
 
 ```bash
-docker compose exec web python scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/backup_YYYYMMDD_HHMMSS.sql
 ```
 
-**Якщо отримуєш помилки `already exists`** (старий бекап без `--clean`):
+**Якщо отримуєш помилки `already exists`** (бекап створений без `--clean`):
 
 ```bash
 # 1. Очистити схему
@@ -140,7 +137,7 @@ docker compose exec postgres psql -U kvitkova_user -d kvitkova_crm \
 
 # 2. Відновити
 docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
-  < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+  < backups/backup_YYYYMMDD_HHMMSS.sql
 
 # 3. Застосувати міграції
 docker compose exec web flask db upgrade
