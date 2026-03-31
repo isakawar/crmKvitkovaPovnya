@@ -869,7 +869,23 @@ document.getElementById('btn-run-optimizer').addEventListener('click', async fun
 const COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
 
 // ── Map always initialized ────────────────────────────────────────────────────
-const map = L.map('route-map').setView([50.4501, 30.5234], 11);
+const map = L.map('route-map', { scrollWheelZoom: false }).setView([50.4501, 30.5234], 11);
+
+// Distinguish trackpad pinch (ctrlKey set by browser, no physical key)
+// from Ctrl+scroll (ctrlKey + physical Ctrl = browser page zoom, don't intercept)
+let _ctrlKeyHeld = false;
+document.addEventListener('keydown', function(e) { if (e.key === 'Control') _ctrlKeyHeld = true; });
+document.addEventListener('keyup',   function(e) { if (e.key === 'Control') _ctrlKeyHeld = false; });
+window.addEventListener('blur', function() { _ctrlKeyHeld = false; });
+
+document.getElementById('route-map').addEventListener('wheel', function(e) {
+  if (e.ctrlKey && !_ctrlKeyHeld) {
+    // Pinch gesture: use Leaflet's normalized delta for consistent cross-device behavior
+    e.preventDefault();
+    const delta = L.DomEvent.getWheelDelta(e);
+    map.setZoom(map.getZoom() + delta * map.options.zoomDelta);
+  }
+}, { passive: false });
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
