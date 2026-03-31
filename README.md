@@ -110,16 +110,59 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 
 ## Backup
 
+### Створити бекап
+
 ```bash
-docker compose exec web python scripts/database_backup.py create
+# Через скрипт (зберігається в ./backups/)
+python3 scripts/database_backup.py create
+
+# Або напряму через pg_dump
+docker compose exec -T postgres pg_dump -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
 ```
+
+### Список наявних бекапів
+
+```bash
+python3 scripts/database_backup.py list
+```
+
+### Відновити з бекапу
+
+```bash
+# Через скрипт
+python3 scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+
+# Або напряму через psql
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+```
+
+> **Важливо:** перед відновленням зупини web-сервер або переконайся що немає активних підключень до БД.
+
+### Повністю видалити БД та почати з нуля
+
+```bash
+# 1. Зупинити всі контейнери
+docker compose down
+
+# 2. Видалити volume з даними PostgreSQL
+docker volume rm crmkvitkovapovnya_postgres_data
+
+# 3. Запустити заново — БД створиться автоматично і міграції застосуються
+docker compose up -d
+
+# 4. Наповнити початковими налаштуваннями (міста, розміри, типи доставки)
+docker compose exec web python scripts/seed_settings.py
+
+# 5. Створити адміна (з env змінних ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD)
+docker compose exec web flask ensure-admin
+```
+
+> Щоб дізнатись точну назву volume: `docker volume ls | grep postgres`
 
 ---
 
 ## Import
 
-- `/import`
-- `/import/operational`
 - `/import/kvitkovapovnya`
 
 ---
