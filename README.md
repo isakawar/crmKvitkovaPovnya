@@ -16,6 +16,7 @@
 - Telegram бот для кур'єрів
 - Рольова система (admin / manager / florist)
 - Подарункові сертифікати
+- Транзакції
 
 ---
 
@@ -113,11 +114,12 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 ### Створити бекап
 
 ```bash
-# Через скрипт (зберігається в ./backups/)
+# Через скрипт (зберігається в ./backups/, створює директорію автоматично)
 python3 scripts/database_backup.py create
 
 # Або напряму через pg_dump
-docker compose exec -T postgres pg_dump -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+# Прапор --clean --if-exists додає DROP перед CREATE — це дозволяє відновлювати на існуючу БД
+mkdir -p backups && docker compose exec -T postgres pg_dump --clean --if-exists -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### Список наявних бекапів
@@ -128,6 +130,9 @@ python3 scripts/database_backup.py list
 
 ### Відновити з бекапу
 
+> **Важливо:** бекап має бути створений командами вище (з `--clean --if-exists`).
+> Якщо бекап старий (без `--clean`), спочатку скинь схему вручну (крок нижче).
+
 ```bash
 # Через скрипт
 python3 scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
@@ -136,7 +141,19 @@ python3 scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_
 docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
 ```
 
-> **Важливо:** перед відновленням зупини web-сервер або переконайся що немає активних підключень до БД.
+**Якщо бекап без `--clean` (старий формат) — отримаєш помилки "already exists". Спочатку очисти схему:**
+
+```bash
+# Очистити всі таблиці (дані видаляться!)
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# Потім відновити
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+
+# Після відновлення повторно застосувати міграції (на випадок якщо бекап старіший за поточну схему)
+docker compose exec web flask db upgrade
+```
 
 ### Повністю видалити БД та почати з нуля
 

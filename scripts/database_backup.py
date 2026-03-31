@@ -31,8 +31,8 @@ def create_backup():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_file = backup_dir / f"kvitkova_crm_backup_{timestamp}.sql"
     
-    # Створити backup
-    cmd = f'docker compose exec -T postgres pg_dump -U kvitkova_user kvitkova_crm > {backup_file}'
+    # Створити backup (--clean --if-exists дозволяє відновлювати на існуючу БД)
+    cmd = f'docker compose exec -T postgres pg_dump --clean --if-exists -U kvitkova_user kvitkova_crm > {backup_file}'
     result = run_command(cmd, check=False)
     
     if result is not None:
