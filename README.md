@@ -114,67 +114,56 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 ### Створити бекап
 
 ```bash
-# Через скрипт (зберігається в ./backups/, створює директорію автоматично)
-python3 scripts/database_backup.py create
-
-# Або напряму через pg_dump
-# Прапор --clean --if-exists додає DROP перед CREATE — це дозволяє відновлювати на існуючу БД
-mkdir -p backups && docker compose exec -T postgres pg_dump --clean --if-exists -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose exec web python scripts/database_backup.py create
 ```
+
+Файл зберігається в `./backups/` з іменем `kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql`.
 
 ### Список наявних бекапів
 
 ```bash
-python3 scripts/database_backup.py list
+docker compose exec web python scripts/database_backup.py list
 ```
 
 ### Відновити з бекапу
 
-> **Важливо:** бекап має бути створений командами вище (з `--clean --if-exists`).
-> Якщо бекап старий (без `--clean`), спочатку скинь схему вручну (крок нижче).
-
 ```bash
-# Через скрипт
-python3 scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
-
-# Або напряму через psql
-docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+docker compose exec web python scripts/database_backup.py restore backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
 ```
 
-**Якщо бекап без `--clean` (старий формат) — отримаєш помилки "already exists". Спочатку очисти схему:**
+**Якщо отримуєш помилки `already exists`** (старий бекап без `--clean`):
 
 ```bash
-# Очистити всі таблиці (дані видаляться!)
-docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
+# 1. Очистити схему
+docker compose exec postgres psql -U kvitkova_user -d kvitkova_crm \
   -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 
-# Потім відновити
-docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
+# 2. Відновити
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
+  < backups/kvitkova_crm_backup_YYYYMMDD_HHMMSS.sql
 
-# Після відновлення повторно застосувати міграції (на випадок якщо бекап старіший за поточну схему)
+# 3. Застосувати міграції
 docker compose exec web flask db upgrade
 ```
 
 ### Повністю видалити БД та почати з нуля
 
 ```bash
-# 1. Зупинити всі контейнери
+# 1. Зупинити контейнери
 docker compose down
 
-# 2. Видалити volume з даними PostgreSQL
+# 2. Видалити volume з даними (дізнатись назву: docker volume ls | grep postgres)
 docker volume rm crmkvitkovapovnya_postgres_data
 
-# 3. Запустити заново — БД створиться автоматично і міграції застосуються
+# 3. Запустити — БД і міграції застосуються автоматично
 docker compose up -d
 
-# 4. Наповнити початковими налаштуваннями (міста, розміри, типи доставки)
+# 4. Наповнити початковими налаштуваннями
 docker compose exec web python scripts/seed_settings.py
 
-# 5. Створити адміна (з env змінних ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD)
+# 5. Створити адміна
 docker compose exec web flask ensure-admin
 ```
-
-> Щоб дізнатись точну назву volume: `docker volume ls | grep postgres`
 
 ---
 
