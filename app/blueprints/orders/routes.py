@@ -528,7 +528,11 @@ def search_clients():
     if not query:
         return jsonify([])
     clients = Client.query.filter(Client.instagram.contains(query)).limit(10).all()
-    return jsonify([{'instagram': c.instagram} for c in clients])
+    return jsonify([{
+        'instagram': c.instagram,
+        'credits': c.credits or 0,
+        'personal_discount': c.personal_discount or '',
+    } for c in clients])
 
 
 @orders_bp.route('/route-generator', methods=['GET', 'POST'])

@@ -248,6 +248,9 @@ def create_subscription(client, form):
     custom_amount_raw = (form.get('custom_amount') or '').strip()
     custom_amount = int(custom_amount_raw) if custom_amount_raw else None
 
+    discount_raw = (form.get('discount') or '').strip()
+    discount = int(discount_raw) if discount_raw else None
+
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
@@ -273,6 +276,7 @@ def create_subscription(client, form):
         for_whom=form.get('for_whom') or '',
         comment=form.get('comment') or None,
         preferences=form.get('preferences') or None,
+        discount=discount,
     )
     db.session.add(subscription)
     db.session.flush()

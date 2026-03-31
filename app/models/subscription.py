@@ -64,6 +64,9 @@ class Subscription(db.Model):
     draft_bank_link = db.Column(db.String(512), nullable=True)
     draft_wedding_date = db.Column(db.Date, nullable=True)
 
+    # Знижка (%)
+    discount = db.Column(db.Integer, nullable=True)
+
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())
 
