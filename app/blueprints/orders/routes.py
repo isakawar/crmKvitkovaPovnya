@@ -559,6 +559,63 @@ def route_generator():
             editing_courier = editing_route.courier
             editing_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
 
+    view_date_str = request.args.get('view_date')
+    view_date_routes_json = None
+
+    if view_date_str and not edit_route_id:
+        from app.models.delivery_route import DeliveryRoute as DR
+        try:
+            vd = datetime.strptime(view_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            vd = None
+        if vd:
+            if not selected_date_str:
+                selected_date_str = view_date_str
+            day_routes = DR.query.filter_by(route_date=vd).order_by(DR.id).all()
+            combined_routes = []
+            first_cache = None
+            for dr in day_routes:
+                if not dr.cached_result_json:
+                    delivery_ids = [s.delivery_id for s in dr.stops]
+                    route_deliveries = Delivery.query.filter(
+                        Delivery.id.in_(delivery_ids)
+                    ).all() if delivery_ids else []
+                    if route_deliveries:
+                        try:
+                            optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+                            opt_result = optimize_json(deliveries=route_deliveries, optimizer_url=optimizer_url)
+                            dr.cached_result_json = json.dumps({
+                                **{k: v for k, v in opt_result.items() if k != 'routes'},
+                                'routes': opt_result.get('routes', []),
+                            })
+                            dr.cached_at = datetime.utcnow()
+                            db.session.commit()
+                        except Exception:
+                            pass
+                if not dr.cached_result_json:
+                    continue
+                try:
+                    cached = json.loads(dr.cached_result_json)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if first_cache is None:
+                    first_cache = cached
+                for route_entry in cached.get('routes', []):
+                    route_entry['routeDbId'] = dr.id
+                    if dr.courier:
+                        route_entry['courierName'] = dr.courier.name
+                    combined_routes.append(route_entry)
+            if combined_routes and first_cache:
+                view_date_routes_json = json.dumps({
+                    'depot': first_cache.get('depot', {}),
+                    'routes': combined_routes,
+                    'stats': first_cache.get('stats', {}),
+                })
+        from app.models.courier import Courier
+        view_date_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
+    else:
+        view_date_couriers = []
+
     if not selected_date_str:
         selected_date_str = date.today().isoformat()
 
@@ -616,6 +673,9 @@ def route_generator():
         editing_cached_result=editing_cached_result,
         editing_courier=editing_courier,
         editing_couriers=editing_couriers,
+        view_date_routes=view_date_routes_json,
+        view_date=view_date_str,
+        view_date_couriers=[{'id': c.id, 'name': c.name} for c in view_date_couriers],
     )
 
 
@@ -792,9 +852,14 @@ def route_generator_save():
         })
 
         dr = None
-        if editing_route_id:
-            dr = DeliveryRoute.query.get(editing_route_id)
+        # Per-route routeDbId takes priority (view_date multi-edit mode)
+        route_db_id = route_data.get('routeDbId')
+        # Fallback: legacy single editing_route_id (consumed once)
+        if not route_db_id and editing_route_id:
+            route_db_id = editing_route_id
             editing_route_id = None
+        if route_db_id:
+            dr = DeliveryRoute.query.get(route_db_id)
             if dr:
                 old_delivery_ids = [s.delivery_id for s in dr.stops]
                 if old_delivery_ids:
@@ -872,11 +937,26 @@ def route_generator_save():
         saved_route_ids.append(dr.id)
 
     db.session.commit()
+
+    saved_routes_list = (
+        DeliveryRoute.query
+        .filter(DeliveryRoute.id.in_(saved_route_ids))
+        .options(joinedload(DeliveryRoute.courier))
+        .all()
+    )
     return jsonify({
         'success': True,
         'route_ids': saved_route_ids,
         'count': len(saved_route_ids),
         'editing_route_id': editing_route_id,
+        'saved_routes': [{
+            'id': dr.id,
+            'courier_id': dr.courier_id,
+            'courier_name': dr.courier.name if dr.courier else None,
+            'courier_has_telegram': bool(dr.courier and dr.courier.telegram_chat_id),
+            'deliveries_count': dr.deliveries_count,
+            'status': dr.status,
+        } for dr in saved_routes_list],
     })
 
 

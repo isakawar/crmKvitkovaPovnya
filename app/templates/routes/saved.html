@@ -557,11 +557,18 @@
           <input type="text" id="route-date-picker" readonly placeholder="Обрати дату">
           <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
         </form>
-        {% if date_filter %}
+        {% if date_filter and date_filter != today_iso %}
         <a href="{{ url_for('routes.saved_routes') }}"
            class="routes-hero-btn routes-hero-btn-secondary">
-          <i class="bi bi-arrow-counterclockwise"></i>
-          Скинути
+          <i class="bi bi-calendar-check"></i>
+          Сьогодні
+        </a>
+        {% endif %}
+        {% if date_filter and routes %}
+        <a href="{{ url_for('orders.route_generator') }}?view_date={{ date_filter }}"
+           class="routes-hero-btn routes-hero-btn-secondary">
+          <i class="bi bi-map"></i>
+          Переглянути на карті
         </a>
         {% endif %}
         <a href="{{ url_for('orders.route_generator') }}"

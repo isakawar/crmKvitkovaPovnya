@@ -4,7 +4,7 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.courier import Courier
-from datetime import datetime
+from datetime import datetime, date as date_type
 import json
 import urllib.parse
 import requests as http_requests
@@ -41,20 +41,25 @@ def _telegram_edit(bot_token, chat_id, message_id, text, reply_markup=None):
 @routes_bp.route('/routes', methods=['GET'])
 @login_required
 def saved_routes():
-    date_filter = request.args.get('date', '')
-    query = DeliveryRoute.query.order_by(
-        DeliveryRoute.route_date.desc(), DeliveryRoute.created_at.desc()
-    )
+    date_filter = (request.args.get('date') or '').strip()
+
     if date_filter:
         try:
-            d = datetime.strptime(date_filter, '%Y-%m-%d').date()
-            query = query.filter_by(route_date=d)
+            selected_route_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            date_filter = selected_route_date.strftime('%Y-%m-%d')
         except ValueError:
-            pass
+            date_filter = ''
+            selected_route_date = date_type.today()
+    else:
+        selected_route_date = date_type.today()
+        date_filter = selected_route_date.strftime('%Y-%m-%d')
+
+    query = DeliveryRoute.query.filter(DeliveryRoute.route_date == selected_route_date)
+
+    query = query.order_by(DeliveryRoute.route_date.asc(), DeliveryRoute.created_at.desc())
     from app.models.delivery import Delivery
     from app.models.order import Order
     from app.models.client import Client
-    from datetime import date as date_type
     routes = query.options(
         joinedload(DeliveryRoute.stops)
             .joinedload(RouteDelivery.delivery)
@@ -66,14 +71,7 @@ def saved_routes():
     couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
 
     # Nova Poshta deliveries for selected date
-    np_date = None
-    if date_filter:
-        try:
-            np_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-    if np_date is None:
-        np_date = date_type.today()
+    np_date = selected_route_date or date_type.today()
     nova_poshta_deliveries = (
         Delivery.query
         .options(joinedload(Delivery.order), joinedload(Delivery.client))
@@ -117,6 +115,7 @@ def saved_routes():
         routes=routes,
         couriers=couriers,
         date_filter=date_filter,
+        today_iso=date_type.today().isoformat(),
         nova_poshta_deliveries=nova_poshta_deliveries,
         pickup_deliveries=pickup_deliveries,
         unrouted_deliveries=unrouted_deliveries,
@@ -161,12 +160,18 @@ def assign_and_send_route(route_id):
     courier_id = request.form.get('courier_id', type=int)
     delivery_price = request.form.get('delivery_price', type=int)
 
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if not courier_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Оберіть кур\'єра'}), 400
         flash('Оберіть кур\'єра', 'warning')
         return redirect(url_for('routes.saved_routes'))
 
     courier = Courier.query.get(courier_id)
     if not courier or not courier.telegram_chat_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Кур\'єр не зареєстрований в Telegram'}), 400
         flash('Кур\'єр не зареєстрований в Telegram', 'danger')
         return redirect(url_for('routes.saved_routes'))
 
@@ -238,6 +243,8 @@ def assign_and_send_route(route_id):
     msg_id = _telegram_send(bot_token, courier.telegram_chat_id, text, {'inline_keyboard': inline_keyboard})
 
     if not msg_id:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Кур\'єра призначено, але надіслати в Telegram не вдалось.'}), 500
         flash('Кур\'єра призначено, але надіслати в Telegram не вдалось. Перевірте токен та chat_id.', 'warning')
         return redirect(url_for('routes.saved_routes'))
 
@@ -246,6 +253,8 @@ def assign_and_send_route(route_id):
     route.sent_at = datetime.utcnow()
     db.session.commit()
 
+    if is_ajax:
+        return jsonify({'success': True})
     flash(f'Маршрут призначено та надіслано кур\'єру {courier.name}', 'success')
     return redirect(url_for('routes.saved_routes'))
 
