@@ -251,6 +251,23 @@ def test_update_order_changes_client(session):
     assert order.client_id == new_client.id
 
 
+@pytest.mark.xfail(reason='BUG: update_order does not sync delivery.client_id when client changes')
+def test_update_order_changes_client_syncs_delivery_client_id(session):
+    """
+    When order client changes, delivery.client_id should also be updated
+    to maintain the invariant: delivery.client_id == order.client_id.
+    """
+    old_client = _make_client(session, 'old_client_sync')
+    new_client = _make_client(session, 'new_client_sync')
+    order, delivery = _make_order_with_delivery(session, old_client)
+
+    form = _base_edit_form(client_instagram='new_client_sync')
+    update_order(order, form)
+
+    session.refresh(delivery)
+    assert delivery.client_id == new_client.id
+
+
 def test_update_order_unknown_client_raises_error(session):
     client = _make_client(session)
     order, delivery = _make_order_with_delivery(session, client)

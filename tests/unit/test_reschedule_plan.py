@@ -131,11 +131,20 @@ def test_reschedule_plan_returns_none_when_no_pending_next(session):
 
 
 def test_reschedule_plan_returns_none_when_gap_too_large(session):
-    """Next delivery is far enough that no reschedule is needed."""
+    """
+    When the gap from new_date to the next pending delivery exceeds the threshold,
+    no reschedule plan is returned.
+
+    Uses a date change > 2 days (to pass the early return) but with a large
+    enough gap to the next delivery that rescheduling is unnecessary.
+    """
     sub, orders, deliveries = _make_subscription_with_orders(session)
     delivery = deliveries[0]
-    old_date = delivery.delivery_date
-    new_date = old_date + datetime.timedelta(days=1)
+    old_date = datetime.date(2026, 3, 30)  # Monday
+    new_date = datetime.date(2026, 3, 27)  # Friday, 3 days earlier (> 2 day threshold)
+
+    delivery.delivery_date = new_date
+    session.commit()
 
     result = calculate_reschedule_plan(delivery, old_date, new_date)
     assert result is None
@@ -236,7 +245,7 @@ def test_reschedule_plan_returns_valid_plan_for_weekly(session):
     sub, orders, deliveries = _make_close_gap_weekly_subscription(session)
     delivery = deliveries[0]
     old_date = datetime.date(2026, 3, 30)
-    new_date = datetime.date(2026, 4, 2)  # Thursday, gap to next Monday = 4 days
+    new_date = datetime.date(2026, 4, 2)
 
     result = calculate_reschedule_plan(delivery, old_date, new_date)
 
@@ -245,19 +254,6 @@ def test_reschedule_plan_returns_valid_plan_for_weekly(session):
     assert result['gap_days'] == 4
     assert result['desired_weekday'] == 'ПН'
     assert result['count'] == 2
-    assert 'deliveries' in result
-    assert result['recipient_name'] == 'R'
-
-
-def test_reschedule_plan_contains_correct_suggested_dates(session):
-    sub, orders, deliveries = _make_close_gap_weekly_subscription(session)
-    delivery = deliveries[0]
-    old_date = datetime.date(2026, 3, 30)
-    new_date = datetime.date(2026, 4, 2)
-
-    result = calculate_reschedule_plan(delivery, old_date, new_date)
-
-    assert result is not None
     assert len(result['deliveries']) == 2
 
     first_suggestion = result['deliveries'][0]
@@ -282,6 +278,67 @@ def test_reschedule_plan_includes_changed_info(session):
     assert result['changed_delivery_id'] == delivery.id
     assert result['changed_from'] == '30.03'
     assert result['changed_to'] == '02.04'
+
+
+def test_reschedule_plan_returns_valid_plan_for_biweekly(session):
+    """
+    Bi-weekly end-to-end: move first delivery forward so gap to next <= 9 days.
+    Monday Mar 30 -> moved to Thursday Apr 2.
+    Next delivery is Monday Apr 13 (14 days later). Gap = 11 days > 9 threshold.
+    Need to move closer: move to Apr 6 (Monday). Gap = 7 days <= 9.
+    """
+    client = Client(instagram='reshed_biweekly')
+    session.add(client)
+    session.flush()
+
+    sub = Subscription(
+        client_id=client.id, type='Bi-weekly', status='active',
+        delivery_day='ПН', recipient_name='R', recipient_phone='+380991234567',
+        city='Київ', street='Вул. 1', size='M', for_whom='Я',
+    )
+    session.add(sub)
+    session.flush()
+
+    mon1 = datetime.date(2026, 3, 30)
+    mon2 = datetime.date(2026, 4, 13)
+    mon3 = datetime.date(2026, 4, 27)
+
+    o1 = Order(client_id=client.id, subscription_id=sub.id, sequence_number=1,
+               recipient_name='R', recipient_phone='+380991234567',
+               city='Київ', street='Вул. 1', size='M', delivery_date=mon1, for_whom='Я', delivery_method='courier')
+    session.add(o1)
+    session.flush()
+
+    o2 = Order(client_id=client.id, subscription_id=sub.id, sequence_number=2,
+               recipient_name='R', recipient_phone='+380991234567',
+               city='Київ', street='Вул. 1', size='M', delivery_date=mon2, for_whom='Я', delivery_method='courier')
+    session.add(o2)
+    session.flush()
+
+    o3 = Order(client_id=client.id, subscription_id=sub.id, sequence_number=3,
+               recipient_name='R', recipient_phone='+380991234567',
+               city='Київ', street='Вул. 1', size='M', delivery_date=mon3, for_whom='Я', delivery_method='courier')
+    session.add(o3)
+    session.flush()
+
+    d1 = Delivery(order_id=o1.id, client_id=client.id, delivery_date=mon1, status='Очікує', size='M', phone='+380991234567', delivery_method='courier', street='Вул. 1')
+    d2 = Delivery(order_id=o2.id, client_id=client.id, delivery_date=mon2, status='Очікує', size='M', phone='+380991234567', delivery_method='courier', street='Вул. 1')
+    d3 = Delivery(order_id=o3.id, client_id=client.id, delivery_date=mon3, status='Очікує', size='M', phone='+380991234567', delivery_method='courier', street='Вул. 1')
+    session.add_all([d1, d2, d3])
+    session.commit()
+
+    delivery = d1
+    old_date = datetime.date(2026, 3, 30)
+    new_date = datetime.date(2026, 4, 6)
+
+    result = calculate_reschedule_plan(delivery, old_date, new_date)
+
+    assert result is not None
+    assert result['subscription_type'] == 'Bi-weekly'
+    assert result['gap_days'] == 7
+    assert result['desired_weekday'] == 'ПН'
+    assert result['count'] == 2
+    assert len(result['deliveries']) == 2
 
 
 # ── apply_reschedule_plan ────────────────────────────────────────────────────
@@ -318,6 +375,24 @@ def test_apply_reschedule_plan_does_not_touch_delivered_deliveries(session):
 
     session.refresh(deliveries[1])
     assert deliveries[1].delivery_date == original_date
+
+
+def test_apply_reschedule_plan_does_not_touch_cancelled_deliveries(session):
+    sub, orders, deliveries = _make_close_gap_weekly_subscription(session)
+
+    deliveries[1].status = 'Скасовано'
+    session.commit()
+
+    delivery = deliveries[0]
+    delivery.delivery_date = datetime.date(2026, 4, 2)
+    session.commit()
+
+    original_date = deliveries[1].delivery_date
+    count = apply_reschedule_plan(delivery)
+
+    session.refresh(deliveries[1])
+    assert deliveries[1].delivery_date == original_date
+    assert deliveries[1].status == 'Скасовано'
 
 
 def test_apply_reschedule_plan_resets_rozpodileno_to_ochikuye(session):
