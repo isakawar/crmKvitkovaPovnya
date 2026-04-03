@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const clientSearch = document.getElementById('client-search');
     const clientResults = document.getElementById('client-results');
+    const clientInfoBlock = document.getElementById('client-info-block');
+    const clientCreditsDisplay = document.getElementById('client-credits-display');
+    const clientDiscountInput = document.getElementById('client-discount-input');
     const addressInput = document.getElementById('address-input');
     const addressField = document.getElementById('address-field');
     const addressLabel = document.getElementById('address-label');
@@ -343,6 +346,14 @@ document.addEventListener('DOMContentLoaded', function() {
         clientResults.innerHTML = '';
     }
 
+    function clearClientInfoBlock() {
+        if (clientInfoBlock) {
+            clientInfoBlock.classList.add('hidden');
+            clientCreditsDisplay.textContent = '—';
+            clientDiscountInput.value = '';
+        }
+    }
+
     function toggleDeleteOrderBtn(show) {
         const btn = document.getElementById('delete-order-btn');
         if (!btn) return;
@@ -353,6 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
         clearExtraPhones();
+        clearClientInfoBlock();
         addOrderForm.removeAttribute('data-edit-id');
         addOrderForm.removeAttribute('data-extend-mode');
         window.currentDeliveryId = null;
@@ -483,12 +495,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 clientResults.innerHTML = clients.map(client =>
-                    `<button type="button" class="list-group-item list-group-item-action">${client.instagram}</button>`
+                    `<button type="button" class="list-group-item list-group-item-action"
+                        data-credits="${client.credits}"
+                        data-discount="${client.personal_discount}">${client.instagram}</button>`
                 ).join('');
                 clientResults.classList.remove('d-none');
                 clientResults.querySelectorAll('button').forEach(btn => {
                     btn.addEventListener('click', function() {
                         clientSearch.value = this.textContent.trim();
+                        const credits = this.getAttribute('data-credits');
+                        const discount = this.getAttribute('data-discount');
+                        if (clientInfoBlock) {
+                            clientCreditsDisplay.textContent = credits ? `${credits} грн` : '0 грн';
+                            clientDiscountInput.value = discount || '';
+                            clientInfoBlock.classList.remove('hidden');
+                        }
                         clearClientResults();
                     });
                 });

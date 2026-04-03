@@ -525,6 +525,34 @@
   </div>
 </div>
 {% endif %}
+
+<div class="modal fade" id="viewDateSaveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:660px;">
+    <div class="modal-content rounded-2xl border border-stone-200 shadow-xl">
+      <div class="p-6 pb-4">
+        <div class="flex items-center justify-between mb-1">
+          <div class="flex items-center gap-2">
+            <span class="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600">
+              <i class="bi bi-check2-circle"></i>
+            </span>
+            <h3 class="text-lg font-semibold text-stone-900">Маршрути збережено</h3>
+          </div>
+          <button type="button" data-bs-dismiss="modal" class="flex items-center justify-center w-7 h-7 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors">
+            <i class="bi bi-x-lg text-sm"></i>
+          </button>
+        </div>
+        <p class="text-sm text-stone-400 mb-4 ml-10">Надішліть оновлені маршрути кур'єрам у Telegram.</p>
+        <div id="vd-save-routes-list" class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1"></div>
+      </div>
+      <div class="border-t border-stone-100 px-6 py-4">
+        <button type="button" data-bs-dismiss="modal"
+                class="w-full rounded-xl border border-stone-200 bg-white py-2.5 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          Закрити
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -541,6 +569,13 @@ const EDITING_CACHED_RESULT = {{ editing_cached_result | tojson }};
 {% else %}
 const EDITING_CACHED_RESULT = null;
 {% endif %}
+{% if view_date_routes %}
+const VIEW_DATE_ROUTES = {{ view_date_routes | tojson }};
+{% else %}
+const VIEW_DATE_ROUTES = null;
+{% endif %}
+const VIEW_DATE = {{ view_date | tojson if view_date else 'null' }};
+const VIEW_DATE_COURIERS = {{ view_date_couriers | tojson if view_date_couriers else '[]' }};
 
 // ── Job polling ──────────────────────────────────────────────────────────────
 function startJobPolling(jobId, csvMode, date) {
@@ -993,6 +1028,7 @@ document.addEventListener('click', function(e) {
       const card = document.createElement('div');
       card.className = 'rounded-xl border border-stone-200 bg-white overflow-hidden';
       card.dataset.routeIdx = idx;
+      if (route.routeDbId) card.dataset.routeDbId = route.routeDbId;
 
       const stopsCount = route.stops.length;
       const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
@@ -1006,7 +1042,7 @@ document.addEventListener('click', function(e) {
         <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
           <div class="flex items-center gap-2">
             <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></span>
-            <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">${EDITING_COURIER_NAME && idx === 0 ? EDITING_COURIER_NAME : 'Кур\'єр ' + route.courierId}</span>
+            <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">${route.courierName || (EDITING_COURIER_NAME && idx === 0 ? EDITING_COURIER_NAME : 'Кур\'єр ' + route.courierId)}</span>
           </div>
           <span style="font-size:0.78rem;color:#a8a29e;display:flex;align-items:center;gap:5px;">
             <span class="stops-count">${stopsCount}</span>&nbsp;зупинок · ${distKm} ·
@@ -1138,6 +1174,9 @@ document.addEventListener('click', function(e) {
         const card = listEl.closest('[data-route-idx]');
         const inp = card && card.querySelector('.departure-time-input');
         if (inp) currentRoutes[routeIdx].departureTime = inp.value;
+        if (card && card.dataset.routeDbId && !currentRoutes[routeIdx].routeDbId) {
+          currentRoutes[routeIdx].routeDbId = parseInt(card.dataset.routeDbId);
+        }
       }
     });
   }
@@ -1202,6 +1241,14 @@ document.addEventListener('click', function(e) {
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перераховую…';
 
+    // Save routeDbId/courierName mapping before recalculate (optimizer response won't include them)
+    const routeDbIdByCourier = {};
+    const courierNameByCourier = {};
+    currentRoutes.forEach(function(r) {
+      if (r.routeDbId) routeDbIdByCourier[r.courierId] = r.routeDbId;
+      if (r.courierName) courierNameByCourier[r.courierId] = r.courierName;
+    });
+
     const recalcRoutes = currentRoutes.map(function(route) {
       return {
         courierId: route.courierId,
@@ -1238,6 +1285,11 @@ document.addEventListener('click', function(e) {
       }
 
       currentRoutes = data.routes || currentRoutes;
+      // Restore routeDbId and courierName after recalculate (optimizer strips them)
+      currentRoutes.forEach(function(r) {
+        if (!r.routeDbId && routeDbIdByCourier[r.courierId]) r.routeDbId = routeDbIdByCourier[r.courierId];
+        if (!r.courierName && courierNameByCourier[r.courierId]) r.courierName = courierNameByCourier[r.courierId];
+      });
       hasChanges = false;
       document.getElementById('changes-banner').classList.remove('visible');
       renderRoutes(currentRoutes);
@@ -1255,6 +1307,22 @@ document.addEventListener('click', function(e) {
   const btnSaveRoutes = document.getElementById('btn-save-routes');
   if (btnSaveRoutes) btnSaveRoutes.addEventListener('click', async function() {
     syncRoutesFromDOM();
+
+    // Detect changed routes (by stop IDs) before saving
+    const changedDbIds = new Set();
+    if (VIEW_DATE_ROUTES) {
+      const origRouteMap = {};
+      (originalResult.routes || []).forEach(function(r) {
+        if (r.routeDbId) origRouteMap[r.routeDbId] = (r.stops || []).map(function(s) { return s.id; }).join(',');
+      });
+      currentRoutes.forEach(function(r) {
+        if (!r.routeDbId) return;
+        const origStops = origRouteMap[r.routeDbId] || '';
+        const currStops = (r.stops || []).map(function(s) { return s.id; }).join(',');
+        if (origStops !== currStops) changedDbIds.add(r.routeDbId);
+      });
+    }
+
     const resultToSave = Object.assign({}, originalResult, { routes: currentRoutes });
     const btn = this;
     btn.disabled = true;
@@ -1289,6 +1357,16 @@ document.addEventListener('click', function(e) {
         }
         return;
       }
+      if (VIEW_DATE_ROUTES && data.saved_routes && data.saved_routes.length) {
+        renderViewDateSaveModal(data.saved_routes, changedDbIds);
+        new bootstrap.Modal(document.getElementById('viewDateSaveModal')).show();
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Збережено!';
+        setTimeout(function() {
+          btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
+          btn.disabled = false;
+        }, 2000);
+        return;
+      }
       btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Збережено!';
       setTimeout(function() {
         btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
@@ -1300,6 +1378,96 @@ document.addEventListener('click', function(e) {
       btn.innerHTML = '<i class="bi bi-floppy me-1"></i>Зберегти маршрути';
     }
   });
+
+  function renderViewDateSaveModal(savedRoutes, changedDbIds) {
+    const list = document.getElementById('vd-save-routes-list');
+    list.innerHTML = '';
+    const courierOptions = VIEW_DATE_COURIERS.map(function(c) {
+      return '<option value="' + c.id + '">' + c.name + '</option>';
+    }).join('');
+    savedRoutes.forEach(function(route) {
+      const changed = changedDbIds.has(route.id);
+      const row = document.createElement('div');
+      row.className = 'rounded-xl border border-stone-200 bg-white';
+      const changedBadge = changed
+        ? '<span class="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-700"><i class="bi bi-pencil-fill text-[10px]"></i> Змінено</span>'
+        : '<span class="inline-flex items-center rounded-full bg-stone-100 border border-stone-200 px-2 py-0.5 text-xs text-stone-400">Без змін</span>';
+      if (route.courier_id && route.courier_has_telegram) {
+        row.innerHTML = '<div class="flex items-center justify-between gap-3 px-4 py-3">'
+          + '<div class="flex items-center gap-3 min-w-0">'
+          + '<span class="flex-shrink-0 w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-500"><i class="bi bi-person"></i></span>'
+          + '<div class="min-w-0"><div class="font-medium text-stone-800 text-sm truncate">' + route.courier_name + '</div>'
+          + '<div class="flex items-center gap-1.5 mt-0.5"><span class="text-xs text-stone-400">' + route.deliveries_count + ' зупинок</span><span class="text-stone-200">·</span>' + changedBadge + '</div></div></div>'
+          + (changed
+            ? '<button class="btn-vd-send flex-shrink-0 rounded-xl bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700 flex items-center gap-1.5 whitespace-nowrap transition-colors" data-route-id="' + route.id + '" data-courier-id="' + route.courier_id + '"><i class="bi bi-send text-[11px]"></i> Надіслати</button>'
+            : '<span class="flex-shrink-0 text-xs text-stone-400">Не потрібно</span>')
+          + '</div>';
+      } else if (route.courier_id) {
+        row.innerHTML = '<div class="flex items-center justify-between gap-3 px-4 py-3">'
+          + '<div class="flex items-center gap-3 min-w-0">'
+          + '<span class="flex-shrink-0 w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center text-stone-400"><i class="bi bi-person"></i></span>'
+          + '<div class="min-w-0"><div class="font-medium text-stone-800 text-sm truncate">' + route.courier_name + '</div>'
+          + '<div class="flex items-center gap-1.5 mt-0.5"><span class="text-xs text-stone-400">' + route.deliveries_count + ' зупинок</span><span class="text-stone-200">·</span>' + changedBadge + '</div></div></div>'
+          + '<span class="flex-shrink-0 inline-flex items-center gap-1 text-xs text-stone-400"><i class="bi bi-telegram"></i> Немає Telegram</span>'
+          + '</div>';
+      } else {
+        row.innerHTML = '<div class="px-4 pt-3 pb-1 flex items-center gap-1.5">'
+          + '<span class="flex-shrink-0 w-8 h-8 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center text-stone-400"><i class="bi bi-person-dash"></i></span>'
+          + '<div><div class="text-sm font-medium text-stone-500">Не призначено</div>'
+          + '<div class="flex items-center gap-1.5"><span class="text-xs text-stone-400">' + route.deliveries_count + ' зупинок</span><span class="text-stone-200">·</span>' + changedBadge + '</div></div>'
+          + '</div>'
+          + '<div class="flex items-center gap-2 px-4 pb-3 pt-2">'
+          + '<select class="vd-courier-select min-w-0 flex-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700" data-route-id="' + route.id + '"><option value="">Оберіть кур\'єра</option>' + courierOptions + '</select>'
+          + '<input type="number" placeholder="₴" min="0" class="vd-price-input w-16 flex-shrink-0 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700" data-route-id="' + route.id + '">'
+          + '<button class="btn-vd-assign-send flex-shrink-0 rounded-xl bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-700 flex items-center gap-1.5 whitespace-nowrap transition-colors" data-route-id="' + route.id + '"><i class="bi bi-send text-[11px]"></i> Призначити</button>'
+          + '</div>';
+      }
+      list.appendChild(row);
+    });
+    list.querySelectorAll('.btn-vd-send').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        await sendRouteToTelegram(this.dataset.routeId, this.dataset.courierId, null, this);
+      });
+    });
+    list.querySelectorAll('.btn-vd-assign-send').forEach(function(btn) {
+      btn.addEventListener('click', async function() {
+        const rid = this.dataset.routeId;
+        const sel = list.querySelector('.vd-courier-select[data-route-id="' + rid + '"]');
+        const inp = list.querySelector('.vd-price-input[data-route-id="' + rid + '"]');
+        if (!sel || !sel.value) { alert('Оберіть кур\'єра'); return; }
+        await sendRouteToTelegram(rid, sel.value, inp ? inp.value : null, this);
+      });
+    });
+  }
+
+  async function sendRouteToTelegram(routeId, courierId, deliveryPrice, btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass"></i>';
+    const form = new FormData();
+    form.append('courier_id', courierId);
+    if (deliveryPrice) form.append('delivery_price', deliveryPrice);
+    try {
+      const resp = await fetch('/routes/' + routeId + '/assign-and-send', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: form,
+      });
+      const data = await resp.json();
+      if (data.success) {
+        btn.innerHTML = '<i class="bi bi-check-lg"></i> Надіслано';
+        btn.style.background = '#059669';
+        btn.style.cursor = 'default';
+      } else {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send"></i> Надіслати';
+        alert(data.error || 'Помилка надсилання');
+      }
+    } catch(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-send"></i> Надіслати';
+      alert('Помилка: ' + e.message);
+    }
+  }
 
   function updateMap(result) {
     map.eachLayer(function(layer) {
@@ -1459,6 +1627,16 @@ document.addEventListener('click', function(e) {
     }
   } else if (EDITING_ROUTE_ID) {
     document.getElementById('btn-open-picker').click();
+  } else if (VIEW_DATE_ROUTES) {
+    try {
+      const vdr = typeof VIEW_DATE_ROUTES === 'string'
+        ? JSON.parse(VIEW_DATE_ROUTES)
+        : VIEW_DATE_ROUTES;
+      vdr._selectedDate = VIEW_DATE || selectedDate;
+      window.renderResult(vdr);
+    } catch(e) {
+      console.warn('Failed to load view_date routes:', e);
+    }
   }
 })();
 </script>

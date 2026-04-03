@@ -44,6 +44,9 @@ class Order(db.Model):
     comment = db.Column(db.Text)
     preferences = db.Column(db.Text)
 
+    # Знижка (%)
+    discount = db.Column(db.Integer, nullable=True)
+
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())
 

@@ -532,12 +532,10 @@
 {% block content %}
 {% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
 {% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
-{% set stats = namespace(assigned=0, awaiting=0, sent=0) %}
+{% set stats = namespace(assigned=0, sent=0) %}
 {% for route in routes %}
   {% if route.courier_id %}
     {% set stats.assigned = stats.assigned + 1 %}
-  {% else %}
-    {% set stats.awaiting = stats.awaiting + 1 %}
   {% endif %}
   {% if route.status == 'sent' %}
     {% set stats.sent = stats.sent + 1 %}
@@ -557,11 +555,18 @@
           <input type="text" id="route-date-picker" readonly placeholder="Обрати дату">
           <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
         </form>
-        {% if date_filter %}
+        {% if date_filter and date_filter != today_iso %}
         <a href="{{ url_for('routes.saved_routes') }}"
            class="routes-hero-btn routes-hero-btn-secondary">
-          <i class="bi bi-arrow-counterclockwise"></i>
-          Скинути
+          <i class="bi bi-calendar-check"></i>
+          Сьогодні
+        </a>
+        {% endif %}
+        {% if date_filter and routes %}
+        <a href="{{ url_for('orders.route_generator') }}?view_date={{ date_filter }}"
+           class="routes-hero-btn routes-hero-btn-secondary">
+          <i class="bi bi-map"></i>
+          Переглянути на карті
         </a>
         {% endif %}
         <a href="{{ url_for('orders.route_generator') }}"
@@ -592,7 +597,7 @@
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-stone-100 text-stone-600"><i class="bi bi-hourglass-split"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Очікують</p>
-      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ unrouted_deliveries|length }}</p>
     </article>
   </section>
 
@@ -802,7 +807,14 @@
               <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ unrouted_deliveries|length }} доставок без маршруту</p>
             </div>
           </div>
-          <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+          <div class="flex items-center gap-3">
+            <a href="{{ url_for('orders.route_generator') }}?date={{ date_filter }}"
+               onclick="event.stopPropagation();"
+               class="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
+              <i class="bi bi-diagram-3"></i> Розподілити
+            </a>
+            <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+          </div>
         </div>
       </summary>
       <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
