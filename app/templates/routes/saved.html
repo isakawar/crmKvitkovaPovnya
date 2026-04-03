@@ -532,12 +532,10 @@
 {% block content %}
 {% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
 {% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
-{% set stats = namespace(assigned=0, awaiting=0, sent=0) %}
+{% set stats = namespace(assigned=0, sent=0) %}
 {% for route in routes %}
   {% if route.courier_id %}
     {% set stats.assigned = stats.assigned + 1 %}
-  {% else %}
-    {% set stats.awaiting = stats.awaiting + 1 %}
   {% endif %}
   {% if route.status == 'sent' %}
     {% set stats.sent = stats.sent + 1 %}
@@ -599,7 +597,7 @@
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-stone-100 text-stone-600"><i class="bi bi-hourglass-split"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Очікують</p>
-      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ unrouted_deliveries|length }}</p>
     </article>
   </section>
 
