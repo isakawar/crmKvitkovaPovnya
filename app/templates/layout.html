@@ -383,5 +383,298 @@ new MutationObserver(function(mutations) {
   });
 }).observe(document.body, { childList: true, subtree: true });
 </script>
+
+{% if current_user.is_authenticated and current_user.user_type in ['admin', 'manager'] and ai_agent_enabled %}
+<!-- AI Chat Widget -->
+<button id="ai-chat-btn"
+        onclick="aiChat.toggle()"
+        class="fixed bottom-6 right-6 z-50 w-14 h-14 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-full shadow-xl flex items-center justify-center transition-colors"
+        title="AI Асистент">
+    <i class="bi bi-robot text-xl" id="ai-chat-btn-icon"></i>
+</button>
+
+<!-- AI Chat Panel -->
+<div id="ai-chat-panel"
+     class="fixed bottom-24 right-6 z-50 bg-white rounded-2xl shadow-2xl border border-stone-200 flex-col hidden"
+     style="width: 420px; height: 600px; min-width: 320px; min-height: 400px; max-width: 80vw; max-height: 90vh; overflow: hidden;">
+
+    <!-- Left resize handle -->
+    <div id="ai-resize-left"
+         style="position:absolute; left:0; top:12px; bottom:12px; width:6px; cursor:ew-resize; z-index:10; border-radius:4px 0 0 4px;"
+         class="hover:bg-amber-300 transition-colors"></div>
+
+    <!-- Bottom resize handle -->
+    <div id="ai-resize-bottom"
+         style="position:absolute; bottom:0; left:12px; right:12px; height:6px; cursor:ns-resize; z-index:10; border-radius:0 0 4px 4px;"
+         class="hover:bg-amber-300 transition-colors"></div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-stone-100 rounded-t-2xl bg-amber-50">
+        <div class="flex items-center gap-2">
+            <i class="bi bi-robot text-amber-600"></i>
+            <span class="text-sm font-semibold text-stone-800">AI Асистент</span>
+        </div>
+        <div class="flex items-center gap-1">
+            <button onclick="aiChat.clear()" title="Очистити історію"
+                    class="p-1 text-stone-400 hover:text-stone-600 rounded transition-colors">
+                <i class="bi bi-trash3 text-xs"></i>
+            </button>
+            <button onclick="aiChat.toggle()"
+                    class="p-1 text-stone-400 hover:text-stone-600 rounded transition-colors">
+                <i class="bi bi-x-lg text-sm"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="ai-messages"
+         class="flex-1 overflow-y-auto px-3 py-3 flex flex-col gap-2"
+         style="min-height: 0;">
+        <div class="text-xs text-stone-400 text-center py-2">Привіт! Я AI асистент CRM. Можу відповідати на питання та допомагати з доставками.</div>
+    </div>
+
+    <!-- Typing indicator -->
+    <div id="ai-typing" class="hidden px-4 py-1">
+        <div class="flex gap-1 items-center">
+            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style="animation-delay:0ms"></div>
+            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style="animation-delay:150ms"></div>
+            <div class="w-1.5 h-1.5 bg-stone-400 rounded-full animate-bounce" style="animation-delay:300ms"></div>
+        </div>
+    </div>
+
+    <!-- Input -->
+    <div class="px-3 py-3 border-t border-stone-100 rounded-b-2xl">
+        <div class="flex gap-2 items-end">
+            <textarea id="ai-input"
+                      placeholder="Запитай мене..."
+                      rows="2"
+                      class="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                      style="min-height: 44px; max-height: 120px; overflow-y: auto; resize: vertical;"
+                      onkeydown="aiChat.onKeyDown(event)"></textarea>
+            <button id="ai-send-btn"
+                    onclick="aiChat.send()"
+                    class="w-9 h-9 bg-amber-500 hover:bg-amber-600 text-white rounded-xl flex items-center justify-center transition-colors flex-shrink-0">
+                <i class="bi bi-send-fill text-xs"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const aiChat = (() => {
+    let isOpen = false;
+    let isLoading = false;
+
+    const panel = () => document.getElementById('ai-chat-panel');
+    const messages = () => document.getElementById('ai-messages');
+    const input = () => document.getElementById('ai-input');
+    const sendBtn = () => document.getElementById('ai-send-btn');
+    const typing = () => document.getElementById('ai-typing');
+
+    function scrollToBottom() {
+        const m = messages();
+        m.scrollTop = m.scrollHeight;
+    }
+
+    function appendMessage(role, text) {
+        const el = document.createElement('div');
+        if (role === 'user') {
+            el.className = 'self-end max-w-[85%] bg-amber-100 text-stone-800 rounded-2xl rounded-br-sm px-3 py-2 text-sm whitespace-pre-wrap break-words';
+        } else {
+            el.className = 'self-start max-w-[85%] bg-stone-100 text-stone-800 rounded-2xl rounded-bl-sm px-3 py-2 text-sm whitespace-pre-wrap break-words';
+        }
+        el.textContent = text;
+        messages().appendChild(el);
+        scrollToBottom();
+        return el;
+    }
+
+    function renderConfirmCard(action_id, preview_text) {
+        const card = document.createElement('div');
+        card.className = 'w-full border border-amber-300 bg-amber-50 rounded-xl p-3 text-sm';
+        card.innerHTML = `
+            <div class="font-semibold text-stone-700 mb-1 text-xs uppercase tracking-wide">Підтвердження</div>
+            <div class="text-stone-700 whitespace-pre-wrap text-xs mb-3">${escapeHtml(preview_text)}</div>
+            <div class="flex gap-2">
+                <button onclick="aiChat.confirm('${action_id}', true, this)"
+                        class="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium py-1.5 rounded-lg transition-colors">
+                    ✓ Підтвердити
+                </button>
+                <button onclick="aiChat.confirm('${action_id}', false, this)"
+                        class="flex-1 bg-stone-200 hover:bg-stone-300 text-stone-700 text-xs font-medium py-1.5 rounded-lg transition-colors">
+                    ✗ Скасувати
+                </button>
+            </div>`;
+        messages().appendChild(card);
+        scrollToBottom();
+    }
+
+    function escapeHtml(text) {
+        return (text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function setLoading(state) {
+        isLoading = state;
+        const btn = sendBtn();
+        const inp = input();
+        if (btn) btn.disabled = state;
+        if (inp) inp.disabled = state;
+        const t = typing();
+        if (t) t.classList.toggle('hidden', !state);
+    }
+
+    async function open() {
+        const p = panel();
+        p.classList.remove('hidden');
+        p.classList.add('flex');
+        isOpen = true;
+        // Load history
+        try {
+            const r = await fetch('/ai/history');
+            const data = await r.json();
+            if (data.messages && data.messages.length > 0) {
+                // Clear default message
+                const first = messages().querySelector('.text-stone-400');
+                if (first && data.messages.length > 0) first.remove();
+                data.messages.forEach(m => appendMessage(m.role, m.content));
+            }
+        } catch(e) {}
+        input().focus();
+    }
+
+    function close() {
+        const p = panel();
+        p.classList.add('hidden');
+        p.classList.remove('flex');
+        isOpen = false;
+    }
+
+    function toggle() {
+        if (isOpen) close(); else open();
+    }
+
+    async function send() {
+        if (isLoading) return;
+        const text = input().value.trim();
+        if (!text) return;
+        input().value = '';
+        input().style.height = 'auto';
+
+        appendMessage('user', text);
+        setLoading(true);
+        scrollToBottom();
+
+        try {
+            const r = await fetch('/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: text })
+            });
+            const data = await r.json();
+            setLoading(false);
+
+            if (data.error) {
+                appendMessage('assistant', '⚠️ ' + data.error);
+                return;
+            }
+
+            appendMessage('assistant', data.reply || '');
+
+            if (data.pending_action && data.pending_action.action_id) {
+                renderConfirmCard(
+                    data.pending_action.action_id,
+                    data.pending_action.preview_text || ''
+                );
+            }
+        } catch(e) {
+            setLoading(false);
+            appendMessage('assistant', '⚠️ Помилка з\'єднання. Спробуй ще раз.');
+        }
+    }
+
+    async function confirm(action_id, confirmed, btn) {
+        // Disable both buttons to prevent double-click
+        const card = btn.closest('.border-amber-300');
+        if (card) card.querySelectorAll('button').forEach(b => b.disabled = true);
+
+        try {
+            const r = await fetch('/ai/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action_id, confirmed })
+            });
+            const data = await r.json();
+
+            if (card) card.remove();
+            appendMessage('assistant', data.reply || (confirmed ? 'Виконано.' : 'Скасовано.'));
+        } catch(e) {
+            if (card) card.querySelectorAll('button').forEach(b => b.disabled = false);
+            appendMessage('assistant', '⚠️ Помилка виконання. Спробуй ще раз.');
+        }
+    }
+
+    async function clear() {
+        if (!confirm('Очистити всю історію чату?')) return;
+        await fetch('/ai/clear', { method: 'POST' });
+        const m = messages();
+        m.innerHTML = '<div class="text-xs text-stone-400 text-center py-2">Привіт! Я AI асистент CRM. Можу відповідати на питання та допомагати з доставками.</div>';
+    }
+
+    function onKeyDown(e) {
+        // Auto-resize
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 80) + 'px';
+        // Enter without Shift = send
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            send();
+        }
+    }
+
+    return { toggle, send, confirm, clear, onKeyDown };
+})();
+
+// --- AI Panel resize from left and bottom ---
+(function() {
+    const MIN_W = 320, MAX_W = window.innerWidth * 0.8;
+    const MIN_H = 400, MAX_H = window.innerHeight * 0.9;
+
+    function initResize(handleId, onDrag) {
+        const handle = document.getElementById(handleId);
+        if (!handle) return;
+        handle.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            const panel = document.getElementById('ai-chat-panel');
+            function onMove(ev) { onDrag(ev, panel); }
+            function onUp() {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+            }
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            document.body.style.userSelect = 'none';
+        });
+    }
+
+    // Left handle: drag left to widen, drag right to narrow
+    initResize('ai-resize-left', function(e, panel) {
+        document.body.style.cursor = 'ew-resize';
+        const rect = panel.getBoundingClientRect();
+        const newW = Math.min(MAX_W, Math.max(MIN_W, rect.right - e.clientX));
+        panel.style.width = newW + 'px';
+    });
+
+    // Bottom handle: drag down to heighten, drag up to shorten
+    initResize('ai-resize-bottom', function(e, panel) {
+        document.body.style.cursor = 'ns-resize';
+        const rect = panel.getBoundingClientRect();
+        const newH = Math.min(MAX_H, Math.max(MIN_H, e.clientY - rect.top));
+        panel.style.height = newH + 'px';
+    });
+})();
+</script>
+{% endif %}
 </body>
 </html>

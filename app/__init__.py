@@ -34,6 +34,8 @@ def create_app(config_class=DevelopmentConfig):
     app.telegram_bot = telegram_bot
 
     # Register blueprints
+    from app.models.ai_log import AIAgentLog  # noqa: ensure table is created
+
     from app.blueprints.orders.routes import orders_bp
     from app.blueprints.clients.routes import clients_bp
     from app.blueprints.couriers.routes import couriers_bp
@@ -47,6 +49,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.certificates import certificates_bp
     from app.blueprints.transactions import transactions_bp
     from app.blueprints.subscriptions import subscriptions_bp
+    from app.blueprints.ai_agent import ai_agent_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -61,6 +64,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(certificates_bp)
     app.register_blueprint(transactions_bp)
     app.register_blueprint(subscriptions_bp)
+    app.register_blueprint(ai_agent_bp)
 
     # Cleanup old route cache (раз на добу, старше 7 днів)
     @app.before_request
@@ -187,6 +191,19 @@ def create_app(config_class=DevelopmentConfig):
     @app.context_processor
     def inject_version():
         return dict(app_version=version)
+
+    @app.context_processor
+    def inject_ai_agent_enabled():
+        if not current_user.is_authenticated:
+            return dict(ai_agent_enabled=False)
+        try:
+            from app.models.settings import Settings
+            disabled = Settings.query.filter_by(
+                type='feature_flag', value='ai_agent_disabled'
+            ).first()
+            return dict(ai_agent_enabled=disabled is None)
+        except Exception:
+            return dict(ai_agent_enabled=True)
 
     @app.route('/changelog')
     def changelog():
