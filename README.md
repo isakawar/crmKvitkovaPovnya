@@ -17,6 +17,7 @@
 - Рольова система (admin / manager / florist)
 - Подарункові сертифікати
 - Транзакції
+- AI Асистент (чат для менеджерів і адмінів, вмикається/вимикається в налаштуваннях)
 
 ---
 
@@ -24,8 +25,10 @@
 
 - **Backend:** Python 3.12, Flask, SQLAlchemy, Alembic
 - **Database:** PostgreSQL 15
+- **Cache:** Redis 7
 - **Frontend:** Jinja2, Bootstrap 5, Tailwind CSS v3
 - **Bot:** python-telegram-bot 20.7
+- **AI:** OpenAI-compatible API (Gemini, OpenRouter, etc.)
 - **Deploy:** Docker Compose
 
 ---
@@ -55,12 +58,33 @@ docker compose exec web flask ensure-admin
 
 ## ENV
 
+Скопіюй `env.example` в `.env` і заповни значення:
+
 ```env
+# Database
 POSTGRES_PASSWORD=your_password
 SECRET_KEY=your_secret_key
+
+# Admin
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_password
+
+# Telegram bot
 TELEGRAM_BOT_TOKEN=...
+
+# Route optimizer
 DEPOT_ADDRESS=Київ, вул. Прикладна 1
 ROUTE_OPTIMIZER_URL=http://...
+OPTIMIZER_API_KEY=
+
+# AI Agent (OpenAI-compatible)
+AI_API_KEY=your_key
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-2.5-flash
+
+# Redis
+REDIS_URL=redis://redis:6379/0
 ```
 
 ---

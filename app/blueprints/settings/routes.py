@@ -159,6 +159,22 @@ def get_prices():
     })
 
 
+@bp.route('/settings/ai-agent/toggle', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def toggle_ai_agent():
+    from app.models.settings import Settings
+    flag = Settings.query.filter_by(type='feature_flag', value='ai_agent_disabled').first()
+    if flag:
+        db.session.delete(flag)
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': True})
+    else:
+        db.session.add(Settings(type='feature_flag', value='ai_agent_disabled'))
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': False})
+
+
 @bp.route('/settings/prices', methods=['POST'])
 def save_prices():
     data = request.get_json()
