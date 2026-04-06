@@ -30,7 +30,7 @@ def _delivery_to_order_json(delivery) -> dict:
         "address": street,
         "house": house,
     }
-    if delivery.time_from:
+    if delivery.time_from and delivery.time_from != '∞':
         item["delivery_window_start"] = delivery.time_from
     if delivery.time_to:
         item["delivery_window_end"] = delivery.time_to
@@ -163,6 +163,71 @@ def get_job_status(job_id: str, optimizer_url: str) -> dict:
     return body
 
 
+
+
+def distribute_deliveries(route_ids: list, new_delivery_ids: list, optimizer_url: str) -> dict:
+    """POST /api/distribute — insert new deliveries into fixed existing routes."""
+    from app.models.delivery_route import DeliveryRoute
+    from app.models.delivery import Delivery
+
+    existing_routes_payload = []
+    for route in DeliveryRoute.query.filter(DeliveryRoute.id.in_(route_ids)).all():
+        stops = []
+        for stop in sorted(route.stops, key=lambda s: s.stop_order):
+            d = stop.delivery
+            if not d:
+                continue
+            stop_item = _delivery_to_order_json(d)
+            stop_item["stopOrder"] = stop.stop_order
+            if stop.planned_arrival:
+                stop_item["eta"] = stop.planned_arrival.strftime("%H:%M")
+            stops.append(stop_item)
+
+        existing_routes_payload.append({
+            "courierId": f"route_{route.id}",
+            "routeDbId": route.id,
+            "courierName": route.courier.name if route.courier else None,
+            "departureTime": route.start_time.strftime("%H:%M") if route.start_time else "09:00",
+            "stops": stops,
+        })
+
+    new_orders = [
+        _delivery_to_order_json(d)
+        for d in Delivery.query.filter(Delivery.id.in_(new_delivery_ids)).all()
+    ]
+
+    url = f"{optimizer_url.rstrip('/')}/api/distribute"
+    headers = {"Content-Type": "application/json"}
+    api_key = os.environ.get("OPTIMIZER_API_KEY")
+    if api_key:
+        headers["X-API-Key"] = api_key
+
+    try:
+        response = requests.post(
+            url,
+            json={
+                "existing_routes": existing_routes_payload,
+                "new_orders": new_orders,
+                "max_wait_min": 15,
+                "allow_departure_adjustment": True,
+                "earliest_departure": "08:00",
+            },
+            headers=headers,
+            timeout=120,
+        )
+    except requests.RequestException as exc:
+        raise RouteOptimizerError(f"Немає з'єднання з route optimizer: {exc}") from exc
+
+    body = {}
+    try:
+        body = response.json()
+    except ValueError:
+        pass
+
+    if response.status_code == 200:
+        return _ensure_stats(body)
+
+    _parse_error(body, response.status_code)
 
 
 def routes_result_to_csv(result: dict) -> str:

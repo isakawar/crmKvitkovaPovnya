@@ -46,6 +46,14 @@
   .stop-row:hover { background: #fafaf9; }
   .stop-row.sortable-ghost { opacity: 0.4; background: #fef3c7; }
   .stop-row.sortable-chosen { background: #fef3c7; box-shadow: 0 2px 12px rgba(245,158,11,0.13); }
+  .stop-row.is-new { background: #fffbeb; border-left: 3px solid #f59e0b; }
+  .stop-row.is-new:hover { background: #fef3c7; }
+  .stop-badge-new {
+    display: inline-flex; align-items: center;
+    padding: 1px 6px; border-radius: 999px;
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+    background: #fef3c7; color: #92400e; margin-left: 6px; vertical-align: middle;
+  }
   .drag-handle {
     color: #d6d3d1; cursor: grab; font-size: 1.1rem;
     flex-shrink: 0; margin-top: 2px; transition: color 0.15s;
@@ -360,6 +368,20 @@
   <!-- Map -->
   <div class="overflow-hidden rounded-[22px] border border-stone-200 shadow-sm">
     <div id="route-map"></div>
+  </div>
+
+  <!-- Distribute mode banner -->
+  <div id="distribute-banner" style="display:none;"
+       class="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <i class="bi bi-lightning-charge-fill text-amber-500 text-base flex-shrink-0 mt-0.5"></i>
+    <div>
+      <p class="text-sm font-semibold text-amber-900">
+        Пропонований розподіл — <span id="distribute-new-count">0</span> нових доставок
+      </p>
+      <p class="text-xs text-amber-700 mt-0.5">
+        Нові доставки виділені бурштиновим. Перевірте та натисніть <b>Зберегти маршрути</b> для застосування.
+      </p>
+    </div>
   </div>
 
   <!-- Result section -->
@@ -958,6 +980,7 @@ document.addEventListener('click', function(e) {
   let currentRoutes = [];
   let hasChanges = false;
   let isCsvMode = false;
+  let distributeNewIds = new Set();
   let selectedDate = '{{ selected_date }}';
 
   function calcDeparture(stops) {
@@ -1038,6 +1061,13 @@ document.addEventListener('click', function(e) {
         route.stops = recalcETAs(route.stops, departureTime);
       }
 
+      const depAdjustedBadge = route.departureAdjusted
+        ? `<span title="Оптимізатор скоригував час виїзду щоб вписати нову доставку"
+               style="display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:999px;font-size:0.65rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;background:#fef3c7;color:#92400e;margin-left:2px;">
+             <i class="bi bi-arrow-repeat"></i> скориговано
+           </span>`
+        : '';
+
       card.innerHTML = `
         <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
           <div class="flex items-center gap-2">
@@ -1052,6 +1082,7 @@ document.addEventListener('click', function(e) {
                    value="${departureTime}"
                    style="border:1px solid #e7e5e4;border-radius:6px;padding:1px 5px;font-size:0.78rem;color:#1c1917;background:#fff;cursor:pointer;outline:none;"
                    title="Час виїзду з депо">
+            ${depAdjustedBadge}
           </span>
         </div>
         <div>
@@ -1110,7 +1141,8 @@ document.addEventListener('click', function(e) {
 
   function createStopRow(stop, num, color) {
     const li = document.createElement('li');
-    li.className = 'stop-row';
+    const isNew = stop.id && distributeNewIds.has(stop.id);
+    li.className = 'stop-row' + (isNew ? ' is-new' : '');
     li.dataset.stopId = stop.id || '';
     li.dataset.stopJson = JSON.stringify(stop);
 
@@ -1123,12 +1155,13 @@ document.addEventListener('click', function(e) {
     const waitPart = stop.waitMin
       ? `<span><i class="bi bi-hourglass-split me-1"></i>${stop.waitMin} хв очікування</span>`
       : '';
+    const newBadge = isNew ? '<span class="stop-badge-new">нова</span>' : '';
 
     li.innerHTML = `
       <i class="bi bi-grip-vertical drag-handle"></i>
       <span class="stop-num" style="background:${color};">${num}</span>
       <div style="flex:1;">
-        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}</div>
+        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}${newBadge}</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:0.8rem;color:#a8a29e;">
           <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
           ${timePart}${drivePart}${waitPart}
@@ -1601,6 +1634,13 @@ document.addEventListener('click', function(e) {
     hasChanges = false;
     selectedDate = result._selectedDate || selectedDate;
 
+    // Hide distribute banner on normal render (only shown explicitly from localStorage load)
+    if (!result._fromDistribute) {
+      distributeNewIds = new Set();
+      const distBanner = document.getElementById('distribute-banner');
+      if (distBanner) distBanner.style.display = 'none';
+    }
+
     document.getElementById('result-section').style.display = '';
     const saveBtn = document.getElementById('btn-save-routes');
     saveBtn.style.display = isCsvMode ? 'none' : '';
@@ -1612,6 +1652,36 @@ document.addEventListener('click', function(e) {
     document.getElementById('export-result-json').value = JSON.stringify(result);
     document.getElementById('changes-banner').classList.remove('visible');
   };
+
+  // Auto-load distribute result from localStorage (triggered from /routes banner)
+  (function() {
+    const raw = localStorage.getItem('distribute_result');
+    const newIdsRaw = localStorage.getItem('distribute_new_ids');
+    if (!raw || !newIdsRaw) return;
+    try {
+      const result = JSON.parse(raw);
+      const newIds = JSON.parse(newIdsRaw);
+      const dateRaw = localStorage.getItem('distribute_date');
+      localStorage.removeItem('distribute_result');
+      localStorage.removeItem('distribute_new_ids');
+      localStorage.removeItem('distribute_date');
+      distributeNewIds = new Set(newIds);
+      result._selectedDate = dateRaw || selectedDate;
+      result._fromDistribute = true;
+      window.renderResult(result);
+      const banner = document.getElementById('distribute-banner');
+      if (banner) {
+        banner.style.display = '';
+        const countEl = document.getElementById('distribute-new-count');
+        if (countEl) countEl.textContent = newIds.length;
+      }
+    } catch(e) {
+      console.warn('Failed to load distribute result from localStorage:', e);
+      localStorage.removeItem('distribute_result');
+      localStorage.removeItem('distribute_new_ids');
+      localStorage.removeItem('distribute_date');
+    }
+  })();
 
   // Auto-load cached route in edit mode (після визначення renderResult)
   if (EDITING_ROUTE_ID && EDITING_CACHED_RESULT) {

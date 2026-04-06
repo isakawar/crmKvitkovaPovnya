@@ -175,6 +175,22 @@ def toggle_ai_agent():
         return jsonify({'success': True, 'enabled': False})
 
 
+@bp.route('/settings/distribute-banner/toggle', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def toggle_distribute_banner():
+    from app.models.settings import Settings
+    flag = Settings.query.filter_by(type='feature_flag', value='distribute_banner_disabled').first()
+    if flag:
+        db.session.delete(flag)
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': True})
+    else:
+        db.session.add(Settings(type='feature_flag', value='distribute_banner_disabled'))
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': False})
+
+
 @bp.route('/settings/prices', methods=['POST'])
 def save_prices():
     data = request.get_json()

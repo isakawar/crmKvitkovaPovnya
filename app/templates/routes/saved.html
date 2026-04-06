@@ -6,6 +6,7 @@
 <style>
   .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .routes-shell {
     display: flex;
@@ -619,6 +620,66 @@
     {% endif %}
   {% endwith %}
 
+  {# Distribute banner — shown when there are routes + deliveries with time windows #}
+  {% set distributable_ids = [] %}
+  {% for d in unrouted_deliveries %}
+    {% if d.time_from or d.time_to %}{% set _ = distributable_ids.append(d.id) %}{% endif %}
+  {% endfor %}
+  {% if routes and distributable_ids and distribute_banner_enabled %}
+  <div id="distribute-banner"
+       class="flex items-center justify-between gap-4 flex-wrap rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+        <i class="bi bi-lightning-charge-fill text-base"></i>
+      </span>
+      <div>
+        <p class="text-sm font-semibold text-amber-900">
+          {{ distributable_ids | length }} доставок з часовими вікнами ще не розподілені
+        </p>
+        <p class="text-xs text-amber-700 mt-0.5">Оптимізатор підбере найкращу позицію в існуючих маршрутах</p>
+      </div>
+    </div>
+    <button id="btn-distribute-banner" onclick="runDistribute()"
+            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors flex-shrink-0">
+      <i class="bi bi-shuffle"></i> Розподілити
+    </button>
+  </div>
+  <script>
+  const _DIST_ROUTE_IDS = {{ routes | map(attribute='id') | list | tojson }};
+  const _DIST_DELIVERY_IDS = {{ distributable_ids | tojson }};
+  const _DIST_DATE = {{ date_filter | tojson }};
+
+  async function runDistribute() {
+    const btn = document.getElementById('btn-distribute-banner');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;vertical-align:middle;"></span> Розраховую...';
+
+    try {
+      const resp = await fetch('/route-generator/distribute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+        body: JSON.stringify({route_ids: _DIST_ROUTE_IDS, delivery_ids: _DIST_DELIVERY_IDS}),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        alert(data.error || 'Помилка при розрахунку');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+        return;
+      }
+      localStorage.setItem('distribute_result', JSON.stringify(data.result));
+      localStorage.setItem('distribute_new_ids', JSON.stringify(_DIST_DELIVERY_IDS));
+      localStorage.setItem('distribute_date', _DIST_DATE);
+      window.location.href = '/route-generator?delivery_date=' + _DIST_DATE;
+    } catch(e) {
+      alert('Помилка з\'єднання з сервером');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+    }
+  }
+  </script>
+  {% endif %}
+
   {% if not routes %}
   <section class="route-ops-card flex flex-col items-center justify-center py-20 text-center">
     <div class="flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">
@@ -808,6 +869,13 @@
             </div>
           </div>
           <div class="flex items-center gap-3">
+            {% if routes %}
+            <a href="{{ url_for('orders.route_generator_distribute_page', date=date_filter) }}"
+               onclick="event.stopPropagation();"
+               class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors">
+              <i class="bi bi-shuffle"></i> Додати в маршрути
+            </a>
+            {% endif %}
             <a href="{{ url_for('orders.route_generator') }}?date={{ date_filter }}"
                onclick="event.stopPropagation();"
                class="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
