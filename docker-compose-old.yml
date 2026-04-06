@@ -3,19 +3,17 @@ version: '3.8'
 services:
   postgres:
     image: postgres:15-alpine
-    env_file:
-      - .env
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: kvitkova_crm
+      POSTGRES_USER: kvitkova_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in .env}
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U kvitkova_user -d kvitkova_crm"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -40,23 +38,21 @@ services:
       - ./scripts:/app/scripts
       - ./instance:/app/instance
       - ./logs:/app/logs
-    env_file:
-      - .env
     environment:
-      FLASK_APP: run.py
-      FLASK_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      DEPOT_ADDRESS: ${DEPOT_ADDRESS:-}
-      ROUTE_OPTIMIZER_URL: ${ROUTE_OPTIMIZER_URL:-}
-      OPTIMIZER_API_KEY: ${OPTIMIZER_API_KEY:-}
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@kvitkovapovnya.com}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
-      AI_API_KEY: ${AI_API_KEY:-}
-      AI_BASE_URL: ${AI_BASE_URL}
-      AI_MODEL: ${AI_MODEL}
+      - FLASK_APP=run.py
+      - FLASK_ENV=production
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in .env}@postgres:5432/kvitkova_crm
+      - REDIS_URL=redis://redis:6379/0
+      - DEPOT_ADDRESS=${DEPOT_ADDRESS:-}
+      - ROUTE_OPTIMIZER_URL=${ROUTE_OPTIMIZER_URL:-}
+      - OPTIMIZER_API_KEY=${OPTIMIZER_API_KEY:-}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@kvitkovapovnya.com}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - AI_API_KEY=${AI_API_KEY:-}
+      - AI_BASE_URL=${AI_BASE_URL}
+      - AI_MODEL=${AI_MODEL}
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,11 +72,9 @@ services:
       - ./app:/app/app
       - ./instance:/app/instance
       - ./logs:/app/logs
-    env_file:
-      - .env
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - DATABASE_URL=postgresql://kvitkova_user:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is not set in .env}@postgres:5432/kvitkova_crm
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,6 +83,8 @@ services:
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_bot.py"]
 
+# Volumes are now managed via local directories
+
 networks:
   default:
-    driver: bridge
+    driver: bridge 
