@@ -38,26 +38,23 @@ def _parse_selected_date(raw_value, fallback_date):
 
 
 def _build_subscription_delivery_index(order_ids):
+    """Return {delivery_id: sequence_number} from Order.sequence_number."""
     if not order_ids:
         return {}
 
+    from app.models.order import Order as _Order
     rows = (
-        Delivery.query
-        .with_entities(Delivery.id, Delivery.order_id, Delivery.status)
-        .filter(Delivery.order_id.in_(order_ids))
-        .order_by(Delivery.order_id.asc(), Delivery.delivery_date.asc(), Delivery.id.asc())
+        db.session.query(Delivery.id, _Order.sequence_number)
+        .join(_Order, _Order.id == Delivery.order_id)
+        .filter(
+            Delivery.order_id.in_(order_ids),
+            _Order.sequence_number.isnot(None),
+            Delivery.status != 'Скасовано',
+        )
         .all()
     )
 
-    position_map = {}
-    counter_by_order = {}
-    for delivery_id, order_id, status in rows:
-        if status == 'Скасовано':
-            continue
-        current = counter_by_order.get(order_id, 0) + 1
-        counter_by_order[order_id] = current
-        position_map[delivery_id] = current
-    return position_map
+    return {delivery_id: seq for delivery_id, seq in rows}
 
 
 @florist_bp.route('/florist/deliveries/status', methods=['POST'])
@@ -105,7 +102,11 @@ def florist_bulk_update_status():
             if not delivery.delivered_at:
                 delivery.delivered_at = now_utc
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
     return jsonify({'success': True, 'updated_count': updated_count})
 
 

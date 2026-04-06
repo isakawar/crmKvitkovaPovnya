@@ -1,7 +1,7 @@
 <div class="modal fade" id="addOrderModal" tabindex="-1" aria-labelledby="addOrderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable order-composer-dialog">
     <div class="modal-content order-composer-content">
-      <form id="addOrderForm" novalidate>
+      <form id="addOrderForm" novalidate autocomplete="off">
         <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <input type="hidden" name="extend_from_order_id" id="extend-from-order-id" value="">
         <div class="order-composer-shell">
@@ -88,6 +88,20 @@
                         <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
                       </div>
                     </div>
+
+                    <div id="client-info-block" class="hidden mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+                      <div class="flex items-center gap-3">
+                        <div class="flex-1">
+                          <div class="order-label mb-1"><i class="bi bi-wallet2"></i> Баланс клієнта</div>
+                          <div class="order-input bg-white text-stone-700 cursor-default select-none" id="client-credits-display">—</div>
+                        </div>
+                        <div class="flex-1">
+                          <label class="order-label mb-1" for="client-discount-input"><i class="bi bi-percent"></i> Знижка (%)</label>
+                          <input type="number" id="client-discount-input" name="discount" min="0" max="100"
+                                 class="order-input" placeholder="0">
+                        </div>
+                      </div>
+                    </div>
                   </section>
 
                   <section class="order-subpanel">
@@ -114,7 +128,14 @@
                             <i class="bi bi-telephone"></i>
                             Телефон отримувача <span class="text-red-500">*</span>
                           </label>
-                          <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input" required placeholder="+380XXXXXXXXX" maxlength="13">
+                          <div class="flex items-center gap-1.5">
+                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" maxlength="13">
+                            <button type="button" id="add-extra-phone-btn" title="Додати телефон"
+                                    class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 hover:border-stone-300 transition-colors">
+                              <i class="bi bi-plus text-base"></i>
+                            </button>
+                          </div>
+                          <div id="extra-phones-container"></div>
                         </div>
 
                         <div class="order-field">
@@ -142,23 +163,6 @@
 
                 <div class="mt-6 space-y-4">
                   <div class="order-field">
-                    <label class="order-label" for="order-city-select">
-                      <i class="bi bi-geo-alt"></i>
-                      Місто <span class="text-red-500">*</span>
-                    </label>
-                    <select name="city" id="order-city-select" class="order-select" required>
-                      <option value="">Оберіть місто</option>
-                      {% if cities and cities|length > 0 %}
-                          {% for city in cities %}
-                              <option value="{{ city.value }}">{{ city.value }}</option>
-                          {% endfor %}
-                      {% else %}
-                          <option disabled>Додайте міста у налаштуваннях</option>
-                      {% endif %}
-                    </select>
-                  </div>
-
-                  <div class="order-field">
                     <div class="flex items-center justify-between gap-3">
                       <label class="order-label" for="delivery-mode-switch">
                         <i class="bi bi-truck"></i>
@@ -178,15 +182,40 @@
                     <input type="hidden" name="is_pickup" id="is-pickup-input" value="">
                   </div>
 
+                  <div class="order-field">
+                    <label class="order-label" for="order-city-select">
+                      <i class="bi bi-geo-alt"></i>
+                      Місто <span class="text-red-500">*</span>
+                    </label>
+                    <select name="city" id="order-city-select" class="order-select" required>
+                      <option value="">Оберіть місто</option>
+                      {% if cities and cities|length > 0 %}
+                          {% for city in cities %}
+                              <option value="{{ city.value }}">{{ city.value }}</option>
+                          {% endfor %}
+                      {% else %}
+                          <option disabled>Додайте міста у налаштуваннях</option>
+                      {% endif %}
+                    </select>
+                  </div>
+
                   <div class="order-field" id="address-field">
                     <label class="order-label" for="address-input" id="address-label">
                       <i class="bi bi-signpost-2"></i>
                       Адреса <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок, квартира">
+                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок">
                     <p class="order-helper-copy" id="address-hint">
                       Вкажіть повну адресу доставки, щоб кур'єр міг швидко оформити маршрут.
                     </p>
+                  </div>
+
+                  <div class="order-field hidden" id="address-comment-field">
+                    <label class="order-label" for="address-comment-input">
+                      <i class="bi bi-chat-left-text"></i>
+                      Коментар до адреси
+                    </label>
+                    <input type="text" name="address_comment" id="address-comment-input" class="order-input" placeholder="Під'їзд, квартира, поверх, код домофону...">
                   </div>
 
                   <div class="order-two-col">
@@ -237,7 +266,7 @@
                     <div class="order-field">
                       <label class="order-label" for="first-delivery-date-input" id="first-delivery-label">
                         <i class="bi bi-calendar-event"></i>
-                        Перша доставка <span class="text-red-500">*</span>
+                        Дата доставки <span class="text-red-500">*</span>
                       </label>
                       <input type="date" id="first-delivery-date-input" name="first_delivery_date" class="order-input" required>
                     </div>
@@ -321,6 +350,36 @@
                 </div>
               </div>
             </section>
+
+            <!-- Certificate section -->
+            <input type="hidden" name="certificate_code" id="order-certificate-code" value="">
+            <section class="order-panel order-panel-notes mt-4">
+              <span class="order-section-kicker order-section-kicker-muted">
+                <i class="bi bi-award"></i>
+                Сертифікат
+              </span>
+              <div class="mt-3 flex flex-col gap-3">
+                <div class="flex gap-2">
+                  <div class="flex-1 order-field">
+                    <label class="order-label" for="order-cert-code-input">
+                      <i class="bi bi-upc-scan"></i>
+                      Код сертифіката
+                    </label>
+                    <input type="text" id="order-cert-code-input" class="order-input font-mono uppercase"
+                           placeholder="KVIT-XXXX-XXXX"
+                           autocomplete="off" maxlength="50">
+                  </div>
+                  <div class="flex items-end pb-0.5">
+                    <button type="button" id="cert-validate-btn"
+                      class="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-stone-200 bg-white text-sm text-stone-700 hover:bg-stone-50 transition-colors whitespace-nowrap">
+                      Перевірити
+                    </button>
+                  </div>
+                </div>
+                <!-- Certificate result -->
+                <div id="cert-result" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
+              </div>
+            </section>
           </div>
 
           <div class="order-composer-footer">
@@ -328,15 +387,56 @@
               Для підписки система створить серію доставок автоматично. Для разового замовлення буде створена одна доставка.
             </p>
 
-            <div class="order-footer-actions">
-              <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-              <button type="submit" class="order-btn-primary" id="order-submit-btn">
-                <span id="order-submit-btn-text">Створити замовлення</span>
+            <div class="flex items-center justify-between gap-3 w-full">
+              <button type="button" id="delete-order-btn"
+                      class="hidden items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-500 transition-colors hover:bg-red-50 hover:border-red-300"
+                      title="Видалити замовлення">
+                <i class="bi bi-trash3"></i>
               </button>
+              <div class="order-footer-actions ml-auto">
+                <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="submit" class="order-btn-primary" id="order-submit-btn">
+                  <span id="order-submit-btn-text">Створити замовлення</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </form>
+    </div>
+  </div>
+</div>
+
+<!-- Order Delete Confirmation Modal -->
+<div class="modal fade" id="deleteOrderConfirmModal" tabindex="-1" aria-labelledby="deleteOrderConfirmLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+    <div class="modal-content rounded-2xl border-0 shadow-lg" style="overflow: hidden;">
+      <div class="modal-header border-0 pb-0 px-5 pt-5">
+        <div class="flex items-center gap-3">
+          <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-red-50 text-red-500 flex-shrink-0">
+            <i class="bi bi-trash3 text-lg"></i>
+          </div>
+          <div>
+            <h5 class="modal-title font-semibold text-stone-900 text-base" id="deleteOrderConfirmLabel">Видалити замовлення?</h5>
+            <p class="text-sm text-stone-500 mt-0.5">Цю дію не можна скасувати</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-body px-5 py-4">
+        <div id="delete-order-deps-info" class="space-y-2 text-sm text-stone-700">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div class="modal-footer border-0 px-5 pb-5 pt-2">
+        <div class="order-footer-actions w-full">
+          <button type="button" class="order-btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+          <button type="button" id="confirm-delete-order-btn"
+                  class="order-btn-primary !bg-red-500 hover:!bg-red-600">
+            <i class="bi bi-trash3"></i>
+            Видалити
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>

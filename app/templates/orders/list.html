@@ -9,12 +9,191 @@
   .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
   .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+  .delivery-time-confirmed-row {
+    background: #ffffff;
+    box-shadow: inset 4px 0 0 #34d399;
+  }
+  .delivery-time-confirmed-row:hover {
+    background: #ecfdf5 !important;
+  }
+  .delivery-time-no-time-row {
+    background: #ffffff;
+    box-shadow: inset 4px 0 0 #fb7185;
+  }
+  .delivery-time-no-time-row:hover {
+    background: #fff1f2 !important;
+  }
+  .reschedule-modal-dialog {
+    max-width: 760px;
+  }
+  .reschedule-modal-content {
+    overflow: hidden;
+    border: 0;
+    border-radius: 32px;
+    background:
+      radial-gradient(circle at top left, rgba(251, 191, 36, 0.12), transparent 24%),
+      linear-gradient(180deg, #ffffff 0%, #fafaf9 100%);
+    box-shadow: 0 28px 80px rgba(28, 25, 23, 0.22);
+  }
+  .reschedule-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.5rem 1.5rem 1rem;
+    border-bottom: 1px solid #e7e5e4;
+  }
+  .reschedule-modal-body-shell {
+    padding: 1.25rem 1.5rem 1.5rem;
+  }
+  .reschedule-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem 1.5rem;
+    border-top: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, 0.82);
+  }
+  .reschedule-close-btn {
+    display: inline-flex;
+    height: 52px;
+    width: 52px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    border: 1px solid #e7e5e4;
+    background: rgba(255, 255, 255, 0.92);
+    color: #78716c;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  }
+  .reschedule-close-btn:hover {
+    border-color: #d6d3d1;
+    background: #f5f5f4;
+    color: #292524;
+  }
+  .reschedule-context-card {
+    border: 1px solid #fde68a;
+    border-radius: 24px;
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.98), rgba(255, 255, 255, 0.96));
+    padding: 1rem 1.1rem;
+  }
+  .reschedule-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    border: 1px solid #fcd34d;
+    background: rgba(255, 251, 235, 0.95);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #b45309;
+  }
+  .reschedule-meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.83rem;
+    font-weight: 600;
+  }
+  .reschedule-meta-pill.is-safe {
+    border: 1px solid #d6d3d1;
+    background: #fafaf9;
+    color: #57534e;
+  }
+  .reschedule-meta-pill.is-overlap {
+    border: 1px solid #fecaca;
+    background: #fef2f2;
+    color: #dc2626;
+  }
+  .reschedule-rows {
+    display: grid;
+    gap: 0.75rem;
+  }
+  .reschedule-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    border: 1px solid #e7e5e4;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 0.95rem 1rem;
+  }
+  .reschedule-row-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .reschedule-row-kicker {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #a8a29e;
+  }
+  .reschedule-row-dates {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #57534e;
+    font-size: 0.92rem;
+  }
+  .reschedule-row-current-date {
+    font-weight: 500;
+    color: #292524;
+  }
+  .reschedule-row-arrow {
+    color: #a8a29e;
+    font-size: 0.95rem;
+  }
+  .reschedule-date-input {
+    width: 168px;
+    border: 1px solid #fde68a;
+    border-radius: 16px;
+    background: #fffbeb;
+    padding: 0.7rem 0.85rem;
+    color: #1c1917;
+    font-size: 0.92rem;
+    font-weight: 600;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  }
+  .reschedule-date-input:focus {
+    border-color: #f59e0b;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+  }
+  @media (max-width: 767.98px) {
+    .reschedule-modal-header,
+    .reschedule-modal-body-shell,
+    .reschedule-modal-footer {
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    .reschedule-row {
+      grid-template-columns: 1fr;
+    }
+    .reschedule-date-input {
+      width: 100%;
+    }
+    .reschedule-modal-footer {
+      flex-direction: column-reverse;
+      align-items: stretch;
+    }
+  }
   .order-status-delivered {
-    background: #059669;
-    border-color: #059669;
+    background: #16a34a;
+    border-color: #16a34a;
     color: #fff;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+    font-weight: 600;
   }
 </style>
 {% endblock %}
@@ -257,9 +436,9 @@
             {% set order = delivery.order %}
             {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
-            {% set delivery_type_label = delivery.delivery_type or (order.delivery_type if order else '—') %}
-            {% set time_confirmed = delivery.time_from %}
-            <tr class="border-b border-stone-200 align-top transition-colors hover:bg-amber-50/40 {{ '' if time_confirmed else 'bg-stone-100' }}"
+            {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
+            {% set time_confirmed = delivery.time_from or delivery.time_to %}
+            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row' if time_confirmed else 'delivery-time-no-time-row' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -274,17 +453,17 @@
                   <p class="text-sm font-semibold text-stone-900">{{ order.recipient_name if order else 'Отримувач не вказаний' }}</p>
                   {% if order and order.recipient_social %}
                   {% set is_telegram = order.recipient_social.startswith('@') %}
-                  {% set social_handle = order.recipient_social.lstrip('@') %}
+                  {% set social_display = order.recipient_social.lstrip('@') %}
                   <button type="button"
                     class="copy-handle-btn group flex items-center gap-1.5 text-left"
-                    data-handle="{{ social_handle }}"
-                    title="Скопіювати {{ social_handle }}">
+                    data-handle="{{ order.recipient_social }}"
+                    title="Скопіювати {{ order.recipient_social }}">
                     {% if is_telegram %}
                     <i class="bi bi-telegram text-xs text-stone-400 group-hover:text-sky-500 transition-colors"></i>
                     {% else %}
                     <i class="bi bi-instagram text-xs text-stone-400 group-hover:text-pink-500 transition-colors"></i>
                     {% endif %}
-                    <span class="text-sm text-stone-500 group-hover:text-stone-800 transition-colors">{{ social_handle }}</span>
+                    <span class="text-sm text-stone-500 group-hover:text-stone-800 transition-colors">{{ social_display }}</span>
                     <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
                   </button>
                   {% endif %}
@@ -300,7 +479,7 @@
                   {% endif %}
                   <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium
                     {% if delivery.status == 'Доставлено' %}order-status-delivered
-                    {% elif delivery.status == 'Очікує' %}border border-stone-200 bg-stone-100 text-stone-600
+                    {% elif delivery.status == 'Очікує' %}border border-red-200 bg-red-50 text-red-400
                     {% elif delivery.status == 'Розподілено' %}border border-blue-200 bg-blue-50 text-blue-700
                     {% elif delivery.status == 'Не оплачена' %}border border-red-200 bg-red-50 text-red-700
                     {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
@@ -322,11 +501,17 @@
                       Адресу не вказано
                     {% endif %}
                   </p>
+                  {% set addr_comment = delivery.address_comment or (order.address_comment if order else '') %}
+                  {% if addr_comment %}
+                  <p class="text-xs text-stone-400">{{ addr_comment }}</p>
+                  {% endif %}
                 </div>
               </td>
 
               <td class="px-4 py-4">
-                <p class="text-sm font-medium text-stone-700">{{ delivery.phone or order.recipient_phone or 'Телефон не вказано' }}</p>
+                {% set primary = delivery.phone or order.recipient_phone or '' %}
+                {% set all_phones = ([primary] + (order.additional_phones | map(attribute='phone') | list)) if order else [primary] %}
+                <p class="text-sm font-medium text-stone-700">{{ all_phones | select | join(' / ') or 'Телефон не вказано' }}</p>
               </td>
 
               <td class="px-4 py-4">
@@ -355,6 +540,11 @@
                     px-3 py-1 text-xs font-medium">
                     {{ delivery_type_label }}
                   </span>
+                  {% if order and order.sequence_number %}
+                  <span class="inline-flex items-center rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-medium text-stone-500">
+                    {{ order.sequence_number }}/4
+                  </span>
+                  {% endif %}
                 </div>
               </td>
 
@@ -483,6 +673,46 @@
   </div>
 </div>
 
+<div class="modal fade" id="rescheduleSubsequentModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered reschedule-modal-dialog">
+    <div class="modal-content reschedule-modal-content">
+      <div class="reschedule-modal-header">
+        <div class="space-y-3">
+          <span class="reschedule-chip">
+            <i class="bi bi-arrow-repeat"></i>
+            Графік доставок
+          </span>
+          <div>
+            <h5 class="modal-title text-xl font-semibold text-stone-900">Перенести наступні доставки?</h5>
+            <p class="mt-1 text-sm text-stone-500">
+              Ми підготували нові дати для решти циклу, щоб інтервал між доставками залишався логічним.
+            </p>
+          </div>
+        </div>
+        <button type="button" class="reschedule-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="reschedule-modal-body-shell">
+        <div id="rescheduleModalBody" class="space-y-4"></div>
+      </div>
+      <div class="reschedule-modal-footer">
+        <button type="button"
+                class="inline-flex min-w-[170px] items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition-colors duration-200 hover:bg-stone-50 hover:text-stone-900"
+                data-bs-dismiss="modal">
+          Залишити як є
+        </button>
+        <button type="button"
+                class="inline-flex min-w-[190px] items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-3 text-sm font-medium text-white shadow-sm transition-colors duration-200 hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-70"
+                id="rescheduleConfirmBtn">
+          <i class="bi bi-arrow-right-circle"></i>
+          Так, перенести
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="extendSubscriptionModal" tabindex="-1" aria-labelledby="extendSubscriptionModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4 border-0 shadow-lg">
@@ -516,13 +746,26 @@
     if (!btn) return;
     const handle = btn.dataset.handle;
     if (!handle) return;
-    navigator.clipboard.writeText(handle).then(function () {
-      const icon = btn.querySelector('.bi-copy');
+    const icon = btn.querySelector('.bi-copy');
+    function onCopied() {
       if (icon) {
         icon.classList.replace('bi-copy', 'bi-check2');
         setTimeout(() => icon.classList.replace('bi-check2', 'bi-copy'), 1500);
       }
-    });
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(handle).then(onCopied);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = handle;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      onCopied();
+    }
   });
 })();
 </script>
@@ -732,16 +975,22 @@
       ids.forEach(id => {
         const row = document.querySelector(`tr[data-delivery-id="${id}"]`);
         if (!row) return;
-        row.dataset.timeFrom = clear ? '' : fromValue;
+        const newTimeFrom = clear ? '' : fromValue;
+        row.dataset.timeFrom = newTimeFrom;
         row.dataset.timeTo = clear ? '' : toValue;
         if (deliveryDate) {
           row.dataset.deliveryDate = deliveryDate;
         }
+        const newTimeTo = clear ? '' : toValue;
+        const hasTime = !!(newTimeFrom || newTimeTo);
+        row.classList.toggle('delivery-time-no-time-row', !hasTime);
+        row.classList.toggle('delivery-time-confirmed-row', hasTime);
         const slot = row.querySelector('.delivery-time-slot');
         if (slot) slot.textContent = buildTimeLabel(clear ? '' : fromValue, clear ? '' : toValue);
       });
       showToast(clear ? 'Час доставки очищено' : 'Час доставки оновлено', 'success');
       updateSelectedCount();
+      return data;
     } catch (e) {
       showToast('Помилка зʼєднання', 'error');
     }
@@ -763,13 +1012,112 @@
       const prevRow = document.querySelector(`tr[data-delivery-id="${id}"]`);
       const prevDate = prevRow ? prevRow.dataset.deliveryDate : '';
 
-      await applyTime([id], fromValue, toValue, false, dateValue);
+      const result = await applyTime([id], fromValue, toValue, false, dateValue);
       if (editModalInstance) editModalInstance.hide();
-      if (dateValue && prevDate && dateValue !== prevDate) {
+
+      if (result && result.reschedule_suggestion) {
+        showRescheduleModal(result.reschedule_suggestion);
+      } else if (dateValue && prevDate && dateValue !== prevDate) {
         location.reload();
       }
     });
   }
+
+  function showRescheduleModal(suggestion) {
+    const body = document.getElementById('rescheduleModalBody');
+
+    const subTypeMap = { 'Weekly': 'Weekly (щотижнева)', 'Bi-weekly': 'Bi-weekly (кожні 2 тижні)', 'Monthly': 'Monthly (щомісячна)' };
+    const subTypeLabel = subTypeMap[suggestion.subscription_type] || suggestion.subscription_type;
+    const contextNote = suggestion.recipient_name
+      ? `<div class="reschedule-context-card">
+           <div class="flex flex-wrap items-center gap-2">
+             <span class="reschedule-chip">
+               <i class="bi bi-person"></i>
+               ${suggestion.recipient_name}
+             </span>
+             <span class="inline-flex items-center rounded-full border border-stone-200 bg-white px-3 py-1 text-xs font-medium text-stone-600">
+               ${subTypeLabel}
+             </span>
+           </div>
+           <p class="mt-3 mb-0 text-sm leading-6 text-stone-600">
+             Поточну доставку перенесено з <strong class="text-stone-900">${suggestion.changed_from}</strong>
+             на <strong class="text-stone-900">${suggestion.changed_to}</strong>.
+             Нижче можна одразу підтвердити оновлений графік наступних доставок.
+           </p>
+         </div>`
+      : '';
+
+    const isOverlap = suggestion.gap_days < 0;
+    const gapText = isOverlap
+      ? `<span class="reschedule-meta-pill is-overlap"><i class="bi bi-exclamation-octagon"></i>Перекриття дат</span>`
+      : `<span class="reschedule-meta-pill is-safe"><i class="bi bi-check2-circle"></i>До наступної доставки залишилось ${suggestion.gap_days} дн.</span>`;
+
+    const rows = suggestion.deliveries.map(d =>
+      `<div class="reschedule-row">
+         <div class="reschedule-row-label">
+           <span class="reschedule-row-kicker">Доставка #${d.sequence_number}</span>
+           <div class="reschedule-row-dates">
+             <span class="reschedule-row-current-date">${d.current_date}</span>
+             <i class="bi bi-arrow-right reschedule-row-arrow"></i>
+           </div>
+         </div>
+         <div>
+           <input type="date"
+                  class="reschedule-date-input"
+                  data-order-id="${d.order_id}"
+                  value="${d.new_date_iso}">
+         </div>
+       </div>`
+    ).join('');
+
+    body.innerHTML = `
+      ${contextNote}
+      <div>${gapText}</div>
+      <div class="reschedule-rows">${rows}</div>`;
+
+    const oldBtn = document.getElementById('rescheduleConfirmBtn');
+    const newBtn = oldBtn.cloneNode(true);
+    oldBtn.parentNode.replaceChild(newBtn, oldBtn);
+
+    newBtn.addEventListener('click', async () => {
+      newBtn.disabled = true;
+      newBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Переносимо...';
+
+      const modalEl = document.getElementById('rescheduleSubsequentModal');
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+
+      try {
+        const dateInputs = body.querySelectorAll('.reschedule-date-input');
+        const dates = Array.from(dateInputs).map(inp => ({
+          order_id: inp.dataset.orderId,
+          new_date: inp.value,
+        }));
+        const resp = await fetch('/orders/deliveries/reschedule-subsequent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ delivery_id: suggestion.changed_delivery_id, dates }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (data.success) {
+          showToast(`${data.rescheduled} доставок перенесено`, 'success');
+          location.reload();
+        } else {
+          showToast(data.error || 'Помилка перенесення', 'error');
+          newBtn.disabled = false;
+          newBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Так, перенести';
+        }
+      } catch {
+        showToast('Помилка зʼєднання', 'error');
+        newBtn.disabled = false;
+        newBtn.innerHTML = '<i class="bi bi-arrow-right-circle"></i> Так, перенести';
+      }
+    });
+
+    new bootstrap.Modal(document.getElementById('rescheduleSubsequentModal')).show();
+  }
+
+  window.showRescheduleModal = showRescheduleModal;
 
   updateSelectedCount();
 })();
@@ -789,8 +1137,21 @@
     const orderId = row.dataset.orderId;
     if (!orderId) return;
     if (!window.orderComposerApi || !window.orderComposerApi.openOrderEditor) return;
-    window.orderComposerApi.openOrderEditor(orderId);
+    window.orderComposerApi.openOrderEditor(orderId, {
+        deliveryId: row.dataset.deliveryId || null,
+        forceOrderTitle: true,
+    });
   });
+
+  const openParam = new URLSearchParams(window.location.search).get('open');
+  if (openParam) {
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.orderComposerApi?.openOrderEditor) {
+        window.orderComposerApi.openOrderEditor(openParam, { forceOrderTitle: true });
+        history.replaceState(null, '', window.location.pathname);
+      }
+    });
+  }
 })();
 </script>
 {% endblock %}

@@ -63,9 +63,11 @@
     <!-- Top row: name + subscription dot -->
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-2">
-        {% set icons = ['bi-person', 'bi-flower1', 'bi-star', 'bi-emoji-smile', 'bi-gem'] %}
-        <div class="w-8 h-8 bg-stone-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          <i class="bi {{ icons[client.id % icons|length] }} text-stone-500 text-sm"></i>
+        {% set avatar_colors = ['bg-violet-100 text-violet-600', 'bg-sky-100 text-sky-600', 'bg-emerald-100 text-emerald-600', 'bg-amber-100 text-amber-600', 'bg-rose-100 text-rose-600', 'bg-teal-100 text-teal-600', 'bg-orange-100 text-orange-600'] %}
+        {% set avatar_color = avatar_colors[client.id % avatar_colors|length] %}
+        {% set avatar_letter = client.instagram.lstrip('@')[0].upper() if client.instagram else '?' %}
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 font-semibold text-sm {{ avatar_color }}">
+          {{ avatar_letter }}
         </div>
         <span class="font-medium text-stone-900 text-sm break-all">{{ client.instagram.lstrip('@') }}</span>
       </div>

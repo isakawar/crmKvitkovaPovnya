@@ -6,6 +6,7 @@
 <style>
   .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .routes-shell {
     display: flex;
@@ -532,12 +533,10 @@
 {% block content %}
 {% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
 {% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
-{% set stats = namespace(assigned=0, awaiting=0, sent=0) %}
+{% set stats = namespace(assigned=0, sent=0) %}
 {% for route in routes %}
   {% if route.courier_id %}
     {% set stats.assigned = stats.assigned + 1 %}
-  {% else %}
-    {% set stats.awaiting = stats.awaiting + 1 %}
   {% endif %}
   {% if route.status == 'sent' %}
     {% set stats.sent = stats.sent + 1 %}
@@ -557,11 +556,18 @@
           <input type="text" id="route-date-picker" readonly placeholder="Обрати дату">
           <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
         </form>
-        {% if date_filter %}
+        {% if date_filter and date_filter != today_iso %}
         <a href="{{ url_for('routes.saved_routes') }}"
            class="routes-hero-btn routes-hero-btn-secondary">
-          <i class="bi bi-arrow-counterclockwise"></i>
-          Скинути
+          <i class="bi bi-calendar-check"></i>
+          Сьогодні
+        </a>
+        {% endif %}
+        {% if date_filter and routes %}
+        <a href="{{ url_for('orders.route_generator') }}?view_date={{ date_filter }}"
+           class="routes-hero-btn routes-hero-btn-secondary">
+          <i class="bi bi-map"></i>
+          Переглянути на карті
         </a>
         {% endif %}
         <a href="{{ url_for('orders.route_generator') }}"
@@ -592,7 +598,7 @@
     <article class="routes-kpi-card">
       <div class="routes-kpi-icon bg-stone-100 text-stone-600"><i class="bi bi-hourglass-split"></i></div>
       <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Очікують</p>
-      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ stats.awaiting }}</p>
+      <p class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">{{ unrouted_deliveries|length }}</p>
     </article>
   </section>
 
@@ -613,6 +619,66 @@
       </div>
     {% endif %}
   {% endwith %}
+
+  {# Distribute banner — shown when there are routes + deliveries with time windows #}
+  {% set distributable_ids = [] %}
+  {% for d in unrouted_deliveries %}
+    {% if d.time_from or d.time_to %}{% set _ = distributable_ids.append(d.id) %}{% endif %}
+  {% endfor %}
+  {% if routes and distributable_ids and distribute_banner_enabled %}
+  <div id="distribute-banner"
+       class="flex items-center justify-between gap-4 flex-wrap rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+        <i class="bi bi-lightning-charge-fill text-base"></i>
+      </span>
+      <div>
+        <p class="text-sm font-semibold text-amber-900">
+          {{ distributable_ids | length }} доставок з часовими вікнами ще не розподілені
+        </p>
+        <p class="text-xs text-amber-700 mt-0.5">Оптимізатор підбере найкращу позицію в існуючих маршрутах</p>
+      </div>
+    </div>
+    <button id="btn-distribute-banner" onclick="runDistribute()"
+            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors flex-shrink-0">
+      <i class="bi bi-shuffle"></i> Розподілити
+    </button>
+  </div>
+  <script>
+  const _DIST_ROUTE_IDS = {{ routes | map(attribute='id') | list | tojson }};
+  const _DIST_DELIVERY_IDS = {{ distributable_ids | tojson }};
+  const _DIST_DATE = {{ date_filter | tojson }};
+
+  async function runDistribute() {
+    const btn = document.getElementById('btn-distribute-banner');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;vertical-align:middle;"></span> Розраховую...';
+
+    try {
+      const resp = await fetch('/route-generator/distribute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+        body: JSON.stringify({route_ids: _DIST_ROUTE_IDS, delivery_ids: _DIST_DELIVERY_IDS}),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        alert(data.error || 'Помилка при розрахунку');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+        return;
+      }
+      localStorage.setItem('distribute_result', JSON.stringify(data.result));
+      localStorage.setItem('distribute_new_ids', JSON.stringify(_DIST_DELIVERY_IDS));
+      localStorage.setItem('distribute_date', _DIST_DATE);
+      window.location.href = '/route-generator?delivery_date=' + _DIST_DATE;
+    } catch(e) {
+      alert('Помилка з\'єднання з сервером');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+    }
+  }
+  </script>
+  {% endif %}
 
   {% if not routes %}
   <section class="route-ops-card flex flex-col items-center justify-center py-20 text-center">
@@ -639,6 +705,28 @@
           <div class="flex flex-wrap items-center gap-3">
             <h2 class="text-xl font-semibold text-stone-900">{{ formatted_date }}</h2>
             <span class="route-badge route-badge-status-{{ route.status }}">{{ status_labels.get(route.status, route.status) }}</span>
+            <span class="route-start-time-wrap" data-route-id="{{ route.id }}" onclick="event.stopPropagation()">
+              <span class="route-badge route-start-time-display"
+                    style="cursor:pointer; gap:0.3rem;"
+                    title="Час виїзду з депо — клікніть для зміни"
+                    onclick="openStartTimeEdit(this)">
+                <i class="bi bi-clock"></i>
+                {% if route.start_time %}{{ route.start_time.strftime('%H:%M') }}{% else %}Час виїзду{% endif %}
+              </span>
+              <span class="route-start-time-editor" style="display:none; align-items:center; gap:0.35rem;">
+                <input type="time" class="route-start-time-input"
+                       value="{{ route.start_time.strftime('%H:%M') if route.start_time else '' }}"
+                       style="border:1px solid #e7e5e4; border-radius:0.5rem; padding:0.25rem 0.5rem; font-size:0.82rem; color:#1c1917;">
+                <button type="button" class="route-start-time-save" onclick="saveStartTime(this)"
+                        style="background:#1c1917; color:#fff; border:none; border-radius:0.5rem; padding:0.25rem 0.65rem; font-size:0.82rem; cursor:pointer; white-space:nowrap;">
+                  Зберегти
+                </button>
+                <button type="button" onclick="closeStartTimeEdit(this)"
+                        style="background:transparent; border:1px solid #e7e5e4; border-radius:0.5rem; padding:0.25rem 0.5rem; font-size:0.82rem; cursor:pointer; line-height:1;">
+                  &#x2715;
+                </button>
+              </span>
+            </span>
           </div>
           <div class="routes-route-badges">
             <span class="route-badge"><i class="bi bi-box-seam"></i>{{ route.deliveries_count }} доставок</span>
@@ -722,7 +810,7 @@
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
                 <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-                <td class="whitespace-nowrap">{{ d.bouquet_size or d.size or (order.size if order else '—') or '—' }}</td>
+                <td class="whitespace-nowrap">{{ d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
                   {% if d and d.is_pickup %}
@@ -742,8 +830,8 @@
                     {% endif %}
                   {% else %}—{% endif %}
                 </td>
-                <td class="whitespace-nowrap">{{ d.phone if d and d.phone else (order.recipient_phone if order else '—') }}</td>
-                <td class="whitespace-nowrap">
+                <td class="whitespace-nowrap">{% set _rp = d.phone if d and d.phone else (order.recipient_phone if order else '') %}{% set _re = (order.additional_phones | map(attribute='phone') | list) if order else [] %}{{ ([_rp] + _re) | select | join(' / ') or '—' }}</td>
+                <td class="whitespace-nowrap" data-stop-id="{{ stop.id }}">
                   {% if stop.planned_arrival %}{{ stop.planned_arrival.strftime('%H:%M') }}
                   {% elif d and (d.time_from or d.time_to) %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}
                   {% else %}—{% endif %}
@@ -765,6 +853,60 @@
       </div>
     </article>
     {% endfor %}
+  </section>
+  {% endif %}
+
+  {% if unrouted_deliveries %}
+  <section class="route-ops-grid">
+    <details class="route-ops-card route-ops-card--collapsible" open>
+      <summary class="route-ops-summary">
+        <div class="route-ops-head">
+          <div class="route-ops-head-main">
+            <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500"><i class="bi bi-exclamation-circle"></i></span>
+            <div>
+              <p class="route-ops-title">Не розподілені</p>
+              <p class="text-sm text-stone-400">{{ np_date.strftime('%d.%m.%Y') }} · {{ unrouted_deliveries|length }} доставок без маршруту</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            {% if routes %}
+            <a href="{{ url_for('orders.route_generator_distribute_page', date=date_filter) }}"
+               onclick="event.stopPropagation();"
+               class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 transition-colors">
+              <i class="bi bi-shuffle"></i> Додати в маршрути
+            </a>
+            {% endif %}
+            <a href="{{ url_for('orders.route_generator') }}?date={{ date_filter }}"
+               onclick="event.stopPropagation();"
+               class="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
+              <i class="bi bi-diagram-3"></i> Розподілити
+            </a>
+            <span class="route-ops-toggle"><i class="bi bi-chevron-down"></i></span>
+          </div>
+        </div>
+      </summary>
+      <div class="route-table-wrap" style="border:0;border-top:1px solid #f1f5f9;border-radius:0;">
+        <table class="route-table">
+          <thead>
+            <tr><th>Клієнт</th><th>Букет</th><th>Отримувач</th><th>Телефон</th><th>Адреса</th><th>Час</th><th>Коментар</th></tr>
+          </thead>
+          <tbody>
+            {% for d in unrouted_deliveries %}
+            {% set order = d.order %}{% set client = d.client %}
+            <tr>
+              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
+              <td>{{ (order.recipient_name if order else '') or '—' }}</td>
+              {% set _rp2 = d.phone or (order.recipient_phone if order else '') %}{% set _re2 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp2] + _re2) | select | join(' / ') or '—' }}</td>
+              <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
+              <td class="whitespace-nowrap">{% if d.time_from == '∞' %}∞{% elif d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
+              <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
   </section>
   {% endif %}
 
@@ -794,9 +936,9 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
               <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
@@ -832,9 +974,9 @@
             {% set order = d.order %}{% set client = d.client %}
             <tr>
               <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
-              <td>{{ d.bouquet_size or d.size or (order.size if order else '—') }}</td>
+              <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
-              <td>{{ d.phone or (order.recipient_phone if order else '—') }}</td>
+              {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
               <td>{% if order %}{% set parts = [] %}{% if order.city %}{% set _ = parts.append(order.city) %}{% endif %}{% set street = d.street or order.street %}{% if street %}{% set _ = parts.append(street) %}{% endif %}{% set build = d.building_number or order.building_number %}{% if build %}{% set _ = parts.append(build) %}{% endif %}{{ parts | join(', ') or '—' }}{% else %}—{% endif %}</td>
               <td class="whitespace-nowrap">{% if d.time_from or d.time_to %}{{ d.time_from or '?' }}–{{ d.time_to or '?' }}{% else %}—{% endif %}</td>
               <td style="max-width:180px;">{% set comment = d.comment or (order.comment if order else '') %}{% if comment %}<span class="text-stone-500" title="{{ comment }}">{{ comment | truncate(55) }}</span>{% else %}—{% endif %}</td>
@@ -999,5 +1141,46 @@ document.querySelectorAll('.route-assign-trigger').forEach(function(button) {
 document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
   new bootstrap.Tooltip(el);
 });
+
+function openStartTimeEdit(displayEl) {
+  const wrap = displayEl.closest('.route-start-time-wrap');
+  displayEl.style.display = 'none';
+  const editor = wrap.querySelector('.route-start-time-editor');
+  editor.style.display = 'inline-flex';
+  editor.querySelector('.route-start-time-input').focus();
+}
+
+function closeStartTimeEdit(btn) {
+  const wrap = btn.closest('.route-start-time-wrap');
+  wrap.querySelector('.route-start-time-editor').style.display = 'none';
+  wrap.querySelector('.route-start-time-display').style.display = '';
+}
+
+function saveStartTime(btn) {
+  const wrap = btn.closest('.route-start-time-wrap');
+  const routeId = wrap.dataset.routeId;
+  const input = wrap.querySelector('.route-start-time-input');
+  const timeVal = input.value;
+
+  fetch('/routes/' + routeId + '/start-time', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+    body: JSON.stringify({start_time: timeVal})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (!data.success) { alert(data.error || 'Помилка збереження'); return; }
+    const displayEl = wrap.querySelector('.route-start-time-display');
+    displayEl.innerHTML = '<i class="bi bi-clock"></i> ' + (timeVal || 'Час виїзду');
+    closeStartTimeEdit(btn);
+    if (data.arrivals) {
+      Object.entries(data.arrivals).forEach(function([stopId, time]) {
+        const td = document.querySelector('[data-stop-id="' + stopId + '"]');
+        if (td) td.textContent = time || '—';
+      });
+    }
+  })
+  .catch(function() { alert('Помилка збереження'); });
+}
 </script>
 {% endblock %}

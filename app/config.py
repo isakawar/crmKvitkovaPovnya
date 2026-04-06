@@ -18,8 +18,14 @@ class Config:
     # Login configuration
     LOGIN_DISABLED = False
     REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
-    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
+    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+
+    # AI Agent
+    AI_API_KEY = os.environ.get('AI_API_KEY', '')
+    AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1')
+    AI_MODEL = os.environ.get('AI_MODEL', 'qwen/qwen3-235b-a22b:free')
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 class DevelopmentConfig:
     DEBUG = True
@@ -40,8 +46,14 @@ class DevelopmentConfig:
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
     TELEGRAM_WEBHOOK_SECRET = os.environ.get('TELEGRAM_WEBHOOK_SECRET', 'webhook_secret')
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
-    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', 'http://34.55.114.149:3000')
+    ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+
+    # AI Agent
+    AI_API_KEY = os.environ.get('AI_API_KEY', '')
+    AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1')
+    AI_MODEL = os.environ.get('AI_MODEL', 'qwen/qwen3-235b-a22b:free')
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

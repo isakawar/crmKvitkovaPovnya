@@ -1,172 +1,224 @@
-# CRM Kvіtkova Povnya
+# CRM Квіткова Повня
 
-CRM-система для квіткового магазину. Управління замовленнями, доставками, кур'єрами та маршрутами.
+> CRM-система для управління квітковим бізнесом: клієнти, підписки,
+> замовлення, доставки, кур'єри та оптимізація маршрутів.
 
-## Стек
+---
+
+## Features
+
+- Управління замовленнями та підписками (разові, Weekly / Bi-weekly / Monthly)
+- CRM клієнтів з балансом і знижками
+- Доставки та кур'єри
+- Генерація та оптимізація маршрутів
+- Звіти та транзакції
+- Імпорт даних з CSV
+- Telegram бот для кур'єрів
+- Рольова система (admin / manager / florist)
+- Подарункові сертифікати
+- Транзакції
+- AI Асистент (чат для менеджерів і адмінів, вмикається/вимикається в налаштуваннях)
+
+---
+
+## Tech Stack
 
 - **Backend:** Python 3.12, Flask, SQLAlchemy, Alembic
 - **Database:** PostgreSQL 15
-- **Frontend:** Jinja2, Bootstrap 5, Leaflet.js
-- **Telegram Bot:** python-telegram-bot
-- **Route Optimizer:** зовнішній сервіс (REST API)
+- **Cache:** Redis 7
+- **Frontend:** Jinja2, Bootstrap 5, Tailwind CSS v3
+- **Bot:** python-telegram-bot 20.7
+- **AI:** OpenAI-compatible API (Gemini, OpenRouter, etc.)
 - **Deploy:** Docker Compose
 
 ---
 
-## Структура проекту
+## Quick Start
 
+```bash
+git clone <repo-url>
+cd crmKvitkovaPovnya
+cp env.example .env
+docker compose up -d
+docker compose exec web python scripts/seed_settings.py
+docker compose exec web flask ensure-admin
 ```
-app/
-├── blueprints/
-│   ├── auth/          # Авторизація
-│   ├── clients/       # Клієнти
-│   ├── couriers/      # Кур'єри
-│   ├── deliveries/    # Доставки
-│   ├── florist/       # Сторінка флориста (/florist)
-│   ├── orders/        # Замовлення + оптимізатор маршрутів
-│   ├── reports/       # Звіти
-│   ├── routes/        # Збережені маршрути (/routes)
-│   └── settings/      # Налаштування
-├── models/            # SQLAlchemy моделі
-├── services/          # Бізнес-логіка, route optimizer
-├── telegram_bot/      # Telegram бот (handlers, keyboards, bot)
-├── templates/         # Jinja2 шаблони
-├── static/            # Статика
-└── utils/             # Допоміжні утиліти
-
-migrations/            # Alembic міграції
-scripts/               # Утиліти для адміністрування
-docs/                  # Документація
-```
-
-## Сторінки
-
-| URL | Опис |
-|-----|------|
-| `/orders` | Список замовлень |
-| `/deliveries` | Список доставок |
-| `/clients` | Клієнти |
-| `/couriers` | Кур'єри |
-| `/route-generator` | Оптимізатор маршрутів |
-| `/routes` | Збережені маршрути (призначення кур'єрів, відправка в Telegram) |
-| `/reports` | Звіти |
-| `/florist` | Сторінка флориста (тільки для user_type=florist) |
-| `/settings` | Налаштування |
 
 ---
 
-## Запуск (Docker)
+## Roles
 
-```bash
-# 1. Скопіюй env
-cp env.example .env
-# Заповни .env: TELEGRAM_BOT_TOKEN, POSTGRES_PASSWORD, ROUTE_OPTIMIZER_URL
+| Role    | Access         |
+|---------|----------------|
+| admin   | full access    |
+| manager | business logic |
+| florist | /florist only  |
 
-# 2. Запуск
-docker compose up -d
+---
 
-# 3. Створити адміна
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py"
+## ENV
+
+Скопіюй `env.example` в `.env` і заповни значення:
+
+```env
+# Database
+POSTGRES_PASSWORD=your_password
+SECRET_KEY=your_secret_key
+
+# Admin
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=your_password
+
+# Telegram bot
+TELEGRAM_BOT_TOKEN=...
+
+# Route optimizer
+DEPOT_ADDRESS=Київ, вул. Прикладна 1
+ROUTE_OPTIMIZER_URL=http://...
+OPTIMIZER_API_KEY=
+
+# AI Agent (OpenAI-compatible)
+AI_API_KEY=your_key
+AI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AI_MODEL=gemini-2.5-flash
+
+# Redis
+REDIS_URL=redis://redis:6379/0
 ```
 
-### Команди для розробки
+---
+
+## Docker
 
 ```bash
-# Застосувати зміни в коді (Python/HTML/CSS)
-docker compose restart web
-
-# Перебілдити (після змін у requirements.txt або Dockerfile)
-docker compose build web && docker compose up -d
-
-# Логи
+docker compose up -d
 docker compose logs -f web
+docker compose restart web
+docker compose build web && docker compose up -d
+```
 
-# Міграція вручну
+---
+
+## DB Migrations
+
+```bash
+docker compose exec web flask db upgrade
+docker compose exec web flask db history
+docker compose exec web flask db current
+```
+
+---
+
+## Users
+
+```bash
+# Admin (з env змінних ADMIN_USERNAME / ADMIN_EMAIL / ADMIN_PASSWORD)
+docker compose exec web flask ensure-admin
+
+# Florist (інтерактивно)
+docker compose exec web flask create-florist
+```
+
+---
+
+## Tests
+
+```bash
+pytest tests/unit/ -v          # всі юніт тести
+pytest tests/unit/ --tb=short  # з коротким трейсом
+```
+
+Чек-лист тестів: [`tests/CHECKLIST.md`](tests/CHECKLIST.md)
+
+---
+
+## Backup
+
+> Всі команди виконуються на хості (не через `docker compose exec web`).
+> Shell-редиректи `>` і `<` працюють з файлами на хості.
+
+### Створити бекап
+
+```bash
+mkdir -p backups && docker compose exec -T postgres pg_dump --clean --if-exists -U kvitkova_user kvitkova_crm > backups/backup_$(date +%Y%m%d_%H%M%S).sql
+```
+
+Файл збережеться в `./backups/` на хості.
+
+### Відновити з бекапу
+
+```bash
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm < backups/backup_YYYYMMDD_HHMMSS.sql
+```
+
+**Якщо отримуєш помилки `already exists`** (бекап створений без `--clean`):
+
+```bash
+# 1. Очистити схему
+docker compose exec postgres psql -U kvitkova_user -d kvitkova_crm \
+  -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# 2. Відновити
+docker compose exec -T postgres psql -U kvitkova_user -d kvitkova_crm \
+  < backups/backup_YYYYMMDD_HHMMSS.sql
+
+# 3. Застосувати міграції
 docker compose exec web flask db upgrade
 ```
 
----
-
-## Повне скидання та ініціалізація БД
-
-Якщо потрібно почати з чистої БД (наприклад, після додавання нових міграцій або при розгортанні на новому сервері):
-
-### 1. Зупинити контейнери та видалити дані БД
+### Повністю видалити БД та почати з нуля
 
 ```bash
+# 1. Зупинити контейнери
 docker compose down
-rm -rf data/postgres
-```
 
-> Папка `data/postgres` — це volume PostgreSQL. Видалення очищає всі таблиці та дані.
+# 2. Видалити volume з даними (дізнатись назву: docker volume ls | grep postgres)
+docker volume rm crmkvitkovapovnya_postgres_data
 
-### 2. Запустити контейнери (міграції застосуються автоматично)
-
-```bash
+# 3. Запустити — БД і міграції застосуються автоматично
 docker compose up -d
-```
 
-Контейнер `web` при старті автоматично виконує `flask db upgrade` через `entrypoint.sh`.
+# 4. Наповнити початковими налаштуваннями
+docker compose exec web python scripts/seed_settings.py
 
-### 3. Наповнити початковими даними
-
-```bash
-# Створити адміністратора (логін: admin, пароль: admin)
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py"
-
-# Заповнити довідники (міста, розміри, типи доставки, тощо)
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_settings.py"
-```
-
-### 4. Опційно: тестові дані
-
-```bash
-# Додати тестових клієнтів та доставки
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_test_data.py"
-```
-
-### Повна команда одним блоком
-
-```bash
-docker compose down && \
-rm -rf data/postgres && \
-docker compose up -d && \
-sleep 10 && \
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/create_default_admin.py" && \
-docker compose exec web bash -c "cd /app && PYTHONPATH=/app python scripts/seed_settings.py"
+# 5. Створити адміна
+docker compose exec web flask ensure-admin
 ```
 
 ---
 
-## Основні таблиці БД
+## Import
 
-| Таблиця | Опис |
-|---------|------|
-| `user` | Користувачі (admin, manager, florist) |
-| `client` | Клієнти (instagram, телефон) |
-| `courier` | Кур'єри + telegram_chat_id |
-| `order` | Замовлення (отримувач, адреса, розмір) |
-| `delivery` | Доставки (дата, статус, кур'єр) |
-| `delivery_routes` | Збережені маршрути |
-| `route_deliveries` | Зупинки маршруту |
+- `/import/kvitkovapovnya`
 
 ---
 
-## Telegram бот
+## Architecture
 
-Кур'єр отримує пропозицію маршруту з кнопками **Прийняти / Відхилити**.
-Після прийняття — отримує повний маршрут: адреси, отримувачі, телефони, час.
-
----
-
-## Змінні середовища
-
-```env
-TELEGRAM_BOT_TOKEN=...
-POSTGRES_PASSWORD=...
-ROUTE_OPTIMIZER_URL=http://...
-OPTIMIZER_API_KEY=
-SECRET_KEY=...
+```
+app/
+├── blueprints/   # Route handlers (orders, clients, couriers, florist…)
+├── models/       # SQLAlchemy models
+├── services/     # Business logic
+├── templates/    # Jinja2 templates
+└── static/       # CSS (Tailwind) + JS
 ```
 
-Детально: [docs/ENV_SETUP.md](docs/ENV_SETUP.md)
+---
+
+## Docs
+
+| Файл | Зміст |
+|------|-------|
+| [`docs/BUSINESS_LOGIC.md`](docs/BUSINESS_LOGIC.md) | Бізнес-правила, флоу, endpoint map |
+| [`docs/BUGS_AND_MISSING_FEATURES.md`](docs/BUGS_AND_MISSING_FEATURES.md) | Відомі баги, missing features, підозрілі місця |
+| [`docs/PERFORMANCE_PLAN.md`](docs/PERFORMANCE_PLAN.md) | Пріоритети оптимізації |
+| [`docs/PROJECT_RULES.md`](docs/PROJECT_RULES.md) | Чек-лист для нових фіч, правила міграцій |
+| [`CLAUDE.md`](CLAUDE.md) | Інструкції для AI-асистента (стек, команди, патерни) |
+
+---
+
+## Author
+
+Vladyslav Bilobrov

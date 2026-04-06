@@ -1,63 +1,55 @@
 from app.extensions import db
 
+
 class Order(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
-    
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
+
+    # Підписка (null для разових замовлень)
+    subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'), nullable=True, index=True)
+    sequence_number = db.Column(db.Integer, nullable=True)  # 1-4 для замовлень підписки
+
     # Отримувач
     recipient_name = db.Column(db.String(128), nullable=False)
     recipient_phone = db.Column(db.String(32), nullable=False)
-    recipient_social = db.Column(db.String(128))  # Instagram/Telegram
-    
+    recipient_social = db.Column(db.String(128))
+
     # Адреса
     city = db.Column(db.String(64), nullable=False)
     street = db.Column(db.String(128), nullable=False)
     building_number = db.Column(db.String(32))
     floor = db.Column(db.String(16))
     entrance = db.Column(db.String(16))
-    is_pickup = db.Column(db.Boolean, default=False)  # Самовивіз
-    
-    # Доставка
-    delivery_type = db.Column(db.String(32), nullable=False)  # Weekly, Monthly, Bi-weekly, One-time
-    
-    # Розмір
-    size = db.Column(db.String(32), nullable=False)  # M/L/XL/XXL/Custom
-    custom_amount = db.Column(db.Integer)  # Сума для власного розміру
-    
-    # Дати та час
-    first_delivery_date = db.Column(db.Date, nullable=False)
-    delivery_day = db.Column(db.String(16), nullable=False)  # ПН/ВТ/СР/ЧТ/ПТ/СБ/НД
-    time_from = db.Column(db.String(8))
-    time_to = db.Column(db.String(8))
-    
-    # Додаткова інформація
-    comment = db.Column(db.Text)
-    preferences = db.Column(db.Text)  # Побажання
-    for_whom = db.Column(db.String(64), nullable=False)  # Для кого
-    
-    # Системні поля
-    created_at = db.Column(db.DateTime, default=db.func.now())
-    
-    # Зв'язки  
-    deliveries = db.relationship('Delivery', back_populates='order', lazy=True)
-    
-    # --- denormalized fields ---
-    bouquet_size = db.Column(db.String(16))
-    price_at_order = db.Column(db.Integer)
-    periodicity = db.Column(db.String(8))
-    preferred_days = db.Column(db.String(64))
-    is_subscription_extended = db.Column(db.Boolean, default=False)  # Чи вже продовжено підписку
-    subscription_followup_status = db.Column(db.String(32), nullable=True)
-    subscription_followup_at = db.Column(db.DateTime, nullable=True)
+    is_pickup = db.Column(db.Boolean, default=False)
+    address_comment = db.Column(db.Text, nullable=True)
 
     # Метод доставки: 'courier' | 'nova_poshta'
     delivery_method = db.Column(db.String(32), default='courier', nullable=False)
 
-    # Коментар до адреси (підʼїзд, квартира, поверх і тд)
-    address_comment = db.Column(db.Text, nullable=True)
+    # Розмір
+    size = db.Column(db.String(32), nullable=False)
+    custom_amount = db.Column(db.Integer)
 
-    # Тип пакування: 'коробка 📦', 'букет 🌸', 'коробка 📦 + пакет 🌸', тощо
+    # Дата та час
+    delivery_date = db.Column(db.Date, nullable=False)
+    time_from = db.Column(db.String(8))
+    time_to = db.Column(db.String(8))
+
+    # Букет
     bouquet_type = db.Column(db.String(64), nullable=True)
-
-    # Тип композиції: 'Весняний', 'Білосніжний', 'Екзотичний', 'Інший', тощо
     composition_type = db.Column(db.String(64), nullable=True)
+
+    # Примітки
+    for_whom = db.Column(db.String(64), nullable=False)
+    comment = db.Column(db.Text)
+    preferences = db.Column(db.Text)
+
+    # Знижка (%)
+    discount = db.Column(db.Integer, nullable=True)
+
+    # Системні поля
+    created_at = db.Column(db.DateTime, default=db.func.now())
+
+    # Зв'язки
+    deliveries = db.relationship('Delivery', back_populates='order', lazy=True)
+    subscription = db.relationship('Subscription', back_populates='orders')

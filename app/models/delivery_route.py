@@ -22,6 +22,11 @@ class DeliveryRoute(db.Model):
     accepted_at = db.Column(db.DateTime, nullable=True)
     rejected_at = db.Column(db.DateTime, nullable=True)
 
+    start_time = db.Column(db.Time, nullable=True)
+
+    cached_result_json = db.Column(db.Text, nullable=True)
+    cached_at = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

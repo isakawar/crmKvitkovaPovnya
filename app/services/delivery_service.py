@@ -103,14 +103,10 @@ def update_delivery(d, data):
         d.phone = data['phone']
     if 'size' in data:
         d.size = data['size']
-    if 'delivery_type' in data:
-        d.delivery_type = data['delivery_type']
     if 'status' in data:
         d.status = data['status']
     if 'is_pickup' in data:
         d.is_pickup = data['is_pickup']
-    if 'is_subscription' in data:
-        d.is_subscription = data['is_subscription']
     if 'comment' in data:
         d.comment = data['comment']
     if 'preferences' in data:
@@ -144,25 +140,33 @@ def set_delivery_status(d, new_status):
 
 def assign_deliveries(assignments):
     logger.info(f'Розподіл доставок: {assignments}')
-    # Скидаємо всі призначення
-    for d in Delivery.query.all():
-        d.courier_id = None
-        d.status = 'Очікує'
-    db.session.commit()
+    # Збираємо всі ID доставок із поточного розподілу
+    all_ids = []
+    for delivery_ids in assignments.values():
+        for d_id in delivery_ids:
+            try:
+                all_ids.append(int(d_id))
+            except (TypeError, ValueError):
+                pass
+    # Скидаємо тільки доставки з поточного розподілу
+    if all_ids:
+        Delivery.query.filter(Delivery.id.in_(all_ids)).update(
+            {'courier_id': None, 'status': 'Очікує'},
+            synchronize_session='fetch',
+        )
+    db.session.flush()
     # Призначаємо доставки кур'єрам
     for courier_id, delivery_ids in assignments.items():
         if courier_id == 'unassigned':
-            for d_id in delivery_ids:
+            continue  # вже скинуто вище
+        for d_id in delivery_ids:
+            try:
                 d = Delivery.query.get(int(d_id))
-                if d:
-                    d.courier_id = None
-                    d.status = 'Очікує'
-        else:
-            for d_id in delivery_ids:
-                d = Delivery.query.get(int(d_id))
-                if d:
-                    d.courier_id = int(courier_id)
-                    d.status = 'Розподілено'
+            except (TypeError, ValueError):
+                continue
+            if d:
+                d.courier_id = int(courier_id)
+                d.status = 'Розподілено'
     db.session.commit()
     return True
 

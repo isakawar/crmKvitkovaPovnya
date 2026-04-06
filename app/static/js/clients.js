@@ -80,6 +80,8 @@ document.addEventListener('DOMContentLoaded', function () {
     creditsInput.value = client.credits ?? 0;
     marketingSourceInput.value = client.marketing_source || '';
     personalDiscountInput.value = client.personal_discount || '';
+    const createdAtDisplay = document.getElementById('client-created-at-display');
+    if (createdAtDisplay) createdAtDisplay.value = client.created_at || '—';
     clearAllErrors();
     toggleClearPhoneButton();
   }
@@ -98,6 +100,8 @@ document.addEventListener('DOMContentLoaded', function () {
     resetForm();
   });
 
+  const deleteClientBtn = document.getElementById('delete-client-btn');
+
   function renderMode() {
     const content = isEditMode ? modeContent.edit : modeContent.create;
     modalTitle.textContent = isEditMode && currentClientLabel
@@ -110,6 +114,33 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtnText.textContent = content.submit;
     }
     updateSubscriptionButtonState();
+    const createdAtRow = document.getElementById('client-created-at-row');
+    if (createdAtRow) createdAtRow.classList.toggle('hidden', !isEditMode);
+    if (deleteClientBtn) {
+      deleteClientBtn.classList.toggle('hidden', !isEditMode);
+      deleteClientBtn.classList.toggle('inline-flex', isEditMode);
+    }
+  }
+
+  if (deleteClientBtn) {
+    deleteClientBtn.addEventListener('click', async function () {
+      const clientId = clientIdInput.value;
+      if (!clientId) return;
+      if (!confirm(`Видалити клієнта "${currentClientLabel}"? Цю дію не можна скасувати.`)) return;
+      try {
+        const resp = await fetch(`/clients/${clientId}/delete`, { method: 'POST' });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+          alert(data.error || 'Не вдалося видалити клієнта');
+          return;
+        }
+        modalInstance.hide();
+        showToast('Клієнта видалено', 'success');
+        setTimeout(() => location.reload(), 900);
+      } catch (e) {
+        alert('Помилка з\'єднання');
+      }
+    });
   }
 
   function resetForm() {

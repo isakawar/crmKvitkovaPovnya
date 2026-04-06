@@ -115,9 +115,9 @@ class TelegramService:
                 size_info = f"{order.custom_amount}₴"
             elif order.size:
                 size_info = order.size
-        elif delivery.bouquet_size:
-            size_info = delivery.bouquet_size
-        
+        elif delivery.size:
+            size_info = delivery.size
+
         if size_info:
             text += f"💐 {size_info}\n"
         

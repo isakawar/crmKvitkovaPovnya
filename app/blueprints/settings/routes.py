@@ -136,6 +136,16 @@ def add_marketing_source():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/<int:item_id>', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_setting(item_id):
+    item = Settings.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @bp.route('/settings/prices', methods=['GET'])
 def get_prices():
     sub_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
@@ -147,6 +157,38 @@ def get_prices():
         'sizes': [{'id': s.id, 'value': s.value} for s in sizes],
         'prices': {f'{k[0]}_{k[1]}': v for k, v in price_map.items()},
     })
+
+
+@bp.route('/settings/ai-agent/toggle', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def toggle_ai_agent():
+    from app.models.settings import Settings
+    flag = Settings.query.filter_by(type='feature_flag', value='ai_agent_disabled').first()
+    if flag:
+        db.session.delete(flag)
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': True})
+    else:
+        db.session.add(Settings(type='feature_flag', value='ai_agent_disabled'))
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': False})
+
+
+@bp.route('/settings/distribute-banner/toggle', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def toggle_distribute_banner():
+    from app.models.settings import Settings
+    flag = Settings.query.filter_by(type='feature_flag', value='distribute_banner_disabled').first()
+    if flag:
+        db.session.delete(flag)
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': True})
+    else:
+        db.session.add(Settings(type='feature_flag', value='distribute_banner_disabled'))
+        db.session.commit()
+        return jsonify({'success': True, 'enabled': False})
 
 
 @bp.route('/settings/prices', methods=['POST'])

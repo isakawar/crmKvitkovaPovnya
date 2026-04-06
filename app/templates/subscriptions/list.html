@@ -15,6 +15,14 @@
       </div>
       <button
         type="button"
+        class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
+        id="add-draft-btn"
+      >
+        <i class="bi bi-pencil-square"></i>
+        Додати чернетку
+      </button>
+      <button
+        type="button"
         class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
         data-open-composer="subscription"
         data-bs-toggle="modal"
@@ -96,18 +104,113 @@
     Фільтрувати
   </button>
   {% if search_query or city_filter or type_filter %}
-  <a href="{{ url_for('orders.subscriptions_list') }}"
+  <a href="{{ url_for('subscriptions.subscriptions_list') }}"
      class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
     Скинути
   </a>
   {% endif %}
 </form>
 
+<!-- Draft subscriptions -->
+{% if drafts %}
+<section class="mb-6">
+  <div class="flex items-center gap-3 mb-3">
+    <h2 class="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Потребують контакту</h2>
+    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">{{ drafts|length }}</span>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for sub in drafts %}
+    <div class="relative bg-white border-2 border-dashed border-amber-300 rounded-xl p-5 hover:shadow-md transition-all">
+
+      <!-- Top row: client info + icon actions -->
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-0.5">
+            <p class="font-medium text-stone-900 text-sm truncate">{{ sub.client.instagram.lstrip('@') }}</p>
+            <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-700 flex-shrink-0">
+              <i class="bi bi-pencil-fill" style="font-size:8px"></i> Чернетка
+            </span>
+          </div>
+          {% if sub.client.phone %}
+          <p class="text-xs text-stone-400">{{ sub.client.phone }}</p>
+          {% endif %}
+        </div>
+        <!-- Icon actions -->
+        <div class="flex items-center gap-1.5 flex-shrink-0 relative z-10">
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 bg-white text-stone-400 hover:bg-stone-50 hover:text-stone-700 transition-colors"
+            data-draft-edit="{{ sub.id }}"
+            data-contact-date="{{ sub.contact_date.strftime('%Y-%m-%d') if sub.contact_date else '' }}"
+            data-draft-comment="{{ sub.draft_comment or '' }}"
+            data-draft-bank-link="{{ sub.draft_bank_link or '' }}"
+            data-draft-wedding-date="{{ sub.draft_wedding_date.strftime('%Y-%m-%d') if sub.draft_wedding_date else '' }}"
+            title="Редагувати"
+          >
+            <i class="bi bi-pencil text-xs"></i>
+          </button>
+          <button
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-red-100 bg-white text-red-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+            data-draft-delete="{{ sub.id }}"
+            title="Видалити чернетку"
+          >
+            <i class="bi bi-trash text-xs"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Contact date -->
+      <div class="flex items-center gap-1.5 mb-2 text-sm
+        {% if sub.contact_date and sub.contact_date < today %}text-red-600 font-medium{% else %}text-amber-800{% endif %}">
+        <i class="bi bi-telephone-outbound text-xs flex-shrink-0"></i>
+        <span>Зв'язатися: <strong>{{ sub.contact_date.strftime('%d.%m.%Y') if sub.contact_date else 'не вказано' }}</strong></span>
+      </div>
+
+      <!-- Extra draft info -->
+      {% if sub.draft_wedding_date %}
+      <div class="flex items-center gap-1.5 mb-2 text-xs text-rose-600">
+        <i class="bi bi-heart-fill flex-shrink-0" style="font-size:9px"></i>
+        <span>Весілля: <strong>{{ sub.draft_wedding_date.strftime('%d.%m.%Y') }}</strong></span>
+      </div>
+      {% endif %}
+      {% if sub.draft_bank_link %}
+      <div class="flex items-center gap-1.5 mb-2 text-xs overflow-hidden">
+        <i class="bi bi-credit-card text-stone-400 flex-shrink-0 text-[10px]"></i>
+        <a href="{{ sub.draft_bank_link }}" target="_blank" rel="noopener noreferrer"
+           class="truncate text-blue-600 hover:underline">{{ sub.draft_bank_link }}</a>
+      </div>
+      {% endif %}
+      {% if sub.draft_comment %}
+      <div class="flex items-start gap-1.5 mb-2 text-xs text-stone-500">
+        <i class="bi bi-chat-left-text text-[10px] flex-shrink-0 mt-0.5"></i>
+        <span class="line-clamp-2">{{ sub.draft_comment }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Main CTA -->
+      <div class="mt-4 relative z-10">
+        <button
+          type="button"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          data-draft-convert="{{ sub.id }}"
+          data-client-instagram="{{ sub.client.instagram }}"
+        >
+          <i class="bi bi-arrow-repeat"></i>
+          Оформити підписку
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
 <!-- Cards -->
 {% if subscriptions %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
   {% for item in subscriptions %}
-  {% set order = item.order %}
+  {% set sub = item.subscription %}
   {% set total = item.total %}
   {% set completed = item.completed %}
   {% set progress = ((completed / total * 100) | int) if total > 0 else 0 %}
@@ -118,15 +221,15 @@
     <button
       type="button"
       class="absolute inset-0 z-10"
-      data-subscription-id="{{ order.id }}"
-      aria-label="Відкрити підписку {{ order.client.instagram }}"
+      data-subscription-id="{{ sub.id }}"
+      aria-label="Відкрити підписку {{ sub.client.instagram }}"
     ></button>
 
     <!-- Top: client + status dot -->
     <div class="flex items-start justify-between mb-3">
       <div>
-        <p class="font-medium text-stone-900 text-sm">{{ order.client.instagram.lstrip('@') }}</p>
-        <p class="text-xs text-stone-400 mt-0.5">{{ order.recipient_name }}</p>
+        <p class="font-medium text-stone-900 text-sm">{{ sub.client.instagram.lstrip('@') }}</p>
+        <p class="text-xs text-stone-400 mt-0.5">{{ sub.recipient_name }}</p>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if is_active else 'bg-stone-300' }}"
            title="{{ 'Активна' if is_active else 'Завершена' }}"></div>
@@ -135,23 +238,23 @@
     <!-- Badges: type + size -->
     <div class="flex items-center gap-2 mb-3 flex-wrap">
       <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
-                   {% if order.delivery_type == 'Weekly' %}bg-blue-50 border-blue-200 text-blue-700
-                   {% elif order.delivery_type == 'Monthly' %}bg-purple-50 border-purple-200 text-purple-700
+                   {% if sub.type == 'Weekly' %}bg-blue-50 border-blue-200 text-blue-700
+                   {% elif sub.type == 'Monthly' %}bg-purple-50 border-purple-200 text-purple-700
                    {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
-        {{ order.delivery_type }}
+        {{ sub.type }}
       </span>
-      {% if order.size %}
+      {% if sub.size %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-medium
-                   {% if order.size == 'L' %}bg-green-50 border-green-200 text-green-700
-                   {% elif order.size == 'XL' %}bg-amber-50 border-amber-200 text-amber-700
-                   {% elif order.size == 'XXL' %}bg-red-50 border-red-200 text-red-700
+                   {% if sub.size == 'L' %}bg-green-50 border-green-200 text-green-700
+                   {% elif sub.size == 'XL' %}bg-amber-50 border-amber-200 text-amber-700
+                   {% elif sub.size == 'XXL' %}bg-red-50 border-red-200 text-red-700
                    {% else %}bg-stone-50 border-stone-200 text-stone-600{% endif %}">
-        {{ order.size }}
+        {{ sub.size }}
       </span>
       {% endif %}
-      {% if order.delivery_day %}
+      {% if sub.delivery_day %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-50 border border-stone-200 text-stone-500 text-xs">
-        {{ order.delivery_day }}
+        {{ sub.delivery_day }}
       </span>
       {% endif %}
     </div>
@@ -173,10 +276,10 @@
     <div class="border-t border-stone-100 pt-3 flex items-center justify-between">
       <div class="flex items-center gap-1.5 text-xs text-stone-400">
         <i class="bi bi-geo-alt"></i>
-        <span>{{ order.city }}</span>
+        <span>{{ sub.city }}</span>
       </div>
-      {% if order.first_delivery_date %}
-      <span class="text-xs text-stone-400">з {{ order.first_delivery_date.strftime('%d.%m.%Y') }}</span>
+      {% if sub.created_at %}
+      <span class="text-xs text-stone-400">з {{ sub.created_at.strftime('%d.%m.%Y') }}</span>
       {% endif %}
     </div>
   </div>
@@ -403,6 +506,150 @@
   </div>
 </div>
 
+<!-- Draft create modal -->
+<div class="modal fade" id="draftCreateModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+    <div class="modal-content border-0 rounded-[28px] overflow-hidden">
+      <div class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
+        <h5 class="text-base font-semibold text-stone-900">Нова чернетка підписки</h5>
+        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 hover:bg-stone-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg text-sm"></i>
+        </button>
+      </div>
+      <div class="bg-stone-50 px-6 py-5">
+        <div id="draft-create-error" class="hidden mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"></div>
+        <form id="draft-create-form" novalidate>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Клієнт (Instagram)</label>
+            <div class="relative">
+              <input
+                type="text"
+                id="draft-client-search"
+                name="client_instagram"
+                placeholder="Введіть Instagram..."
+                autocomplete="off"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                required
+              />
+              <div id="draft-client-results" class="absolute left-0 right-0 top-full z-50 mt-1 hidden rounded-xl border border-stone-200 bg-white shadow-lg overflow-hidden"></div>
+            </div>
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата контакту</label>
+            <input
+              type="date"
+              id="draft-contact-date"
+              name="contact_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата весілля</label>
+            <input
+              type="date"
+              id="draft-wedding-date"
+              name="draft_wedding_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Лінк на банку</label>
+            <input
+              type="url"
+              id="draft-bank-link"
+              name="draft_bank_link"
+              placeholder="https://send.monobank.ua/..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-5">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Коментар</label>
+            <textarea
+              id="draft-comment"
+              name="draft_comment"
+              rows="2"
+              placeholder="Деталі, побажання, нотатки..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          >
+            <i class="bi bi-plus"></i>
+            Створити чернетку
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Draft edit modal -->
+<div class="modal fade" id="draftEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+    <div class="modal-content border-0 rounded-[28px] overflow-hidden">
+      <div class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
+        <h5 class="text-base font-semibold text-stone-900">Редагувати чернетку</h5>
+        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 hover:bg-stone-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg text-sm"></i>
+        </button>
+      </div>
+      <div class="bg-stone-50 px-6 py-5">
+        <form id="draft-edit-form" novalidate>
+          <input type="hidden" id="draft-edit-id" value="">
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата контакту</label>
+            <input
+              type="date"
+              id="draft-edit-contact-date"
+              name="contact_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата весілля</label>
+            <input
+              type="date"
+              id="draft-edit-wedding-date"
+              name="draft_wedding_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Лінк на банку</label>
+            <input
+              type="url"
+              id="draft-edit-bank-link"
+              name="draft_bank_link"
+              placeholder="https://send.monobank.ua/..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-5">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Коментар</label>
+            <textarea
+              id="draft-edit-comment"
+              name="draft_comment"
+              rows="2"
+              placeholder="Деталі, побажання, нотатки..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          >
+            Зберегти
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% include 'orders/_composer_modal.html' %}
 {{ render_toast() }}
 {% endblock %}
@@ -458,11 +705,11 @@ document.addEventListener('DOMContentLoaded', function() {
             <p class="mt-1 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">Створено: ${escapeHtml(order.created_at || '—')}</p>
           </div>
           <span class="inline-flex rounded-full px-3 py-1 text-xs font-medium ${order.is_current ? 'bg-white/10 text-white' : 'bg-white text-stone-600 border border-stone-200'}">
-            ${escapeHtml(order.delivery_type)} · ${escapeHtml(order.size || '—')}
+            ${escapeHtml(order.delivery_type)} · ${escapeHtml(order.size || '—')} · #${escapeHtml(order.sequence_number || '?')}
           </span>
         </div>
         <div class="mt-3 flex items-center gap-3 text-xs ${order.is_current ? 'text-white/70' : 'text-stone-500'}">
-          <span>Старт: ${escapeHtml(order.first_delivery_date || '—')}</span>
+          <span>Дата: ${escapeHtml(order.first_delivery_date || '—')}</span>
           <span>Виконано: ${escapeHtml(order.deliveries_completed || 0)}/${escapeHtml(order.deliveries_total || 0)}</span>
           ${order.is_extended ? '<span>Продовжено</span>' : ''}
         </div>
@@ -495,7 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         : (delivery.time_from || 'Без часу');
       const deliveryMode = delivery.delivery_method === 'nova_poshta'
         ? 'Нова пошта'
-        : (delivery.address === 'Самовивіз' ? 'Самовивіз' : (delivery.is_subscription ? 'Оплачена' : 'На продовження'));
+        : (delivery.address === 'Самовивіз' ? 'Самовивіз' : 'Підписка');
       const statusClass = delivery.status === 'Доставлено'
         ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
         : delivery.status === 'Не оплачена'
@@ -527,7 +774,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="text-sm text-stone-600">
             <p class="font-medium text-stone-900 md:hidden">Тип доставки</p>
             <p class="mt-1 md:mt-0">${escapeHtml(deliveryMode)}</p>
-            <p class="mt-1 text-xs text-stone-400">${delivery.is_subscription ? 'Входить в оплачений цикл' : 'Доставка на продовження'}</p>
+            <p class="mt-1 text-xs text-stone-400">Входить в підписку</p>
           </div>
         </div>
       `;
@@ -587,12 +834,16 @@ document.addEventListener('DOMContentLoaded', function() {
       extendBtn.disabled = !data.stats.can_extend;
       extendBtn.classList.toggle('opacity-50', !data.stats.can_extend);
       extendBtn.onclick = async () => {
+        if (!data.stats.can_extend) return;
         try {
+          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
+          const result = await resp.json();
+          if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка');
+          showToast(result.message || 'Підписку продовжено', 'success');
           detailModal.hide();
-          await window.orderComposerApi?.openSubscriptionExtension(data.id, { returnToModalId: 'subscriptionDetailModal' });
+          setTimeout(() => location.reload(), 900);
         } catch (error) {
-          showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
-          detailModal.show();
+          showToast(error.message || 'Не вдалося продовжити підписку', 'error');
         }
       };
 
@@ -610,6 +861,173 @@ document.addEventListener('DOMContentLoaded', function() {
       openSubscriptionDetail(this.getAttribute('data-subscription-id'));
     });
   });
+
+  const openParam = new URLSearchParams(window.location.search).get('open');
+  if (openParam) {
+    openSubscriptionDetail(openParam);
+    history.replaceState(null, '', window.location.pathname);
+  }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // ── Draft create ─────────────────────────────────────────────────
+  const addDraftBtn = document.getElementById('add-draft-btn');
+  const draftCreateModalEl = document.getElementById('draftCreateModal');
+  const draftCreateModal = bootstrap.Modal.getOrCreateInstance(draftCreateModalEl);
+  const draftCreateForm = document.getElementById('draft-create-form');
+  const draftClientSearch = document.getElementById('draft-client-search');
+  const draftClientResults = document.getElementById('draft-client-results');
+  const draftCreateError = document.getElementById('draft-create-error');
+
+  addDraftBtn?.addEventListener('click', () => {
+    draftCreateForm.reset();
+    draftCreateError.classList.add('hidden');
+    draftCreateModal.show();
+  });
+
+  draftClientSearch?.addEventListener('input', async function () {
+    const q = this.value.trim();
+    if (q.length < 2) { draftClientResults.classList.add('hidden'); return; }
+    try {
+      const res = await fetch(`/clients/search?q=${encodeURIComponent(q)}`);
+      const clients = await res.json();
+      if (!clients.length) { draftClientResults.classList.add('hidden'); return; }
+      draftClientResults.innerHTML = clients.map(c =>
+        `<button type="button" class="w-full px-4 py-2 text-sm text-left text-stone-800 hover:bg-stone-50">${escapeHtmlDraft(c.instagram)}</button>`
+      ).join('');
+      draftClientResults.classList.remove('hidden');
+      draftClientResults.querySelectorAll('button').forEach(btn => {
+        btn.addEventListener('click', function () {
+          draftClientSearch.value = this.textContent.trim();
+          draftClientResults.classList.add('hidden');
+        });
+      });
+    } catch { draftClientResults.classList.add('hidden'); }
+  });
+
+  draftClientSearch?.addEventListener('blur', () => {
+    setTimeout(() => draftClientResults.classList.add('hidden'), 180);
+  });
+
+  draftCreateForm?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    draftCreateError.classList.add('hidden');
+    const body = new FormData(this);
+    try {
+      const res = await fetch('/subscriptions/draft', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      draftCreateModal.hide();
+      showToast('Чернетку створено', 'success');
+      setTimeout(() => location.reload(), 700);
+    } catch (err) {
+      draftCreateError.textContent = err.message;
+      draftCreateError.classList.remove('hidden');
+    }
+  });
+
+  // ── Draft edit ───────────────────────────────────────────────────
+  const draftEditModalEl = document.getElementById('draftEditModal');
+  const draftEditModal = bootstrap.Modal.getOrCreateInstance(draftEditModalEl);
+  const draftEditForm = document.getElementById('draft-edit-form');
+
+  document.querySelectorAll('[data-draft-edit]').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.getElementById('draft-edit-id').value = this.dataset.draftEdit;
+      document.getElementById('draft-edit-contact-date').value = this.dataset.contactDate || '';
+      document.getElementById('draft-edit-wedding-date').value = this.dataset.draftWeddingDate || '';
+      document.getElementById('draft-edit-bank-link').value = this.dataset.draftBankLink || '';
+      document.getElementById('draft-edit-comment').value = this.dataset.draftComment || '';
+      draftEditModal.show();
+    });
+  });
+
+  draftEditForm?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const id = document.getElementById('draft-edit-id').value;
+    const body = new FormData(this);
+    try {
+      const res = await fetch(`/subscriptions/${id}/draft/edit`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      draftEditModal.hide();
+      showToast('Чернетку оновлено', 'success');
+      setTimeout(() => location.reload(), 700);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  });
+
+  // ── Draft delete ─────────────────────────────────────────────────
+  document.querySelectorAll('[data-draft-delete]').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.draftDelete;
+      if (!confirm('Видалити чернетку?')) return;
+      try {
+        const res = await fetch(`/subscriptions/${id}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+        showToast('Чернетку видалено', 'success');
+        setTimeout(() => location.reload(), 700);
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    });
+  });
+
+  // ── Draft convert → open composer with client pre-filled ─────────
+  document.querySelectorAll('[data-draft-convert]').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const instagram = this.dataset.clientInstagram || '';
+      window._convertingDraftId = this.dataset.draftConvert;
+      window.orderComposerApi?.openComposer('subscription', instagram);
+    });
+  });
+
+  // Clear draft ID when composer closes without saving
+  document.getElementById('addOrderModal')?.addEventListener('hidden.bs.modal', function () {
+    window._convertingDraftId = null;
+  });
+
+  // Auto-delete draft ONLY after successful subscription creation.
+  // We detect success by intercepting showToast — the composer calls
+  // showToast('...', 'success') right before reloading the page.
+  if (typeof showToast === 'function') {
+    const _origShowToast = showToast;
+    window.showToast = function (text, type) {
+      _origShowToast(text, type);
+      if (type === 'success' && window._convertingDraftId) {
+        const draftId = window._convertingDraftId;
+        window._convertingDraftId = null;
+        fetch(`/subscriptions/${draftId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }).catch(() => {});
+      }
+    };
+  }
+
+  function escapeHtmlDraft(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 });
 </script>
 {% endblock %}

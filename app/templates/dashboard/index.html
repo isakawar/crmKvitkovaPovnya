@@ -549,19 +549,32 @@
       <div class="dash-ended-list">
         {% for item in ended_subscriptions %}
         {% set urgency_class = 'dash-ended-card--danger' if item.days_overdue >= 6 else ('dash-ended-card--warn' if item.days_overdue >= 3 else '') %}
-        <div class="dash-ended-card {{ urgency_class }}" data-ended-id="{{ item.order_id }}">
+        <div class="dash-ended-card {{ urgency_class }}"
+             data-ended-id="{{ item.order_id }}"
+             data-last-order-id="{{ item.last_order_id or '' }}"
+             data-client-instagram="{{ item.client_instagram or '' }}"
+             data-is-reminder="{{ 'true' if item.is_renewal_reminder else 'false' }}">
           <div class="dash-ended-meta">
             <strong>{{ item.client_instagram.lstrip('@') if item.client_instagram else '—' }}</strong>
             <span>{{ item.recipient_name }} · {{ item.client_phone }}</span>
+            {% if item.is_renewal_reminder %}
+            <span style="color:#b45309;font-weight:600;">Нагадування: зв'язатися для продовження</span>
+            {% else %}
             <span>Остання доставка: {{ item.last_delivery_date.strftime('%d.%m.%Y') }} · {{ item.days_overdue }} днів тому</span>
+            {% endif %}
           </div>
           <div class="dash-ended-tags">
+            {% if item.is_renewal_reminder %}
+            <span class="dash-tag" style="background:#fef3c7;color:#92400e;border-color:#fde68a;">Нагадування з імпорту</span>
+            {% endif %}
             <span class="dash-tag">{{ item.delivery_type }}</span>
             <span class="dash-tag">Розмір: {{ item.size }}</span>
+            {% if not item.is_renewal_reminder %}
             <span class="dash-tag">Затримка: {{ item.days_overdue }} днів</span>
+            {% endif %}
           </div>
           <div class="dash-actions">
-            <button class="dash-action-btn dash-action-btn--primary" data-followup-status="extended">Продовжено</button>
+            <button class="dash-action-btn dash-action-btn--primary" data-action="renew">Продовжити</button>
             <button class="dash-action-btn dash-action-btn--ghost" data-followup-status="declined">Відмова</button>
           </div>
         </div>
@@ -585,35 +598,46 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelectorAll('[data-ended-id]').forEach(card => {
-    const orderId = card.getAttribute('data-ended-id');
-    card.querySelectorAll('[data-followup-status]').forEach(button => {
-      button.addEventListener('click', async function() {
-        const status = this.getAttribute('data-followup-status');
-        if (status === 'extended') {
-          try {
-            await window.orderComposerApi?.openSubscriptionExtension(orderId);
-          } catch (error) {
-            showToast(error.message || 'Не вдалося відкрити форму продовження', 'error');
-          }
-          return;
+    const subscriptionId = card.getAttribute('data-ended-id');
+    const lastOrderId = card.getAttribute('data-last-order-id');
+    const isReminder = card.getAttribute('data-is-reminder') === 'true';
+    const instagram = card.getAttribute('data-client-instagram');
+
+    // "Продовжити" — відкрити модальне вікно
+    const renewBtn = card.querySelector('[data-action="renew"]');
+    if (renewBtn) {
+      renewBtn.addEventListener('click', function() {
+        if (!isReminder && lastOrderId) {
+          // Є реальна підписка — відкрити вікно продовження
+          window.orderComposerApi.openSubscriptionExtension(lastOrderId);
+        } else {
+          // Нагадування з імпорту або без lastOrderId — відкрити нову підписку
+          window.orderComposerApi.openComposer('subscription', instagram || '');
         }
+      });
+    }
+
+    // "Відмова" — позначити і прибрати картку
+    const declineBtn = card.querySelector('[data-followup-status="declined"]');
+    if (declineBtn) {
+      declineBtn.addEventListener('click', async function() {
         try {
-          const response = await fetch(`/dashboard/subscriptions/${orderId}/status`, {
+          const response = await fetch(`/dashboard/subscriptions/${subscriptionId}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status })
+            body: JSON.stringify({ status: 'declined' })
           });
           const data = await response.json();
           if (!response.ok || !data.success) {
             throw new Error(data.error || 'Не вдалося зберегти');
           }
           card.remove();
-          showToast(status === 'extended' ? 'Підписку відмічено як продовжену' : 'Позначено як відмову', 'success');
+          showToast('Позначено як відмову', 'success');
         } catch (error) {
           showToast(error.message || 'Помилка збереження', 'error');
         }
       });
-    });
+    }
   });
 });
 </script>

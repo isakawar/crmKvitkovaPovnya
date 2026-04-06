@@ -265,53 +265,6 @@ def normalize_delivery_type(raw: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# CSV parser
-# ---------------------------------------------------------------------------
-
-EXPECTED_COLUMNS = [
-    'Клієнт', 'Тип підписки', 'Розмір', 'Коробка/Букет',
-    'Тип композиції', 'Загальні побажання клієнта', 'Коментарі',
-    'Час доставки', 'Імʼя отримувача', 'Адреса', 'Телефон отримувача'
-]
-
-
-def parse_csv_rows(file_stream) -> tuple[list[dict], str | None]:
-    """
-    Parse CSV file stream → list of raw row dicts.
-    Returns (rows, error_message).
-    """
-    try:
-        content = file_stream.read()
-        if isinstance(content, bytes):
-            content = content.decode('utf-8-sig')  # handle BOM
-        reader = csv.DictReader(io.StringIO(content))
-        rows = []
-        for i, row in enumerate(reader, start=2):  # start=2 because row 1 is header
-            client_raw = row.get('Клієнт', '').strip()
-            # Skip empty rows or #N/A rows
-            if not client_raw or client_raw == '#N/A':
-                continue
-            rows.append({
-                'row_num': i,
-                'raw_client': client_raw,
-                'delivery_type_raw': row.get('Тип підписки', '').strip(),
-                'size': row.get('Розмір', '').strip(),
-                'bouquet': row.get('Коробка/Букет', '').strip(),
-                'composition_type': row.get('Тип композиції', '').strip(),
-                'preferences_raw': row.get('Загальні побажання клієнта', '').strip(),
-                'comment_raw': row.get('Коментарі', '').strip(),
-                'time_raw': row.get('Час доставки', '').strip(),
-                'recipient_name': row.get('Імʼя отримувача', '').strip(),
-                'address_raw': row.get('Адреса', '').strip(),
-                'recipient_phone_raw': row.get('Телефон отримувача', '').strip(),
-            })
-        return rows, None
-    except Exception as e:
-        logger.error(f'CSV parse error: {e}')
-        return [], f'Помилка читання CSV: {e}'
-
-
-# ---------------------------------------------------------------------------
 # Strip numeric/duplicate suffixes from client names for dedup
 # e.g. "chrisfetisova 1" → "chrisfetisova", "lanatremtii(2)" → "lanatremtii"
 # ---------------------------------------------------------------------------
@@ -366,102 +319,212 @@ def find_existing_client(instagram=None, phone=None, telegram=None) -> Client | 
 
 
 # ---------------------------------------------------------------------------
-# Build row preview dict (enriched with parsed + client status)
+# Kvitkovapovnya 2026 operational CSV — new format
 # ---------------------------------------------------------------------------
 
-def build_preview_row(raw: dict) -> dict:
-    """Enrich a raw row dict with parsed fields and client lookup."""
-    client_info = parse_client_field(raw['raw_client'])
-    addr = parse_address(raw['address_raw'])
-    time_from, time_to = parse_time_range(raw['time_raw'])
-    recipient_phone = normalize_phone(raw['recipient_phone_raw'])
-    delivery_type = normalize_delivery_type(raw['delivery_type_raw'])
+_DELIVERY_DAY_UA_MAP = {
+    'субота': 'СБ', 'неділя': 'НД', 'понеділок': 'ПН',
+    'вівторок': 'ВТ', 'середа': 'СР', 'четвер': 'ЧТ',
+    "п'ятниця": 'ПТ', 'пʼятниця': 'ПТ', 'пятниця': 'ПТ',
+}
+_REVERSE_WEEKDAY_SHORT = {0: 'ПН', 1: 'ВТ', 2: 'СР', 3: 'ЧТ', 4: 'ПТ', 5: 'СБ', 6: 'НД'}
 
-    composition_type = raw['composition_type'] if raw['composition_type'] and raw['composition_type'] != '#N/A' else None
-    bouquet_type = raw['bouquet'] if raw['bouquet'] and raw['bouquet'] != '#N/A' else None
-    preferences = raw['preferences_raw'] if raw['preferences_raw'] and raw['preferences_raw'] != '#N/A' else None
-    comment = raw['comment_raw'] if raw['comment_raw'] and raw['comment_raw'] != '#N/A' else None
 
-    # Determine size
-    size = raw['size'] if raw['size'] and raw['size'] != '#N/A' else 'M'
+def parse_csv_rows_kvitkovapovnya(file_stream):
+    """Parse rows from the Kvitkovapovnya 2026 CSV format."""
+    import io
+    import csv as csv_module
 
-    existing = find_existing_client(
-        instagram=client_info['instagram'],
-        phone=client_info['phone'],
-        telegram=client_info['telegram'],
-    )
+    content = file_stream.read()
+    if isinstance(content, bytes):
+        content = content.decode('utf-8-sig')
 
-    # Warnings
+    reader = csv_module.DictReader(io.StringIO(content))
+    rows = []
+    for i, row in enumerate(reader, start=2):
+        # Normalize keys
+        normalized = {k.strip(): v.strip() if isinstance(v, str) else (v or '') for k, v in row.items()}
+
+        raw_client = normalized.get('Name of clients', '').strip()
+        if not raw_client:
+            continue
+
+        phones_raw = normalized.get('Номер телефону отримувача', '')
+        phone_lines = [p.strip() for p in phones_raw.replace('\r', '').split('\n') if p.strip()]
+        recipient_phone = normalize_phone(phone_lines[0]) if phone_lines else ''
+        extra_phones = [normalize_phone(p) for p in phone_lines[1:] if normalize_phone(p)]
+
+        rows.append({
+            'row_num': i,
+            'raw_client': raw_client,
+            'recipient_name': normalized.get("Ім'я на кого доставка", '') or normalized.get('Імʼя на кого доставка', ''),
+            'delivery_type_raw': normalized.get('Вид підписки', ''),
+            'delivery_day_raw': normalized.get('Коли відправка', ''),
+            'size': normalized.get('Розмір', ''),
+            'city': normalized.get('Місто', ''),
+            'address_raw': normalized.get('Адреса', ''),
+            'address_comment_raw': normalized.get('Коментар до адреси', ''),
+            'recipient_phone': recipient_phone,
+            'recipient_phones_extra': extra_phones,
+            'marketing_source': normalized.get('Звідки дізнались про нас', ''),
+            'for_whom': normalized.get('Для кого', ''),
+            'planned_date_raw': normalized.get('Планова доставка', ''),
+            'delivery_number_raw': normalized.get('№ доставки', ''),
+            'is_wedding_raw': normalized.get('Відмітка якщо весільна', ''),
+            'discount_raw': normalized.get('Відсоток знижки', ''),
+        })
+    return rows
+
+
+def _parse_kvp_date(raw):
+    """Parse dd.mm.yyyy date string, return date or None."""
+    import datetime as dt
+    if not raw:
+        return None
+    raw = raw.strip()
+    for fmt in ('%d.%m.%Y', '%d.%m.%y'):
+        try:
+            return dt.datetime.strptime(raw, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
+def _parse_kvp_discount(raw):
+    """Parse discount like '10%' or '10', return int or None."""
+    if not raw:
+        return None
+    raw = raw.strip().rstrip('%').strip()
+    try:
+        val = int(float(raw))
+        return val if val > 0 else None
+    except (ValueError, TypeError):
+        return None
+
+
+def build_preview_row_kvitkovapovnya(raw):
+    """Build a normalized preview row from raw parsed CSV data."""
+    from app.services.subscription_service import SUBSCRIPTION_TYPES
+    planned_date = None
+    planned_date_raw = (raw.get('planned_date_raw') or '').strip()
+    if planned_date_raw.lower() not in ('', 'доставки не плануються'):
+        planned_date = _parse_kvp_date(planned_date_raw)
+
+    delivery_number = None
+    dn_raw = (raw.get('delivery_number_raw') or '').strip()
+    if dn_raw and dn_raw.lower() not in ('', 'доставки не плануються'):
+        try:
+            delivery_number = int(dn_raw)
+        except ValueError:
+            pass
+
+    delivery_day_raw = (raw.get('delivery_day_raw') or '').strip().lower()
+    delivery_day = _DELIVERY_DAY_UA_MAP.get(delivery_day_raw, '')
+    if not delivery_day and planned_date:
+        delivery_day = _REVERSE_WEEKDAY_SHORT.get(planned_date.weekday(), 'ПН')
+
+    discount = _parse_kvp_discount(raw.get('discount_raw'))
+    is_wedding = bool((raw.get('is_wedding_raw') or '').strip()) or (raw.get('for_whom') or '').strip().lower() == 'весільна підписка'
+
+    delivery_type_raw = (raw.get('delivery_type_raw') or '').strip()
+    delivery_type_map = {
+        'щотижнева': 'Weekly', 'weekly': 'Weekly',
+        'щодвотижнева': 'Bi-weekly', 'bi-weekly': 'Bi-weekly', 'двотижнева': 'Bi-weekly',
+        'щомісячна': 'Monthly', 'monthly': 'Monthly',
+    }
+    delivery_type = delivery_type_map.get(delivery_type_raw.lower(), delivery_type_raw)
+
+    # Determine action
+    if delivery_number is None:
+        action = 'client_only'
+    elif delivery_number == 0:
+        action = 'one_time'
+    elif delivery_number >= 5:
+        action = 'subscription_followup'
+    else:
+        action = 'subscription'
+
+    # If delivery_type is 'Test' or unknown, treat as client_only/one_time
+    if delivery_type.lower() == 'test' or (delivery_type not in SUBSCRIPTION_TYPES and action in ('subscription', 'subscription_followup')):
+        action = 'one_time' if delivery_number == 0 else 'client_only'
+
+    size_raw = (raw.get('size') or '').strip()
+    size_map = {'s': 'S', 'm': 'M', 'l': 'L', 'xl': 'XL', 'xxl': 'XXL'}
+    size = size_map.get(size_raw.lower(), size_raw) or 'M'
+
     warnings = []
-    if not client_info['instagram']:
-        warnings.append('Не вдалося визначити ідентифікатор клієнта')
-    if not recipient_phone and raw['recipient_phone_raw']:
-        warnings.append(f'Не вдалося нормалізувати телефон: {raw["recipient_phone_raw"][:30]}')
+    if action in ('one_time', 'subscription', 'subscription_followup') and not planned_date:
+        warnings.append('Відсутня планова дата доставки')
+    if action in ('subscription', 'subscription_followup') and not delivery_type:
+        warnings.append('Відсутній тип підписки')
 
     return {
         'row_num': raw['row_num'],
         'raw_client': raw['raw_client'],
-        # Parsed client fields
-        'instagram': client_info['instagram'],
-        'phone': client_info['phone'],
-        'telegram': client_info['telegram'],
-        'client_type': (
-            'telegram' if client_info['telegram'] else
-            'phone' if (client_info['phone'] and client_info['instagram'] == client_info['phone']) else
-            'instagram'
-        ),
-        # Existing client info
-        'existing_client_id': existing.id if existing else None,
-        'client_status': 'exists' if existing else 'new',
-        # Order fields
+        'recipient_name': (raw.get('recipient_name') or '').strip(),
+        'recipient_phone': raw.get('recipient_phone') or '',
+        'recipient_phones_extra': raw.get('recipient_phones_extra') or [],
         'delivery_type': delivery_type,
-        'delivery_type_raw': raw['delivery_type_raw'],
+        'delivery_day': delivery_day,
         'size': size,
-        'bouquet': raw['bouquet'],
-        'recipient_name': raw['recipient_name'] if raw['recipient_name'] != '#N/A' else '',
-        'recipient_phone': recipient_phone,
-        'city': addr['city'],
-        'street': addr['street'],
-        'address_comment': addr['address_comment'],
-        'address': raw['address_raw'] if raw['address_raw'] != '#N/A' else '',
-        'delivery_method': addr['delivery_method'],
-        'is_pickup': addr['is_pickup'],
-        'time_from': time_from,
-        'time_to': time_to,
-        'bouquet_type': bouquet_type,
-        'composition_type': composition_type,
-        'preferences': preferences,
-        'comment': comment,
+        'city': (raw.get('city') or 'Київ').strip() or 'Київ',
+        'address_raw': (raw.get('address_raw') or '').strip(),
+        'address_comment': (raw.get('address_comment_raw') or '').strip(),
+        'for_whom': (raw.get('for_whom') or '').strip(),
+        'marketing_source': (raw.get('marketing_source') or '').strip(),
+        'planned_date': planned_date.strftime('%Y-%m-%d') if planned_date else None,
+        'delivery_number': delivery_number,
+        'is_wedding': is_wedding,
+        'discount': discount,
+        'action': action,
         'warnings': warnings,
     }
 
 
-def preview_import(file_stream) -> tuple[list[dict], str | None]:
-    """Parse CSV and build enriched preview rows. Returns (rows, error)."""
-    raw_rows, error = parse_csv_rows(file_stream)
-    if error:
-        return [], error
-    preview_rows = [build_preview_row(r) for r in raw_rows]
-    return preview_rows, None
+def preview_import_kvitkovapovnya(file_stream):
+    """Parse and preview the Kvitkovapovnya 2026 CSV file."""
+    raw_rows = parse_csv_rows_kvitkovapovnya(file_stream)
+    preview_rows = []
+    summary = {
+        'total': 0,
+        'new_clients': 0,
+        'existing_clients': 0,
+        'warnings': 0,
+        'client_only': 0,
+        'one_time': 0,
+        'subscriptions': 0,
+    }
+
+    for raw in raw_rows:
+        row = build_preview_row_kvitkovapovnya(raw)
+        instagram = _strip_suffix(raw['raw_client'])
+        existing = find_existing_client(instagram)
+        row['is_new_client'] = existing is None
+        row['instagram'] = instagram
+
+        summary['total'] += 1
+        if existing:
+            summary['existing_clients'] += 1
+        else:
+            summary['new_clients'] += 1
+        if row['warnings']:
+            summary['warnings'] += len(row['warnings'])
+        if row['action'] == 'client_only':
+            summary['client_only'] += 1
+        elif row['action'] == 'one_time':
+            summary['one_time'] += 1
+        else:
+            summary['subscriptions'] += 1
+
+        preview_rows.append(row)
+
+    return preview_rows, summary
 
 
-# ---------------------------------------------------------------------------
-# Execute import
-# ---------------------------------------------------------------------------
-
-def execute_import(preview_rows: list[dict], first_delivery_date_str: str, delivery_day: str) -> dict:
-    """
-    For each preview row:
-      1. Find or create Client
-      2. Create Order + Deliveries via order_service logic
-    Returns summary dict.
-    """
+def execute_import_kvitkovapovnya(preview_rows):
+    """Execute the import from preview rows."""
+    from app.services.subscription_service import create_subscription_from_import
     from app.services.order_service import create_order_and_deliveries
-
-    try:
-        first_delivery_date = datetime.datetime.strptime(first_delivery_date_str, '%Y-%m-%d').date()
-    except (ValueError, TypeError):
-        first_delivery_date = datetime.date.today()
 
     created_clients = 0
     existing_clients = 0
@@ -470,71 +533,71 @@ def execute_import(preview_rows: list[dict], first_delivery_date_str: str, deliv
 
     for row in preview_rows:
         try:
-            # 1. Find or create client
-            existing = find_existing_client(
-                instagram=row['instagram'],
-                phone=row['phone'],
-                telegram=row['telegram'],
-            )
-
-            if existing:
-                client = existing
-                existing_clients += 1
+            instagram = row['instagram']
+            client = find_existing_client(instagram)
+            if not client:
+                client = Client(
+                    instagram=instagram,
+                    phone=row['recipient_phone'] or '',
+                )
+                db.session.add(client)
+                db.session.flush()
+                created_clients += 1
             else:
-                if not row['instagram']:
-                    errors.append(f'Рядок {row["row_num"]}: неможливо визначити ідентифікатор клієнта, пропущено')
-                    continue
+                existing_clients += 1
 
-                # Build safe instagram identifier (strip suffixes for client creation)
-                instagram_id = _strip_suffix(row['instagram'])
+            if row.get('marketing_source'):
+                client.marketing_source = row['marketing_source']
+            if row.get('discount'):
+                client.personal_discount = row['discount']
 
-                # Check if stripped version already exists
-                existing_stripped = Client.query.filter_by(instagram=instagram_id).first()
-                if existing_stripped:
-                    client = existing_stripped
-                    existing_clients += 1
-                else:
-                    client = Client(
-                        instagram=instagram_id,
-                        phone=row['phone'],
-                        telegram=row['telegram'],
-                    )
-                    db.session.add(client)
-                    db.session.flush()  # get client.id without full commit
-                    created_clients += 1
+            db.session.flush()
 
-            # 2. Build form dict for create_order_and_deliveries
+            action = row['action']
+            if action == 'client_only':
+                continue
+
+            planned_date = row.get('planned_date')
+            if not planned_date:
+                errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): відсутня дата доставки')
+                continue
+
             form = {
                 'recipient_name': row['recipient_name'] or '',
                 'recipient_phone': row['recipient_phone'] or '',
-                'recipient_social': '',
-                'city': row.get('city') or 'Київ',
-                'street': row.get('street') or row.get('address') or '',
-                'address_comment': row.get('address_comment') or '',
+                'additional_phones': row['recipient_phones_extra'] or [],
+                'city': row['city'],
+                'street': row['address_raw'],
+                'address_comment': row['address_comment'],
                 'building_number': '',
                 'floor': '',
                 'entrance': '',
-                'is_pickup': 'on' if row['is_pickup'] else '',
-                'delivery_type': row['delivery_type'],
+                'is_pickup': '',
                 'size': row['size'],
                 'custom_amount': '',
-                'first_delivery_date': first_delivery_date.strftime('%Y-%m-%d'),
-                'delivery_day': delivery_day,
-                'time_from': row['time_from'] or '',
-                'time_to': row['time_to'] or '',
-                'comment': row['comment'] or '',
-                'preferences': row['preferences'] or '',
-                'bouquet_type': row.get('bouquet_type') or '',
-                'composition_type': row.get('composition_type') or '',
-                'for_whom': '',
-                'delivery_method': row['delivery_method'],
+                'first_delivery_date': planned_date,
+                'delivery_day': row['delivery_day'],
+                'time_from': '',
+                'time_to': '',
+                'comment': '',
+                'preferences': '',
+                'bouquet_type': '',
+                'composition_type': '',
+                'for_whom': row['for_whom'],
+                'delivery_method': 'courier',
+                'delivery_type': row['delivery_type'],
+                'is_wedding': 'on' if row.get('is_wedding') else '',
             }
 
-            create_order_and_deliveries(client, form)
-            created_orders += 1
+            if action == 'one_time':
+                create_order_and_deliveries(client, form)
+                created_orders += 1
+            elif action in ('subscription', 'subscription_followup'):
+                create_subscription_from_import(client, form, row['delivery_number'])
+                created_orders += 1
 
         except Exception as e:
-            logger.error(f'Import error row {row["row_num"]}: {e}', exc_info=True)
+            logger.error(f'KvP import error row {row["row_num"]}: {e}', exc_info=True)
             errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): {e}')
             db.session.rollback()
 
@@ -542,7 +605,7 @@ def execute_import(preview_rows: list[dict], first_delivery_date_str: str, deliv
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        logger.error(f'Commit error: {e}', exc_info=True)
+        logger.error(f'KvP commit error: {e}', exc_info=True)
         errors.append(f'Помилка збереження в БД: {e}')
 
     return {
