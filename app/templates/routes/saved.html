@@ -2,6 +2,23 @@
 
 {% block head %}
 {{ super() }}
+<script>
+(function(){
+  var STORAGE_KEY='crm_routes_date';
+  var p=new URLSearchParams(window.location.search);
+  if(!p.has('date')){
+    try{
+      var d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      var today=new Date();
+      var t=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      if(d&&d.day===t&&d.value){
+        p.set('date',d.value);
+        window.location.replace(window.location.pathname+'?'+p.toString());
+      }
+    }catch(e){}
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
@@ -1090,17 +1107,9 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ value: dateStr, day: todayIso() }));
   }
 
-  // Restore filter if URL has no date param
+  // Persist date from URL (redirect already handled in <head>)
   var urlParams = new URLSearchParams(window.location.search);
-  if (!urlParams.has('date')) {
-    var stored = getStored();
-    if (stored && stored.value) {
-      urlParams.set('date', stored.value);
-      window.location.replace(window.location.pathname + '?' + urlParams.toString());
-      return;
-    }
-  } else {
-    // URL has date — persist it so future redirects keep it
+  if (urlParams.has('date')) {
     saveDate(urlParams.get('date'));
   }
 

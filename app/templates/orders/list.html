@@ -3,6 +3,23 @@
 
 {% block head %}
 {{ super() }}
+<script>
+(function(){
+  var STORAGE_KEY='crm_orders_date';
+  var p=new URLSearchParams(window.location.search);
+  if(!p.has('date_from')&&!p.has('date_to')){
+    try{
+      var d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      var today=new Date();
+      var t=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      if(d&&d.day===t&&d.date_from){
+        p.set('date_from',d.date_from);p.set('date_to',d.date_to||d.date_from);
+        window.location.replace(window.location.pathname+'?'+p.toString());
+      }
+    }catch(e){}
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .flatpickr-input { cursor: pointer; }
@@ -802,18 +819,9 @@
     localStorage.removeItem(STORAGE_KEY);
   }
 
-  // Restore filter if URL has no date params
+  // Persist date from URL (redirect already handled in <head>)
   var urlParams = new URLSearchParams(window.location.search);
-  if (!urlParams.has('date_from') && !urlParams.has('date_to')) {
-    var stored = getStored();
-    if (stored && stored.date_from) {
-      urlParams.set('date_from', stored.date_from);
-      urlParams.set('date_to', stored.date_to || stored.date_from);
-      window.location.replace(window.location.pathname + '?' + urlParams.toString());
-      return;
-    }
-  } else {
-    // URL has date — persist it
+  if (urlParams.has('date_from') || urlParams.has('date_to')) {
     saveDates(urlParams.get('date_from'), urlParams.get('date_to'));
   }
 
