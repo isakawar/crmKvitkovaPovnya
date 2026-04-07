@@ -1050,7 +1050,7 @@ def route_generator_distribute():
     except RouteOptimizerError as e:
         return jsonify({'error': str(e)}), 502
 
-    # Restore routeDbId and courierName from the sent payload (optimizer may strip them)
+    # Restore routeDbId, courierName, and depot (optimizer may strip them)
     from app.models.delivery_route import DeliveryRoute
     route_map = {r.id: r for r in DeliveryRoute.query.filter(DeliveryRoute.id.in_(route_ids)).options(
         joinedload(DeliveryRoute.courier)
@@ -1062,6 +1062,18 @@ def route_generator_distribute():
             route_data['routeDbId'] = db_id
             if not route_data.get('courierName') and dr.courier:
                 route_data['courierName'] = dr.courier.name
+
+    # Inject depot from cached_result_json of existing routes (authoritative source)
+    if not result.get('depot'):
+        for dr in route_map.values():
+            if dr.cached_result_json:
+                try:
+                    cached = json.loads(dr.cached_result_json)
+                    if cached.get('depot'):
+                        result['depot'] = cached['depot']
+                        break
+                except (json.JSONDecodeError, ValueError):
+                    pass
 
     return jsonify({'success': True, 'result': result})
 

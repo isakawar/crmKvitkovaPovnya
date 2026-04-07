@@ -773,6 +773,50 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
 (function () {
+  var STORAGE_KEY = 'crm_orders_date';
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function getStored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (data.day !== todayIso()) { localStorage.removeItem(STORAGE_KEY); return null; }
+      return data;
+    } catch (e) { localStorage.removeItem(STORAGE_KEY); return null; }
+  }
+
+  function saveDates(dateFrom, dateTo) {
+    if (dateFrom) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ date_from: dateFrom, date_to: dateTo || dateFrom, day: todayIso() }));
+    }
+  }
+
+  function clearStored() {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // Restore filter if URL has no date params
+  var urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has('date_from') && !urlParams.has('date_to')) {
+    var stored = getStored();
+    if (stored && stored.date_from) {
+      urlParams.set('date_from', stored.date_from);
+      urlParams.set('date_to', stored.date_to || stored.date_from);
+      window.location.replace(window.location.pathname + '?' + urlParams.toString());
+      return;
+    }
+  } else {
+    // URL has date — persist it
+    saveDates(urlParams.get('date_from'), urlParams.get('date_to'));
+  }
+
   const dateFromEl = document.getElementById('date_from');
   const dateToEl   = document.getElementById('date_to');
   const form       = document.getElementById('orders-filter-form');
@@ -803,14 +847,17 @@
         dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
         dateToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
         instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+        saveDates(dateFromEl.value, dateToEl.value);
       } else if (dates.length === 2) {
         dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
         dateToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
         instance.element.value =
           instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+        saveDates(dateFromEl.value, dateToEl.value);
       } else {
         dateFromEl.value = '';
         dateToEl.value   = '';
+        clearStored();
       }
     },
   });
@@ -820,6 +867,7 @@
       fp.clear();
       dateFromEl.value = '';
       dateToEl.value   = '';
+      clearStored();
       const params = new URLSearchParams(window.location.search);
       ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
       window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');

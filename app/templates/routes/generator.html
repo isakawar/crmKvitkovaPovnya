@@ -1531,9 +1531,12 @@ document.addEventListener('click', function(e) {
           color, weight: 4, opacity: 0.85
         }).addTo(map);
       } else {
-        const coords = (route.stops || [])
+        const stopCoords = (route.stops || [])
           .filter(function(s) { return s.lat && s.lng; })
           .map(function(s) { return [s.lat, s.lng]; });
+        const depotCoord = (result.depot && result.depot.lat && result.depot.lng)
+          ? [[result.depot.lat, result.depot.lng]] : [];
+        const coords = depotCoord.concat(stopCoords);
         if (coords.length > 1) {
           entry.line = L.polyline(coords, { color, weight: 4, opacity: 0.85, dashArray: '6 6' }).addTo(map);
         }

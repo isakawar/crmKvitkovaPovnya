@@ -557,7 +557,7 @@
           <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
         </form>
         {% if date_filter and date_filter != today_iso %}
-        <a href="{{ url_for('routes.saved_routes') }}"
+        <a href="{{ url_for('routes.saved_routes') }}?date={{ today_iso }}"
            class="routes-hero-btn routes-hero-btn-secondary">
           <i class="bi bi-calendar-check"></i>
           Сьогодні
@@ -1066,22 +1066,63 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
-flatpickr('#route-date-picker', {
-  locale: 'uk',
-  dateFormat: 'Y-m-d',
-  defaultDate: '{{ date_filter }}' || null,
-  disableMobile: true,
-  onReady(dates, _, fp) {
-    if (dates[0]) fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
-  },
-  onChange(dates, _, fp) {
-    if (dates[0]) {
-      document.getElementById('route-date-value').value = fp.formatDate(dates[0], 'Y-m-d');
-      fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
-      fp.element.closest('form').submit();
+(function () {
+  var STORAGE_KEY = 'crm_routes_date';
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function getStored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (data.day !== todayIso()) { localStorage.removeItem(STORAGE_KEY); return null; }
+      return data;
+    } catch (e) { localStorage.removeItem(STORAGE_KEY); return null; }
+  }
+
+  function saveDate(dateStr) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ value: dateStr, day: todayIso() }));
+  }
+
+  // Restore filter if URL has no date param
+  var urlParams = new URLSearchParams(window.location.search);
+  if (!urlParams.has('date')) {
+    var stored = getStored();
+    if (stored && stored.value) {
+      urlParams.set('date', stored.value);
+      window.location.replace(window.location.pathname + '?' + urlParams.toString());
+      return;
     }
-  },
-});
+  } else {
+    // URL has date — persist it so future redirects keep it
+    saveDate(urlParams.get('date'));
+  }
+
+  flatpickr('#route-date-picker', {
+    locale: 'uk',
+    dateFormat: 'Y-m-d',
+    defaultDate: '{{ date_filter }}' || null,
+    disableMobile: true,
+    onReady(dates, _, fp) {
+      if (dates[0]) fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+    },
+    onChange(dates, _, fp) {
+      if (dates[0]) {
+        var dateStr = fp.formatDate(dates[0], 'Y-m-d');
+        document.getElementById('route-date-value').value = dateStr;
+        fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+        saveDate(dateStr);
+        fp.element.closest('form').submit();
+      }
+    },
+  });
+})();
 </script>
 <script>
 document.querySelectorAll('.routes-board-header').forEach(function(header) {
