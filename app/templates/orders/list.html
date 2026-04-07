@@ -434,7 +434,7 @@
 
             {% for delivery in items %}
             {% set order = delivery.order %}
-            {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
+            {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% elif delivery.time_from %}{% set time_slot = 'з ' ~ delivery.time_from %}{% elif delivery.time_to %}{% set time_slot = 'до ' ~ delivery.time_to %}{% else %}{% set time_slot = 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
