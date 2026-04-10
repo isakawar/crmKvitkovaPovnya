@@ -58,6 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const confirmExtendBtn = document.getElementById('confirmExtendBtn');
     const extendClientInstagram = document.getElementById('extend-client-instagram');
     const composerTriggers = document.querySelectorAll('[data-open-composer]');
+    const lastOrderBanner = document.getElementById('last-order-banner');
+    const lastOrderLoading = document.getElementById('last-order-loading');
+    const lastOrderFound = document.getElementById('last-order-found');
+    const lastOrderApplyBtn = document.getElementById('last-order-apply-btn');
+    const lastOrderDismissBtn = document.getElementById('last-order-dismiss-btn');
+    let pendingLastOrderData = null;
     const commentInput = document.getElementById('order-comment-input');
     const preferencesInput = document.getElementById('order-preferences-input');
     const filterForm = document.getElementById('orders-filter-form');
@@ -352,6 +358,82 @@ document.addEventListener('DOMContentLoaded', function() {
             clientCreditsDisplay.textContent = '—';
             clientDiscountInput.value = '';
         }
+        hidePrefillBanner();
+    }
+
+    function hidePrefillBanner() {
+        if (lastOrderBanner) lastOrderBanner.classList.add('hidden');
+        if (lastOrderLoading) lastOrderLoading.classList.remove('hidden');
+        if (lastOrderFound) lastOrderFound.classList.add('hidden');
+        pendingLastOrderData = null;
+    }
+
+    // Set a select value, adding the option dynamically if it doesn't exist yet
+    function setSelectValueOrAdd(selectEl, value) {
+        if (!selectEl || !value) return;
+        const exists = Array.from(selectEl.options).some(opt => opt.value === value);
+        if (!exists) {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            selectEl.appendChild(opt);
+        }
+        selectEl.value = value;
+        selectEl.dispatchEvent(new Event('change'));
+    }
+
+    function applyLastOrderPrefill(data) {
+        if (!data) return;
+
+        // Delivery mode first (controls visibility/required of address fields)
+        if (data.is_pickup) {
+            setDeliveryMode('pickup');
+        } else if (data.delivery_method === 'nova_poshta') {
+            setDeliveryMode('nova_poshta');
+        } else {
+            setDeliveryMode('courier');
+        }
+
+        // Recipient
+        const recipientNameInput = addOrderForm.querySelector('[name="recipient_name"]');
+        if (recipientNameInput) recipientNameInput.value = data.recipient_name || '';
+        if (recipientPhoneInput) recipientPhoneInput.value = data.recipient_phone || '';
+        const recipientSocialInput = addOrderForm.querySelector('[name="recipient_social"]');
+        if (recipientSocialInput) recipientSocialInput.value = data.recipient_social || '';
+
+        // Address
+        if (data.city) setSelectValueOrAdd(citySelect, data.city);
+        if (addressInput) addressInput.value = data.street || '';
+        if (addressCommentInput) addressCommentInput.value = data.address_comment || '';
+
+        // Size — setSelectValueOrAdd also dispatches change → triggers syncCustomAmountState
+        if (data.size) setSelectValueOrAdd(sizeSelect, data.size);
+        if (data.custom_amount && customAmountInput) {
+            customAmountInput.value = data.custom_amount;
+        }
+
+        // Schedule
+        const timeFromInput = addOrderForm.querySelector('[name="time_from"]');
+        const timeToInput = addOrderForm.querySelector('[name="time_to"]');
+        if (timeFromInput) timeFromInput.value = data.time_from || '';
+        if (timeToInput) timeToInput.value = data.time_to || '';
+
+        // For whom
+        const forWhomSelect = addOrderForm.querySelector('[name="for_whom"]');
+        if (data.for_whom) setSelectValueOrAdd(forWhomSelect, data.for_whom);
+
+        // Notes (comment is intentionally excluded — user fills it fresh each time)
+        if (preferencesInput) preferencesInput.value = data.preferences || '';
+
+        // Subscription-specific: only when creating a subscription AND last order was a subscription
+        if (data.is_subscription && currentComposerFlow === 'subscription') {
+            if (data.delivery_type && deliveryTypeSelect) {
+                setSelectValueOrAdd(deliveryTypeSelect, data.delivery_type);
+            }
+            if (data.delivery_day && deliveryDaySelect) {
+                deliveryDaySelect.value = data.delivery_day;
+            }
+        }
     }
 
     function toggleDeleteOrderBtn(show) {
@@ -496,13 +578,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 clientResults.innerHTML = clients.map(client =>
                     `<button type="button" class="list-group-item list-group-item-action"
+                        data-client-id="${client.id}"
                         data-credits="${client.credits}"
                         data-discount="${client.personal_discount}">${client.instagram}</button>`
                 ).join('');
                 clientResults.classList.remove('d-none');
                 clientResults.querySelectorAll('button').forEach(btn => {
-                    btn.addEventListener('click', function() {
+                    btn.addEventListener('click', async function() {
                         clientSearch.value = this.textContent.trim();
+                        const clientId = this.getAttribute('data-client-id');
                         const credits = this.getAttribute('data-credits');
                         const discount = this.getAttribute('data-discount');
                         if (clientInfoBlock) {
@@ -511,6 +595,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             clientInfoBlock.classList.remove('hidden');
                         }
                         clearClientResults();
+
+                        // Show loading state immediately, then fetch last order
+                        if (clientId) {
+                            hidePrefillBanner();
+                            if (lastOrderBanner) lastOrderBanner.classList.remove('hidden');
+                            try {
+                                const resp = await fetch(`/orders/last-order?client_id=${encodeURIComponent(clientId)}`);
+                                const data = await resp.json();
+                                if (data.found) {
+                                    pendingLastOrderData = data;
+                                    if (lastOrderLoading) lastOrderLoading.classList.add('hidden');
+                                    if (lastOrderFound) lastOrderFound.classList.remove('hidden');
+                                } else {
+                                    hidePrefillBanner();
+                                }
+                            } catch (e) {
+                                console.error('Помилка завантаження останнього замовлення:', e);
+                                hidePrefillBanner();
+                            }
+                        }
                     });
                 });
             } catch (error) {
@@ -737,6 +841,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     bindClientSearch();
+
+    if (lastOrderApplyBtn) {
+        lastOrderApplyBtn.addEventListener('click', function() {
+            applyLastOrderPrefill(pendingLastOrderData);
+            hidePrefillBanner();
+        });
+    }
+    if (lastOrderDismissBtn) {
+        lastOrderDismissBtn.addEventListener('click', hidePrefillBanner);
+    }
+
     setDeliveryMode('courier');
     syncCustomAmountState();
     setComposerFlow('order', false);
