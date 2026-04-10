@@ -572,7 +572,6 @@ def client_last_order():
         'time_from': last_order.time_from or '',
         'time_to': last_order.time_to or '',
         'for_whom': last_order.for_whom or '',
-        'comment': last_order.comment or '',
         'preferences': last_order.preferences or '',
         'delivery_type': '',
         'delivery_day': '',

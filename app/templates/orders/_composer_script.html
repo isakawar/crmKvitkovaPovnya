@@ -422,8 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const forWhomSelect = addOrderForm.querySelector('[name="for_whom"]');
         if (data.for_whom) setSelectValueOrAdd(forWhomSelect, data.for_whom);
 
-        // Notes
-        if (commentInput) commentInput.value = data.comment || '';
+        // Notes (comment is intentionally excluded — user fills it fresh each time)
         if (preferencesInput) preferencesInput.value = data.preferences || '';
 
         // Subscription-specific: only when creating a subscription AND last order was a subscription
