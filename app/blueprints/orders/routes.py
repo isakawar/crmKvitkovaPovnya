@@ -530,10 +530,58 @@ def search_clients():
         return jsonify([])
     clients = Client.query.filter(Client.instagram.contains(query)).limit(10).all()
     return jsonify([{
+        'id': c.id,
         'instagram': c.instagram,
         'credits': c.credits or 0,
         'personal_discount': c.personal_discount or '',
     } for c in clients])
+
+
+@orders_bp.route('/orders/last-order', methods=['GET'])
+@login_required
+def client_last_order():
+    from sqlalchemy.orm import joinedload
+
+    client_id = request.args.get('client_id', type=int)
+    if not client_id:
+        return jsonify({'found': False})
+
+    last_order = (
+        Order.query
+        .filter_by(client_id=client_id)
+        .options(joinedload(Order.subscription))
+        .order_by(Order.created_at.desc())
+        .first()
+    )
+    if not last_order:
+        return jsonify({'found': False})
+
+    result = {
+        'found': True,
+        'is_subscription': last_order.subscription_id is not None,
+        'recipient_name': last_order.recipient_name or '',
+        'recipient_phone': last_order.recipient_phone or '',
+        'recipient_social': last_order.recipient_social or '',
+        'city': last_order.city or '',
+        'street': last_order.street or '',
+        'address_comment': last_order.address_comment or '',
+        'is_pickup': bool(last_order.is_pickup),
+        'delivery_method': last_order.delivery_method or 'courier',
+        'size': last_order.size or '',
+        'custom_amount': last_order.custom_amount or '',
+        'time_from': last_order.time_from or '',
+        'time_to': last_order.time_to or '',
+        'for_whom': last_order.for_whom or '',
+        'comment': last_order.comment or '',
+        'preferences': last_order.preferences or '',
+        'delivery_type': '',
+        'delivery_day': '',
+    }
+    if last_order.subscription:
+        result['delivery_type'] = last_order.subscription.type or ''
+        result['delivery_day'] = last_order.subscription.delivery_day or ''
+
+    return jsonify(result)
 
 
 @orders_bp.route('/route-generator', methods=['GET', 'POST'])

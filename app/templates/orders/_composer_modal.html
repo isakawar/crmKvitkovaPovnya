@@ -102,6 +102,33 @@
                         </div>
                       </div>
                     </div>
+
+                    <!-- Last order prefill banner -->
+                    <div id="last-order-banner" class="hidden mt-3 p-3 rounded-xl bg-sky-50 border border-sky-200">
+                      <!-- Loading state -->
+                      <div id="last-order-loading" class="flex items-center gap-2 text-sm text-sky-700">
+                        <div class="w-3.5 h-3.5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                        <span>Перевірка попередніх замовлень…</span>
+                      </div>
+                      <!-- Found state -->
+                      <div id="last-order-found" class="hidden flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 text-sm text-sky-800">
+                          <i class="bi bi-clock-history text-sky-500"></i>
+                          <span>Заповнити з останнього замовлення</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                          <button type="button" id="last-order-apply-btn"
+                                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-700 transition-colors">
+                            Застосувати
+                          </button>
+                          <button type="button" id="last-order-dismiss-btn"
+                                  class="flex items-center justify-center w-6 h-6 rounded-md text-sky-500 hover:bg-sky-100 transition-colors"
+                                  aria-label="Відхилити">
+                            <i class="bi bi-x text-sm"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </section>
 
                   <section class="order-subpanel">
