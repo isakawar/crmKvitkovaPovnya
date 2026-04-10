@@ -205,6 +205,9 @@
       </div>
 
       <div class="cert-detail-footer">
+        <button type="button" id="certDetailEditBtn" class="cert-detail-btn" style="display:none; margin-right:auto;">
+          <i class="bi bi-pencil me-1"></i>Редагувати
+        </button>
         <button type="button" data-bs-dismiss="modal" class="cert-detail-btn">Закрити</button>
       </div>
     </div>
@@ -218,6 +221,8 @@
     used: '<span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700"><i class="bi bi-check2-square"></i>Використаний</span>',
     expired: '<span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700"><i class="bi bi-exclamation-circle"></i>Прострочений</span>',
   };
+
+  let currentCertData = null;
 
   function showRow(element) {
     if (!element) return;
@@ -236,6 +241,7 @@
   }
 
   function resetDetailModal() {
+    currentCertData = null;
     setText('certDetailCode', '—');
     setText('certDetailTypeValue', '—');
     setText('certDetailExpires', '—');
@@ -246,6 +252,8 @@
     setText('certDetailComment', '—');
     const statusWrap = document.getElementById('certDetailStatusWrap');
     if (statusWrap) statusWrap.innerHTML = '';
+    const editBtn = document.getElementById('certDetailEditBtn');
+    if (editBtn) editBtn.style.display = 'none';
 
     hideRow(document.getElementById('certDetailUsedAtRow'));
     hideRow(document.getElementById('certDetailClientRow'));
@@ -267,6 +275,7 @@
         throw new Error('Помилка завантаження');
       }
       const d = await resp.json();
+      currentCertData = d;
 
       setText('certDetailCode', d.code);
       setText('certDetailTypeValue', `${d.type_display || '—'} · ${d.value_display || '—'}`);
@@ -277,6 +286,11 @@
       const statusWrap = document.getElementById('certDetailStatusWrap');
       if (statusWrap) {
         statusWrap.innerHTML = STATUS_HTML[d.status] || `<span class="text-sm text-stone-500">${d.status_display || ''}</span>`;
+      }
+
+      const editBtn = document.getElementById('certDetailEditBtn');
+      if (editBtn) {
+        editBtn.style.display = d.status === 'active' ? '' : 'none';
       }
 
       if (d.used_at) {
@@ -320,6 +334,22 @@
         openCertDetail(this.getAttribute('data-cert-detail'));
       });
     });
+
+    const editBtn = document.getElementById('certDetailEditBtn');
+    const modalEl = document.getElementById('certDetailModal');
+    if (editBtn && modalEl) {
+      editBtn.addEventListener('click', function () {
+        if (!currentCertData) return;
+        const certData = currentCertData;
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modalEl.addEventListener('hidden.bs.modal', function onHidden() {
+          if (typeof window.openCertEdit === 'function') {
+            window.openCertEdit(certData);
+          }
+        }, { once: true });
+        modal.hide();
+      });
+    }
   });
 })();
 </script>
