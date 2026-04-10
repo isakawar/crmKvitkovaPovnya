@@ -1,0 +1,8 @@
+# Exclude compiled/generated CSS from language stats
+app/static/css/main.css linguist-generated=true
+
+# Exclude Jinja2 HTML templates from language stats
+app/templates/**/*.html linguist-detectable=false
+
+# Exclude static JS vendor files if any
+app/static/js/*.min.js linguist-vendored=true
