@@ -586,69 +586,7 @@
   </div>
 </div>
 
-<!-- Draft edit modal -->
-<div class="modal fade" id="draftEditModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
-    <div class="modal-content border-0 rounded-[28px] overflow-hidden">
-      <div class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
-        <h5 class="text-base font-semibold text-stone-900">Редагувати чернетку</h5>
-        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 hover:bg-stone-100" data-bs-dismiss="modal">
-          <i class="bi bi-x-lg text-sm"></i>
-        </button>
-      </div>
-      <div class="bg-stone-50 px-6 py-5">
-        <form id="draft-edit-form" novalidate>
-          <input type="hidden" id="draft-edit-id" value="">
-          <div class="mb-4">
-            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата контакту</label>
-            <input
-              type="date"
-              id="draft-edit-contact-date"
-              name="contact_date"
-              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-              required
-            />
-          </div>
-          <div class="mb-4">
-            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата весілля</label>
-            <input
-              type="date"
-              id="draft-edit-wedding-date"
-              name="draft_wedding_date"
-              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            />
-          </div>
-          <div class="mb-4">
-            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Лінк на банку</label>
-            <input
-              type="url"
-              id="draft-edit-bank-link"
-              name="draft_bank_link"
-              placeholder="https://send.monobank.ua/..."
-              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            />
-          </div>
-          <div class="mb-5">
-            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Коментар</label>
-            <textarea
-              id="draft-edit-comment"
-              name="draft_comment"
-              rows="2"
-              placeholder="Деталі, побажання, нотатки..."
-              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-            ></textarea>
-          </div>
-          <button
-            type="submit"
-            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
-          >
-            Зберегти
-          </button>
-        </form>
-      </div>
-    </div>
-  </div>
-</div>
+{% include 'subscriptions/_draft_edit_modal.html' %}
 
 {% include 'orders/_composer_modal.html' %}
 {{ render_toast() }}
@@ -895,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const clients = await res.json();
       if (!clients.length) { draftClientResults.classList.add('hidden'); return; }
       draftClientResults.innerHTML = clients.map(c =>
-        `<button type="button" class="w-full px-4 py-2 text-sm text-left text-stone-800 hover:bg-stone-50">${escapeHtmlDraft(c.instagram)}</button>`
+        `<button type="button" class="w-full px-4 py-2 text-sm text-left text-stone-800 hover:bg-stone-50">${window.escapeHtmlDraft(c.instagram)}</button>`
       ).join('');
       draftClientResults.classList.remove('hidden');
       draftClientResults.querySelectorAll('button').forEach(btn => {
@@ -932,104 +870,9 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // ── Draft edit ───────────────────────────────────────────────────
-  const draftEditModalEl = document.getElementById('draftEditModal');
-  const draftEditModal = bootstrap.Modal.getOrCreateInstance(draftEditModalEl);
-  const draftEditForm = document.getElementById('draft-edit-form');
-
-  document.querySelectorAll('[data-draft-edit]').forEach(btn => {
-    btn.addEventListener('click', function () {
-      document.getElementById('draft-edit-id').value = this.dataset.draftEdit;
-      document.getElementById('draft-edit-contact-date').value = this.dataset.contactDate || '';
-      document.getElementById('draft-edit-wedding-date').value = this.dataset.draftWeddingDate || '';
-      document.getElementById('draft-edit-bank-link').value = this.dataset.draftBankLink || '';
-      document.getElementById('draft-edit-comment').value = this.dataset.draftComment || '';
-      draftEditModal.show();
-    });
-  });
-
-  draftEditForm?.addEventListener('submit', async function (e) {
-    e.preventDefault();
-    const id = document.getElementById('draft-edit-id').value;
-    const body = new FormData(this);
-    try {
-      const res = await fetch(`/subscriptions/${id}/draft/edit`, {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body,
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
-      draftEditModal.hide();
-      showToast('Чернетку оновлено', 'success');
-      setTimeout(() => location.reload(), 700);
-    } catch (err) {
-      showToast(err.message, 'error');
-    }
-  });
-
-  // ── Draft delete ─────────────────────────────────────────────────
-  document.querySelectorAll('[data-draft-delete]').forEach(btn => {
-    btn.addEventListener('click', async function () {
-      const id = this.dataset.draftDelete;
-      if (!confirm('Видалити чернетку?')) return;
-      try {
-        const res = await fetch(`/subscriptions/${id}/delete`, {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
-        showToast('Чернетку видалено', 'success');
-        setTimeout(() => location.reload(), 700);
-      } catch (err) {
-        showToast(err.message, 'error');
-      }
-    });
-  });
-
-  // ── Draft convert → open composer with client pre-filled ─────────
-  document.querySelectorAll('[data-draft-convert]').forEach(btn => {
-    btn.addEventListener('click', function () {
-      const instagram = this.dataset.clientInstagram || '';
-      window._convertingDraftId = this.dataset.draftConvert;
-      window.orderComposerApi?.openComposer('subscription', instagram);
-    });
-  });
-
-  // Clear draft ID when composer closes without saving
-  document.getElementById('addOrderModal')?.addEventListener('hidden.bs.modal', function () {
-    window._convertingDraftId = null;
-  });
-
-  // Auto-delete draft ONLY after successful subscription creation.
-  // We detect success by intercepting showToast — the composer calls
-  // showToast('...', 'success') right before reloading the page.
-  if (typeof showToast === 'function') {
-    const _origShowToast = showToast;
-    window.showToast = function (text, type) {
-      _origShowToast(text, type);
-      if (type === 'success' && window._convertingDraftId) {
-        const draftId = window._convertingDraftId;
-        window._convertingDraftId = null;
-        fetch(`/subscriptions/${draftId}/delete`, {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        }).catch(() => {});
-      }
-    };
-  }
-
-  function escapeHtmlDraft(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
 });
 </script>
+{% include 'subscriptions/_draft_actions_script.html' %}
 {% endblock %}
 
 {% macro update_query(page_num) %}

@@ -29,6 +29,7 @@ from app.services.subscription_service import (
     delete_subscription,
     create_subscription_from_import,
     create_draft_subscription,
+    get_draft_subscriptions,
 )
 
 
@@ -442,3 +443,16 @@ def test_create_draft_subscription_with_optional_fields(session):
     assert sub.draft_comment == 'Тестовий коментар'
     assert sub.draft_bank_link == 'https://example.com'
     assert sub.draft_wedding_date == datetime.date(2026, 6, 15)
+
+
+def test_get_draft_subscriptions_filters_due_contact_dates(session):
+    due_client = _make_client(session, 'draft_due')
+    future_client = _make_client(session, 'draft_future')
+    today = datetime.date.today()
+
+    due_sub = create_draft_subscription(due_client, today - datetime.timedelta(days=1))
+    create_draft_subscription(future_client, today + datetime.timedelta(days=2))
+
+    drafts = get_draft_subscriptions(contact_date_to=today)
+
+    assert [sub.id for sub in drafts] == [due_sub.id]

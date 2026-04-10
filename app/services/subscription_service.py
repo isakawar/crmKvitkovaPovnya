@@ -4,6 +4,7 @@ from app.models.subscription import Subscription
 import datetime
 import logging
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -556,14 +557,21 @@ def create_draft_subscription(client, contact_date, draft_comment=None, draft_ba
     return subscription
 
 
-def get_draft_subscriptions():
-    return (
+def get_draft_subscriptions(contact_date_to=None):
+    query = (
         Subscription.query
+        .options(joinedload(Subscription.client))
         .join(Client)
         .filter(Subscription.status == 'draft')
-        .order_by(Subscription.contact_date.asc())
-        .all()
     )
+
+    if contact_date_to is not None:
+        query = query.filter(
+            Subscription.contact_date.isnot(None),
+            Subscription.contact_date <= contact_date_to,
+        )
+
+    return query.order_by(Subscription.contact_date.asc(), Subscription.created_at.asc()).all()
 
 
 def update_draft_subscription(subscription, contact_date, draft_comment=None, draft_bank_link=None, draft_wedding_date=None):

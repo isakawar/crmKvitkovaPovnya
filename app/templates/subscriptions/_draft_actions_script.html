@@ -1,0 +1,96 @@
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (!window.escapeHtmlDraft) {
+    window.escapeHtmlDraft = function (value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+  }
+
+  const draftEditModalEl = document.getElementById('draftEditModal');
+  const draftEditModal = draftEditModalEl ? bootstrap.Modal.getOrCreateInstance(draftEditModalEl) : null;
+  const draftEditForm = document.getElementById('draft-edit-form');
+
+  document.querySelectorAll('[data-draft-edit]').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.getElementById('draft-edit-id').value = this.dataset.draftEdit;
+      document.getElementById('draft-edit-contact-date').value = this.dataset.contactDate || '';
+      document.getElementById('draft-edit-wedding-date').value = this.dataset.draftWeddingDate || '';
+      document.getElementById('draft-edit-bank-link').value = this.dataset.draftBankLink || '';
+      document.getElementById('draft-edit-comment').value = this.dataset.draftComment || '';
+      draftEditModal?.show();
+    });
+  });
+
+  draftEditForm?.addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const id = document.getElementById('draft-edit-id').value;
+    const body = new FormData(this);
+    try {
+      const res = await fetch(`/subscriptions/${id}/draft/edit`, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body,
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      draftEditModal?.hide();
+      showToast('Чернетку оновлено', 'success');
+      setTimeout(() => location.reload(), 700);
+    } catch (err) {
+      showToast(err.message || 'Помилка', 'error');
+    }
+  });
+
+  document.querySelectorAll('[data-draft-delete]').forEach(btn => {
+    btn.addEventListener('click', async function () {
+      const id = this.dataset.draftDelete;
+      if (!confirm('Видалити чернетку?')) return;
+      try {
+        const res = await fetch(`/subscriptions/${id}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+        showToast('Чернетку видалено', 'success');
+        setTimeout(() => location.reload(), 700);
+      } catch (err) {
+        showToast(err.message || 'Помилка', 'error');
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-draft-convert]').forEach(btn => {
+    btn.addEventListener('click', function () {
+      const instagram = this.dataset.clientInstagram || '';
+      window._convertingDraftId = this.dataset.draftConvert;
+      window.orderComposerApi?.openComposer('subscription', instagram);
+    });
+  });
+
+  document.getElementById('addOrderModal')?.addEventListener('hidden.bs.modal', function () {
+    window._convertingDraftId = null;
+  });
+
+  if (!window.__draftToastHookInstalled && typeof window.showToast === 'function') {
+    const originalShowToast = window.showToast;
+    window.showToast = function (text, type) {
+      originalShowToast(text, type);
+      if (type === 'success' && window._convertingDraftId) {
+        const draftId = window._convertingDraftId;
+        window._convertingDraftId = null;
+        fetch(`/subscriptions/${draftId}/delete`, {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        }).catch(() => {});
+      }
+    };
+    window.__draftToastHookInstalled = true;
+  }
+});
+</script>
