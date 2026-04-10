@@ -813,6 +813,9 @@ def route_generator_save():
         return jsonify({'error': 'Некоректна дата'}), 400
 
     routes = result.get('routes', [])
+    current_app.logger.info('SAVE_ROUTES: received %d routes: %s', len(routes), [
+        {'routeDbId': r.get('routeDbId'), 'stops_count': len(r.get('stops', []))} for r in routes
+    ])
     if not routes:
         return jsonify({'error': 'Немає маршрутів для збереження'}), 400
 
@@ -845,6 +848,18 @@ def route_generator_save():
     for route_data in routes:
         stops = route_data.get('stops', [])
         if not stops:
+            # If this was an existing DB route that is now empty, delete it
+            empty_route_db_id = route_data.get('routeDbId')
+            if empty_route_db_id:
+                dr_to_delete = DeliveryRoute.query.get(empty_route_db_id)
+                if dr_to_delete:
+                    old_delivery_ids = [s.delivery_id for s in dr_to_delete.stops]
+                    if old_delivery_ids:
+                        Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
+                            {'status': 'Очікує'}, synchronize_session=False
+                        )
+                    db.session.delete(dr_to_delete)
+                    db.session.flush()
             continue
 
         single_route_cache = json.dumps({
@@ -936,6 +951,23 @@ def route_generator_save():
                 delivery.status = 'Розподілено'
 
         saved_route_ids.append(dr.id)
+
+    # Clean up routes for this date that existed before but were not included in the save
+    # (handles the case where a courier's route became empty and the frontend omitted it entirely)
+    any_db_id = any(r.get('routeDbId') for r in routes)
+    if any_db_id and saved_route_ids:
+        stale_routes = DeliveryRoute.query.filter(
+            DeliveryRoute.route_date == selected_date,
+            ~DeliveryRoute.id.in_(saved_route_ids)
+        ).all()
+        for stale in stale_routes:
+            old_delivery_ids = [s.delivery_id for s in stale.stops]
+            if old_delivery_ids:
+                Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
+                    {'status': 'Очікує'}, synchronize_session=False
+                )
+            db.session.delete(stale)
+            current_app.logger.info('SAVE_ROUTES: deleted stale route id=%d (not in saved set)', stale.id)
 
     db.session.commit()
 
