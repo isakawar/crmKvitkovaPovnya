@@ -20,13 +20,12 @@
             <label>Телефон отримувача</label>
             <input type="text" class="form-control" name="recipient_phone" value="{{ order.recipient_phone }}" required>
           </div>
-          <div class="mb-3">
-            <label>Місто</label>
-            <select name="city" class="form-select" required>
-              {% for city in cities %}
-                <option value="{{ city.value }}" {% if order.city == city.value %}selected{% endif %}>{{ city.value }}</option>
-              {% endfor %}
-            </select>
+          <div class="mb-3" style="position: relative;">
+            <label>Населений пункт</label>
+            <input type="text" name="city" id="extend-city-input"
+                   class="form-control" placeholder="Введіть місто або село"
+                   value="{{ order.city or '' }}" required autocomplete="off">
+            <div id="extend-city-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
           </div>
           <div class="mb-3">
             <label>Адреса</label>
@@ -86,4 +85,13 @@
     </div>
   </div>
 </div>
+<script>
+(function () {
+  var inp = document.getElementById('extend-city-input');
+  var drp = document.getElementById('extend-city-dropdown');
+  if (inp && drp && typeof initCityAutocomplete === 'function') {
+    initCityAutocomplete(inp, drp);
+  }
+})();
+</script>
  

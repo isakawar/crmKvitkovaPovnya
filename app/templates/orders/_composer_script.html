@@ -26,6 +26,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const addressCommentInput = document.getElementById('address-comment-input');
     const citySelect = document.getElementById('order-city-select');
     const cityField = citySelect ? citySelect.closest('.order-field') : null;
+    const cityDropdown = document.getElementById('order-city-dropdown');
+    if (citySelect && cityDropdown && typeof initCityAutocomplete === 'function') {
+        initCityAutocomplete(citySelect, cityDropdown);
+    }
     const deliveryMethodInput = document.getElementById('delivery-method-input');
     const pickupInput = document.getElementById('is-pickup-input');
     const deliveryModeHint = document.getElementById('delivery-mode-hint');
@@ -403,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (recipientSocialInput) recipientSocialInput.value = data.recipient_social || '';
 
         // Address
-        if (data.city) setSelectValueOrAdd(citySelect, data.city);
+        if (data.city && citySelect) citySelect.value = data.city;
         if (addressInput) addressInput.value = data.street || '';
         if (addressCommentInput) addressCommentInput.value = data.address_comment || '';
 

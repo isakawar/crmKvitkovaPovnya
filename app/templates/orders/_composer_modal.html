@@ -210,21 +210,15 @@
                     <input type="hidden" name="is_pickup" id="is-pickup-input" value="">
                   </div>
 
-                  <div class="order-field">
+                  <div class="order-field" style="position: relative;">
                     <label class="order-label" for="order-city-select">
                       <i class="bi bi-geo-alt"></i>
-                      Місто <span class="text-red-500">*</span>
+                      Населений пункт <span class="text-red-500">*</span>
                     </label>
-                    <select name="city" id="order-city-select" class="order-select" required>
-                      <option value="">Оберіть місто</option>
-                      {% if cities and cities|length > 0 %}
-                          {% for city in cities %}
-                              <option value="{{ city.value }}">{{ city.value }}</option>
-                          {% endfor %}
-                      {% else %}
-                          <option disabled>Додайте міста у налаштуваннях</option>
-                      {% endif %}
-                    </select>
+                    <input type="text" name="city" id="order-city-select"
+                           class="order-input" placeholder="Введіть місто або село"
+                           required autocomplete="off">
+                    <div id="order-city-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
                   </div>
 
                   <div class="order-field" id="address-field">

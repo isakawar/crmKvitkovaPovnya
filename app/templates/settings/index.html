@@ -854,19 +854,6 @@
   </section>
 
   <section class="settings-grid" aria-label="Налаштування CRM">
-    <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#citiesModal">
-      <span class="settings-grid-card__icon"><i class="bi bi-geo-alt"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Довідник</p>
-        <h2 class="settings-grid-card__title">Міста</h2>
-        <p class="settings-grid-card__text">Список міст для маршрутизації, оформлення підписок і замовлень.</p>
-      </div>
-      <div class="settings-grid-card__meta">
-        <span>Оновити значення</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
-      </div>
-    </button>
-
     <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
       <span class="settings-grid-card__icon"><i class="bi bi-arrow-repeat"></i></span>
       <div>
@@ -1107,7 +1094,6 @@
 
 {{ render_toast() }}
 
-{{ settings_modal('citiesModal', 'Міста', 'Підтримуйте актуальний перелік міст, який використовують замовлення, підписки та маршрути.', '/settings/cities', 'Наприклад, Київ') }}
 {{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
 {{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
@@ -1342,7 +1328,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     [
-        {id: 'citiesModal', endpoint: '/settings/cities'},
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
         {id: 'sizesModal', endpoint: '/settings/sizes'},
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},

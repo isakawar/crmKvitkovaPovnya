@@ -45,24 +45,6 @@ def update_settings():
     
     return jsonify({'status': 'success'})
 
-@bp.route('/settings/cities', methods=['GET'])
-def get_cities():
-    cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
-    return jsonify([{'id': c.id, 'value': c.value} for c in cities])
-
-@bp.route('/settings/cities', methods=['POST'])
-def add_city():
-    data = request.get_json()
-    value = (data.get('value') or '').strip()
-    if not value:
-        return jsonify({'success': False, 'error': 'Назва міста не може бути порожньою'}), 400
-    if Settings.query.filter_by(type='city', value=value).first():
-        return jsonify({'success': False, 'error': 'Таке місто вже існує'}), 400
-    city = Settings(type='city', value=value)
-    db.session.add(city)
-    db.session.commit()
-    return jsonify({'success': True, 'city': {'id': city.id, 'value': city.value}})
-
 @bp.route('/settings/delivery_types', methods=['GET'])
 def get_delivery_types():
     items = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
