@@ -30,6 +30,7 @@ from app.services.route_optimizer_service import (
     submit_csv_job,
     get_job_status,
     routes_result_to_csv,
+    distribute_deliveries,
     RouteOptimizerError,
     RouteOptimizerInfeasibleError,
 )
@@ -103,6 +104,10 @@ def orders_list():
                 )
             except ValueError:
                 pass
+        else:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= date.today()
+            )
         if date_to:
             try:
                 deliveries_query = deliveries_query.filter(
@@ -173,7 +178,7 @@ def order_create():
     elif order_scenario == 'order':
         is_subscription = False
 
-    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
+    required_fields = ['recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
     if is_subscription:
         required_fields.extend(['delivery_type', 'delivery_day'])
     if not is_pickup:
@@ -184,6 +189,14 @@ def order_create():
         value = request.form.get(field)
         if not value or (isinstance(value, str) and value.strip() == ''):
             errors.append(field)
+
+    # Перевіряємо що вказано або client_id або client_instagram
+    has_client = (
+        (request.form.get('client_id', '').strip().isdigit()) or
+        bool(request.form.get('client_instagram', '').strip())
+    )
+    if not has_client:
+        errors.append('client_instagram')
 
     if errors:
         msg = 'Не всі обовʼязкові поля заповнені: ' + ', '.join(errors)
@@ -242,13 +255,23 @@ def order_create():
             flash(error_msg, 'danger')
             return redirect('/orders/new')
 
-    client_instagram = request.form['client_instagram']
-    client, error = get_or_create_client(client_instagram)
-    if error:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'error': error}), 400
-        flash(error, 'danger')
-        return redirect('/orders/new')
+    client_id_raw = request.form.get('client_id', '').strip()
+    if client_id_raw and client_id_raw.isdigit():
+        client = Client.query.get(int(client_id_raw))
+        if not client:
+            error_msg = 'Клієнта не знайдено'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+    else:
+        client_instagram = request.form['client_instagram']
+        client, error = get_or_create_client(client_instagram)
+        if error:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error}), 400
+            flash(error, 'danger')
+            return redirect('/orders/new')
 
     if is_subscription:
         entity = create_subscription(client, request.form)
@@ -524,15 +547,89 @@ def reschedule_subsequent_deliveries():
 @orders_bp.route('/clients/search', methods=['GET'])
 @login_required
 def search_clients():
+    from sqlalchemy import or_, func
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    clients = Client.query.filter(Client.instagram.contains(query)).limit(10).all()
+    like_q = f'%{query}%'
+    clients = Client.query.filter(
+        or_(
+            Client.instagram.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.phone.contains(query),
+            Client.name.ilike(like_q),
+        )
+    ).order_by(Client.id.desc()).limit(10).all()
+
+    def display_label(c):
+        parts = []
+        if c.instagram:
+            parts.append(c.instagram)
+        if c.telegram:
+            tg = c.telegram if c.telegram.startswith('@') else f'@{c.telegram}'
+            parts.append(tg)
+        if c.phone:
+            parts.append(c.phone)
+        if c.name:
+            parts.append(c.name)
+        return ' · '.join(parts) if parts else f'#{c.id}'
+
     return jsonify([{
-        'instagram': c.instagram,
+        'id': c.id,
+        'display': display_label(c),
+        'instagram': c.instagram or '',
+        'telegram': c.telegram or '',
+        'phone': c.phone or '',
+        'name': c.name or '',
         'credits': c.credits or 0,
         'personal_discount': c.personal_discount or '',
     } for c in clients])
+
+
+@orders_bp.route('/orders/last-order', methods=['GET'])
+@login_required
+def client_last_order():
+    from sqlalchemy.orm import joinedload
+
+    client_id = request.args.get('client_id', type=int)
+    if not client_id:
+        return jsonify({'found': False})
+
+    last_order = (
+        Order.query
+        .filter_by(client_id=client_id)
+        .options(joinedload(Order.subscription))
+        .order_by(Order.created_at.desc())
+        .first()
+    )
+    if not last_order:
+        return jsonify({'found': False})
+
+    result = {
+        'found': True,
+        'is_subscription': last_order.subscription_id is not None,
+        'recipient_name': last_order.recipient_name or '',
+        'recipient_phone': last_order.recipient_phone or '',
+        'recipient_social': last_order.recipient_social or '',
+        'city': last_order.city or '',
+        'street': last_order.street or '',
+        'address_comment': last_order.address_comment or '',
+        'is_pickup': bool(last_order.is_pickup),
+        'delivery_method': last_order.delivery_method or 'courier',
+        'size': last_order.size or '',
+        'custom_amount': last_order.custom_amount or '',
+        'time_from': last_order.time_from or '',
+        'time_to': last_order.time_to or '',
+        'for_whom': last_order.for_whom or '',
+        'preferences': last_order.preferences or '',
+        'delivery_type': '',
+        'delivery_day': '',
+    }
+    if last_order.subscription:
+        result['delivery_type'] = last_order.subscription.type or ''
+        result['delivery_day'] = last_order.subscription.delivery_day or ''
+
+    return jsonify(result)
 
 
 @orders_bp.route('/route-generator', methods=['GET', 'POST'])
@@ -812,6 +909,9 @@ def route_generator_save():
         return jsonify({'error': 'Некоректна дата'}), 400
 
     routes = result.get('routes', [])
+    current_app.logger.info('SAVE_ROUTES: received %d routes: %s', len(routes), [
+        {'routeDbId': r.get('routeDbId'), 'stops_count': len(r.get('stops', []))} for r in routes
+    ])
     if not routes:
         return jsonify({'error': 'Немає маршрутів для збереження'}), 400
 
@@ -844,6 +944,18 @@ def route_generator_save():
     for route_data in routes:
         stops = route_data.get('stops', [])
         if not stops:
+            # If this was an existing DB route that is now empty, delete it
+            empty_route_db_id = route_data.get('routeDbId')
+            if empty_route_db_id:
+                dr_to_delete = DeliveryRoute.query.get(empty_route_db_id)
+                if dr_to_delete:
+                    old_delivery_ids = [s.delivery_id for s in dr_to_delete.stops]
+                    if old_delivery_ids:
+                        Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
+                            {'status': 'Очікує'}, synchronize_session=False
+                        )
+                    db.session.delete(dr_to_delete)
+                    db.session.flush()
             continue
 
         single_route_cache = json.dumps({
@@ -936,6 +1048,23 @@ def route_generator_save():
 
         saved_route_ids.append(dr.id)
 
+    # Clean up routes for this date that existed before but were not included in the save
+    # (handles the case where a courier's route became empty and the frontend omitted it entirely)
+    any_db_id = any(r.get('routeDbId') for r in routes)
+    if any_db_id and saved_route_ids:
+        stale_routes = DeliveryRoute.query.filter(
+            DeliveryRoute.route_date == selected_date,
+            ~DeliveryRoute.id.in_(saved_route_ids)
+        ).all()
+        for stale in stale_routes:
+            old_delivery_ids = [s.delivery_id for s in stale.stops]
+            if old_delivery_ids:
+                Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
+                    {'status': 'Очікує'}, synchronize_session=False
+                )
+            db.session.delete(stale)
+            current_app.logger.info('SAVE_ROUTES: deleted stale route id=%d (not in saved set)', stale.id)
+
     db.session.commit()
 
     saved_routes_list = (
@@ -984,6 +1113,215 @@ def route_generator_export_csv():
     )
 
 
+@orders_bp.route('/route-generator/distribute', methods=['GET'])
+@login_required
+def route_generator_distribute_page():
+    date_str = request.args.get('date', date.today().isoformat())
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        selected_date = date.today()
+        date_str = selected_date.isoformat()
+
+    from app.models.delivery_route import DeliveryRoute
+    from app.models.courier import Courier
+
+    saved_routes = (
+        DeliveryRoute.query
+        .options(
+            joinedload(DeliveryRoute.stops).joinedload(RouteDelivery.delivery).joinedload(Delivery.order),
+            joinedload(DeliveryRoute.courier),
+        )
+        .filter(DeliveryRoute.route_date == selected_date)
+        .all()
+    )
+
+    already_routed = db.session.query(RouteDelivery.delivery_id).scalar_subquery()
+    unrouted = (
+        Delivery.query
+        .options(joinedload(Delivery.order), joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date == selected_date,
+            Delivery.is_pickup == False,
+            Delivery.delivery_method != 'nova_poshta',
+            Delivery.status.in_(['Очікує', 'Розподілено']),
+            ~Delivery.id.in_(already_routed),
+        )
+        .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
+        .all()
+    )
+
+    return render_template(
+        'routes/distribute.html',
+        saved_routes=saved_routes,
+        unrouted_deliveries=unrouted,
+        selected_date=selected_date,
+        date_str=date_str,
+    )
+
+
+@orders_bp.route('/route-generator/distribute', methods=['POST'])
+@login_required
+def route_generator_distribute():
+    data = request.get_json(silent=True) or {}
+    route_ids = [int(x) for x in data.get('route_ids', [])]
+    delivery_ids = [int(x) for x in data.get('delivery_ids', [])]
+
+    if not route_ids or not delivery_ids:
+        return jsonify({'error': 'Оберіть маршрути та доставки'}), 400
+
+    optimizer_url = current_app.config.get('ROUTE_OPTIMIZER_URL', 'http://localhost:8000')
+    try:
+        result = distribute_deliveries(route_ids, delivery_ids, optimizer_url)
+    except RouteOptimizerInfeasibleError as e:
+        return jsonify({'error': str(e)}), 422
+    except RouteOptimizerError as e:
+        return jsonify({'error': str(e)}), 502
+
+    # Restore routeDbId, courierName, and depot (optimizer may strip them)
+    from app.models.delivery_route import DeliveryRoute
+    route_map = {r.id: r for r in DeliveryRoute.query.filter(DeliveryRoute.id.in_(route_ids)).options(
+        joinedload(DeliveryRoute.courier)
+    ).all()}
+    for route_data in result.get('routes', []):
+        db_id = route_data.get('routeDbId')
+        if db_id and db_id in route_map:
+            dr = route_map[db_id]
+            route_data['routeDbId'] = db_id
+            if not route_data.get('courierName') and dr.courier:
+                route_data['courierName'] = dr.courier.name
+
+    # Inject depot from cached_result_json of existing routes (authoritative source)
+    if not result.get('depot'):
+        for dr in route_map.values():
+            if dr.cached_result_json:
+                try:
+                    cached = json.loads(dr.cached_result_json)
+                    if cached.get('depot'):
+                        result['depot'] = cached['depot']
+                        break
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+    return jsonify({'success': True, 'result': result})
+
+
+@orders_bp.route('/route-generator/distribute/apply', methods=['POST'])
+@login_required
+def route_generator_distribute_apply():
+    from app.models.delivery_route import DeliveryRoute
+
+    data = request.get_json(silent=True) or {}
+    result = data.get('result', {})
+    selected_date_str = data.get('selected_date', date.today().isoformat())
+
+    try:
+        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'Некоректна дата'}), 400
+
+    routes = result.get('routes', [])
+    applied_route_ids = []
+
+    for route_data in routes:
+        route_db_id = route_data.get('routeDbId')
+        stops = route_data.get('stops', [])
+
+        if route_db_id:
+            dr = DeliveryRoute.query.get(route_db_id)
+            if not dr:
+                continue
+            existing_stop_map = {s.delivery_id: s for s in dr.stops}
+
+            for i, stop in enumerate(stops, start=1):
+                delivery_id = stop.get('id')
+                if not delivery_id:
+                    continue
+                planned_arrival = None
+                if stop.get('eta'):
+                    try:
+                        planned_arrival = datetime.strptime(
+                            f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
+                        )
+                    except ValueError:
+                        pass
+
+                if delivery_id in existing_stop_map:
+                    rd = existing_stop_map[delivery_id]
+                    rd.stop_order = i
+                    rd.duration_from_previous_min = stop.get('driveMin')
+                    rd.planned_arrival = planned_arrival
+                else:
+                    rd = RouteDelivery(
+                        route_id=dr.id,
+                        delivery_id=delivery_id,
+                        stop_order=i,
+                        duration_from_previous_min=stop.get('driveMin'),
+                        planned_arrival=planned_arrival,
+                    )
+                    db.session.add(rd)
+                    delivery = Delivery.query.get(delivery_id)
+                    if delivery and delivery.status == 'Очікує':
+                        delivery.status = 'Розподілено'
+
+            dr.deliveries_count = len(stops)
+            dr.total_distance_km = route_data.get('totalDistanceKm')
+            dr.estimated_duration_min = route_data.get('totalDriveMin')
+            dep_str = (route_data.get('departureTime') or '').strip()
+            if dep_str:
+                try:
+                    dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
+                except ValueError:
+                    pass
+        else:
+            start_time_val = None
+            dep_str = (route_data.get('departureTime') or '').strip()
+            if dep_str:
+                try:
+                    start_time_val = datetime.strptime(dep_str, '%H:%M').time()
+                except ValueError:
+                    pass
+            dr = DeliveryRoute(
+                route_date=selected_date,
+                status='draft',
+                deliveries_count=len(stops),
+                total_distance_km=route_data.get('totalDistanceKm'),
+                estimated_duration_min=route_data.get('totalDriveMin'),
+                start_time=start_time_val,
+            )
+            db.session.add(dr)
+            db.session.flush()
+
+            for i, stop in enumerate(stops, start=1):
+                delivery_id = stop.get('id')
+                if not delivery_id:
+                    continue
+                planned_arrival = None
+                if stop.get('eta'):
+                    try:
+                        planned_arrival = datetime.strptime(
+                            f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
+                        )
+                    except ValueError:
+                        pass
+                rd = RouteDelivery(
+                    route_id=dr.id,
+                    delivery_id=delivery_id,
+                    stop_order=i,
+                    duration_from_previous_min=stop.get('driveMin'),
+                    planned_arrival=planned_arrival,
+                )
+                db.session.add(rd)
+                delivery = Delivery.query.get(delivery_id)
+                if delivery and delivery.status == 'Очікує':
+                    delivery.status = 'Розподілено'
+
+        applied_route_ids.append(dr.id)
+
+    db.session.commit()
+    return jsonify({'success': True, 'applied_count': len(applied_route_ids)})
+
+
 @orders_bp.route('/orders/<int:order_id>/extend-subscription', methods=['POST'])
 @login_required
 def extend_subscription(order_id):
@@ -1011,42 +1349,74 @@ def extend_subscription(order_id):
 @orders_bp.route('/orders/export/csv', methods=['GET'])
 @login_required
 def export_orders_csv():
-    orders = (
-        Order.query
-        .options(joinedload(Order.client))
-        .filter(Order.subscription_id.is_(None))
-        .order_by(Order.id.desc())
-        .all()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+
+    deliveries_query = (
+        Delivery.query
+        .options(
+            joinedload(Delivery.order).joinedload(Order.client),
+            joinedload(Delivery.courier),
+        )
+        .order_by(Delivery.delivery_date.asc(), Delivery.time_from.asc(), Delivery.id.asc())
     )
+
+    if date_from:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    deliveries = deliveries_query.all()
+
+    filename_suffix = ''
+    if date_from and date_to:
+        filename_suffix = f'_{date_from}_{date_to}'
+    elif date_from:
+        filename_suffix = f'_{date_from}'
 
     def generate():
         header = [
-            'ID', 'Instagram', 'Отримувач', 'Телефон', 'Місто', 'Адреса', 'Розмір', 'Сума',
-            'Дата доставки', 'Час з', 'Час до', 'Для кого', 'Коментар', 'Побажання', 'Створено'
+            'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
+            'Місто', 'Адреса', 'Коментар до адреси',
+            'Розмір', 'Дата доставки', 'Час з', 'Час до',
+            'Статус', 'Кур\'єр', 'Коментар', 'Побажання', 'Спосіб доставки'
         ]
-        yield ','.join(header) + '\n'
-        for o in orders:
+        yield ','.join('"' + h.replace('"', '""') + '"' for h in header) + '\n'
+        for d in deliveries:
+            o = d.order
+            c = (o.client if o else None)
             row = [
-                str(o.id),
-                o.client.instagram if o.client else '',
-                o.recipient_name or '',
-                o.recipient_phone or '',
-                o.city or '',
-                o.street or '',
-                o.size or '',
-                str(o.custom_amount) if o.custom_amount else '',
-                o.delivery_date.strftime('%Y-%m-%d') if o.delivery_date else '',
-                o.time_from or '',
-                o.time_to or '',
-                o.for_whom or '',
-                (o.comment or '').replace('\n', ' ').replace('\r', ' '),
-                (o.preferences or '').replace('\n', ' ').replace('\r', ' '),
-                o.created_at.strftime('%Y-%m-%d %H:%M:%S') if o.created_at else '',
+                str(d.id),
+                c.instagram if c else '',
+                o.recipient_name or '' if o else '',
+                d.phone or (o.recipient_phone if o else '') or '',
+                o.city or '' if o else '',
+                d.street or (o.street if o else '') or '',
+                d.address_comment or '',
+                d.size or (o.size if o else '') or '',
+                d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
+                d.time_from or '',
+                d.time_to or '',
+                d.status or '',
+                d.courier.name if d.courier else '',
+                (d.comment or '').replace('\n', ' ').replace('\r', ' '),
+                (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
+                d.delivery_method or '',
             ]
             yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
 
     return Response(generate(), mimetype='text/csv', headers={
-        'Content-Disposition': 'attachment; filename=orders_export.csv'
+        'Content-Disposition': f'attachment; filename=orders_export{filename_suffix}.csv'
     })
 
 

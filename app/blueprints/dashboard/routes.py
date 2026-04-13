@@ -9,6 +9,7 @@ from app.models import Delivery, Order, Client
 from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.models.delivery_route import DeliveryRoute
+from app.services.subscription_service import get_draft_subscriptions
 
 
 @dashboard_bp.route('/dashboard')
@@ -186,6 +187,8 @@ def dashboard_page():
             'is_renewal_reminder': True,
         })
 
+    draft_reminders = get_draft_subscriptions(contact_date_to=today)
+
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
@@ -214,6 +217,7 @@ def dashboard_page():
         routes_total=routes_total,
         routes_with_courier=routes_with_courier,
         routes_without_courier=routes_without_courier,
+        draft_reminders=draft_reminders,
         ended_subscriptions=ended_subscriptions,
         cities=cities,
         delivery_types=delivery_types,

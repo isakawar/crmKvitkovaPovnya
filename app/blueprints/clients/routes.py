@@ -41,27 +41,33 @@ def clients_list():
                          search_query=search_query,
                          sub_filter=sub_filter)
 
-@clients_bp.route('/clients/new', methods=['POST'])
-def client_create():
-    instagram = request.form.get('instagram', '').strip()
-    phone = request.form.get('phone', '').strip()
-    telegram = request.form.get('telegram', '').strip() or None
-    credits_raw = request.form.get('credits', 0)
+def _parse_client_form(form):
+    credits_raw = form.get('credits', 0)
     try:
         credits = int(credits_raw) if str(credits_raw).strip() else 0
     except ValueError:
         credits = 0
-    marketing_source = request.form.get('marketing_source', '').strip()
-    personal_discount = request.form.get('personal_discount', '').strip()
-    personal_discount = int(personal_discount) if personal_discount.isdigit() else None
-    client, error = create_client(
-        instagram=instagram,
-        phone=phone,
-        telegram=telegram,
-        credits=credits,
-        marketing_source=marketing_source,
-        personal_discount=personal_discount
-    )
+    personal_discount_raw = form.get('personal_discount', '').strip()
+    personal_discount = int(personal_discount_raw) if personal_discount_raw.isdigit() else None
+    return {
+        'instagram': form.get('instagram', '').strip() or None,
+        'telegram': form.get('telegram', '').strip() or None,
+        'phone': form.get('phone', '').strip() or None,
+        'name': form.get('name', '').strip() or None,
+        'phone_viber': form.get('phone_viber') == 'on',
+        'phone_telegram': form.get('phone_telegram') == 'on',
+        'phone_whatsapp': form.get('phone_whatsapp') == 'on',
+        'credits': credits,
+        'marketing_source': form.get('marketing_source', '').strip() or None,
+        'personal_discount': personal_discount,
+        'email': form.get('email', '').strip() or None,
+    }
+
+
+@clients_bp.route('/clients/new', methods=['POST'])
+def client_create():
+    kwargs = _parse_client_form(request.form)
+    client, error = create_client(**kwargs)
     if error:
         if isinstance(error, dict):
             payload = {'success': False}
@@ -75,37 +81,24 @@ def get_client(client_id):
     client = get_client_by_id(client_id)
     return jsonify({
         'id': client.id,
-        'instagram': client.instagram,
-        'phone': client.phone,
+        'name': client.name or '',
+        'instagram': client.instagram or '',
         'telegram': client.telegram or '',
+        'phone': client.phone or '',
+        'phone_viber': client.phone_viber,
+        'phone_telegram': client.phone_telegram,
+        'phone_whatsapp': client.phone_whatsapp,
         'credits': client.credits,
-        'marketing_source': client.marketing_source,
+        'marketing_source': client.marketing_source or '',
         'personal_discount': client.personal_discount or '',
+        'email': client.email or '',
         'created_at': client.created_at.strftime('%d.%m.%Y') if client.created_at else None,
     })
 
 @clients_bp.route('/clients/<int:client_id>', methods=['POST'])
 def client_update(client_id):
-    instagram = request.form.get('instagram', '').strip()
-    phone = request.form.get('phone', '').strip()
-    telegram = request.form.get('telegram', '').strip() or None
-    credits_raw = request.form.get('credits', 0)
-    try:
-        credits = int(credits_raw) if str(credits_raw).strip() else 0
-    except ValueError:
-        credits = 0
-    marketing_source = request.form.get('marketing_source', '').strip()
-    personal_discount = request.form.get('personal_discount', '').strip()
-    personal_discount = int(personal_discount) if personal_discount.isdigit() else None
-    client, error = update_client(
-        client_id=client_id,
-        instagram=instagram,
-        phone=phone,
-        telegram=telegram,
-        credits=credits,
-        marketing_source=marketing_source,
-        personal_discount=personal_discount
-    )
+    kwargs = _parse_client_form(request.form)
+    client, error = update_client(client_id=client_id, **kwargs)
     if error:
         if isinstance(error, dict):
             payload = {'success': False}

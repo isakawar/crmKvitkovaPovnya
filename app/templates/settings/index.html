@@ -854,19 +854,6 @@
   </section>
 
   <section class="settings-grid" aria-label="Налаштування CRM">
-    <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#citiesModal">
-      <span class="settings-grid-card__icon"><i class="bi bi-geo-alt"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Довідник</p>
-        <h2 class="settings-grid-card__title">Міста</h2>
-        <p class="settings-grid-card__text">Список міст для маршрутизації, оформлення підписок і замовлень.</p>
-      </div>
-      <div class="settings-grid-card__meta">
-        <span>Оновити значення</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
-      </div>
-    </button>
-
     <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
       <span class="settings-grid-card__icon"><i class="bi bi-arrow-repeat"></i></span>
       <div>
@@ -960,6 +947,38 @@
                 data-enabled="{{ 'true' if ai_agent_enabled else 'false' }}">
           <i class="bi bi-{{ 'toggle-on' if ai_agent_enabled else 'toggle-off' }}" style="font-size:1.1rem;"></i>
           {{ 'Вимкнути' if ai_agent_enabled else 'Увімкнути' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-grid-card" style="cursor:default;">
+      <span class="settings-grid-card__icon" id="distribute-banner-card-icon"
+            style="background:{{ '#fef3c7' if distribute_banner_enabled else '#f5f5f4' }}; color:{{ '#b45309' if distribute_banner_enabled else '#a8a29e' }};">
+        <i class="bi bi-shuffle"></i>
+      </span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Функції</p>
+        <h2 class="settings-grid-card__title">Розподіл по маршрутах</h2>
+        <p class="settings-grid-card__text">Банер на сторінці маршрутів із кнопкою автоматичного розподілу нових доставок в існуючі маршрути.</p>
+      </div>
+      <div class="settings-grid-card__meta" style="justify-content:space-between;">
+        <span id="distribute-banner-status-text" style="color:{{ '#047857' if distribute_banner_enabled else '#a8a29e' }}; font-weight:600;">
+          {{ 'Увімкнено' if distribute_banner_enabled else 'Вимкнено' }}
+        </span>
+        <button id="distribute-banner-toggle-btn"
+                onclick="toggleDistributeBanner()"
+                title="{{ 'Вимкнути банер розподілу' if distribute_banner_enabled else 'Увімкнути банер розподілу' }}"
+                style="
+                  display:inline-flex; align-items:center; gap:0.5rem;
+                  padding:0.5rem 1rem; border-radius:999px; font-size:0.85rem; font-weight:600;
+                  border:1px solid {{ '#d1fae5' if distribute_banner_enabled else '#e7e5e4' }};
+                  background:{{ '#ecfdf5' if distribute_banner_enabled else '#f5f5f4' }};
+                  color:{{ '#065f46' if distribute_banner_enabled else '#78716c' }};
+                  cursor:pointer; transition:0.16s ease;
+                "
+                data-enabled="{{ 'true' if distribute_banner_enabled else 'false' }}">
+          <i class="bi bi-{{ 'toggle-on' if distribute_banner_enabled else 'toggle-off' }}" style="font-size:1.1rem;"></i>
+          {{ 'Вимкнути' if distribute_banner_enabled else 'Увімкнути' }}
         </button>
       </div>
     </div>
@@ -1075,7 +1094,6 @@
 
 {{ render_toast() }}
 
-{{ settings_modal('citiesModal', 'Міста', 'Підтримуйте актуальний перелік міст, який використовують замовлення, підписки та маршрути.', '/settings/cities', 'Наприклад, Київ') }}
 {{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
 {{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
@@ -1102,7 +1120,7 @@
           </label>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Телефон *</span>
-            <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </label>
           <div class="settings-error" id="courierAddError" role="alert" hidden></div>
           <div class="settings-couriers__form-actions">
@@ -1137,7 +1155,7 @@
           </label>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Телефон *</span>
-            <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </label>
           <div class="settings-error" id="courierEditError" role="alert" hidden></div>
           <div class="settings-couriers__form-actions">
@@ -1197,7 +1215,7 @@ function renderSettingsPlaceholder(message) {
 function applyPhoneMask(input) {
     if (!input) return;
     input.addEventListener('focus', function() {
-        if (!this.value) this.value = '+38';
+        if (!this.value) this.value = '+380';
     });
     input.addEventListener('input', function() {
         let digits = this.value.replace(/\D/g, '');
@@ -1213,7 +1231,7 @@ function applyPhoneMask(input) {
         this.value = '+' + digits;
     });
     input.addEventListener('keydown', function(e) {
-        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 3) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 4) {
             e.preventDefault();
         }
     });
@@ -1310,7 +1328,6 @@ document.addEventListener('click', function(e) {
 
 document.addEventListener('DOMContentLoaded', function() {
     [
-        {id: 'citiesModal', endpoint: '/settings/cities'},
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
         {id: 'sizesModal', endpoint: '/settings/sizes'},
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},
@@ -1543,6 +1560,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+async function toggleDistributeBanner() {
+    const btn = document.getElementById('distribute-banner-toggle-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/settings/distribute-banner/toggle', { method: 'POST' });
+        const data = await resp.json();
+        if (!data.success) { showToast('Помилка збереження', 'error'); return; }
+        const enabled = data.enabled;
+        const statusText = document.getElementById('distribute-banner-status-text');
+        const icon = document.getElementById('distribute-banner-card-icon');
+        statusText.textContent = enabled ? 'Увімкнено' : 'Вимкнено';
+        statusText.style.color = enabled ? '#047857' : '#a8a29e';
+        icon.style.background = enabled ? '#fef3c7' : '#f5f5f4';
+        icon.style.color = enabled ? '#b45309' : '#a8a29e';
+        btn.innerHTML = `<i class="bi bi-toggle-${enabled ? 'on' : 'off'}" style="font-size:1.1rem;"></i> ${enabled ? 'Вимкнути' : 'Увімкнути'}`;
+        btn.title = enabled ? 'Вимкнути банер розподілу' : 'Увімкнути банер розподілу';
+        btn.style.borderColor = enabled ? '#d1fae5' : '#e7e5e4';
+        btn.style.background = enabled ? '#ecfdf5' : '#f5f5f4';
+        btn.style.color = enabled ? '#065f46' : '#78716c';
+        btn.dataset.enabled = enabled ? 'true' : 'false';
+        showToast(enabled ? 'Банер розподілу увімкнено' : 'Банер розподілу вимкнено', 'success');
+    } catch(e) {
+        showToast('Помилка мережі', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
 
 async function toggleAiAgent() {
     const btn = document.getElementById('ai-agent-toggle-btn');

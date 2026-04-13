@@ -4,6 +4,7 @@
       <form id="addOrderForm" novalidate autocomplete="off">
         <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <input type="hidden" name="extend_from_order_id" id="extend-from-order-id" value="">
+        <input type="hidden" name="client_id" id="order-client-id" value="">
         <div class="order-composer-shell">
           <div class="order-composer-header">
             <div class="space-y-3">
@@ -43,7 +44,16 @@
                 <div class="order-scenario-switch" role="tablist" aria-label="Сценарій оформлення">
                   <button type="button" class="order-scenario-option" data-composer-scenario="subscription">
                     <span class="order-scenario-option-title">Підписка</span>
-                    <span class="order-scenario-option-copy">4 доставки</span>
+                    <span class="order-scenario-option-copy" id="delivery-count-display" title="Клікни щоб змінити кількість доставок">4 доставки</span>
+                    <input type="number"
+                           id="delivery-count-input"
+                           name="delivery_count"
+                           value="4"
+                           min="1"
+                           max="52"
+                           class="hidden w-12 rounded border border-amber-400 bg-transparent px-1 py-0 text-center text-xs font-medium focus:outline-none"
+                           style="height:1.25rem">
+                    <span id="delivery-count-error" class="hidden text-red-400 text-xs leading-none">!</span>
                   </button>
                   <button type="button" class="order-scenario-option is-active" data-composer-scenario="order">
                     <span class="order-scenario-option-title">Разове замовлення</span>
@@ -79,12 +89,12 @@
 
                     <div class="order-field">
                       <label class="order-label" for="client-search">
-                        <i class="bi bi-instagram"></i>
-                        Instagram клієнта <span class="text-red-500">*</span>
+                        <i class="bi bi-person-circle"></i>
+                        Клієнт <span class="text-red-500">*</span>
                       </label>
                       <div class="order-input-wrap">
                         <i class="bi bi-search order-input-icon"></i>
-                        <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
+                        <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="Instagram, Telegram, телефон або ім'я" required autocomplete="off">
                         <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
                       </div>
                     </div>
@@ -99,6 +109,33 @@
                           <label class="order-label mb-1" for="client-discount-input"><i class="bi bi-percent"></i> Знижка (%)</label>
                           <input type="number" id="client-discount-input" name="discount" min="0" max="100"
                                  class="order-input" placeholder="0">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Last order prefill banner -->
+                    <div id="last-order-banner" class="hidden mt-3 p-3 rounded-xl bg-sky-50 border border-sky-200">
+                      <!-- Loading state -->
+                      <div id="last-order-loading" class="flex items-center gap-2 text-sm text-sky-700">
+                        <div class="w-3.5 h-3.5 border-2 border-sky-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                        <span>Перевірка попередніх замовлень…</span>
+                      </div>
+                      <!-- Found state -->
+                      <div id="last-order-found" class="hidden flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 text-sm text-sky-800">
+                          <i class="bi bi-clock-history text-sky-500"></i>
+                          <span>Заповнити з останнього замовлення</span>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                          <button type="button" id="last-order-apply-btn"
+                                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 text-white text-xs font-medium hover:bg-sky-700 transition-colors">
+                            Застосувати
+                          </button>
+                          <button type="button" id="last-order-dismiss-btn"
+                                  class="flex items-center justify-center w-6 h-6 rounded-md text-sky-500 hover:bg-sky-100 transition-colors"
+                                  aria-label="Відхилити">
+                            <i class="bi bi-x text-sm"></i>
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -129,7 +166,7 @@
                             Телефон отримувача <span class="text-red-500">*</span>
                           </label>
                           <div class="flex items-center gap-1.5">
-                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" maxlength="13">
+                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" value="+380" maxlength="13">
                             <button type="button" id="add-extra-phone-btn" title="Додати телефон"
                                     class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 hover:border-stone-300 transition-colors">
                               <i class="bi bi-plus text-base"></i>
@@ -182,21 +219,15 @@
                     <input type="hidden" name="is_pickup" id="is-pickup-input" value="">
                   </div>
 
-                  <div class="order-field">
+                  <div class="order-field" style="position: relative;">
                     <label class="order-label" for="order-city-select">
                       <i class="bi bi-geo-alt"></i>
-                      Місто <span class="text-red-500">*</span>
+                      Населений пункт <span class="text-red-500">*</span>
                     </label>
-                    <select name="city" id="order-city-select" class="order-select" required>
-                      <option value="">Оберіть місто</option>
-                      {% if cities and cities|length > 0 %}
-                          {% for city in cities %}
-                              <option value="{{ city.value }}">{{ city.value }}</option>
-                          {% endfor %}
-                      {% else %}
-                          <option disabled>Додайте міста у налаштуваннях</option>
-                      {% endif %}
-                    </select>
+                    <input type="text" name="city" id="order-city-select"
+                           class="order-input" placeholder="Введіть місто або село"
+                           required autocomplete="off">
+                    <div id="order-city-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
                   </div>
 
                   <div class="order-field" id="address-field">

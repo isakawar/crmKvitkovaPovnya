@@ -152,6 +152,8 @@ def certificate_detail(cert_id):
         'type': cert.type,
         'type_display': cert.type_display(),
         'value_display': cert.value_display(),
+        'value_amount': float(cert.value_amount) if cert.value_amount else None,
+        'value_size': cert.value_size,
         'status': cert.effective_status(),
         'status_display': cert.status_display(),
         'expires_at': cert.expires_at.strftime('%d.%m.%Y'),
@@ -161,6 +163,49 @@ def certificate_detail(cert_id):
         'used_at': cert.used_at.strftime('%d.%m.%Y %H:%M') if cert.used_at else None,
         'order': order_info,
     })
+
+
+@certificates_bp.route('/certificates/<int:cert_id>/update', methods=['POST'])
+@login_required
+def update_certificate(cert_id):
+    cert = Certificate.query.get_or_404(cert_id)
+
+    if cert.status == 'used':
+        return jsonify({'success': False, 'errors': ['Використаний сертифікат не можна редагувати']}), 400
+
+    data = request.get_json()
+    cert_type = data.get('type')
+    comment = data.get('comment', '').strip() or None
+
+    errors = []
+    if cert_type not in ('amount', 'size', 'subscription'):
+        errors.append('Невірний тип сертифіката')
+
+    value_amount = None
+    value_size = None
+
+    if cert_type == 'amount':
+        try:
+            value_amount = float(data.get('value_amount') or 0)
+            if value_amount <= 0:
+                errors.append('Сума повинна бути більше 0')
+        except (ValueError, TypeError):
+            errors.append('Невірна сума')
+    elif cert_type in ('size', 'subscription'):
+        value_size = data.get('value_size')
+        if not value_size:
+            errors.append('Розмір обов\'язковий')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    cert.type = cert_type
+    cert.value_amount = value_amount
+    cert.value_size = value_size
+    cert.comment = comment
+    db.session.commit()
+
+    return jsonify({'success': True})
 
 
 @certificates_bp.route('/certificates/validate', methods=['POST'])

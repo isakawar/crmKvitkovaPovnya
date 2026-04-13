@@ -193,17 +193,19 @@ def create_app(config_class=DevelopmentConfig):
         return dict(app_version=version)
 
     @app.context_processor
-    def inject_ai_agent_enabled():
+    def inject_feature_flags():
         if not current_user.is_authenticated:
-            return dict(ai_agent_enabled=False)
+            return dict(ai_agent_enabled=False, distribute_banner_enabled=False)
         try:
             from app.models.settings import Settings
-            disabled = Settings.query.filter_by(
-                type='feature_flag', value='ai_agent_disabled'
-            ).first()
-            return dict(ai_agent_enabled=disabled is None)
+            flags = Settings.query.filter_by(type='feature_flag').all()
+            flag_values = {f.value for f in flags}
+            return dict(
+                ai_agent_enabled='ai_agent_disabled' not in flag_values,
+                distribute_banner_enabled='distribute_banner_disabled' not in flag_values,
+            )
         except Exception:
-            return dict(ai_agent_enabled=True)
+            return dict(ai_agent_enabled=True, distribute_banner_enabled=True)
 
     @app.route('/changelog')
     def changelog():

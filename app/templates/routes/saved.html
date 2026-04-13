@@ -2,10 +2,28 @@
 
 {% block head %}
 {{ super() }}
+<script>
+(function(){
+  var STORAGE_KEY='crm_routes_date';
+  var p=new URLSearchParams(window.location.search);
+  if(!p.has('date')){
+    try{
+      var d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      var today=new Date();
+      var t=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      if(d&&d.day===t&&d.value){
+        p.set('date',d.value);
+        window.location.replace(window.location.pathname+'?'+p.toString());
+      }
+    }catch(e){}
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .flatpickr-day.selected { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.selected:hover { background: #44403c; border-color: #44403c; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   .routes-shell {
     display: flex;
@@ -556,7 +574,7 @@
           <input type="hidden" name="date" id="route-date-value" value="{{ date_filter }}">
         </form>
         {% if date_filter and date_filter != today_iso %}
-        <a href="{{ url_for('routes.saved_routes') }}"
+        <a href="{{ url_for('routes.saved_routes') }}?date={{ today_iso }}"
            class="routes-hero-btn routes-hero-btn-secondary">
           <i class="bi bi-calendar-check"></i>
           Сьогодні
@@ -618,6 +636,66 @@
       </div>
     {% endif %}
   {% endwith %}
+
+  {# Distribute banner — shown when there are routes + deliveries with time windows #}
+  {% set distributable_ids = [] %}
+  {% for d in unrouted_deliveries %}
+    {% if d.time_from or d.time_to %}{% set _ = distributable_ids.append(d.id) %}{% endif %}
+  {% endfor %}
+  {% if routes and distributable_ids and distribute_banner_enabled %}
+  <div id="distribute-banner"
+       class="flex items-center justify-between gap-4 flex-wrap rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+        <i class="bi bi-lightning-charge-fill text-base"></i>
+      </span>
+      <div>
+        <p class="text-sm font-semibold text-amber-900">
+          {{ distributable_ids | length }} доставок з часовими вікнами ще не розподілені
+        </p>
+        <p class="text-xs text-amber-700 mt-0.5">Оптимізатор підбере найкращу позицію в існуючих маршрутах</p>
+      </div>
+    </div>
+    <button id="btn-distribute-banner" onclick="runDistribute()"
+            class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 transition-colors flex-shrink-0">
+      <i class="bi bi-shuffle"></i> Розподілити
+    </button>
+  </div>
+  <script>
+  const _DIST_ROUTE_IDS = {{ routes | map(attribute='id') | list | tojson }};
+  const _DIST_DELIVERY_IDS = {{ distributable_ids | tojson }};
+  const _DIST_DATE = {{ date_filter | tojson }};
+
+  async function runDistribute() {
+    const btn = document.getElementById('btn-distribute-banner');
+    btn.disabled = true;
+    btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin .75s linear infinite;vertical-align:middle;"></span> Розраховую...';
+
+    try {
+      const resp = await fetch('/route-generator/distribute', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+        body: JSON.stringify({route_ids: _DIST_ROUTE_IDS, delivery_ids: _DIST_DELIVERY_IDS}),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) {
+        alert(data.error || 'Помилка при розрахунку');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+        return;
+      }
+      localStorage.setItem('distribute_result', JSON.stringify(data.result));
+      localStorage.setItem('distribute_new_ids', JSON.stringify(_DIST_DELIVERY_IDS));
+      localStorage.setItem('distribute_date', _DIST_DATE);
+      window.location.href = '/route-generator?delivery_date=' + _DIST_DATE;
+    } catch(e) {
+      alert('Помилка з\'єднання з сервером');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-shuffle"></i> Розподілити';
+    }
+  }
+  </script>
+  {% endif %}
 
   {% if not routes %}
   <section class="route-ops-card flex flex-col items-center justify-center py-20 text-center">
@@ -748,7 +826,7 @@
               {% set client = d.client if d else none %}
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
-                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
                 <td class="whitespace-nowrap">{{ d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
@@ -826,7 +904,7 @@
             {% for d in unrouted_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp2 = d.phone or (order.recipient_phone if order else '') %}{% set _re2 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp2] + _re2) | select | join(' / ') or '—' }}</td>
@@ -867,7 +945,7 @@
             {% for d in nova_poshta_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
@@ -905,7 +983,7 @@
             {% for d in pickup_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
@@ -998,22 +1076,55 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
-flatpickr('#route-date-picker', {
-  locale: 'uk',
-  dateFormat: 'Y-m-d',
-  defaultDate: '{{ date_filter }}' || null,
-  disableMobile: true,
-  onReady(dates, _, fp) {
-    if (dates[0]) fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
-  },
-  onChange(dates, _, fp) {
-    if (dates[0]) {
-      document.getElementById('route-date-value').value = fp.formatDate(dates[0], 'Y-m-d');
-      fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
-      fp.element.closest('form').submit();
-    }
-  },
-});
+(function () {
+  var STORAGE_KEY = 'crm_routes_date';
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function getStored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (data.day !== todayIso()) { localStorage.removeItem(STORAGE_KEY); return null; }
+      return data;
+    } catch (e) { localStorage.removeItem(STORAGE_KEY); return null; }
+  }
+
+  function saveDate(dateStr) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ value: dateStr, day: todayIso() }));
+  }
+
+  // Persist date from URL (redirect already handled in <head>)
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('date')) {
+    saveDate(urlParams.get('date'));
+  }
+
+  flatpickr('#route-date-picker', {
+    locale: 'uk',
+    dateFormat: 'Y-m-d',
+    defaultDate: '{{ date_filter }}' || null,
+    disableMobile: true,
+    onReady(dates, _, fp) {
+      if (dates[0]) fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+    },
+    onChange(dates, _, fp) {
+      if (dates[0]) {
+        var dateStr = fp.formatDate(dates[0], 'Y-m-d');
+        document.getElementById('route-date-value').value = dateStr;
+        fp.element.value = fp.formatDate(dates[0], 'd.m.Y');
+        saveDate(dateStr);
+        fp.element.closest('form').submit();
+      }
+    },
+  });
+})();
 </script>
 <script>
 document.querySelectorAll('.routes-board-header').forEach(function(header) {

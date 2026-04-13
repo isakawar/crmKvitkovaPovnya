@@ -3,6 +3,23 @@
 
 {% block head %}
 {{ super() }}
+<script>
+(function(){
+  var STORAGE_KEY='crm_orders_date';
+  var p=new URLSearchParams(window.location.search);
+  if(!p.has('date_from')&&!p.has('date_to')){
+    try{
+      var d=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
+      var today=new Date();
+      var t=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+      if(d&&d.day===t&&d.date_from){
+        p.set('date_from',d.date_from);p.set('date_to',d.date_to||d.date_from);
+        window.location.replace(window.location.pathname+'?'+p.toString());
+      }
+    }catch(e){}
+  }
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <style>
   .flatpickr-input { cursor: pointer; }
@@ -210,10 +227,10 @@
         <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
           Всього: {{ orders_count }}
         </div>
-        <a href="/orders/export/csv"
+        <a href="{{ url_for('orders.export_orders_csv', date_from=date_from_filter or '', date_to=date_to_filter or '') }}"
            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
           <i class="bi bi-download"></i>
-          Експорт CSV
+          Експорт CSV{% if date_from_filter %} ({{ date_from_filter }}{% if date_to_filter and date_to_filter != date_from_filter %} — {{ date_to_filter }}{% endif %}){% endif %}
         </a>
         <button
           type="button"
@@ -434,7 +451,7 @@
 
             {% for delivery in items %}
             {% set order = delivery.order %}
-            {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% else %}{% set time_slot = delivery.time_from or 'Без часу' %}{% endif %}
+            {% if delivery.time_from == '∞' %}{% set time_slot = '∞' %}{% elif delivery.time_from and delivery.time_to %}{% set time_slot = delivery.time_from ~ ' - ' ~ delivery.time_to %}{% elif delivery.time_from %}{% set time_slot = 'з ' ~ delivery.time_from %}{% elif delivery.time_to %}{% set time_slot = 'до ' ~ delivery.time_to %}{% else %}{% set time_slot = 'Без часу' %}{% endif %}
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
@@ -491,16 +508,26 @@
                     Погоджено час
                   </span>
                   {% endif %}
-                  <p class="text-sm leading-6 text-stone-700">
-                    {% if delivery.is_pickup %}
-                    {% elif delivery.street %}
-                      {{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
-                    {% elif order and order.street %}
-                      {{ order.street }}
-                    {% else %}
-                      Адресу не вказано
-                    {% endif %}
-                  </p>
+                  {% set addr_street = '' %}
+                  {% if delivery.street %}
+                    {% set addr_street = delivery.street ~ (', ' ~ delivery.building_number if delivery.building_number else '') %}
+                  {% elif order and order.street %}
+                    {% set addr_street = order.street %}
+                  {% endif %}
+                  {% if delivery.is_pickup %}
+                  <p class="text-sm leading-6 text-stone-700"></p>
+                  {% elif addr_street %}
+                  <button type="button"
+                          class="copy-handle-btn group flex items-center gap-1.5 text-left"
+                          data-handle="{{ addr_street }}"
+                          title="Скопіювати {{ addr_street }}">
+                    <i class="bi bi-geo-alt text-xs text-stone-400 group-hover:text-amber-500 transition-colors"></i>
+                    <span class="text-sm text-stone-700 group-hover:text-stone-900 transition-colors">{{ addr_street }}</span>
+                    <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
+                  </button>
+                  {% else %}
+                  <p class="text-sm leading-6 text-stone-400">Адресу не вказано</p>
+                  {% endif %}
                   {% set addr_comment = delivery.address_comment or (order.address_comment if order else '') %}
                   {% if addr_comment %}
                   <p class="text-xs text-stone-400">{{ addr_comment }}</p>
@@ -511,7 +538,23 @@
               <td class="px-4 py-4">
                 {% set primary = delivery.phone or order.recipient_phone or '' %}
                 {% set all_phones = ([primary] + (order.additional_phones | map(attribute='phone') | list)) if order else [primary] %}
-                <p class="text-sm font-medium text-stone-700">{{ all_phones | select | join(' / ') or 'Телефон не вказано' }}</p>
+                {% set phones_list = all_phones | select | list %}
+                {% if phones_list %}
+                  <div class="flex flex-col gap-0.5">
+                    {% for phone in phones_list %}
+                      <button type="button"
+                              class="copy-handle-btn group flex items-center gap-1.5 text-left"
+                              data-handle="{{ phone }}"
+                              title="Скопіювати {{ phone }}">
+                        <i class="bi bi-telephone text-xs text-stone-400 group-hover:text-emerald-500 transition-colors"></i>
+                        <span class="text-sm font-medium text-stone-700 group-hover:text-stone-900 transition-colors">{{ phone }}</span>
+                        <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-sm text-stone-400">Телефон не вказано</p>
+                {% endif %}
               </td>
 
               <td class="px-4 py-4">
@@ -738,6 +781,7 @@
 
 {% block scripts %}
 {{ toast_script() }}
+<script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
 {% include 'orders/_composer_script.html' %}
 <script>
 (function () {
@@ -773,6 +817,41 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script>
 (function () {
+  var STORAGE_KEY = 'crm_orders_date';
+
+  function todayIso() {
+    var d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function getStored() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var data = JSON.parse(raw);
+      if (data.day !== todayIso()) { localStorage.removeItem(STORAGE_KEY); return null; }
+      return data;
+    } catch (e) { localStorage.removeItem(STORAGE_KEY); return null; }
+  }
+
+  function saveDates(dateFrom, dateTo) {
+    if (dateFrom) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ date_from: dateFrom, date_to: dateTo || dateFrom, day: todayIso() }));
+    }
+  }
+
+  function clearStored() {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // Persist date from URL (redirect already handled in <head>)
+  var urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('date_from') || urlParams.has('date_to')) {
+    saveDates(urlParams.get('date_from'), urlParams.get('date_to'));
+  }
+
   const dateFromEl = document.getElementById('date_from');
   const dateToEl   = document.getElementById('date_to');
   const form       = document.getElementById('orders-filter-form');
@@ -803,14 +882,17 @@
         dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
         dateToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
         instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+        saveDates(dateFromEl.value, dateToEl.value);
       } else if (dates.length === 2) {
         dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
         dateToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
         instance.element.value =
           instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+        saveDates(dateFromEl.value, dateToEl.value);
       } else {
         dateFromEl.value = '';
         dateToEl.value   = '';
+        clearStored();
       }
     },
   });
@@ -820,6 +902,7 @@
       fp.clear();
       dateFromEl.value = '';
       dateToEl.value   = '';
+      clearStored();
       const params = new URLSearchParams(window.location.search);
       ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
       window.location.href = window.location.pathname + (params.toString() ? '?' + params.toString() : '');

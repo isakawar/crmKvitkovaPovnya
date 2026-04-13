@@ -16,7 +16,68 @@
   }
 
   .client-modal-header {
-    @apply flex items-start justify-between gap-4 border-b border-stone-200 bg-white px-5 py-5 sm:px-6 lg:px-8;
+    @apply flex items-start justify-between gap-4 border-b border-stone-200 px-5 py-5 sm:px-6 lg:px-8;
+  }
+
+  .client-modal-head-grid {
+    @apply grid flex-1 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(280px,0.85fr)];
+  }
+
+  .client-modal-head-copy {
+    @apply flex flex-col gap-4;
+  }
+
+  .client-head-tags {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .client-head-tag {
+    @apply inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-600 backdrop-blur;
+  }
+
+  .client-head-tag-strong {
+    @apply border-amber-200 bg-amber-50 text-amber-700;
+  }
+
+  .client-preview-card {
+    @apply relative overflow-hidden rounded-[26px] border border-stone-200 p-4 shadow-sm;
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(250, 250, 249, 0.96) 50%, rgba(255, 251, 235, 0.96) 100%);
+  }
+
+  .client-preview-top {
+    @apply flex items-start gap-3;
+  }
+
+  .client-preview-avatar {
+    @apply flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-[18px] bg-stone-900 text-lg font-semibold text-white shadow-sm;
+  }
+
+  .client-preview-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700;
+  }
+
+  .client-preview-title {
+    @apply mt-1 truncate text-lg font-semibold text-stone-900;
+  }
+
+  .client-preview-subtitle {
+    @apply mt-1 text-xs leading-5 text-stone-500;
+  }
+
+  .client-preview-metrics {
+    @apply mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3;
+  }
+
+  .client-preview-metric {
+    @apply rounded-2xl border border-white/80 bg-white/80 px-3 py-3 backdrop-blur;
+  }
+
+  .client-preview-metric-label {
+    @apply text-[11px] font-medium uppercase tracking-[0.12em] text-stone-400;
+  }
+
+  .client-preview-metric-value {
+    @apply mt-1 block text-sm font-semibold text-stone-900;
   }
 
   .client-modal-body {
@@ -63,6 +124,18 @@
     @apply flex items-center gap-2 text-sm font-medium text-stone-700;
   }
 
+  .client-platform-btn {
+    @apply inline-flex flex-shrink-0 items-center gap-2 rounded-2xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-600 shadow-sm transition-colors duration-200 hover:border-stone-300 hover:bg-stone-50 hover:text-stone-900;
+  }
+
+  .client-nick-platform-btn {
+    @apply absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-lg border-0 bg-transparent p-0 text-base text-stone-400 transition-colors duration-150 hover:bg-stone-100 hover:text-stone-700 cursor-pointer;
+  }
+
+  .client-ghost-icon-btn {
+    @apply inline-flex h-[50px] w-10 flex-shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-white text-stone-400 transition-colors duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-500;
+  }
+
   .client-input-wrap {
     @apply relative;
   }
@@ -98,6 +171,30 @@
 
   .client-two-col {
     @apply grid gap-4 sm:grid-cols-2;
+  }
+
+  .client-toggle-grid {
+    @apply grid gap-2 sm:grid-cols-3;
+  }
+
+  .client-toggle {
+    @apply block;
+  }
+
+  .client-toggle-input {
+    @apply sr-only;
+  }
+
+  .client-toggle-card {
+    @apply flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 text-xs font-medium text-stone-600 shadow-sm transition-all duration-200 hover:border-stone-300 hover:bg-stone-50;
+  }
+
+  .client-toggle-input:focus-visible + .client-toggle-card {
+    @apply ring-2 ring-amber-300 ring-offset-2 ring-offset-stone-50;
+  }
+
+  .client-toggle-input:checked + .client-toggle-card {
+    @apply border-amber-300 bg-amber-50 text-amber-800 shadow-none;
   }
 
   .client-hint {
@@ -137,6 +234,46 @@
     @apply max-w-xl text-xs leading-5 text-stone-500;
   }
 
+  .client-inline-note {
+    @apply flex items-start gap-3 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900;
+  }
+
+  .client-inline-note-icon {
+    @apply inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-700;
+  }
+
+  .client-inline-note-copy {
+    @apply text-xs leading-5 text-amber-900;
+  }
+
+  .client-aside-card {
+    @apply rounded-[24px] border border-stone-200 bg-stone-50/80 p-4;
+  }
+
+  .client-aside-head {
+    @apply space-y-3;
+  }
+
+  .client-aside-copy {
+    @apply text-xs leading-5 text-stone-500;
+  }
+
+  .client-aside-list {
+    @apply mt-4 space-y-2.5;
+  }
+
+  .client-aside-item {
+    @apply flex items-start gap-2 rounded-2xl border border-white/80 bg-white px-3 py-3 text-xs leading-5 text-stone-600 shadow-sm;
+  }
+
+  .client-aside-item i {
+    @apply pt-0.5 text-amber-600;
+  }
+
+  .client-add-nick-btn {
+    @apply inline-flex items-center gap-2 rounded-full border border-dashed border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-500 transition-colors duration-200 hover:border-amber-300 hover:text-amber-800;
+  }
+
   .client-btn-secondary {
     @apply inline-flex min-w-[140px] items-center justify-center rounded-2xl border border-stone-200 bg-white px-5 py-3 text-sm font-medium text-stone-700 transition-colors duration-200 hover:bg-stone-50 hover:text-stone-900;
   }
@@ -151,6 +288,14 @@
 
   .client-modal-close {
     @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50 text-stone-500 transition-colors duration-200 hover:bg-stone-100 hover:text-stone-700;
+  }
+
+  .client-btn-danger {
+    @apply inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-500 transition-colors duration-200 hover:border-red-300 hover:bg-red-50;
+  }
+
+  .client-btn-danger-icon {
+    @apply inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-red-200 bg-white text-red-500 transition-colors duration-200 hover:border-red-300 hover:bg-red-50;
   }
 
   .order-composer-dialog {
@@ -382,6 +527,21 @@
   pointer-events: none;
 }
 
+.client-modal-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto -72px -72px auto;
+  height: 220px;
+  width: 220px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(120, 113, 108, 0.12) 0%, rgba(120, 113, 108, 0) 68%);
+  pointer-events: none;
+}
+
+.client-modal-header {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 250, 241, 0.92) 100%);
+}
+
 .order-composer-shell::before {
   content: "";
   position: absolute;
@@ -462,4 +622,46 @@
   .client-modal-dialog {
     margin: 0.75rem auto;
   }
+}
+
+/* ── City / Location Autocomplete ─────────────────────────────────────────── */
+.city-autocomplete-dropdown {
+  @apply absolute left-0 right-0 bg-white border border-stone-200 rounded-xl shadow-xl overflow-y-auto;
+  top: calc(100% + 4px);
+  z-index: 9999;
+  max-height: 280px;
+}
+
+.city-autocomplete-item {
+  @apply flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer transition-colors;
+}
+
+.city-autocomplete-item:hover,
+.city-autocomplete-item--active {
+  @apply bg-amber-50;
+}
+
+.city-item-name {
+  @apply text-sm font-medium text-stone-800 leading-tight;
+}
+
+.city-item-meta {
+  @apply flex items-center gap-1.5 flex-shrink-0;
+}
+
+.city-item-region {
+  @apply text-xs text-stone-400;
+}
+
+.city-item-type {
+  @apply text-xs px-1.5 py-0.5 rounded font-medium leading-none;
+}
+
+.city-item-type--місто   { @apply bg-amber-100 text-amber-700; }
+.city-item-type--смт     { @apply bg-green-100 text-green-700; }
+.city-item-type--селище  { @apply bg-blue-100 text-blue-700; }
+.city-item-type--село    { @apply bg-stone-100 text-stone-600; }
+
+.city-autocomplete-empty {
+  @apply px-3 py-3 text-sm text-stone-400 italic text-center;
 }

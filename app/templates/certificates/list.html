@@ -83,13 +83,12 @@
           <th class="w-[130px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Статус</th>
           <th class="w-[110px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Привʼязка</th>
           <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Коментар</th>
-          <th class="w-[110px] px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Дії</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-stone-100">
         {% for cert in certificates %}
         {% set eff_status = cert.effective_status() %}
-        <tr class="transition-colors hover:bg-stone-50/70">
+        <tr class="cursor-pointer transition-colors hover:bg-stone-50/70" data-cert-detail="{{ cert.id }}">
           <td class="px-4 py-3 font-mono font-semibold tracking-wider text-stone-900">{{ cert.code }}</td>
           <td class="px-4 py-3 text-stone-700">{{ cert.type_display() }}</td>
           <td class="px-4 py-3 text-stone-700">{{ cert.value_display() }}</td>
@@ -116,7 +115,8 @@
             {% if cert.order_id %}
             {% set is_sub = cert.order and cert.order.subscription_id %}
             <a href="{{ url_for('subscriptions.subscriptions_list') if is_sub else url_for('orders.orders_list') }}?open={{ cert.order_id }}"
-               class="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900">
+               class="text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+               onclick="event.stopPropagation()">
               #{{ cert.order_id }}
             </a>
             {% else %}
@@ -125,12 +125,6 @@
           </td>
           <td class="px-4 py-3 text-xs text-stone-500">
             <div class="max-w-full truncate">{{ cert.comment or '—' }}</div>
-          </td>
-          <td class="px-4 py-3 text-right">
-            <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-50" data-cert-detail="{{ cert.id }}">
-              <i class="bi bi-eye"></i>
-              Деталі
-            </button>
           </td>
         </tr>
         {% endfor %}
@@ -167,7 +161,9 @@ document.addEventListener('DOMContentLoaded', function() {
   const regenCodeBtn = document.getElementById('regenCodeBtn');
   const createBtn = document.getElementById('createCertBtn');
   const createBtnLabel = createBtn ? createBtn.querySelector('span') : null;
+  const createBtnIcon = createBtn ? createBtn.querySelector('i') : null;
   const errorsEl = document.getElementById('certErrors');
+  const modalTitle = modalEl ? modalEl.querySelector('.cert-modal-title') : null;
 
   if (!openBtn || !modalEl || !form || !certType || !createBtn || !errorsEl) {
     return;
@@ -180,10 +176,12 @@ document.addEventListener('DOMContentLoaded', function() {
     subscription: 'Сертифікат на підписку обраного розміру.',
   };
 
+  let editCertId = null;
+
   function setSubmitLoading(isLoading) {
     createBtn.disabled = isLoading;
     if (createBtnLabel) {
-      createBtnLabel.textContent = isLoading ? 'Збереження...' : 'Створити';
+      createBtnLabel.textContent = isLoading ? 'Збереження...' : (editCertId ? 'Зберегти зміни' : 'Зберегти');
     }
   }
 
@@ -233,16 +231,67 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  function setEditMode(certData) {
+    editCertId = certData.id;
+    if (modalTitle) modalTitle.textContent = 'Редагувати сертифікат';
+    if (createBtnLabel) createBtnLabel.textContent = 'Зберегти зміни';
+    if (createBtnIcon) createBtnIcon.className = 'bi bi-check-circle';
+
+    certCode.value = certData.code;
+    certCode.readOnly = true;
+    certCode.style.opacity = '0.6';
+    if (regenCodeBtn) regenCodeBtn.style.display = 'none';
+
+    // Set type
+    certType.value = certData.type;
+
+    // Set values directly — не через syncTypeFields щоб уникнути очищення полів
+    const isAmount = certData.type === 'amount';
+    if (isAmount) {
+      valueAmount.value = certData.value_amount != null ? certData.value_amount : '';
+      valueSize.value = '';
+    } else {
+      valueSize.value = certData.value_size || '';
+      valueAmount.value = '';
+    }
+
+    // Показати/сховати поля без скидання значень
+    fieldAmount.style.display = isAmount ? 'flex' : 'none';
+    fieldSize.style.display = isAmount ? 'none' : 'flex';
+    valueAmount.required = isAmount;
+    valueSize.required = !isAmount;
+    if (certTypeHint) certTypeHint.textContent = typeHints[certData.type] || '';
+
+    if (certComment) certComment.value = certData.comment || '';
+  }
+
+  function clearEditMode() {
+    editCertId = null;
+    if (modalTitle) modalTitle.textContent = 'Новий сертифікат';
+    if (createBtnLabel) createBtnLabel.textContent = 'Зберегти';
+    if (createBtnIcon) createBtnIcon.className = 'bi bi-plus-circle';
+    certCode.readOnly = false;
+    certCode.style.opacity = '';
+    if (regenCodeBtn) regenCodeBtn.style.display = '';
+  }
+
   async function resetModalState() {
+    clearEditMode();
     form.reset();
     clearErrors();
     setSubmitLoading(false);
     syncTypeFields();
     await generateCertCode();
-    if (certComment) {
-      certComment.value = '';
-    }
+    if (certComment) certComment.value = '';
   }
+
+  // Expose edit mode for detail modal
+  window.openCertEdit = function(certData) {
+    clearErrors();
+    setSubmitLoading(false);
+    setEditMode(certData);
+    modal.show();
+  };
 
   openBtn.addEventListener('click', async function() {
     await resetModalState();
@@ -253,7 +302,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   certType.addEventListener('change', async function() {
     syncTypeFields();
-    await generateCertCode();
+    if (!editCertId) {
+      await generateCertCode();
+    }
   });
 
   modalEl.addEventListener('hidden.bs.modal', function() {
@@ -270,7 +321,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const type = certType.value;
     const payload = {
-      code: certCode.value.trim(),
       type: type,
       comment: certComment ? certComment.value.trim() : '',
       value_amount: type === 'amount' ? valueAmount.value : null,
@@ -278,20 +328,30 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     try {
-      const response = await fetch('/certificates/create', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(payload),
-      });
+      let response;
+      if (editCertId) {
+        response = await fetch(`/certificates/${editCertId}/update`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+      } else {
+        payload.code = certCode.value.trim();
+        response = await fetch('/certificates/create', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+      }
       const data = await response.json().catch(() => ({}));
       if (!response.ok || !data.success) {
-        renderErrors(data.errors || data.error || 'Помилка створення сертифіката');
+        renderErrors(data.errors || data.error || 'Помилка збереження сертифіката');
         setSubmitLoading(false);
         return;
       }
       window.location.reload();
     } catch (error) {
-      console.error('Помилка створення сертифіката:', error);
+      console.error('Помилка збереження сертифіката:', error);
       renderErrors('Не вдалося зберегти сертифікат. Спробуйте ще раз.');
       setSubmitLoading(false);
     }

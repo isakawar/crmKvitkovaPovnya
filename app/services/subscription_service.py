@@ -4,6 +4,7 @@ from app.models.subscription import Subscription
 import datetime
 import logging
 from sqlalchemy import or_
+from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
@@ -251,6 +252,14 @@ def create_subscription(client, form):
     discount_raw = (form.get('discount') or '').strip()
     discount = int(discount_raw) if discount_raw else None
 
+    delivery_count_raw = (form.get('delivery_count') or '').strip()
+    try:
+        delivery_count = int(delivery_count_raw)
+        if not (1 <= delivery_count <= 52):
+            delivery_count = 4
+    except (ValueError, TypeError):
+        delivery_count = 4
+
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
@@ -277,11 +286,12 @@ def create_subscription(client, form):
         comment=form.get('comment') or None,
         preferences=form.get('preferences') or None,
         discount=discount,
+        delivery_count=delivery_count,
     )
     db.session.add(subscription)
     db.session.flush()
 
-    dates = build_delivery_dates(first_date, sub_type, delivery_day)
+    dates = build_delivery_dates_n(first_date, sub_type, delivery_day, delivery_count)
     first_order_id = None
 
     for i, d_date in enumerate(dates):
@@ -556,14 +566,21 @@ def create_draft_subscription(client, contact_date, draft_comment=None, draft_ba
     return subscription
 
 
-def get_draft_subscriptions():
-    return (
+def get_draft_subscriptions(contact_date_to=None):
+    query = (
         Subscription.query
+        .options(joinedload(Subscription.client))
         .join(Client)
         .filter(Subscription.status == 'draft')
-        .order_by(Subscription.contact_date.asc())
-        .all()
     )
+
+    if contact_date_to is not None:
+        query = query.filter(
+            Subscription.contact_date.isnot(None),
+            Subscription.contact_date <= contact_date_to,
+        )
+
+    return query.order_by(Subscription.contact_date.asc(), Subscription.created_at.asc()).all()
 
 
 def update_draft_subscription(subscription, contact_date, draft_comment=None, draft_bank_link=None, draft_wedding_date=None):

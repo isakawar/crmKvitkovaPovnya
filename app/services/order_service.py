@@ -207,6 +207,8 @@ def update_order(order, form):
         delivery.delivery_method = order.delivery_method
         delivery.bouquet_type = order.bouquet_type
         delivery.composition_type = order.composition_type
+        delivery.time_from = order.time_from
+        delivery.time_to = order.time_to
 
     db.session.commit()
     return order

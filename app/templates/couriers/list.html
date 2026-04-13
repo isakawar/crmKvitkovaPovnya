@@ -218,7 +218,7 @@
           </div>
           <div class="mb-3">
             <label for="courierPhone" class="form-label">Телефон *</label>
-            <input type="tel" class="form-control" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="form-control" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </div>
         </div>
         <div class="modal-footer">
@@ -247,7 +247,7 @@
           </div>
           <div class="mb-3">
             <label for="editCourierPhone" class="form-label">Телефон *</label>
-            <input type="tel" class="form-control" id="editCourierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="form-control" id="editCourierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </div>
         </div>
         <div class="modal-footer">
@@ -302,7 +302,7 @@
 <script>
 function applyPhoneMask(input) {
   input.addEventListener('focus', function() {
-    if (!this.value) this.value = '+38';
+    if (!this.value) this.value = '+380';
   });
   input.addEventListener('input', function() {
     let digits = this.value.replace(/\D/g, '');
@@ -319,7 +319,7 @@ function applyPhoneMask(input) {
   });
   input.addEventListener('keydown', function(e) {
     // prevent deleting the +38 prefix
-    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 3) {
+    if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 4) {
       e.preventDefault();
     }
   });

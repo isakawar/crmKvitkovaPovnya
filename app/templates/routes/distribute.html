@@ -1,0 +1,456 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .dist-shell { display: flex; flex-direction: column; gap: 1.25rem; }
+
+  .dist-hero {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.75rem;
+    background: radial-gradient(circle at top left, rgba(251,191,36,0.12), transparent 28%),
+                linear-gradient(135deg,#fff 0%,#fafaf9 60%,#f5f5f4 100%);
+    padding: 1.1rem 1.5rem;
+    box-shadow: 0 18px 48px rgba(28,25,23,0.08);
+  }
+
+  .dist-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 900px) {
+    .dist-grid { grid-template-columns: 1fr; }
+  }
+
+  .dist-panel {
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    background: #fff;
+    overflow: hidden;
+  }
+  .dist-panel-header {
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+  }
+  .dist-panel-title {
+    font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.12em; color: #78716c;
+  }
+  .dist-panel-body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.5rem; max-height: 420px; overflow-y: auto; }
+
+  .dist-item {
+    border: 1.5px solid #e7e5e4;
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    display: flex; align-items: flex-start; gap: 0.65rem;
+  }
+  .dist-item:hover { background: #fafaf9; }
+  .dist-item.selected { border-color: #f59e0b; background: #fffbeb; }
+  .dist-item input[type=checkbox] { flex-shrink: 0; margin-top: 2px; accent-color: #f59e0b; width: 15px; height: 15px; }
+  .dist-item-body { flex: 1; min-width: 0; }
+  .dist-item-title { font-size: 0.82rem; font-weight: 600; color: #1c1917; }
+  .dist-item-meta { font-size: 0.75rem; color: #78716c; margin-top: 2px; }
+  .dist-badge {
+    display: inline-flex; align-items: center;
+    padding: 1px 7px; border-radius: 999px;
+    font-size: 0.68rem; font-weight: 600; letter-spacing: 0.05em;
+  }
+  .dist-badge-amber { background: #fef3c7; color: #92400e; }
+  .dist-badge-stone { background: #f5f5f4; color: #57534e; }
+  .dist-badge-red   { background: #fee2e2; color: #991b1b; }
+  .dist-badge-blue  { background: #dbeafe; color: #1e40af; }
+
+  .dist-result { border: 1px solid #e7e5e4; border-radius: 1rem; background: #fff; overflow: hidden; }
+  .dist-result-header {
+    padding: 0.85rem 1.1rem; border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .dist-result-body { padding: 0.75rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+  .dist-route-result {
+    border: 1.5px solid #e7e5e4; border-radius: 0.75rem; overflow: hidden;
+  }
+  .dist-route-result-header {
+    padding: 0.6rem 0.9rem; background: #f9fafb;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  }
+  .dist-stop { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.55rem 0.9rem; border-bottom: 1px solid #f9fafb; }
+  .dist-stop:last-child { border-bottom: none; }
+  .dist-stop.is-new { background: #fffbeb; }
+  .dist-stop-num {
+    width: 20px; height: 20px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; margin-top: 1px;
+  }
+
+  #btn-calculate {
+    background: #1c1917; color: #fff; border: none;
+    padding: 0.65rem 1.5rem; border-radius: 0.75rem;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #btn-calculate:hover:not(:disabled) { background: #44403c; }
+  #btn-calculate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #btn-apply {
+    background: #16a34a; color: #fff; border: none;
+    padding: 0.65rem 1.5rem; border-radius: 0.75rem;
+    font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+  }
+  #btn-apply:hover:not(:disabled) { background: #15803d; }
+  #btn-apply:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .spinner-sm {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+    animation: spin 0.75s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .dist-empty { text-align: center; padding: 2rem 1rem; color: #a8a29e; font-size: 0.82rem; }
+
+  .select-all-btn {
+    font-size: 0.72rem; color: #78716c; background: none; border: none;
+    cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 2px;
+  }
+  .select-all-btn:hover { color: #1c1917; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dist-shell">
+
+  {# Hero header #}
+  <div class="dist-hero">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-lg font-bold text-stone-900 flex items-center gap-2">
+          <i class="bi bi-shuffle text-amber-500"></i>
+          Додати в існуючі маршрути
+        </h1>
+        <p class="text-sm text-stone-400 mt-0.5">
+          {{ selected_date.strftime('%d.%m.%Y') }} · обери маршрути і доставки, тоді натисни «Розрахувати»
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('routes.saved_routes', date=date_str) }}"
+           class="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors">
+          <i class="bi bi-arrow-left"></i> До маршрутів
+        </a>
+        <button id="btn-calculate" disabled>
+          <i class="bi bi-lightning-charge"></i> Розрахувати
+        </button>
+        <button id="btn-apply" disabled>
+          <i class="bi bi-check-lg"></i> Застосувати всі
+        </button>
+      </div>
+    </div>
+  </div>
+
+  {# Selection grid #}
+  <div class="dist-grid">
+
+    {# Left: existing routes #}
+    <div class="dist-panel">
+      <div class="dist-panel-header">
+        <span class="dist-panel-title"><i class="bi bi-map"></i> Існуючі маршрути</span>
+        <button class="select-all-btn" onclick="toggleAll('routes')">Обрати всі</button>
+      </div>
+      <div class="dist-panel-body" id="routes-list">
+        {% if saved_routes %}
+          {% for route in saved_routes %}
+          <label class="dist-item" id="route-item-{{ route.id }}">
+            <input type="checkbox" class="route-check" value="{{ route.id }}" onchange="onSelectionChange()">
+            <div class="dist-item-body">
+              <div class="dist-item-title">
+                {% if route.courier %}
+                  <i class="bi bi-person-fill text-amber-500"></i> {{ route.courier.name }}
+                {% else %}
+                  <i class="bi bi-person text-stone-400"></i> Без кур'єра
+                {% endif %}
+              </div>
+              <div class="dist-item-meta">
+                {{ route.deliveries_count }} зупинок
+                {% if route.start_time %} · старт {{ route.start_time.strftime('%H:%M') }}{% endif %}
+                {% if route.total_distance_km %} · {{ '%.1f'|format(route.total_distance_km) }} км{% endif %}
+                <span class="dist-badge dist-badge-{{ 'amber' if route.status == 'draft' else 'blue' if route.status == 'sent' else 'stone' }} ml-1">
+                  {{ route.status }}
+                </span>
+              </div>
+            </div>
+          </label>
+          {% endfor %}
+        {% else %}
+          <div class="dist-empty">
+            <i class="bi bi-map text-2xl block mb-2"></i>
+            Немає збережених маршрутів на {{ selected_date.strftime('%d.%m.%Y') }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Right: unrouted deliveries #}
+    <div class="dist-panel">
+      <div class="dist-panel-header">
+        <span class="dist-panel-title"><i class="bi bi-box-seam"></i> Нові доставки</span>
+        <button class="select-all-btn" onclick="toggleAll('deliveries')">Обрати всі</button>
+      </div>
+      <div class="dist-panel-body" id="deliveries-list">
+        {% if unrouted_deliveries %}
+          {% for d in unrouted_deliveries %}
+          {% set order = d.order %}
+          {% set client = d.client %}
+          <label class="dist-item" id="delivery-item-{{ d.id }}">
+            <input type="checkbox" class="delivery-check" value="{{ d.id }}" onchange="onSelectionChange()">
+            <div class="dist-item-body">
+              <div class="dist-item-title">
+                {% set city = (order.city if order else '') or '' %}
+                {% set street = (d.street or (order.street if order else '')) or '' %}
+                {% set house = (d.building_number or (order.building_number if order else '')) or '' %}
+                {% if city %}{{ city }}, {% endif %}{{ street }}{% if house %} {{ house }}{% endif %}
+              </div>
+              <div class="dist-item-meta">
+                {% if d.time_from or d.time_to %}
+                  <i class="bi bi-clock"></i>
+                  {{ d.time_from or '?' }}–{{ d.time_to or '?' }}
+                  ·
+                {% endif %}
+                <span class="dist-badge dist-badge-amber">{{ d.size or '—' }}</span>
+                {% if client and client.instagram %}
+                  · <span class="text-stone-400">{{ client.instagram }}</span>
+                {% endif %}
+              </div>
+            </div>
+          </label>
+          {% endfor %}
+        {% else %}
+          <div class="dist-empty">
+            <i class="bi bi-check-circle text-2xl block mb-2"></i>
+            Всі доставки вже розподілені
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  {# Result area #}
+  <div id="result-area" style="display:none;">
+    <div class="dist-result">
+      <div class="dist-result-header">
+        <span class="dist-panel-title"><i class="bi bi-check2-all"></i> Результат розподілу</span>
+        <span id="result-summary" class="text-sm text-stone-500"></span>
+      </div>
+      <div class="dist-result-body" id="result-routes"></div>
+    </div>
+  </div>
+
+  {# Error area #}
+  <div id="error-area" style="display:none;"
+       class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <i class="bi bi-exclamation-triangle-fill"></i> <span id="error-msg"></span>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DATE_STR = {{ date_str | tojson }};
+
+function getSelectedRouteIds() {
+  return [...document.querySelectorAll('.route-check:checked')].map(el => parseInt(el.value));
+}
+function getSelectedDeliveryIds() {
+  return [...document.querySelectorAll('.delivery-check:checked')].map(el => parseInt(el.value));
+}
+
+function onSelectionChange() {
+  // Highlight selected items
+  document.querySelectorAll('.route-check').forEach(cb => {
+    cb.closest('.dist-item').classList.toggle('selected', cb.checked);
+  });
+  document.querySelectorAll('.delivery-check').forEach(cb => {
+    cb.closest('.dist-item').classList.toggle('selected', cb.checked);
+  });
+
+  const hasRoutes = getSelectedRouteIds().length > 0;
+  const hasDeliveries = getSelectedDeliveryIds().length > 0;
+  document.getElementById('btn-calculate').disabled = !(hasRoutes && hasDeliveries);
+}
+
+function toggleAll(type) {
+  const cls = type === 'routes' ? '.route-check' : '.delivery-check';
+  const checks = document.querySelectorAll(cls);
+  const allChecked = [...checks].every(c => c.checked);
+  checks.forEach(c => { c.checked = !allChecked; });
+  onSelectionChange();
+}
+
+// ROUTE COLORS (same palette as generator)
+const ROUTE_COLORS = ['#f59e0b','#3b82f6','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316','#84cc16'];
+function routeColor(idx) { return ROUTE_COLORS[idx % ROUTE_COLORS.length]; }
+
+function renderResult(result) {
+  const routes = result.routes || [];
+  const container = document.getElementById('result-routes');
+  container.innerHTML = '';
+
+  let newCount = 0;
+
+  routes.forEach((route, idx) => {
+    const isNew = !route.routeDbId;
+    if (isNew) newCount++;
+    const color = routeColor(idx);
+    const stops = route.stops || [];
+
+    const card = document.createElement('div');
+    card.className = 'dist-route-result';
+
+    // Count new stops
+    const existingIds = new Set((route._originalStopIds || []));
+    const newStopIds = stops.filter(s => !existingIds.has(s.id)).map(s => s.id);
+
+    card.innerHTML = `
+      <div class="dist-route-result-header">
+        <span class="dist-stop-num" style="background:${color}">${idx+1}</span>
+        <span class="text-sm font-semibold text-stone-800">
+          ${isNew ? '<i class="bi bi-plus-circle text-amber-500"></i> Новий маршрут (без кур\'єра)' : (route.courierName || route.courierId || 'Маршрут')}
+        </span>
+        <span class="dist-badge dist-badge-stone ml-auto">${stops.length} зупинок</span>
+        ${route.totalDistanceKm ? `<span class="dist-badge dist-badge-stone">${parseFloat(route.totalDistanceKm).toFixed(1)} км</span>` : ''}
+        ${route.totalDriveMin ? `<span class="dist-badge dist-badge-stone">${route.totalDriveMin} хв</span>` : ''}
+      </div>
+      <div class="dist-stops">
+        ${stops.map((stop, si) => {
+          const isNewStop = newStopIds.includes(stop.id);
+          return `
+            <div class="dist-stop ${isNewStop ? 'is-new' : ''}">
+              <span class="dist-stop-num" style="background:${color}">${si+1}</span>
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:0.8rem;font-weight:600;color:#1c1917;">${stop.address || '—'} ${isNewStop ? '<span class="dist-badge dist-badge-amber ml-1">нова</span>' : ''}</div>
+                <div style="font-size:0.72rem;color:#78716c;">
+                  ${stop.eta ? `ETA ${stop.eta}` : ''}
+                  ${stop.driveMin ? ` · ${stop.driveMin} хв їзди` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+
+  const totalNew = routes.reduce((sum, r) => {
+    const stops = r.stops || [];
+    return sum + stops.filter(s => !((r._originalStopIds || []).includes(s.id))).length;
+  }, 0);
+
+  document.getElementById('result-summary').textContent =
+    `${routes.length} маршрутів · ${newCount} нових · розміщено доставок: ${totalNew}`;
+
+  document.getElementById('result-area').style.display = '';
+  document.getElementById('btn-apply').disabled = false;
+}
+
+// Store result for apply step
+let _lastResult = null;
+let _originalStopIdsByRoute = {};
+
+async function calculate() {
+  const routeIds = getSelectedRouteIds();
+  const deliveryIds = getSelectedDeliveryIds();
+
+  const btn = document.getElementById('btn-calculate');
+  btn.innerHTML = '<span class="spinner-sm"></span> Розраховую...';
+  btn.disabled = true;
+
+  document.getElementById('error-area').style.display = 'none';
+  document.getElementById('result-area').style.display = 'none';
+  document.getElementById('btn-apply').disabled = true;
+
+  try {
+    const resp = await fetch('/route-generator/distribute', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({route_ids: routeIds, delivery_ids: deliveryIds}),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || !data.success) {
+      showError(data.error || 'Помилка при розрахунку');
+      return;
+    }
+
+    // Attach original stop ids to each route for highlighting new stops
+    const result = data.result;
+    // We'll rely on the backend echoing stops in correct order and new stops not being in original
+    // For now, mark all stops from existing routes as original
+    _originalStopIdsByRoute = {};
+    routeIds.forEach(rid => { _originalStopIdsByRoute[rid] = true; });
+
+    // Enrich routes with original stop ids for UI
+    // (optimizer echoes all stops; new ones will have ids from delivery_ids)
+    const deliveryIdSet = new Set(deliveryIds);
+    (result.routes || []).forEach(route => {
+      route._originalStopIds = (route.stops || [])
+        .map(s => s.id)
+        .filter(id => !deliveryIdSet.has(id));
+    });
+
+    _lastResult = result;
+    renderResult(result);
+  } catch (e) {
+    showError('Помилка з\'єднання з сервером');
+  } finally {
+    btn.innerHTML = '<i class="bi bi-lightning-charge"></i> Розрахувати';
+    btn.disabled = !(getSelectedRouteIds().length > 0 && getSelectedDeliveryIds().length > 0);
+  }
+}
+
+async function applyResult() {
+  if (!_lastResult) return;
+
+  const btn = document.getElementById('btn-apply');
+  btn.innerHTML = '<span class="spinner-sm"></span> Зберігаю...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch('/route-generator/distribute/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({result: _lastResult, selected_date: DATE_STR}),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok || !data.success) {
+      showError(data.error || 'Помилка при збереженні');
+      btn.innerHTML = '<i class="bi bi-check-lg"></i> Застосувати всі';
+      btn.disabled = false;
+      return;
+    }
+
+    window.location.href = '/routes?date=' + DATE_STR;
+  } catch (e) {
+    showError('Помилка з\'єднання з сервером');
+    btn.innerHTML = '<i class="bi bi-check-lg"></i> Застосувати всі';
+    btn.disabled = false;
+  }
+}
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg;
+  document.getElementById('error-area').style.display = '';
+}
+
+document.getElementById('btn-calculate').addEventListener('click', calculate);
+document.getElementById('btn-apply').addEventListener('click', applyResult);
+</script>
+{% endblock %}

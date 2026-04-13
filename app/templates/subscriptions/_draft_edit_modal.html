@@ -1,0 +1,62 @@
+<div class="modal fade" id="draftEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:460px">
+    <div class="modal-content border-0 rounded-[28px] overflow-hidden">
+      <div class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
+        <h5 class="text-base font-semibold text-stone-900">Редагувати чернетку</h5>
+        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 hover:bg-stone-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg text-sm"></i>
+        </button>
+      </div>
+      <div class="bg-stone-50 px-6 py-5">
+        <form id="draft-edit-form" novalidate>
+          <input type="hidden" id="draft-edit-id" value="">
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата контакту</label>
+            <input
+              type="date"
+              id="draft-edit-contact-date"
+              name="contact_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+              required
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Дата весілля</label>
+            <input
+              type="date"
+              id="draft-edit-wedding-date"
+              name="draft_wedding_date"
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-4">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Лінк на банку</label>
+            <input
+              type="url"
+              id="draft-edit-bank-link"
+              name="draft_bank_link"
+              placeholder="https://send.monobank.ua/..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+            />
+          </div>
+          <div class="mb-5">
+            <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Коментар</label>
+            <textarea
+              id="draft-edit-comment"
+              name="draft_comment"
+              rows="2"
+              placeholder="Деталі, побажання, нотатки..."
+              class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+            ></textarea>
+          </div>
+          <button
+            type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          >
+            Зберегти
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
