@@ -826,7 +826,7 @@
               {% set client = d.client if d else none %}
               <tr>
                 <td><span class="route-stop-num">{{ stop.stop_order }}</span></td>
-                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+                <td class="whitespace-nowrap">{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
                 <td class="whitespace-nowrap">{{ d.size or (order.size if order else '—') or '—' }}</td>
                 <td class="whitespace-nowrap">{{ (order.recipient_name if order else '') or '—' }}</td>
                 <td>
@@ -904,7 +904,7 @@
             {% for d in unrouted_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp2 = d.phone or (order.recipient_phone if order else '') %}{% set _re2 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp2] + _re2) | select | join(' / ') or '—' }}</td>
@@ -945,7 +945,7 @@
             {% for d in nova_poshta_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>
@@ -983,7 +983,7 @@
             {% for d in pickup_deliveries %}
             {% set order = d.order %}{% set client = d.client %}
             <tr>
-              <td>{% if client %}<span class="ig-link">{{ client.instagram.lstrip('@') }}</span>{% else %}—{% endif %}</td>
+              <td>{% if client %}<span class="ig-link">{{ client.display_name }}</span>{% else %}—{% endif %}</td>
               <td>{{ d.size or (order.size if order else '—') }}</td>
               <td>{{ (order.recipient_name if order else '') or '—' }}</td>
               {% set _rp3 = d.phone or (order.recipient_phone if order else '') %}{% set _re3 = (order.additional_phones | map(attribute='phone') | list) if order else [] %}<td>{{ ([_rp3] + _re3) | select | join(' / ') or '—' }}</td>

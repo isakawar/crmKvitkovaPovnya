@@ -1134,7 +1134,7 @@
           </label>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Телефон *</span>
-            <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </label>
           <div class="settings-error" id="courierAddError" role="alert" hidden></div>
           <div class="settings-couriers__form-actions">
@@ -1169,7 +1169,7 @@
           </label>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Телефон *</span>
-            <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" required>
+            <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </label>
           <div class="settings-error" id="courierEditError" role="alert" hidden></div>
           <div class="settings-couriers__form-actions">
@@ -1229,7 +1229,7 @@ function renderSettingsPlaceholder(message) {
 function applyPhoneMask(input) {
     if (!input) return;
     input.addEventListener('focus', function() {
-        if (!this.value) this.value = '+38';
+        if (!this.value) this.value = '+380';
     });
     input.addEventListener('input', function() {
         let digits = this.value.replace(/\D/g, '');
@@ -1245,7 +1245,7 @@ function applyPhoneMask(input) {
         this.value = '+' + digits;
     });
     input.addEventListener('keydown', function(e) {
-        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 3) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 4) {
             e.preventDefault();
         }
     });

@@ -4,6 +4,7 @@
       <form id="addOrderForm" novalidate autocomplete="off">
         <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <input type="hidden" name="extend_from_order_id" id="extend-from-order-id" value="">
+        <input type="hidden" name="client_id" id="order-client-id" value="">
         <div class="order-composer-shell">
           <div class="order-composer-header">
             <div class="space-y-3">
@@ -79,12 +80,12 @@
 
                     <div class="order-field">
                       <label class="order-label" for="client-search">
-                        <i class="bi bi-instagram"></i>
-                        Instagram клієнта <span class="text-red-500">*</span>
+                        <i class="bi bi-person-circle"></i>
+                        Клієнт <span class="text-red-500">*</span>
                       </label>
                       <div class="order-input-wrap">
                         <i class="bi bi-search order-input-icon"></i>
-                        <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="@instagram" required autocomplete="off">
+                        <input type="text" class="order-input order-input-with-icon" id="client-search" name="client_instagram" placeholder="Instagram, Telegram, телефон або ім'я" required autocomplete="off">
                         <div class="list-group position-absolute w-100 d-none order-search-results" id="client-results"></div>
                       </div>
                     </div>
@@ -156,7 +157,7 @@
                             Телефон отримувача <span class="text-red-500">*</span>
                           </label>
                           <div class="flex items-center gap-1.5">
-                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" maxlength="13">
+                            <input type="text" id="recipient-phone-input" name="recipient_phone" class="order-input flex-1" required placeholder="+380XXXXXXXXX" value="+380" maxlength="13">
                             <button type="button" id="add-extra-phone-btn" title="Додати телефон"
                                     class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-500 hover:bg-stone-50 hover:border-stone-300 transition-colors">
                               <i class="bi bi-plus text-base"></i>

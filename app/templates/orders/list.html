@@ -227,10 +227,10 @@
         <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
           Всього: {{ orders_count }}
         </div>
-        <a href="/orders/export/csv"
+        <a href="{{ url_for('orders.export_orders_csv', date_from=date_from_filter or '', date_to=date_to_filter or '') }}"
            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
           <i class="bi bi-download"></i>
-          Експорт CSV
+          Експорт CSV{% if date_from_filter %} ({{ date_from_filter }}{% if date_to_filter and date_to_filter != date_from_filter %} — {{ date_to_filter }}{% endif %}){% endif %}
         </a>
         <button
           type="button"
@@ -508,16 +508,26 @@
                     Погоджено час
                   </span>
                   {% endif %}
-                  <p class="text-sm leading-6 text-stone-700">
-                    {% if delivery.is_pickup %}
-                    {% elif delivery.street %}
-                      {{ delivery.street }}{% if delivery.building_number %}, {{ delivery.building_number }}{% endif %}
-                    {% elif order and order.street %}
-                      {{ order.street }}
-                    {% else %}
-                      Адресу не вказано
-                    {% endif %}
-                  </p>
+                  {% set addr_street = '' %}
+                  {% if delivery.street %}
+                    {% set addr_street = delivery.street ~ (', ' ~ delivery.building_number if delivery.building_number else '') %}
+                  {% elif order and order.street %}
+                    {% set addr_street = order.street %}
+                  {% endif %}
+                  {% if delivery.is_pickup %}
+                  <p class="text-sm leading-6 text-stone-700"></p>
+                  {% elif addr_street %}
+                  <button type="button"
+                          class="copy-handle-btn group flex items-center gap-1.5 text-left"
+                          data-handle="{{ addr_street }}"
+                          title="Скопіювати {{ addr_street }}">
+                    <i class="bi bi-geo-alt text-xs text-stone-400 group-hover:text-amber-500 transition-colors"></i>
+                    <span class="text-sm text-stone-700 group-hover:text-stone-900 transition-colors">{{ addr_street }}</span>
+                    <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
+                  </button>
+                  {% else %}
+                  <p class="text-sm leading-6 text-stone-400">Адресу не вказано</p>
+                  {% endif %}
                   {% set addr_comment = delivery.address_comment or (order.address_comment if order else '') %}
                   {% if addr_comment %}
                   <p class="text-xs text-stone-400">{{ addr_comment }}</p>
@@ -528,7 +538,23 @@
               <td class="px-4 py-4">
                 {% set primary = delivery.phone or order.recipient_phone or '' %}
                 {% set all_phones = ([primary] + (order.additional_phones | map(attribute='phone') | list)) if order else [primary] %}
-                <p class="text-sm font-medium text-stone-700">{{ all_phones | select | join(' / ') or 'Телефон не вказано' }}</p>
+                {% set phones_list = all_phones | select | list %}
+                {% if phones_list %}
+                  <div class="flex flex-col gap-0.5">
+                    {% for phone in phones_list %}
+                      <button type="button"
+                              class="copy-handle-btn group flex items-center gap-1.5 text-left"
+                              data-handle="{{ phone }}"
+                              title="Скопіювати {{ phone }}">
+                        <i class="bi bi-telephone text-xs text-stone-400 group-hover:text-emerald-500 transition-colors"></i>
+                        <span class="text-sm font-medium text-stone-700 group-hover:text-stone-900 transition-colors">{{ phone }}</span>
+                        <i class="bi bi-copy text-xs text-stone-300 group-hover:text-stone-500 transition-colors"></i>
+                      </button>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <p class="text-sm text-stone-400">Телефон не вказано</p>
+                {% endif %}
               </td>
 
               <td class="px-4 py-4">

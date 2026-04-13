@@ -104,6 +104,10 @@ def orders_list():
                 )
             except ValueError:
                 pass
+        else:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= date.today()
+            )
         if date_to:
             try:
                 deliveries_query = deliveries_query.filter(
@@ -174,7 +178,7 @@ def order_create():
     elif order_scenario == 'order':
         is_subscription = False
 
-    required_fields = ['client_instagram', 'recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
+    required_fields = ['recipient_name', 'recipient_phone', 'city', 'size', 'first_delivery_date', 'for_whom']
     if is_subscription:
         required_fields.extend(['delivery_type', 'delivery_day'])
     if not is_pickup:
@@ -185,6 +189,14 @@ def order_create():
         value = request.form.get(field)
         if not value or (isinstance(value, str) and value.strip() == ''):
             errors.append(field)
+
+    # Перевіряємо що вказано або client_id або client_instagram
+    has_client = (
+        (request.form.get('client_id', '').strip().isdigit()) or
+        bool(request.form.get('client_instagram', '').strip())
+    )
+    if not has_client:
+        errors.append('client_instagram')
 
     if errors:
         msg = 'Не всі обовʼязкові поля заповнені: ' + ', '.join(errors)
@@ -243,13 +255,23 @@ def order_create():
             flash(error_msg, 'danger')
             return redirect('/orders/new')
 
-    client_instagram = request.form['client_instagram']
-    client, error = get_or_create_client(client_instagram)
-    if error:
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'error': error}), 400
-        flash(error, 'danger')
-        return redirect('/orders/new')
+    client_id_raw = request.form.get('client_id', '').strip()
+    if client_id_raw and client_id_raw.isdigit():
+        client = Client.query.get(int(client_id_raw))
+        if not client:
+            error_msg = 'Клієнта не знайдено'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+    else:
+        client_instagram = request.form['client_instagram']
+        client, error = get_or_create_client(client_instagram)
+        if error:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error}), 400
+            flash(error, 'danger')
+            return redirect('/orders/new')
 
     if is_subscription:
         entity = create_subscription(client, request.form)
@@ -525,13 +547,40 @@ def reschedule_subsequent_deliveries():
 @orders_bp.route('/clients/search', methods=['GET'])
 @login_required
 def search_clients():
+    from sqlalchemy import or_, func
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    clients = Client.query.filter(Client.instagram.contains(query)).limit(10).all()
+    like_q = f'%{query}%'
+    clients = Client.query.filter(
+        or_(
+            Client.instagram.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.phone.contains(query),
+            Client.name.ilike(like_q),
+        )
+    ).order_by(Client.id.desc()).limit(10).all()
+
+    def display_label(c):
+        parts = []
+        if c.instagram:
+            parts.append(c.instagram)
+        if c.telegram:
+            tg = c.telegram if c.telegram.startswith('@') else f'@{c.telegram}'
+            parts.append(tg)
+        if c.phone:
+            parts.append(c.phone)
+        if c.name:
+            parts.append(c.name)
+        return ' · '.join(parts) if parts else f'#{c.id}'
+
     return jsonify([{
         'id': c.id,
-        'instagram': c.instagram,
+        'display': display_label(c),
+        'instagram': c.instagram or '',
+        'telegram': c.telegram or '',
+        'phone': c.phone or '',
+        'name': c.name or '',
         'credits': c.credits or 0,
         'personal_discount': c.personal_discount or '',
     } for c in clients])
@@ -1300,42 +1349,74 @@ def extend_subscription(order_id):
 @orders_bp.route('/orders/export/csv', methods=['GET'])
 @login_required
 def export_orders_csv():
-    orders = (
-        Order.query
-        .options(joinedload(Order.client))
-        .filter(Order.subscription_id.is_(None))
-        .order_by(Order.id.desc())
-        .all()
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+
+    deliveries_query = (
+        Delivery.query
+        .options(
+            joinedload(Delivery.order).joinedload(Order.client),
+            joinedload(Delivery.courier),
+        )
+        .order_by(Delivery.delivery_date.asc(), Delivery.time_from.asc(), Delivery.id.asc())
     )
+
+    if date_from:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    deliveries = deliveries_query.all()
+
+    filename_suffix = ''
+    if date_from and date_to:
+        filename_suffix = f'_{date_from}_{date_to}'
+    elif date_from:
+        filename_suffix = f'_{date_from}'
 
     def generate():
         header = [
-            'ID', 'Instagram', 'Отримувач', 'Телефон', 'Місто', 'Адреса', 'Розмір', 'Сума',
-            'Дата доставки', 'Час з', 'Час до', 'Для кого', 'Коментар', 'Побажання', 'Створено'
+            'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
+            'Місто', 'Адреса', 'Коментар до адреси',
+            'Розмір', 'Дата доставки', 'Час з', 'Час до',
+            'Статус', 'Кур\'єр', 'Коментар', 'Побажання', 'Спосіб доставки'
         ]
-        yield ','.join(header) + '\n'
-        for o in orders:
+        yield ','.join('"' + h.replace('"', '""') + '"' for h in header) + '\n'
+        for d in deliveries:
+            o = d.order
+            c = (o.client if o else None)
             row = [
-                str(o.id),
-                o.client.instagram if o.client else '',
-                o.recipient_name or '',
-                o.recipient_phone or '',
-                o.city or '',
-                o.street or '',
-                o.size or '',
-                str(o.custom_amount) if o.custom_amount else '',
-                o.delivery_date.strftime('%Y-%m-%d') if o.delivery_date else '',
-                o.time_from or '',
-                o.time_to or '',
-                o.for_whom or '',
-                (o.comment or '').replace('\n', ' ').replace('\r', ' '),
-                (o.preferences or '').replace('\n', ' ').replace('\r', ' '),
-                o.created_at.strftime('%Y-%m-%d %H:%M:%S') if o.created_at else '',
+                str(d.id),
+                c.instagram if c else '',
+                o.recipient_name or '' if o else '',
+                d.phone or (o.recipient_phone if o else '') or '',
+                o.city or '' if o else '',
+                d.street or (o.street if o else '') or '',
+                d.address_comment or '',
+                d.size or (o.size if o else '') or '',
+                d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
+                d.time_from or '',
+                d.time_to or '',
+                d.status or '',
+                d.courier.name if d.courier else '',
+                (d.comment or '').replace('\n', ' ').replace('\r', ' '),
+                (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
+                d.delivery_method or '',
             ]
             yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
 
     return Response(generate(), mimetype='text/csv', headers={
-        'Content-Disposition': 'attachment; filename=orders_export.csv'
+        'Content-Disposition': f'attachment; filename=orders_export{filename_suffix}.csv'
     })
 
 
