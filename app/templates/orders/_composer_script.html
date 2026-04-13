@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const scenarioInput = document.getElementById('order-scenario-input');
     const scenarioButtons = Array.from(document.querySelectorAll('[data-composer-scenario]'));
     const scenarioCopy = document.getElementById('order-scenario-copy');
+    const deliveryCountInput = document.getElementById('delivery-count-input');
+    const deliveryCountDisplay = document.getElementById('delivery-count-display');
+    const deliveryCountError = document.getElementById('delivery-count-error');
     const deliveryTypeField = document.getElementById('delivery-type-field');
     const deliveryTypeSelect = document.getElementById('delivery-type-select');
     const deliveryTypeLabel = document.getElementById('delivery-type-label');
@@ -242,10 +245,16 @@ document.addEventListener('DOMContentLoaded', function() {
             scenarioInput.value = currentComposerFlow;
         }
         syncScenarioButtons();
+        const _cnt = deliveryCountInput ? (parseInt(deliveryCountInput.value) || 4) : 4;
+        if (deliveryCountDisplay) {
+            deliveryCountDisplay.textContent = `${_cnt} ${_deliveryCountLabel(_cnt)}`;
+        }
         if (scenarioCopy) {
-            scenarioCopy.textContent = currentComposerFlow === 'subscription'
-                ? 'Підписка створює 4 доставки в межах одного циклу.'
-                : 'Разовий сценарій створює одне замовлення й одну доставку.';
+            if (currentComposerFlow === 'subscription') {
+                scenarioCopy.textContent = `Підписка створює ${_cnt} ${_deliveryCountLabel(_cnt)} в межах одного циклу.`;
+            } else {
+                scenarioCopy.textContent = 'Разовий сценарій створює одне замовлення й одну доставку.';
+            }
         }
         if (deliveryTypeField) {
             deliveryTypeField.classList.toggle('hidden', currentComposerFlow !== 'subscription');
@@ -280,6 +289,49 @@ document.addEventListener('DOMContentLoaded', function() {
             deliveryTypeSelect.value = getDefaultOneTimeType();
             deliveryDaySelect.value = '';
         }
+    }
+
+    function _deliveryCountLabel(n) {
+        if (n === 1) return 'доставку';
+        if (n >= 2 && n <= 4) return 'доставки';
+        return 'доставок';
+    }
+
+    function _syncDeliveryCountUI() {
+        if (!deliveryCountInput) return;
+        const raw = deliveryCountInput.value.trim();
+        const val = parseInt(raw, 10);
+        const isValid = !isNaN(val) && val >= 1 && val <= 52 && raw !== '';
+        if (deliveryCountError) deliveryCountError.classList.toggle('hidden', isValid);
+        if (deliveryCountDisplay) {
+            deliveryCountDisplay.textContent = isValid ? `${val} ${_deliveryCountLabel(val)}` : '? доставок';
+        }
+        if (scenarioCopy && currentComposerFlow === 'subscription') {
+            const cnt = isValid ? val : 4;
+            scenarioCopy.textContent = `Підписка створює ${cnt} ${_deliveryCountLabel(cnt)} в межах одного циклу.`;
+        }
+    }
+
+    function _openDeliveryCountEdit() {
+        if (!deliveryCountInput || !deliveryCountDisplay) return;
+        deliveryCountDisplay.classList.add('hidden');
+        deliveryCountInput.classList.remove('hidden');
+        deliveryCountInput.focus();
+        deliveryCountInput.select();
+    }
+
+    function _closeDeliveryCountEdit() {
+        if (!deliveryCountInput || !deliveryCountDisplay) return;
+        const raw = deliveryCountInput.value.trim();
+        const val = parseInt(raw, 10);
+        if (!isNaN(val) && val >= 1 && val <= 52) {
+            deliveryCountInput.value = val;
+        } else {
+            deliveryCountInput.value = 4;
+        }
+        _syncDeliveryCountUI();
+        deliveryCountInput.classList.add('hidden');
+        deliveryCountDisplay.classList.remove('hidden');
     }
 
     function setComposerFlow(flow, isEditing = false) {
@@ -732,6 +784,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        if (currentComposerFlow === 'subscription' && deliveryCountInput) {
+            const countVal = parseInt(deliveryCountInput.value.trim(), 10);
+            if (isNaN(countVal) || countVal < 1 || countVal > 52) {
+                showOrderError('Кількість доставок має бути від 1 до 52');
+                return;
+            }
+        }
+
         setComposerSubmitting(true);
         const orderId = addOrderForm.getAttribute('data-edit-id');
         const isEditing = Boolean(orderId);
@@ -886,6 +946,34 @@ document.addEventListener('DOMContentLoaded', function() {
             setComposerFlow(nextFlow, false);
         });
     });
+
+    if (deliveryCountDisplay) {
+        deliveryCountDisplay.style.cursor = 'pointer';
+        deliveryCountDisplay.addEventListener('click', function(e) {
+            e.stopPropagation();
+            _openDeliveryCountEdit();
+        });
+    }
+
+    if (deliveryCountInput) {
+        deliveryCountInput.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        deliveryCountInput.addEventListener('input', function() {
+            this.value = this.value.replace(/[^\d]/g, '');
+            _syncDeliveryCountUI();
+        });
+        deliveryCountInput.addEventListener('blur', function() {
+            _closeDeliveryCountEdit();
+        });
+        deliveryCountInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+            if (e.key === 'Escape') { this.value = this.dataset.prev || 4; this.blur(); }
+        });
+        deliveryCountInput.addEventListener('focus', function() {
+            this.dataset.prev = this.value;
+        });
+    }
 
     if (commentInput) {
         commentInput.addEventListener('input', function() {

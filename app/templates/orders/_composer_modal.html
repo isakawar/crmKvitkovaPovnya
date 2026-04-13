@@ -44,7 +44,16 @@
                 <div class="order-scenario-switch" role="tablist" aria-label="Сценарій оформлення">
                   <button type="button" class="order-scenario-option" data-composer-scenario="subscription">
                     <span class="order-scenario-option-title">Підписка</span>
-                    <span class="order-scenario-option-copy">4 доставки</span>
+                    <span class="order-scenario-option-copy" id="delivery-count-display" title="Клікни щоб змінити кількість доставок">4 доставки</span>
+                    <input type="number"
+                           id="delivery-count-input"
+                           name="delivery_count"
+                           value="4"
+                           min="1"
+                           max="52"
+                           class="hidden w-12 rounded border border-amber-400 bg-transparent px-1 py-0 text-center text-xs font-medium focus:outline-none"
+                           style="height:1.25rem">
+                    <span id="delivery-count-error" class="hidden text-red-400 text-xs leading-none">!</span>
                   </button>
                   <button type="button" class="order-scenario-option is-active" data-composer-scenario="order">
                     <span class="order-scenario-option-title">Разове замовлення</span>

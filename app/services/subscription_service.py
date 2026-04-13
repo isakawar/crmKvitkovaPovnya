@@ -252,6 +252,14 @@ def create_subscription(client, form):
     discount_raw = (form.get('discount') or '').strip()
     discount = int(discount_raw) if discount_raw else None
 
+    delivery_count_raw = (form.get('delivery_count') or '').strip()
+    try:
+        delivery_count = int(delivery_count_raw)
+        if not (1 <= delivery_count <= 52):
+            delivery_count = 4
+    except (ValueError, TypeError):
+        delivery_count = 4
+
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
@@ -278,11 +286,12 @@ def create_subscription(client, form):
         comment=form.get('comment') or None,
         preferences=form.get('preferences') or None,
         discount=discount,
+        delivery_count=delivery_count,
     )
     db.session.add(subscription)
     db.session.flush()
 
-    dates = build_delivery_dates(first_date, sub_type, delivery_day)
+    dates = build_delivery_dates_n(first_date, sub_type, delivery_day, delivery_count)
     first_order_id = None
 
     for i, d_date in enumerate(dates):

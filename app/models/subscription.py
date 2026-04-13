@@ -67,6 +67,9 @@ class Subscription(db.Model):
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
 
+    # Кількість доставок у підписці
+    delivery_count = db.Column(db.Integer, nullable=False, default=4)
+
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())
 
