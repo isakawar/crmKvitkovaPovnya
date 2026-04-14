@@ -349,21 +349,25 @@
   @media (max-width: 767px) {
     .auth-shell {
       padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .auth-grid {
       min-height: auto;
-      gap: 1rem;
-    }
-
-    .auth-panel,
-    .auth-card {
-      padding: 1.25rem;
-      border-radius: 1.5rem;
-    }
-
-    .auth-panel__meta {
       grid-template-columns: 1fr;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    .auth-panel {
+      display: none;
+    }
+
+    .auth-card {
+      padding: 1.5rem;
+      border-radius: 1.5rem;
     }
 
     .auth-card__title {
