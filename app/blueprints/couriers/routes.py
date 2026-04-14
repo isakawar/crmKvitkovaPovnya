@@ -19,28 +19,37 @@ def create_new_courier():
     """Створити нового кур'єра"""
     
     data = request.get_json() if request.is_json else request.form
-    name = data.get('name', '').strip()
-    phone = data.get('phone', '').strip()
+    name = (data.get('name') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    is_taxi_raw = data.get('is_taxi', False)
+    is_taxi = is_taxi_raw in (True, 'true', 'on', '1') if not isinstance(is_taxi_raw, bool) else is_taxi_raw
 
-    if not name or not phone:
+    if not name:
         if request.is_json:
-            return jsonify({'success': False, 'error': 'Ім\'я та телефон обов\'язкові'}), 400
-        flash('Ім\'я та телефон обов\'язкові', 'error')
+            return jsonify({'success': False, 'error': 'Ім\'я обов\'язкове'}), 400
+        flash('Ім\'я обов\'язкове', 'error')
         return redirect(url_for('couriers.couriers_list'))
-    
+
+    if not is_taxi and not phone:
+        if request.is_json:
+            return jsonify({'success': False, 'error': 'Телефон обов\'язковий для звичайного кур\'єра'}), 400
+        flash('Телефон обов\'язковий для звичайного кур\'єра', 'error')
+        return redirect(url_for('couriers.couriers_list'))
+
     try:
-        # Перевіряємо чи не існує кур'єр з таким телефоном
-        existing_courier = Courier.query.filter_by(phone=phone).first()
-        if existing_courier:
-            if request.is_json:
-                return jsonify({'success': False, 'error': 'Кур\'єр з таким телефоном вже існує'}), 400
-            flash('Кур\'єр з таким телефоном вже існує', 'error')
-            return redirect(url_for('couriers.couriers_list'))
-        
-        courier = create_courier(name, phone)
-        
-        logger.info(f'Created new courier: {courier.name} ({courier.phone})')
-        
+        # Перевіряємо чи не існує кур'єр з таким телефоном (тільки для звичайних кур'єрів)
+        if not is_taxi and phone:
+            existing_courier = Courier.query.filter_by(phone=phone).first()
+            if existing_courier:
+                if request.is_json:
+                    return jsonify({'success': False, 'error': 'Кур\'єр з таким телефоном вже існує'}), 400
+                flash('Кур\'єр з таким телефоном вже існує', 'error')
+                return redirect(url_for('couriers.couriers_list'))
+
+        courier = create_courier(name, phone if phone else None, is_taxi=is_taxi)
+
+        logger.info(f'Created new courier: {courier.name} (is_taxi={courier.is_taxi})')
+
         if request.is_json:
             return jsonify({
                 'success': True,
@@ -49,10 +58,11 @@ def create_new_courier():
                     'id': courier.id,
                     'name': courier.name,
                     'phone': courier.phone,
-                    'active': courier.active
+                    'active': courier.active,
+                    'is_taxi': courier.is_taxi,
                 }
             })
-        
+
         flash(f'Кур\'єра {courier.name} успішно створено', 'success')
         return redirect(url_for('couriers.couriers_list'))
         
@@ -130,28 +140,35 @@ def edit_courier(courier_id):
     courier = Courier.query.get_or_404(courier_id)
     data = request.get_json()
 
-    name = data.get('name', '').strip()
-    phone = data.get('phone', '').strip()
+    name = (data.get('name') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    is_taxi_raw = data.get('is_taxi', False)
+    is_taxi = is_taxi_raw in (True, 'true', 'on', '1') if not isinstance(is_taxi_raw, bool) else is_taxi_raw
 
-    if not name or not phone:
-        return jsonify({'success': False, 'error': 'Ім\'я та телефон обов\'язкові'}), 400
-    
+    if not name:
+        return jsonify({'success': False, 'error': 'Ім\'я обов\'язкове'}), 400
+
+    if not is_taxi and not phone:
+        return jsonify({'success': False, 'error': 'Телефон обов\'язковий для звичайного кур\'єра'}), 400
+
     try:
         # Перевіряємо чи не існує інший кур'єр з таким телефоном
-        existing_courier = Courier.query.filter(
-            Courier.phone == phone,
-            Courier.id != courier_id
-        ).first()
-        
-        if existing_courier:
-            return jsonify({'success': False, 'error': 'Кур\'єр з таким телефоном вже існує'}), 400
-        
+        if not is_taxi and phone:
+            existing_courier = Courier.query.filter(
+                Courier.phone == phone,
+                Courier.id != courier_id
+            ).first()
+
+            if existing_courier:
+                return jsonify({'success': False, 'error': 'Кур\'єр з таким телефоном вже існує'}), 400
+
         courier.name = name
-        courier.phone = phone
+        courier.phone = phone if phone else None
+        courier.is_taxi = is_taxi
         db.session.commit()
-        
-        logger.info(f'Updated courier: {courier.name} ({courier.phone})')
-        
+
+        logger.info(f'Updated courier: {courier.name} (is_taxi={courier.is_taxi})')
+
         return jsonify({
             'success': True,
             'message': f'Дані кур\'єра {courier.name} оновлено',
@@ -159,7 +176,8 @@ def edit_courier(courier_id):
                 'id': courier.id,
                 'name': courier.name,
                 'phone': courier.phone,
-                'active': courier.active
+                'active': courier.active,
+                'is_taxi': courier.is_taxi,
             }
         })
         

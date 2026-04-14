@@ -169,7 +169,25 @@ def assign_and_send_route(route_id):
         return redirect(url_for('routes.saved_routes'))
 
     courier = Courier.query.get(courier_id)
-    if not courier or not courier.telegram_chat_id:
+    if not courier:
+        if is_ajax:
+            return jsonify({'success': False, 'error': 'Кур\'єра не знайдено'}), 400
+        flash('Кур\'єра не знайдено', 'danger')
+        return redirect(url_for('routes.saved_routes'))
+
+    if courier.is_taxi:
+        # Taxi couriers are assigned directly — no Telegram step
+        route.courier_id = courier_id
+        if delivery_price is not None:
+            route.delivery_price = delivery_price
+        route.status = 'accepted'
+        db.session.commit()
+        if is_ajax:
+            return jsonify({'success': True, 'message': f'Маршрут призначено службі таксі «{courier.name}»'})
+        flash(f'Маршрут призначено службі таксі «{courier.name}»', 'success')
+        return redirect(url_for('routes.saved_routes'))
+
+    if not courier.telegram_chat_id:
         if is_ajax:
             return jsonify({'success': False, 'error': 'Кур\'єр не зареєстрований в Telegram'}), 400
         flash('Кур\'єр не зареєстрований в Telegram', 'danger')

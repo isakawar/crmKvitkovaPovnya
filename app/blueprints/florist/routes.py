@@ -164,7 +164,9 @@ def florist_routes():
         d for d in all_deliveries
         if not d.is_pickup and d.delivery_method != 'nova_poshta'
     ]
-    unrouted_courier_deliveries = [d for d in courier_deliveries if d.id not in route_delivery_ids]
+    unrouted_all = [d for d in courier_deliveries if d.id not in route_delivery_ids]
+    taxi_deliveries = [d for d in unrouted_all if d.courier and d.courier.is_taxi]
+    unrouted_courier_deliveries = [d for d in unrouted_all if not (d.courier and d.courier.is_taxi)]
     nova_poshta_deliveries = [d for d in all_deliveries if d.delivery_method == 'nova_poshta']
     pickup_deliveries = [d for d in all_deliveries if d.is_pickup]
     order_ids = {delivery.order_id for delivery in all_deliveries if delivery.order_id}
@@ -183,6 +185,7 @@ def florist_routes():
         routes_count=len(routes),
         routed_deliveries_count=routed_deliveries_count,
         unrouted_courier_deliveries=unrouted_courier_deliveries,
+        taxi_deliveries=taxi_deliveries,
         nova_poshta_deliveries=nova_poshta_deliveries,
         pickup_deliveries=pickup_deliveries,
         florist_status_options=FLORIST_STATUS_OPTIONS,
