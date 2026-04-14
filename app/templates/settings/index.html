@@ -796,6 +796,26 @@
     }
   }
 
+  .auth-eye-toggle {
+    position: absolute;
+    right: 0.75rem;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #a8a29e;
+    font-size: 0.98rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color 0.16s ease;
+    z-index: 1;
+  }
+
+  .auth-eye-toggle:hover {
+    color: #1c1917;
+  }
+
   @media (max-width: 767px) {
     .settings-hero {
       padding: 1.15rem;
@@ -982,6 +1002,21 @@
         </button>
       </div>
     </div>
+
+    {% if current_user.has_permission('manage_users') %}
+    <button type="button" class="settings-grid-card" onclick="document.getElementById('users-section').scrollIntoView({behavior:'smooth'})">
+      <span class="settings-grid-card__icon"><i class="bi bi-people"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Адміністрування</p>
+        <h2 class="settings-grid-card__title">Користувачі</h2>
+        <p class="settings-grid-card__text">Створюйте акаунти для менеджерів і флористів, змінюйте паролі та деактивуйте доступ.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Управляти командою</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+    {% endif %}
   </section>
 
   <section class="settings-couriers" id="couriers">
@@ -1090,9 +1125,155 @@
     </div>
     {% endif %}
   </section>
+
+  {% if current_user.has_permission('manage_users') %}
+  <section class="settings-couriers" id="users-section">
+    <div class="settings-couriers__header">
+      <div>
+        <span class="settings-couriers__label"><i class="bi bi-people"></i> Адміністрування</span>
+        <h2 class="settings-couriers__title">Користувачі CRM</h2>
+        <p class="settings-couriers__text">Керуйте акаунтами менеджерів і флористів — створюйте, деактивуйте та змінюйте паролі.</p>
+      </div>
+      <div class="settings-couriers__meta">
+        <button type="button" class="settings-couriers__add" data-bs-toggle="modal" data-bs-target="#userCreateModal">
+          <i class="bi bi-plus-lg"></i>
+          Новий користувач
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-couriers__table-wrap">
+      <table class="settings-couriers__table" id="users-table">
+        <thead>
+          <tr>
+            <th>Логін</th>
+            <th>Роль</th>
+            <th>Статус</th>
+            <th>Дії</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="4" style="text-align:center;color:#a8a29e;padding:2rem;">Завантаження...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endif %}
 </div>
 
 {{ render_toast() }}
+
+{% if current_user.has_permission('manage_users') %}
+<!-- Modal: Create User -->
+<div class="modal fade settings-modal" id="userCreateModal" tabindex="-1" aria-labelledby="userCreateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Адміністрування</span>
+          <h2 class="settings-modal__title" id="userCreateModalLabel">Новий користувач</h2>
+          <p class="settings-modal__subtitle">Заповніть дані для створення акаунта менеджера або флориста.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="userCreateForm" class="settings-couriers__form">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Логін *</span>
+            <input type="text" class="settings-modal__input" id="userCreateUsername" autocomplete="off" required>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Роль *</span>
+            <select class="settings-modal__input" id="userCreateRole" required>
+              <option value="manager">Менеджер</option>
+              <option value="florist">Флорист</option>
+            </select>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Пароль *</span>
+            <div style="position:relative;">
+              <input type="password" class="settings-modal__input" id="userCreatePassword"
+                     autocomplete="new-password" required style="padding-right:2.75rem;">
+              <button type="button" class="auth-eye-toggle user-eye-toggle" data-target="userCreatePassword"
+                      style="top:50%;transform:translateY(-50%);" aria-label="Показати пароль">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Повтор паролю *</span>
+            <div style="position:relative;">
+              <input type="password" class="settings-modal__input" id="userCreatePasswordConfirm"
+                     autocomplete="new-password" required style="padding-right:2.75rem;">
+              <button type="button" class="auth-eye-toggle user-eye-toggle" data-target="userCreatePasswordConfirm"
+                      style="top:50%;transform:translateY(-50%);" aria-label="Показати пароль">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </label>
+          <div class="settings-error" id="userCreateError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions">
+            <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Створити</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Change Password -->
+<div class="modal fade settings-modal" id="userPasswordModal" tabindex="-1" aria-labelledby="userPasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Безпека</span>
+          <h2 class="settings-modal__title" id="userPasswordModalLabel">Змінити пароль</h2>
+          <p class="settings-modal__subtitle">Новий пароль для: <strong id="userPasswordTitle"></strong></p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="userPasswordForm" class="settings-couriers__form">
+          <input type="hidden" id="userPasswordId">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Новий пароль *</span>
+            <div style="position:relative;">
+              <input type="password" class="settings-modal__input" id="userPasswordInput"
+                     autocomplete="new-password" required style="padding-right:2.75rem;">
+              <button type="button" class="auth-eye-toggle user-eye-toggle" data-target="userPasswordInput"
+                      style="top:50%;transform:translateY(-50%);" aria-label="Показати пароль">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Повтор паролю *</span>
+            <div style="position:relative;">
+              <input type="password" class="settings-modal__input" id="userPasswordConfirm"
+                     autocomplete="new-password" required style="padding-right:2.75rem;">
+              <button type="button" class="auth-eye-toggle user-eye-toggle" data-target="userPasswordConfirm"
+                      style="top:50%;transform:translateY(-50%);" aria-label="Показати пароль">
+                <i class="bi bi-eye"></i>
+              </button>
+            </div>
+          </label>
+          <div class="settings-error" id="userPasswordError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions">
+            <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Зберегти пароль</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 {{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
 {{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
@@ -1589,6 +1770,170 @@ async function toggleDistributeBanner() {
         btn.disabled = false;
     }
 }
+
+// ── User Management ─────────────────────────────────────────────────────────
+{% if current_user.has_permission('manage_users') %}
+(function() {
+  function roleLabel(role) {
+    if (role === 'manager') return 'Менеджер';
+    if (role === 'florist') return 'Флорист';
+    return role;
+  }
+
+  function renderUsers(users) {
+    const tbody = document.getElementById('users-tbody');
+    if (!users.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#a8a29e;padding:2rem;">Користувачів ще немає</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(u => `
+      <tr data-user-id="${u.id}">
+        <td><div class="settings-couriers__name">${u.username}</div></td>
+        <td><span class="settings-couriers__status">${roleLabel(u.user_type)}</span></td>
+        <td>
+          <span class="settings-couriers__status ${u.is_active ? 'settings-couriers__status--active' : 'settings-couriers__status--inactive'}">
+            ${u.is_active ? 'Активний' : 'Неактивний'}
+          </span>
+        </td>
+        <td>
+          <div class="settings-couriers__actions">
+            <button class="settings-couriers__action js-user-password"
+                    data-user-id="${u.id}" data-username="${u.username}"
+                    title="Змінити пароль">
+              <i class="bi bi-key"></i>
+            </button>
+            <button class="settings-couriers__action js-user-toggle"
+                    data-user-id="${u.id}"
+                    title="${u.is_active ? 'Деактивувати' : 'Активувати'}">
+              <i class="bi bi-${u.is_active ? 'pause' : 'play'}"></i>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+    bindUserActions();
+  }
+
+  function loadUsers() {
+    fetch('/settings/users')
+      .then(r => r.json())
+      .then(renderUsers)
+      .catch(() => {
+        document.getElementById('users-tbody').innerHTML =
+          '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:2rem;">Помилка завантаження</td></tr>';
+      });
+  }
+
+  function bindUserActions() {
+    document.querySelectorAll('.js-user-toggle').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const userId = this.dataset.userId;
+        fetch(`/settings/users/${userId}/toggle-active`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              showToast(data.is_active ? 'Користувача активовано' : 'Користувача деактивовано', 'success');
+              loadUsers();
+            } else {
+              showToast(data.error || 'Помилка', 'error');
+            }
+          })
+          .catch(() => showToast('Помилка мережі', 'error'));
+      });
+    });
+
+    document.querySelectorAll('.js-user-password').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const userId = this.dataset.userId;
+        const username = this.dataset.username;
+        document.getElementById('userPasswordId').value = userId;
+        document.getElementById('userPasswordTitle').textContent = username;
+        document.getElementById('userPasswordInput').value = '';
+        document.getElementById('userPasswordConfirm').value = '';
+        document.getElementById('userPasswordError').hidden = true;
+        const modal = new bootstrap.Modal(document.getElementById('userPasswordModal'));
+        modal.show();
+      });
+    });
+  }
+
+  // Create user form
+  document.getElementById('userCreateForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('userCreateError');
+    errEl.hidden = true;
+    const payload = {
+      username: document.getElementById('userCreateUsername').value.trim(),
+      role: document.getElementById('userCreateRole').value,
+      password: document.getElementById('userCreatePassword').value,
+      password_confirm: document.getElementById('userCreatePasswordConfirm').value,
+    };
+    fetch('/settings/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('userCreateModal')).hide();
+        document.getElementById('userCreateForm').reset();
+        showToast('Користувача створено', 'success');
+        loadUsers();
+      } else {
+        errEl.textContent = (data.errors || [data.error]).join(', ');
+        errEl.hidden = false;
+      }
+    })
+    .catch(() => showToast('Помилка мережі', 'error'));
+  });
+
+  // Change password form
+  document.getElementById('userPasswordForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('userPasswordError');
+    errEl.hidden = true;
+    const userId = document.getElementById('userPasswordId').value;
+    const payload = {
+      password: document.getElementById('userPasswordInput').value,
+      password_confirm: document.getElementById('userPasswordConfirm').value,
+    };
+    fetch(`/settings/users/${userId}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        bootstrap.Modal.getInstance(document.getElementById('userPasswordModal')).hide();
+        showToast('Пароль змінено', 'success');
+      } else {
+        errEl.textContent = data.error || 'Помилка';
+        errEl.hidden = false;
+      }
+    })
+    .catch(() => showToast('Помилка мережі', 'error'));
+  });
+
+  // Eye toggles inside user modals
+  document.querySelectorAll('.user-eye-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const input = document.getElementById(btn.dataset.target);
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+      } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+      }
+    });
+  });
+
+  loadUsers();
+})();
+{% endif %}
 
 async function toggleAiAgent() {
     const btn = document.getElementById('ai-agent-toggle-btn');

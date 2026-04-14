@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.models import Settings, Price
 from app.models.courier import Courier
+from app.models.user import User, Role, ROLE_PERMISSIONS
 from app.extensions import db
 from app.utils.decorators import permission_required
 
@@ -193,4 +194,106 @@ def save_prices():
         else:
             db.session.add(Price(subscription_type_id=sub_id, size_id=size_id, price=price_val))
     db.session.commit()
-    return jsonify({'success': True}) 
+    return jsonify({'success': True})
+
+
+# ── User Management (admin only) ────────────────────────────────────────────
+
+@bp.route('/settings/users', methods=['GET'])
+@login_required
+@permission_required('manage_users')
+def get_users():
+    users = User.query.filter(User.id != current_user.id).order_by(User.username).all()
+    result = []
+    for u in users:
+        role_names = [r.name for r in u.roles]
+        result.append({
+            'id': u.id,
+            'username': u.username,
+            'user_type': u.user_type,
+            'roles': role_names,
+            'is_active': u.is_active,
+        })
+    return jsonify(result)
+
+
+@bp.route('/settings/users', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def create_user():
+    data = request.get_json()
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+    password_confirm = data.get('password_confirm') or ''
+    role_name = (data.get('role') or '').strip()
+
+    errors = []
+    if not username:
+        errors.append('Логін не може бути порожнім')
+    if not password:
+        errors.append('Пароль не може бути порожнім')
+    elif len(password) < 6:
+        errors.append('Пароль має бути не менше 6 символів')
+    if password != password_confirm:
+        errors.append('Паролі не збігаються')
+    if role_name not in ('manager', 'florist'):
+        errors.append('Роль має бути manager або florist')
+    if username and User.query.filter_by(username=username).first():
+        errors.append('Користувач з таким логіном вже існує')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    role = Role.query.filter_by(name=role_name).first()
+    if not role:
+        role = Role(name=role_name, description=role_name.capitalize())
+        db.session.add(role)
+        db.session.flush()
+
+    email = f'{username}@crm.local'
+    user = User(username=username, email=email, user_type=role_name, is_active=True)
+    user.set_password(password)
+    user.roles.append(role)
+    db.session.add(user)
+    db.session.commit()
+
+    return jsonify({'success': True, 'user': {
+        'id': user.id,
+        'username': user.username,
+        'user_type': user.user_type,
+        'roles': [role_name],
+        'is_active': user.is_active,
+    }})
+
+
+@bp.route('/settings/users/<int:user_id>/toggle-active', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def toggle_user_active(user_id):
+    if user_id == current_user.id:
+        return jsonify({'success': False, 'error': 'Не можна деактивувати себе'}), 400
+    user = User.query.get_or_404(user_id)
+    user.is_active = not user.is_active
+    db.session.commit()
+    return jsonify({'success': True, 'is_active': user.is_active})
+
+
+@bp.route('/settings/users/<int:user_id>/password', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def change_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+    password = data.get('password') or ''
+    password_confirm = data.get('password_confirm') or ''
+
+    if not password:
+        return jsonify({'success': False, 'error': 'Пароль не може бути порожнім'}), 400
+    if len(password) < 6:
+        return jsonify({'success': False, 'error': 'Пароль має бути не менше 6 символів'}), 400
+    if password != password_confirm:
+        return jsonify({'success': False, 'error': 'Паролі не збігаються'}), 400
+
+    user.set_password(password)
+    db.session.commit()
+    return jsonify({'success': True})
