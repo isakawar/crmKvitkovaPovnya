@@ -9,7 +9,6 @@ jobs:
 
     steps:
       - name: Deploy via SSH
-        id: deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -29,7 +28,7 @@ jobs:
               exit 1
             fi
 
-            echo "TAG=$LATEST_TAG" >> $GITHUB_ENV
+            echo "🚀 Deploying $LATEST_TAG"
 
             git checkout $LATEST_TAG
 
@@ -37,32 +36,18 @@ jobs:
 
             sleep 8
 
-            if curl -f https://povnyacrm.duckdns.org/health; then
-              echo "DEPLOY_STATUS=success" >> $GITHUB_ENV
-            else
-              echo "DEPLOY_STATUS=fail" >> $GITHUB_ENV
-              exit 1
-            fi
+            curl -f https://povnyacrm.duckdns.org/health
 
-      # 🔥 SUCCESS MESSAGE
       - name: Notify Telegram (success)
         if: success()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ secrets.TG_CHAT_ID }} \
-            -d text="🚀 Deploy SUCCESS
+            -d text="🚀 Deploy SUCCESS | https://povnyacrm.duckdns.org"
 
-Tag: ${{ env.TAG }}
-URL: https://povnyacrm.duckdns.org
-Status: ✅ OK"
-
-      # 💥 FAIL MESSAGE
       - name: Notify Telegram (fail)
         if: failure()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ secrets.TG_CHAT_ID }} \
-            -d text="❌ Deploy FAILED
-
-Tag: ${{ env.TAG }}
-Check logs in GitHub Actions!"
+            -d text="❌ Deploy FAILED | Check GitHub Actions"
