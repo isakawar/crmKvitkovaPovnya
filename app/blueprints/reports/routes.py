@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request
 from flask_login import login_required
-from app.services.reports_service import get_reports_data
+from app.services.reports_service import get_reports_data, get_florist_sales_data
 from app.utils.decorators import permission_required
 
 reports_bp = Blueprint('reports', __name__)
@@ -11,4 +11,5 @@ reports_bp = Blueprint('reports', __name__)
 def reports_page():
     selected_month = (request.args.get('month') or '').strip()
     data = get_reports_data(selected_month)
+    data.update(get_florist_sales_data(selected_month))
     return render_template('reports/index.html', **data)

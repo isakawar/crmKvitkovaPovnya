@@ -35,6 +35,7 @@ def create_app(config_class=DevelopmentConfig):
 
     # Register blueprints
     from app.models.ai_log import AIAgentLog  # noqa: ensure table is created
+    from app.models.florist_sale import FloristSale  # noqa: ensure table is created
 
     from app.blueprints.orders.routes import orders_bp
     from app.blueprints.clients.routes import clients_bp

@@ -4,6 +4,7 @@ from sqlalchemy import func, case, literal
 from app.extensions import db
 from app.models import Client, Order, Settings
 from app.models.subscription import Subscription
+from app.models.user import User
 
 
 UNSPECIFIED_TOKENS = {
@@ -254,4 +255,54 @@ def get_reports_data(selected_month_raw=None):
         'delivery_type_chart': _items_to_chart(delivery_type_all),
         'size_chart': _items_to_chart(size_all),
         'monthly_orders_trend_chart': monthly_orders_trend_chart,
+    }
+
+
+def get_florist_sales_data(selected_month_raw=None):
+    from app.models.florist_sale import FloristSale
+
+    month_start = _parse_month(selected_month_raw)
+    month_start_dt, month_end_dt = _month_bounds(month_start)
+
+    rows = (
+        db.session.query(
+            User.username,
+            func.count(FloristSale.id),
+            func.sum(FloristSale.amount),
+            func.sum(FloristSale.bonus_amount),
+        )
+        .join(User, User.id == FloristSale.florist_id)
+        .filter(
+            FloristSale.created_at >= month_start_dt,
+            FloristSale.created_at < month_end_dt,
+        )
+        .group_by(User.id, User.username)
+        .order_by(func.sum(FloristSale.amount).desc())
+        .all()
+    )
+
+    florist_rows = []
+    grand_total = 0.0
+    grand_bonus = 0.0
+    grand_count = 0
+
+    for username, count, total_amount, total_bonus in rows:
+        t = float(total_amount or 0)
+        b = float(total_bonus or 0)
+        c = int(count or 0)
+        florist_rows.append({
+            'name': username,
+            'count': c,
+            'total_amount': t,
+            'total_bonus': b,
+        })
+        grand_total += t
+        grand_bonus += b
+        grand_count += c
+
+    return {
+        'florist_sales_rows': florist_rows,
+        'florist_sales_grand_total': grand_total,
+        'florist_sales_grand_bonus': grand_bonus,
+        'florist_sales_grand_count': grand_count,
     }

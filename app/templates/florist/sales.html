@@ -1,0 +1,367 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+<style>
+  .sales-add-label { display: none; }
+  @media (min-width: 768px) {
+    .sales-add-label { display: inline; }
+    .sales-add-btn { width: auto; padding-left: 1rem; padding-right: 1rem; border-radius: 0.75rem; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6">
+
+  <!-- Header -->
+  <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+          <i class="bi bi-cash-coin"></i>
+          Продажі
+        </p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-tight text-stone-900">Офлайн продажі</h1>
+        <p class="mt-1 text-sm text-stone-500">
+          {% if is_current_month %}
+            Поточний місяць — записуй продажі та відстежуй бонус.
+          {% else %}
+            Архів за {{ selected_month_label }}.
+          {% endif %}
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Month nav -->
+        <div class="flex items-center gap-1 rounded-xl border border-stone-200 bg-white px-1 py-1 shadow-sm">
+          <a href="?month={{ prev_month }}"
+             class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 transition-colors"
+             title="Попередній місяць">
+            <i class="bi bi-chevron-left text-xs"></i>
+          </a>
+          <span class="px-2 text-sm font-semibold text-stone-800 whitespace-nowrap flex items-center gap-1.5">
+            {{ selected_month_label }}
+            {% if is_current_month %}
+            <span class="inline-block h-2 w-2 rounded-full flex-shrink-0" style="background:#10b981"></span>
+            {% endif %}
+          </span>
+          {% if next_month %}
+          <a href="?month={{ next_month }}"
+             class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 hover:bg-stone-100 transition-colors"
+             title="Наступний місяць">
+            <i class="bi bi-chevron-right text-xs"></i>
+          </a>
+          {% else %}
+          <span class="flex h-8 w-8 items-center justify-center rounded-lg text-stone-300 cursor-not-allowed">
+            <i class="bi bi-chevron-right text-xs"></i>
+          </span>
+          {% endif %}
+        </div>
+        <button type="button"
+                onclick="openAddModal()"
+                title="Додати продаж"
+                class="sales-add-btn inline-flex h-10 w-10 items-center justify-center gap-2 bg-stone-900 text-sm font-medium text-white transition-colors hover:bg-stone-700 {% if not is_current_month %}invisible{% endif %}"
+                style="border-radius:0.75rem;">
+          <i class="bi bi-plus-lg"></i>
+          <span class="sales-add-label">Додати продаж</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Кількість</p>
+      <p class="mt-1 text-xl md:text-2xl font-bold text-stone-900">{{ count }}</p>
+    </div>
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Середній чек</p>
+      <p class="mt-1 text-xl md:text-2xl font-bold text-stone-900 break-all">{{ "%.0f"|format(avg_amount) }} ₴</p>
+    </div>
+    <div class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-widest text-stone-400">Загальна сума</p>
+      <p class="mt-1 text-xl md:text-2xl font-bold text-stone-900 break-all">{{ "%.0f"|format(total_amount) }} ₴</p>
+    </div>
+    <div class="rounded-2xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
+      <p class="text-[10px] font-semibold uppercase tracking-widest text-amber-600">Бонус (5%)</p>
+      <p class="mt-1 text-xl md:text-2xl font-bold text-amber-700 break-all">{{ "%.0f"|format(total_bonus) }} ₴</p>
+    </div>
+  </div>
+
+  <!-- Sales table -->
+  <section class="rounded-2xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+    {% if sales %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-stone-200 bg-stone-50">
+          <tr>
+            <th class="px-4 py-3 text-left font-semibold text-stone-600">Дата</th>
+            <th class="px-4 py-3 text-right font-semibold text-stone-600">Сума</th>
+            <th class="px-4 py-3 text-right font-semibold text-stone-600">Бонус</th>
+            <th class="px-4 py-3 text-left font-semibold text-stone-600">Коментар</th>
+            <th class="px-4 py-3 text-center font-semibold text-stone-600">Дії</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100">
+          {% for sale in sales %}
+          {% set editable = (now_utc - sale.created_at).total_seconds() <= 86400 %}
+          <tr class="hover:bg-stone-50 transition-colors">
+            <td class="px-4 py-3 text-stone-700 whitespace-nowrap">{{ sale.created_at | kyiv_time }}</td>
+            <td class="px-4 py-3 text-right font-semibold text-stone-900 whitespace-nowrap">{{ "%.2f"|format(sale.amount|float) }} ₴</td>
+            <td class="px-4 py-3 text-right text-amber-700 whitespace-nowrap">{{ "%.2f"|format(sale.bonus_amount|float) }} ₴</td>
+            <td class="px-4 py-3 text-stone-500">{{ sale.comment or '—' }}</td>
+            <td class="px-4 py-3 text-center">
+              {% if editable %}
+              <button type="button"
+                      onclick="openEditModal({{ sale.id }}, {{ sale.amount|float }}, {{ sale.comment|tojson }})"
+                      class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100">
+                <i class="bi bi-pencil"></i>
+                Змінити
+              </button>
+              {% else %}
+              <span class="text-xs text-stone-300">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="border-t border-stone-100 px-4 py-3 flex items-center justify-between text-sm text-stone-500">
+      <span>Сторінка {{ pagination.page }} з {{ pagination.pages }}</span>
+      <div class="flex gap-1">
+        {% if pagination.has_prev %}
+        <a href="?month={{ selected_month }}&page={{ pagination.prev_num }}"
+           class="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          ← Попередня
+        </a>
+        {% endif %}
+        {% if pagination.has_next %}
+        <a href="?month={{ selected_month }}&page={{ pagination.next_num }}"
+           class="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          Наступна →
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="flex flex-col items-center justify-center gap-2 py-16 text-stone-400">
+      <i class="bi bi-cash-coin text-4xl"></i>
+      {% if is_current_month %}
+      <p class="text-sm">Продажів ще немає. Додай перший!</p>
+      {% else %}
+      <p class="text-sm">Продажів за {{ selected_month_label }} не знайдено.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+{{ render_toast() }}
+
+<!-- Add modal -->
+<div id="addModal" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:1rem;">
+  <div style="width:100%;max-width:500px;background:#fff;border-radius:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+    <div class="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+      <h2 class="text-lg font-semibold text-stone-900">Додати продаж</h2>
+      <button type="button" onclick="closeAddModal()" class="text-stone-400 hover:text-stone-600">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="px-5 py-4 flex flex-col gap-4">
+      <div id="addWarning" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        Сума понад 50 000 ₴ — підтверди, що це правильно.
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Сума, ₴ <span class="text-red-500">*</span></label>
+        <input id="addAmount" type="number" step="0.01" min="0.01"
+               placeholder="Наприклад, 350"
+               oninput="checkAddAmount()"
+               class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Коментар</label>
+        <textarea id="addComment" rows="2"
+                  placeholder="Необов'язково"
+                  class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-stone-200 px-5 py-4">
+      <button type="button" onclick="closeAddModal()"
+              class="rounded-xl border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+        Скасувати
+      </button>
+      <button type="button" id="addSubmitBtn" onclick="submitAdd()"
+              class="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
+        Зберегти
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit modal -->
+<div id="editModal" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.4);align-items:center;justify-content:center;padding:1rem;">
+  <div style="width:100%;max-width:500px;background:#fff;border-radius:1rem;box-shadow:0 20px 60px rgba(0,0,0,0.15);">
+    <div class="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+      <h2 class="text-lg font-semibold text-stone-900">Редагувати продаж</h2>
+      <button type="button" onclick="closeEditModal()" class="text-stone-400 hover:text-stone-600">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div class="px-5 py-4 flex flex-col gap-4">
+      <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Сума, ₴ <span class="text-red-500">*</span></label>
+        <input id="editAmount" type="number" step="0.01" min="0.01"
+               class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Коментар</label>
+        <textarea id="editComment" rows="2"
+                  class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 border-t border-stone-200 px-5 py-4">
+      <button type="button" onclick="closeEditModal()"
+              class="rounded-xl border border-stone-200 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+        Скасувати
+      </button>
+      <button type="button" onclick="submitEdit()"
+              class="rounded-xl bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700 transition-colors">
+        Зберегти
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+{{ toast_script() }}
+<script>
+  let currentEditId = null;
+  let addConfirmed = false;
+
+  function openAddModal() {
+    document.getElementById('addAmount').value = '';
+    document.getElementById('addComment').value = '';
+    document.getElementById('addWarning').classList.add('hidden');
+    addConfirmed = false;
+    document.getElementById('addModal').style.display = 'flex';
+    document.getElementById('addAmount').focus();
+  }
+
+  function closeAddModal() {
+    document.getElementById('addModal').style.display = 'none';
+  }
+
+  function checkAddAmount() {
+    const val = parseFloat(document.getElementById('addAmount').value);
+    const warn = document.getElementById('addWarning');
+    if (val > 50000) {
+      warn.classList.remove('hidden');
+      addConfirmed = false;
+    } else {
+      warn.classList.add('hidden');
+      addConfirmed = true;
+    }
+  }
+
+  function submitAdd() {
+    const amountEl = document.getElementById('addAmount');
+    const amount = parseFloat(amountEl.value);
+    if (!amount || amount <= 0) {
+      showToast('Введіть суму більше нуля', 'danger');
+      return;
+    }
+    if (amount > 50000 && !addConfirmed) {
+      addConfirmed = true;
+      showToast('Сума понад 50 000 ₴. Натисни "Зберегти" ще раз для підтвердження.', 'warning');
+      return;
+    }
+    const comment = document.getElementById('addComment').value.trim();
+    const btn = document.getElementById('addSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Збереження...';
+
+    fetch('/florist/sales', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({amount, comment}),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('Продаж додано', 'success');
+        closeAddModal();
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(data.error || 'Помилка', 'danger');
+        btn.disabled = false;
+        btn.textContent = 'Зберегти';
+      }
+    })
+    .catch(() => {
+      showToast('Помилка мережі', 'danger');
+      btn.disabled = false;
+      btn.textContent = 'Зберегти';
+    });
+  }
+
+  function openEditModal(id, amount, comment) {
+    currentEditId = id;
+    document.getElementById('editAmount').value = amount;
+    document.getElementById('editComment').value = comment || '';
+    document.getElementById('editModal').style.display = 'flex';
+    document.getElementById('editAmount').focus();
+  }
+
+  function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+    currentEditId = null;
+  }
+
+  function submitEdit() {
+    const amount = parseFloat(document.getElementById('editAmount').value);
+    if (!amount || amount <= 0) {
+      showToast('Введіть суму більше нуля', 'danger');
+      return;
+    }
+    const comment = document.getElementById('editComment').value.trim();
+
+    fetch(`/florist/sales/${currentEditId}/edit`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      body: JSON.stringify({amount, comment}),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        showToast('Збережено', 'success');
+        closeEditModal();
+        setTimeout(() => location.reload(), 800);
+      } else {
+        showToast(data.error || 'Помилка', 'danger');
+      }
+    })
+    .catch(() => showToast('Помилка мережі', 'danger'));
+  }
+
+  document.getElementById('addModal').addEventListener('click', function(e) {
+    if (e.target === this) closeAddModal();
+  });
+  document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeAddModal(); closeEditModal(); }
+  });
+</script>
+{% endblock %}

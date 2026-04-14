@@ -184,9 +184,15 @@
         {% if current_user.user_type == 'florist' %}
         <a href="/florist" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                  {% if request.path == '/florist' or request.path.startswith('/florist/deliveries') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
             <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
             <span>Флорист</span>
+        </a>
+        <a href="/florist/sales" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/sales') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
+            <span>Офлайн продажі</span>
         </a>
         {% else %}
         <a href="/dashboard" onclick="closeMobileSidebar()"
@@ -287,10 +293,17 @@
         {% if current_user.user_type == 'florist' %}
         <a href="/florist"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+                  {% if request.path == '/florist' or request.path.startswith('/florist/deliveries') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Флорист">
             <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
             <span class="nav-label">Флорист</span>
+        </a>
+        <a href="/florist/sales"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/sales') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Офлайн продажі">
+            <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
+            <span class="nav-label">Офлайн продажі</span>
         </a>
         {% else %}
         <a href="/dashboard"
