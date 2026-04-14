@@ -1196,6 +1196,10 @@
             <input type="text" class="settings-modal__input" id="userCreateUsername" autocomplete="off" required>
           </label>
           <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Ім'я</span>
+            <input type="text" class="settings-modal__input" id="userCreateDisplayName" autocomplete="off" placeholder="Необов'язково">
+          </label>
+          <label class="settings-modal__field">
             <span class="settings-modal__field-label">Роль *</span>
             <select class="settings-modal__input" id="userCreateRole" required>
               <option value="manager">Менеджер</option>
@@ -1841,7 +1845,10 @@ async function toggleDistributeBanner() {
     }
     tbody.innerHTML = users.map(u => `
       <tr data-user-id="${u.id}">
-        <td><div class="settings-couriers__name">${u.username}</div></td>
+        <td>
+          <div class="settings-couriers__name">${u.display_name || u.username}</div>
+          ${u.display_name ? `<div style="font-size:0.75rem;color:#a8a29e;">${u.username}</div>` : ''}
+        </td>
         <td><span class="settings-couriers__status">${roleLabel(u.user_type)}</span></td>
         <td>
           <span class="settings-couriers__status ${u.is_active ? 'settings-couriers__status--active' : 'settings-couriers__status--inactive'}">
@@ -1917,6 +1924,7 @@ async function toggleDistributeBanner() {
     errEl.hidden = true;
     const payload = {
       username: document.getElementById('userCreateUsername').value.trim(),
+      display_name: document.getElementById('userCreateDisplayName').value.trim(),
       role: document.getElementById('userCreateRole').value,
       password: document.getElementById('userCreatePassword').value,
       password_confirm: document.getElementById('userCreatePasswordConfirm').value,

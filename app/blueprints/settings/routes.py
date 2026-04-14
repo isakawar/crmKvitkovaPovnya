@@ -210,6 +210,7 @@ def get_users():
         result.append({
             'id': u.id,
             'username': u.username,
+            'display_name': u.display_name or '',
             'user_type': u.user_type,
             'roles': role_names,
             'is_active': u.is_active,
@@ -223,6 +224,7 @@ def get_users():
 def create_user():
     data = request.get_json()
     username = (data.get('username') or '').strip()
+    display_name = (data.get('display_name') or '').strip() or None
     password = data.get('password') or ''
     password_confirm = data.get('password_confirm') or ''
     role_name = (data.get('role') or '').strip()
@@ -251,7 +253,7 @@ def create_user():
         db.session.flush()
 
     email = f'{username}@crm.local'
-    user = User(username=username, email=email, user_type=role_name, is_active=True)
+    user = User(username=username, display_name=display_name, email=email, user_type=role_name, is_active=True)
     user.set_password(password)
     user.roles.append(role)
     db.session.add(user)
@@ -260,6 +262,7 @@ def create_user():
     return jsonify({'success': True, 'user': {
         'id': user.id,
         'username': user.username,
+        'display_name': user.display_name or '',
         'user_type': user.user_type,
         'roles': [role_name],
         'is_active': user.is_active,
