@@ -163,8 +163,116 @@
 <body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
 
 {% if current_user.is_authenticated %}
-<!-- Sidebar -->
-<div class="sidebar fixed left-0 top-0 bottom-0 w-16 bg-stone-100 border-r border-stone-200 flex flex-col items-center z-50 overflow-hidden">
+<!-- Mobile Sidebar Overlay -->
+<div id="mobile-sidebar-overlay"
+     class="fixed inset-0 bg-black/50 z-40 hidden"
+     onclick="closeMobileSidebar()"></div>
+
+<!-- Mobile Sidebar Drawer -->
+<div id="mobile-sidebar"
+     class="fixed left-0 top-0 bottom-0 w-64 bg-stone-100 border-r border-stone-200 flex flex-col z-50 -translate-x-full transition-transform duration-300 ease-in-out md:hidden overflow-y-auto">
+    <div class="flex items-center gap-3 py-4 px-4 border-b border-stone-200 flex-shrink-0">
+        <div class="sidebar-logo-box flex-shrink-0">
+            <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
+        </div>
+        <span class="text-sm font-semibold text-stone-900">Kvitkova CRM</span>
+        <button onclick="closeMobileSidebar()" class="ml-auto p-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-200 transition-colors flex-shrink-0">
+            <i class="bi bi-x-lg text-base"></i>
+        </button>
+    </div>
+    <nav class="flex flex-col w-full px-2 gap-0.5 flex-1 py-2">
+        {% if current_user.user_type == 'florist' %}
+        <a href="/florist" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
+            <span>Флорист</span>
+        </a>
+        {% else %}
+        <a href="/dashboard" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
+            <span>Дашборд</span>
+        </a>
+        <a href="/clients" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-people text-lg flex-shrink-0"></i>
+            <span>Клієнти</span>
+        </a>
+        <a href="/subscriptions" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/subscriptions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-box-seam text-lg flex-shrink-0"></i>
+            <span>Підписки</span>
+        </a>
+        <a href="/orders" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-truck text-lg flex-shrink-0"></i>
+            <span>Замовлення</span>
+        </a>
+        <a href="/route-generator" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-bezier2 text-lg flex-shrink-0"></i>
+            <span>Маршрути</span>
+        </a>
+        <a href="/routes" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/routes') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
+            <span>Збережені</span>
+        </a>
+        {% if current_user.has_permission('view_reports') %}
+        <a href="/reports" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/reports') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-grid text-lg flex-shrink-0"></i>
+            <span>Звіти</span>
+        </a>
+        {% endif %}
+        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        <a href="/florist" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
+            <span>Флорист</span>
+        </a>
+        {% endif %}
+        <a href="/certificates" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/certificates') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-award text-lg flex-shrink-0"></i>
+            <span>Сертифікати</span>
+        </a>
+        <a href="/transactions" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
+            <span>Транзакції</span>
+        </a>
+        <div class="flex-1"></div>
+        <a href="/settings" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-1
+                  {% if request.path.startswith('/settings') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-gear text-lg flex-shrink-0"></i>
+            <span>Налаштування</span>
+        </a>
+        {% endif %}
+        {% if current_user.user_type != 'florist' %}
+        <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs text-stone-400 hover:bg-stone-200 transition-colors mb-2"
+           data-bs-toggle="modal" data-bs-target="#changelogModal" onclick="closeMobileSidebar()">
+            <i class="bi bi-clock-history text-base flex-shrink-0"></i>
+            <span>v{{ app_version }}</span>
+        </a>
+        {% endif %}
+    </nav>
+</div>
+
+<!-- Desktop Sidebar -->
+<div class="sidebar fixed left-0 top-0 bottom-0 w-16 bg-stone-100 border-r border-stone-200 hidden md:flex flex-col items-center z-50 overflow-hidden">
 
     <!-- Logo -->
     <div class="sidebar-logo-row flex items-center gap-3 py-5 px-3 w-full">
@@ -285,11 +393,19 @@
 </div>
 
 <!-- Main content -->
-<div class="ml-16" style="min-height: 100vh;">
+<div class="md:ml-16" style="min-height: 100vh;">
 
     <!-- Topbar -->
-    <div class="bg-white border-b border-stone-200 px-6 py-3 flex items-center justify-between sticky top-0 z-10">
-        <span class="text-sm font-semibold text-stone-700">CRM Kvitkova Povnya</span>
+    <div class="bg-white border-b border-stone-200 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+        <div class="flex items-center gap-2">
+            <button id="mobile-menu-btn"
+                    class="md:hidden p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors"
+                    onclick="openMobileSidebar()"
+                    aria-label="Відкрити меню">
+                <i class="bi bi-list text-xl leading-none"></i>
+            </button>
+            <span class="text-sm font-semibold text-stone-700">CRM Kvitkova Povnya</span>
+        </div>
         <div class="flex items-center gap-2">
             {% if current_user.is_authenticated %}
             <div class="relative" id="user-dropdown-wrapper">
@@ -314,7 +430,7 @@
     </div>
 
     <!-- Page content -->
-    <div class="px-8 py-6">
+    <div class="px-3 py-4 md:px-8 md:py-6">
         {% block content %}{% endblock %}
     </div>
 </div>
@@ -367,6 +483,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     {% endif %}
+});
+</script>
+<script>
+function openMobileSidebar() {
+    var sidebar = document.getElementById('mobile-sidebar');
+    var overlay = document.getElementById('mobile-sidebar-overlay');
+    if (sidebar) sidebar.classList.remove('-translate-x-full');
+    if (overlay) overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+function closeMobileSidebar() {
+    var sidebar = document.getElementById('mobile-sidebar');
+    var overlay = document.getElementById('mobile-sidebar-overlay');
+    if (sidebar) sidebar.classList.add('-translate-x-full');
+    if (overlay) overlay.classList.add('hidden');
+    document.body.style.overflow = '';
+}
+// Close mobile sidebar on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMobileSidebar();
 });
 </script>
 {% block scripts %}{% endblock %}

@@ -218,23 +218,21 @@
 {% block content %}
 <div class="flex flex-col gap-6">
   <section class="mb-2 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-stone-900">Замовлення</h1>
+      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm">
           Всього: {{ orders_count }}
         </div>
         <a href="{{ url_for('orders.export_orders_csv', date_from=date_from_filter or '', date_to=date_to_filter or '') }}"
-           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900">
+           class="inline-flex items-center justify-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900 whitespace-nowrap">
           <i class="bi bi-download"></i>
-          Експорт CSV{% if date_from_filter %} ({{ date_from_filter }}{% if date_to_filter and date_to_filter != date_from_filter %} — {{ date_to_filter }}{% endif %}){% endif %}
+          <span class="hidden sm:inline">Експорт CSV{% if date_from_filter %} ({{ date_from_filter }}{% if date_to_filter and date_to_filter != date_from_filter %} — {{ date_to_filter }}{% endif %}){% endif %}</span>
+          <span class="sm:hidden">CSV</span>
         </a>
         <button
           type="button"
-          class="inline-flex min-w-[210px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          class="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-2xl bg-stone-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap"
           data-open-composer="order"
           data-bs-toggle="modal"
           data-bs-target="#addOrderModal"
@@ -296,66 +294,68 @@
     </article>
   </section>
 
-  <form method="get" id="orders-filter-form" class="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-stone-200 bg-white px-5 py-3 shadow-sm">
-      <div class="relative min-w-[280px] flex-1 md:max-w-md">
-        <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
-        <input
-          type="text"
-          name="q"
-          value="{{ search_query }}"
-          placeholder="Пошук за Instagram, отримувачем, телефоном, соцмережею або містом..."
-          class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-          autocomplete="off"
-        >
-      </div>
-      <div class="relative">
-        <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
-        <input
-          type="text"
-          id="date-range-picker"
-          placeholder="Оберіть дату"
-          readonly
-          style="width:150px"
-          class="rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
+  <form method="get" id="orders-filter-form" class="mb-6 flex flex-col gap-2 rounded-xl border border-stone-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+      <!-- Search + date: full-width row on mobile -->
+      <div class="flex gap-2 w-full sm:contents">
+        <div class="relative flex-1 sm:flex-1 sm:min-w-[220px] sm:max-w-md">
+          <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+          <input
+            type="text"
+            name="q"
+            value="{{ search_query }}"
+            placeholder="Instagram, отримувач, телефон..."
+            class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            autocomplete="off"
+          >
+        </div>
+        <div class="relative flex-shrink-0">
+          <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+          <input
+            type="text"
+            id="date-range-picker"
+            placeholder="Дата"
+            readonly
+            class="w-32 sm:w-36 rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-3 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+          >
+        </div>
       </div>
       <input type="hidden" name="date_from" id="date_from" value="{{ date_from_filter }}">
       <input type="hidden" name="date_to" id="date_to" value="{{ date_to_filter }}">
-      <select
-        name="city"
-        id="filter-city"
-        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      >
-        <option value="">Всі міста</option>
-        {% for city in cities %}
-          <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
-        {% endfor %}
-      </select>
-
-      <select
-        name="delivery_type"
-        id="filter-delivery-type"
-        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      >
-        <option value="">Усі типи</option>
-        {% for item in delivery_types %}
-          <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
-        {% endfor %}
-      </select>
-
-      <select
-        name="size"
-        id="filter-size"
-        class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      >
-        <option value="">Усі розміри</option>
-        {% for item in sizes %}
-          <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
-        {% endfor %}
-      </select>
+      <!-- Selects + actions: wrapping row -->
+      <div class="flex flex-wrap items-center gap-2">
+        <select
+          name="city"
+          id="filter-city"
+          class="flex-1 min-w-[100px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+          <option value="">Всі міста</option>
+          {% for city in cities %}
+            <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+          {% endfor %}
+        </select>
+        <select
+          name="delivery_type"
+          id="filter-delivery-type"
+          class="flex-1 min-w-[100px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+          <option value="">Усі типи</option>
+          {% for item in delivery_types %}
+            <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+          {% endfor %}
+        </select>
+        <select
+          name="size"
+          id="filter-size"
+          class="flex-1 min-w-[90px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        >
+          <option value="">Розмір</option>
+          {% for item in sizes %}
+            <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+          {% endfor %}
+        </select>
         <button
           type="submit"
-          class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+          class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap"
         >
           Застосувати
         </button>
@@ -369,6 +369,7 @@
           <i class="bi bi-x text-base leading-none"></i>
         </button>
         {% endif %}
+      </div>
   </form>
 
   {% if deliveries %}
@@ -392,8 +393,8 @@
       </div>
     </div>
 
-    <div class="flex flex-wrap items-end gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
-      <div class="mr-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Час доставки</div>
+    <div class="flex flex-wrap items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+      <div class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Час доставки</div>
       <div class="flex items-center gap-2">
         <input type="time" id="bulk-time-from"
                class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
