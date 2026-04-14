@@ -43,7 +43,7 @@ def test_dashboard_shows_only_due_draft_reminders(app, session):
 
     assert response.status_code == 200
     html = response.get_data(as_text=True)
-    assert "Фокус менеджера на сьогодні" in html
+    assert "Нагадування на сьогодні" in html
     assert "Кому потрібно написати або подзвонити" in html
     assert "Кого потрібно продовжити" in html
     assert 'due_draft' in html

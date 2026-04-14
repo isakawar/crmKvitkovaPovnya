@@ -239,33 +239,57 @@
   }
 
   .auth-field__control {
-    position: relative;
-  }
-
-  .auth-field__control i {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #a8a29e;
-    font-size: 0.98rem;
-  }
-
-  .auth-input {
-    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     border: 1px solid #e7e5e4;
     border-radius: 1.1rem;
     background: #fff;
-    padding: 0.9rem 1rem 0.9rem 2.75rem;
-    font-size: 0.98rem;
-    color: #1c1917;
-    transition: 0.16s ease;
+    padding: 0 1rem;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
   }
 
-  .auth-input:focus {
-    outline: none;
+  .auth-field__control:focus-within {
     border-color: #1c1917;
     box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.14);
+  }
+
+  .auth-field__control > i {
+    flex-shrink: 0;
+    color: #a8a29e;
+    font-size: 0.98rem;
+    pointer-events: none;
+  }
+
+  .auth-input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 0.9rem 0;
+    font-size: 0.98rem;
+    color: #1c1917;
+    outline: none;
+  }
+
+  .auth-input--has-toggle { }
+
+  .auth-eye-toggle {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #a8a29e;
+    font-size: 0.98rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    transition: color 0.16s ease;
+  }
+
+  .auth-eye-toggle:hover {
+    color: #1c1917;
   }
 
   .auth-submit {
@@ -433,7 +457,10 @@
           <span class="auth-field__label">Пароль</span>
           <span class="auth-field__control">
             <i class="bi bi-lock"></i>
-            <input type="password" class="auth-input" id="password" name="password" autocomplete="current-password" required>
+            <input type="password" class="auth-input auth-input--has-toggle" id="password" name="password" autocomplete="current-password" required>
+            <button type="button" class="auth-eye-toggle" aria-label="Показати пароль" data-target="password">
+              <i class="bi bi-eye"></i>
+            </button>
           </span>
         </label>
 
@@ -446,4 +473,22 @@
     </section>
   </div>
 </div>
+
+<script>
+  document.querySelectorAll('.auth-eye-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var input = document.getElementById(btn.dataset.target);
+      var icon = btn.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'bi bi-eye-slash';
+        btn.setAttribute('aria-label', 'Приховати пароль');
+      } else {
+        input.type = 'password';
+        icon.className = 'bi bi-eye';
+        btn.setAttribute('aria-label', 'Показати пароль');
+      }
+    });
+  });
+</script>
 {% endblock %}

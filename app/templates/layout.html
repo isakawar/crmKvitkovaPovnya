@@ -227,6 +227,7 @@
             <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
             <span class="nav-label">Збережені</span>
         </a>
+        {% if current_user.has_permission('view_reports') %}
         <a href="/reports"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/reports') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
@@ -234,6 +235,7 @@
             <i class="bi bi-grid text-lg flex-shrink-0"></i>
             <span class="nav-label">Звіти</span>
         </a>
+        {% endif %}
         {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
         <a href="/florist"
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors

@@ -152,7 +152,10 @@ def test_role_get_permissions_returns_list_for_manager():
     perms = Role.get_permissions(ROLE_MANAGER)
     assert isinstance(perms, list)
     assert 'view_orders' in perms
-    assert 'edit_settings' not in perms
+    assert 'view_settings' in perms
+    assert 'edit_settings' in perms
+    assert 'manage_users' not in perms
+    assert 'view_reports' not in perms
 
 
 def test_role_get_permissions_unknown_role_returns_empty_list():

@@ -16,14 +16,16 @@ ROLE_PERMISSIONS = {
         'view_deliveries', 'edit_deliveries', 'delete_deliveries',
         'view_distribution', 'edit_distribution',
         'view_reports',
-        'view_settings', 'edit_settings'
+        'view_settings', 'edit_settings',
+        'manage_users'
     ],
     ROLE_MANAGER: [
         'view_orders', 'edit_orders', 'delete_orders',
         'view_clients', 'edit_clients', 'delete_clients',
         'view_couriers', 'edit_couriers', 'delete_couriers',
         'view_deliveries', 'edit_deliveries', 'delete_deliveries',
-        'view_distribution', 'edit_distribution'
+        'view_distribution', 'edit_distribution',
+        'view_settings', 'edit_settings'
     ]
 }
 
