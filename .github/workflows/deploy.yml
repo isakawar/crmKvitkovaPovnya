@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy to Production
 
 on:
   workflow_dispatch:
@@ -6,51 +6,63 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Deploy to server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        script: |
-          echo "🚀 Starting deployment for tag: ${{ github.ref_name }}"
-          
-          cd /home/isakawar1/crmKvitkovaPovnya
-          
-          # Отримуємо останні зміни
-          git fetch --tags
-          git pull origin main
-          git checkout ${{ github.ref_name }}
-          
-          # Створюємо .env файл
-          cat > .env << EOF
-          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
-          FLASK_ENV=production
-          FLASK_APP=run.py
-          PYTHONUNBUFFERED=1
-          VERSION=${{ github.ref_name }}
-          EOF
-          
-          # Повне очищення Docker
-          echo "🧹 Full Docker cleanup..."
-          docker-compose down --volumes --remove-orphans || true
-          docker system prune -af
-          docker volume prune -f
-          
-          # Запускаємо скрипт розгортання
-          chmod +x scripts/docker-deploy.sh
-          ./scripts/docker-deploy.sh
-          
-          # Додаткова перевірка
-          echo "📊 Final container status:"
-          docker-compose ps
-          
-          echo "📋 Recent logs:"
-          docker-compose logs --tail=30
-          
-          echo "✅ Deployment completed!"
+      - name: Deploy via SSH
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /apps/crm
+
+            git fetch --tags
+
+            LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
+
+            if [ -z "$LATEST_TAG" ]; then
+              echo "❌ No tags found!"
+              exit 1
+            fi
+
+            echo "TAG=$LATEST_TAG" >> $GITHUB_ENV
+
+            git checkout $LATEST_TAG
+
+            docker compose up -d --build
+
+            sleep 8
+
+            if curl -f https://povnyacrm.duckdns.org/health; then
+              echo "DEPLOY_STATUS=success" >> $GITHUB_ENV
+            else
+              echo "DEPLOY_STATUS=fail" >> $GITHUB_ENV
+              exit 1
+            fi
+
+      # 🔥 SUCCESS MESSAGE
+      - name: Notify Telegram (success)
+        if: success()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TG_CHAT_ID }} \
+            -d text="🚀 Deploy SUCCESS
+
+Tag: ${{ env.TAG }}
+URL: https://povnyacrm.duckdns.org
+Status: ✅ OK"
+
+      # 💥 FAIL MESSAGE
+      - name: Notify Telegram (fail)
+        if: failure()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TG_CHAT_ID }} \
+            -d text="❌ Deploy FAILED
+
+Tag: ${{ env.TAG }}
+Check logs in GitHub Actions!"
