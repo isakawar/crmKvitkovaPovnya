@@ -254,9 +254,16 @@
           <div class="mt-1.5">{{ street }}{% if building %}, {{ building }}{% endif %}</div>
         {% endif %}
       {% else %}
+        {% if delivery.courier and delivery.courier.is_taxi %}
+          <span class="florist-badge" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">
+            <i class="bi bi-taxi-front"></i> {{ delivery.courier.name }}
+          </span>
+        {% endif %}
         {% if street %}
-          {{ city ~ ', ' if city else '' }}{{ street }}{% if building %}, {{ building }}{% endif %}
-        {% else %}
+          <div class="{% if delivery.courier and delivery.courier.is_taxi %}mt-1.5{% endif %}">
+            {{ city ~ ', ' if city else '' }}{{ street }}{% if building %}, {{ building }}{% endif %}
+          </div>
+        {% elif not (delivery.courier and delivery.courier.is_taxi) %}
           —
         {% endif %}
       {% endif %}
@@ -471,6 +478,30 @@
     </section>
   {% endif %}
 
+  {% if taxi_deliveries %}
+    <section class="florist-section">
+      <div class="flex items-center justify-between gap-3 px-5 py-4">
+        <div>
+          <h2 class="text-xl font-semibold text-stone-900">Доставки через таксі</h2>
+          <p class="mt-1 text-sm text-amber-600 font-medium">
+            <i class="bi bi-taxi-front me-1"></i>Потрібно викликати таксі для цих доставок.
+          </p>
+        </div>
+        <span class="florist-badge">{{ taxi_deliveries|length }} доставок</span>
+      </div>
+      <div class="florist-table-wrap">
+        <table class="florist-table">
+          {{ delivery_table_head() }}
+          <tbody>
+            {% for delivery in taxi_deliveries %}
+              {{ delivery_row(delivery) }}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  {% endif %}
+
   {% if unrouted_courier_deliveries %}
     <section class="florist-section">
       <div class="flex items-center justify-between gap-3 px-5 py-4">
@@ -537,7 +568,7 @@
     </section>
   {% endif %}
 
-  {% if not routes and not unrouted_courier_deliveries and not nova_poshta_deliveries and not pickup_deliveries %}
+  {% if not routes and not unrouted_courier_deliveries and not taxi_deliveries and not nova_poshta_deliveries and not pickup_deliveries %}
     <section class="florist-empty">
       <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-stone-400">
         <i class="bi bi-flower1 text-xl"></i>

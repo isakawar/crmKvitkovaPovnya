@@ -549,7 +549,7 @@
 
 {% block content %}
 {% set months = ['','Січня','Лютого','Березня','Квітня','Травня','Червня','Липня','Серпня','Вересня','Жовтня','Листопада','Грудня'] %}
-{% set status_labels = {'draft':'Чернетка','sent':'В процесі','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
+{% set status_labels = {'draft':'Чернетка','sent':'На узгодженні у курʼєра','accepted':'Прийнято','rejected':'Відхилено','completed':'Завершено'} %}
 {% set stats = namespace(assigned=0, sent=0) %}
 {% for route in routes %}
   {% if route.courier_id %}

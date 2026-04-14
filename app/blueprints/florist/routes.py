@@ -1,9 +1,11 @@
+from decimal import Decimal
 from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.delivery import Delivery
 from app.extensions import db
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 from datetime import date, datetime, timedelta
 
 florist_bp = Blueprint('florist', __name__)
@@ -164,7 +166,9 @@ def florist_routes():
         d for d in all_deliveries
         if not d.is_pickup and d.delivery_method != 'nova_poshta'
     ]
-    unrouted_courier_deliveries = [d for d in courier_deliveries if d.id not in route_delivery_ids]
+    unrouted_all = [d for d in courier_deliveries if d.id not in route_delivery_ids]
+    taxi_deliveries = [d for d in unrouted_all if d.courier and d.courier.is_taxi]
+    unrouted_courier_deliveries = [d for d in unrouted_all if not (d.courier and d.courier.is_taxi)]
     nova_poshta_deliveries = [d for d in all_deliveries if d.delivery_method == 'nova_poshta']
     pickup_deliveries = [d for d in all_deliveries if d.is_pickup]
     order_ids = {delivery.order_id for delivery in all_deliveries if delivery.order_id}
@@ -183,8 +187,189 @@ def florist_routes():
         routes_count=len(routes),
         routed_deliveries_count=routed_deliveries_count,
         unrouted_courier_deliveries=unrouted_courier_deliveries,
+        taxi_deliveries=taxi_deliveries,
         nova_poshta_deliveries=nova_poshta_deliveries,
         pickup_deliveries=pickup_deliveries,
         florist_status_options=FLORIST_STATUS_OPTIONS,
         subscription_delivery_index=subscription_delivery_index,
     )
+
+
+def _parse_month(month_raw):
+    today = datetime.utcnow()
+    default = datetime(today.year, today.month, 1)
+    if not month_raw:
+        return default
+    try:
+        parsed = datetime.strptime(month_raw, '%Y-%m')
+        return datetime(parsed.year, parsed.month, 1)
+    except ValueError:
+        return default
+
+
+def _month_bounds(month_start):
+    if month_start.month == 12:
+        month_end = datetime(month_start.year + 1, 1, 1)
+    else:
+        month_end = datetime(month_start.year, month_start.month + 1, 1)
+    return month_start, month_end
+
+
+def _adjacent_months(month_start):
+    # previous month
+    if month_start.month == 1:
+        prev = datetime(month_start.year - 1, 12, 1)
+    else:
+        prev = datetime(month_start.year, month_start.month - 1, 1)
+    # next month — only expose if not in the future
+    if month_start.month == 12:
+        nxt = datetime(month_start.year + 1, 1, 1)
+    else:
+        nxt = datetime(month_start.year, month_start.month + 1, 1)
+    return prev, nxt
+
+
+MONTH_NAMES_UK = {
+    1: 'Січень', 2: 'Лютий', 3: 'Березень', 4: 'Квітень',
+    5: 'Травень', 6: 'Червень', 7: 'Липень', 8: 'Серпень',
+    9: 'Вересень', 10: 'Жовтень', 11: 'Листопад', 12: 'Грудень',
+}
+
+
+@florist_bp.route('/florist/sales', methods=['GET'])
+@login_required
+def florist_sales():
+    from app.models.florist_sale import FloristSale
+
+    month_raw = (request.args.get('month') or '').strip()
+    month_start = _parse_month(month_raw)
+    month_start, month_end = _month_bounds(month_start)
+
+    now_utc = datetime.utcnow()
+    current_month_start = datetime(now_utc.year, now_utc.month, 1)
+    is_current_month = (month_start == current_month_start)
+
+    prev_month, next_month = _adjacent_months(month_start)
+    has_next = next_month <= current_month_start  # don't navigate into future
+
+    stats = (
+        db.session.query(
+            func.count(FloristSale.id),
+            func.sum(FloristSale.amount),
+            func.avg(FloristSale.amount),
+            func.sum(FloristSale.bonus_amount),
+        )
+        .filter(
+            FloristSale.florist_id == current_user.id,
+            FloristSale.created_at >= month_start,
+            FloristSale.created_at < month_end,
+        )
+        .one()
+    )
+    count = stats[0] or 0
+    total_amount = float(stats[1] or 0)
+    avg_amount = float(stats[2] or 0)
+    total_bonus = float(stats[3] or 0)
+
+    page = request.args.get('page', 1, type=int)
+    per_page = 15
+    pagination = (
+        FloristSale.query
+        .filter(
+            FloristSale.florist_id == current_user.id,
+            FloristSale.created_at >= month_start,
+            FloristSale.created_at < month_end,
+        )
+        .order_by(FloristSale.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    selected_month_str = month_start.strftime('%Y-%m')
+    selected_month_label = f"{MONTH_NAMES_UK[month_start.month]} {month_start.year}"
+
+    return render_template(
+        'florist/sales.html',
+        count=count,
+        total_amount=total_amount,
+        avg_amount=avg_amount,
+        total_bonus=total_bonus,
+        pagination=pagination,
+        sales=pagination.items,
+        now_utc=now_utc,
+        is_current_month=is_current_month,
+        selected_month=selected_month_str,
+        selected_month_label=selected_month_label,
+        prev_month=prev_month.strftime('%Y-%m'),
+        next_month=next_month.strftime('%Y-%m') if has_next else None,
+    )
+
+
+@florist_bp.route('/florist/sales', methods=['POST'])
+@login_required
+def florist_sales_add():
+    from app.models.florist_sale import FloristSale
+
+    data = request.get_json(silent=True) or {}
+    try:
+        amount = Decimal(str(data.get('amount', 0)))
+    except Exception:
+        return jsonify({'success': False, 'error': 'Некоректна сума'}), 400
+
+    if amount <= 0:
+        return jsonify({'success': False, 'error': 'Сума має бути більше нуля'}), 400
+
+    comment = (data.get('comment') or '').strip() or None
+    bonus_percent = Decimal('5.0')
+    bonus_amount = (amount * bonus_percent / Decimal('100')).quantize(Decimal('0.01'))
+
+    sale = FloristSale(
+        florist_id=current_user.id,
+        created_by=current_user.id,
+        amount=amount,
+        bonus_percent=bonus_percent,
+        bonus_amount=bonus_amount,
+        comment=comment,
+    )
+    db.session.add(sale)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    return jsonify({'success': True, 'id': sale.id})
+
+
+@florist_bp.route('/florist/sales/<int:sale_id>/edit', methods=['POST'])
+@login_required
+def florist_sales_edit(sale_id):
+    from app.models.florist_sale import FloristSale
+
+    sale = FloristSale.query.filter_by(id=sale_id, florist_id=current_user.id).first()
+    if not sale:
+        return jsonify({'success': False, 'error': 'Продаж не знайдено'}), 404
+
+    if (datetime.utcnow() - sale.created_at).total_seconds() > 86400:
+        return jsonify({'success': False, 'error': 'Редагування заборонено після 24 годин'}), 403
+
+    data = request.get_json(silent=True) or {}
+    try:
+        amount = Decimal(str(data.get('amount', 0)))
+    except Exception:
+        return jsonify({'success': False, 'error': 'Некоректна сума'}), 400
+
+    if amount <= 0:
+        return jsonify({'success': False, 'error': 'Сума має бути більше нуля'}), 400
+
+    comment = (data.get('comment') or '').strip() or None
+    sale.amount = amount
+    sale.bonus_amount = (amount * sale.bonus_percent / Decimal('100')).quantize(Decimal('0.01'))
+    sale.comment = comment
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+    return jsonify({'success': True})

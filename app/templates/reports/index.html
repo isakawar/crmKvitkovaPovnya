@@ -209,6 +209,49 @@
       {% endif %}
     </article>
   </section>
+
+  <!-- Florist sales section -->
+  <section class="report-card p-4">
+    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-semibold text-stone-900">Продажі флориста</h2>
+        <p class="text-sm text-stone-500">Офлайн продажі за {{ selected_month_label }}. Бонус — 5% від суми.</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="report-kpi">Продажів: {{ florist_sales_grand_count }}</span>
+        <span class="report-kpi">Сума: {{ "%.2f"|format(florist_sales_grand_total) }} ₴</span>
+        <span class="report-kpi text-amber-700">Бонус: {{ "%.2f"|format(florist_sales_grand_bonus) }} ₴</span>
+      </div>
+    </div>
+
+    {% if florist_sales_rows %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="border-b border-stone-200 bg-stone-50">
+          <tr>
+            <th class="px-3 py-2 text-left font-semibold text-stone-600">Флорист</th>
+            <th class="px-3 py-2 text-right font-semibold text-stone-600">Кількість</th>
+            <th class="px-3 py-2 text-right font-semibold text-stone-600">Загальна сума</th>
+            <th class="px-3 py-2 text-right font-semibold text-stone-600">Бонус (5%)</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100">
+          {% for row in florist_sales_rows %}
+          <tr class="hover:bg-stone-50 transition-colors">
+            <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
+            <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
+            <td class="px-3 py-2 text-right font-semibold text-stone-900">{{ "%.2f"|format(row.total_amount) }} ₴</td>
+            <td class="px-3 py-2 text-right font-semibold text-amber-700">{{ "%.2f"|format(row.total_bonus) }} ₴</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="report-empty">Немає продажів за {{ selected_month_label }}</div>
+    {% endif %}
+  </section>
+
 </div>
 {% endblock %}
 

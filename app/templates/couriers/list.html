@@ -102,6 +102,9 @@
                           </div>
                           <div>
                             <strong>{{ stats.courier.name }}</strong>
+                            {% if stats.courier.is_taxi %}
+                              <span class="badge bg-warning text-dark ms-1"><i class="bi bi-taxi-front"></i> Таксі</span>
+                            {% endif %}
                             {% if stats.total_deliveries == 0 %}
                               <br><small class="text-muted">Новий кур'єр</small>
                             {% endif %}
@@ -109,9 +112,13 @@
                         </div>
                       </td>
                       <td>
-                        <a href="tel:{{ stats.courier.phone }}" class="text-decoration-none">
-                          <i class="bi bi-telephone"></i> {{ stats.courier.phone }}
-                        </a>
+                        {% if stats.courier.phone %}
+                          <a href="tel:{{ stats.courier.phone }}" class="text-decoration-none">
+                            <i class="bi bi-telephone"></i> {{ stats.courier.phone }}
+                          </a>
+                        {% else %}
+                          <small class="text-muted">—</small>
+                        {% endif %}
                       </td>
                       <td>
                         <span class="badge bg-{{ 'success' if stats.courier.active else 'secondary' }}">
@@ -128,7 +135,11 @@
                         <span class="text-warning">{{ stats.in_progress }}</span>
                       </td>
                       <td class="text-center">
-                        {% if stats.courier.telegram_registered %}
+                        {% if stats.courier.is_taxi %}
+                          <span class="badge bg-warning text-dark">
+                            <i class="bi bi-taxi-front"></i> Служба таксі
+                          </span>
+                        {% elif stats.courier.telegram_registered %}
                           <div class="d-flex flex-column align-items-center">
                             <span class="badge bg-success mb-1">
                               <i class="bi bi-telegram"></i> Підключено
@@ -136,7 +147,7 @@
                             {% if stats.courier.telegram_username %}
                               <small class="text-muted">@{{ stats.courier.telegram_username }}</small>
                             {% endif %}
-                            <button class="btn btn-outline-warning btn-sm mt-1 reset-telegram" 
+                            <button class="btn btn-outline-warning btn-sm mt-1 reset-telegram"
                                     data-courier-id="{{ stats.courier.id }}"
                                     data-courier-name="{{ stats.courier.name }}"
                                     title="Скинути прив'язку Telegram">
@@ -160,11 +171,12 @@
                       </td>
                       <td class="text-center">
                         <div class="btn-group" role="group">
-                          <button class="btn btn-outline-primary btn-sm edit-courier" 
+                          <button class="btn btn-outline-primary btn-sm edit-courier"
                                   data-courier-id="{{ stats.courier.id }}"
                                   data-courier-name="{{ stats.courier.name }}"
-                                  data-courier-phone="{{ stats.courier.phone }}"
-                                          title="Редагувати">
+                                  data-courier-phone="{{ stats.courier.phone or '' }}"
+                                  data-courier-is-taxi="{{ 'true' if stats.courier.is_taxi else 'false' }}"
+                                  title="Редагувати">
                             <i class="bi bi-pencil"></i>
                           </button>
                           <button class="btn btn-outline-{{ 'warning' if stats.courier.active else 'success' }} btn-sm toggle-status" 
@@ -216,7 +228,13 @@
             <label for="courierName" class="form-label">Ім'я кур'єра *</label>
             <input type="text" class="form-control" id="courierName" name="name" required>
           </div>
-          <div class="mb-3">
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="courierIsTaxi" name="is_taxi">
+            <label class="form-check-label" for="courierIsTaxi">
+              <i class="bi bi-taxi-front"></i> Служба таксі (без Telegram та телефону)
+            </label>
+          </div>
+          <div class="mb-3" id="courierPhoneWrap">
             <label for="courierPhone" class="form-label">Телефон *</label>
             <input type="tel" class="form-control" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </div>
@@ -245,7 +263,13 @@
             <label for="editCourierName" class="form-label">Ім'я кур'єра *</label>
             <input type="text" class="form-control" id="editCourierName" name="name" required>
           </div>
-          <div class="mb-3">
+          <div class="mb-3 form-check">
+            <input type="checkbox" class="form-check-input" id="editCourierIsTaxi" name="is_taxi">
+            <label class="form-check-label" for="editCourierIsTaxi">
+              <i class="bi bi-taxi-front"></i> Служба таксі (без Telegram та телефону)
+            </label>
+          </div>
+          <div class="mb-3" id="editCourierPhoneWrap">
             <label for="editCourierPhone" class="form-label">Телефон *</label>
             <input type="tel" class="form-control" id="editCourierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
           </div>
@@ -325,26 +349,56 @@ function applyPhoneMask(input) {
   });
 }
 
+function applyTaxiToggle(checkboxId, phoneWrapId, phoneInputId) {
+  const checkbox = document.getElementById(checkboxId);
+  const phoneWrap = document.getElementById(phoneWrapId);
+  const phoneInput = document.getElementById(phoneInputId);
+
+  function toggle() {
+    if (checkbox.checked) {
+      phoneWrap.style.display = 'none';
+      phoneInput.removeAttribute('required');
+      phoneInput.value = '';
+    } else {
+      phoneWrap.style.display = '';
+      phoneInput.setAttribute('required', 'required');
+    }
+  }
+
+  checkbox.addEventListener('change', toggle);
+  toggle(); // apply on init
+}
+
 document.addEventListener('DOMContentLoaded', function() {
   applyPhoneMask(document.getElementById('courierPhone'));
   applyPhoneMask(document.getElementById('editCourierPhone'));
+  applyTaxiToggle('courierIsTaxi', 'courierPhoneWrap', 'courierPhone');
+  applyTaxiToggle('editCourierIsTaxi', 'editCourierPhoneWrap', 'editCourierPhone');
 
+  // Reset add modal on close
+  document.getElementById('addCourierModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('addCourierForm').reset();
+    document.getElementById('courierPhone').value = '+380';
+    // re-run toggle to restore phone field
+    document.getElementById('courierIsTaxi').dispatchEvent(new Event('change'));
+  });
 
-  
   // Зміна періоду статистики
   document.getElementById('period-filter').addEventListener('change', function() {
     const period = this.value;
     window.location.href = `/couriers?period=${period}`;
   });
-  
+
   // Додавання нового кур'єра
   document.getElementById('addCourierForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const formData = new FormData(this);
+    const isTaxi = document.getElementById('courierIsTaxi').checked;
     const data = {
       name: formData.get('name'),
-      phone: formData.get('phone'),
+      phone: isTaxi ? null : formData.get('phone'),
+      is_taxi: isTaxi,
     };
 
     fetch('/couriers/new', {
@@ -369,30 +423,35 @@ document.addEventListener('DOMContentLoaded', function() {
       showToast('Помилка мережі', 'danger');
     });
   });
-  
+
   // Редагування кур'єра
   document.querySelectorAll('.edit-courier').forEach(btn => {
     btn.addEventListener('click', function() {
       const courierId = this.dataset.courierId;
       const courierName = this.dataset.courierName;
       const courierPhone = this.dataset.courierPhone;
+      const courierIsTaxi = this.dataset.courierIsTaxi === 'true';
 
       document.getElementById('editCourierId').value = courierId;
       document.getElementById('editCourierName').value = courierName;
-      document.getElementById('editCourierPhone').value = courierPhone;
-      
+      document.getElementById('editCourierPhone').value = courierPhone || '+380';
+      document.getElementById('editCourierIsTaxi').checked = courierIsTaxi;
+      document.getElementById('editCourierIsTaxi').dispatchEvent(new Event('change'));
+
       new bootstrap.Modal(document.getElementById('editCourierModal')).show();
     });
   });
-  
+
   document.getElementById('editCourierForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const courierId = document.getElementById('editCourierId').value;
     const formData = new FormData(this);
+    const isTaxi = document.getElementById('editCourierIsTaxi').checked;
     const data = {
       name: formData.get('name'),
-      phone: formData.get('phone'),
+      phone: isTaxi ? null : formData.get('phone'),
+      is_taxi: isTaxi,
     };
 
     fetch(`/couriers/${courierId}/edit`, {
