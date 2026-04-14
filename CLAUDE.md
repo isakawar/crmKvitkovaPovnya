@@ -231,6 +231,31 @@ pytest tests/test_orders.py  # конкретний файл
 
 ---
 
+## CI / GitHub Actions
+
+Файли в `.github/workflows/`:
+- `tests.yml` — запускається на кожен PR, виконує `pytest tests/unit/`
+- `auto-tag.yml` — запускається при merge PR в `main`: тести → semver тег → GitHub Release
+- `deploy.yml` — тільки `workflow_dispatch` (ручний запуск), автоматичного деплою немає
+
+### Conventional Commits (використовується для auto-bump версії)
+
+```
+feat: add bulk import        → minor bump (0.3.0 → 0.4.0)
+fix: correct date parsing    → patch bump (0.3.0 → 0.3.1)
+BREAKING CHANGE: ...         → major bump (0.3.0 → 1.0.0)
+```
+
+### Ручний деплой на сервері
+
+```bash
+git fetch --tags
+git checkout v0.4.0
+docker compose up -d --build
+```
+
+---
+
 ## Змінні середовища (.env)
 
 ```

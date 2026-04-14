@@ -1,0 +1,119 @@
+name: Auto Tag Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  tag-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        env:
+          SECRET_KEY: test-secret-key
+          DATABASE_URL: "sqlite:///:memory:"
+        run: pytest tests/unit/ -v --tb=short
+
+      - name: Determine new version
+        id: tag
+        run: |
+          LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
+          IS_FIRST_RELEASE=false
+          if [ -z "$LAST_TAG" ]; then
+            LAST_TAG="v0.0.0"
+            IS_FIRST_RELEASE=true
+          fi
+
+          VERSION=$(echo "$LAST_TAG" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          PATCH=$(echo $VERSION | cut -d. -f3)
+
+          if [ "$IS_FIRST_RELEASE" = "true" ]; then
+            COMMITS=$(git log HEAD --pretty=format:"%s%n%b")
+          else
+            COMMITS=$(git log "${LAST_TAG}..HEAD" --pretty=format:"%s%n%b")
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            echo "No changes since last tag, skipping."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          if echo "$COMMITS" | grep -q "BREAKING CHANGE"; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+          elif echo "$COMMITS" | grep -qE "^feat(\(.+\))?:"; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New tag: $NEW_TAG (was: $LAST_TAG)"
+
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        if: steps.tag.outputs.skip == 'false'
+        run: |
+          LAST_TAG="${{ steps.tag.outputs.last_tag }}"
+
+          if git rev-parse "$LAST_TAG" >/dev/null 2>&1; then
+            LOG_RANGE="${LAST_TAG}..HEAD"
+          else
+            LOG_RANGE="HEAD"
+          fi
+
+          FEATS=$(git log $LOG_RANGE --pretty=format:"- %s" | grep -E "^- feat(\(.+\))?:" || true)
+          FIXES=$(git log $LOG_RANGE --pretty=format:"- %s" | grep -E "^- fix(\(.+\))?:" || true)
+          OTHERS=$(git log $LOG_RANGE --pretty=format:"- %s" | grep -vE "^- (feat|fix|chore|docs|test|style|refactor)(\(.+\))?:" || true)
+
+          CHANGELOG=""
+          [ -n "$FEATS" ]  && CHANGELOG="### Features\n${FEATS}\n\n"
+          [ -n "$FIXES" ]  && CHANGELOG="${CHANGELOG}### Bug Fixes\n${FIXES}\n\n"
+          [ -n "$OTHERS" ] && CHANGELOG="${CHANGELOG}### Other Changes\n${OTHERS}"
+          [ -z "$CHANGELOG" ] && CHANGELOG="Automated release"
+
+          printf "%b" "$CHANGELOG" > /tmp/changelog.txt
+          cat /tmp/changelog.txt
+
+      - name: Create and push tag
+        if: steps.tag.outputs.skip == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tag.outputs.new_tag }}" -F /tmp/changelog.txt
+          git push origin "${{ steps.tag.outputs.new_tag }}"
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.skip == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag.outputs.new_tag }}
+          body_path: /tmp/changelog.txt

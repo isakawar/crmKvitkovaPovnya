@@ -133,6 +133,36 @@ pytest tests/unit/ --tb=short  # з коротким трейсом
 
 ---
 
+## CI / Releases
+
+При merge PR в `main` автоматично:
+1. Запускаються юніт тести
+2. Якщо тести пройшли — створюється новий semver тег і GitHub Release з changelog
+
+Версія визначається по [Conventional Commits](https://www.conventionalcommits.org/):
+
+| Prefix в commit | Bump |
+|-----------------|------|
+| `BREAKING CHANGE` | major |
+| `feat:` | minor |
+| `fix:`, решта | patch |
+
+### Деплой на сервер (ручний)
+
+```bash
+git fetch --tags
+git checkout v0.4.0           # переключитись на потрібну версію
+docker compose up -d --build  # перезапустити
+```
+
+Rollback:
+```bash
+git checkout v0.3.0
+docker compose up -d --build
+```
+
+---
+
 ## Backup
 
 > Всі команди виконуються на хості (не через `docker compose exec web`).
