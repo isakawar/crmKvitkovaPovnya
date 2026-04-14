@@ -1,0 +1,54 @@
+name: Deploy to Dev
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Dev via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEV_SERVER_HOST }}
+          username: ${{ secrets.DEV_SERVER_USER }}
+          key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "🚀 Starting DEV deploy..."
+
+            cd /home/bilobrov_vladyslav/apps/crmKvitkovaPovnya
+
+            echo "📥 Pulling latest code..."
+            git pull
+
+            echo "🐳 Rebuilding containers..."
+            docker compose up -d --build
+
+            echo "⏳ Waiting..."
+            sleep 6
+
+            echo "🩺 Health check..."
+
+            if curl -f http://localhost:8002; then
+              echo "✅ DEV OK"
+            else
+              echo "❌ DEV FAILED"
+              exit 1
+            fi
+
+      - name: Notify Telegram (dev success)
+        if: success()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TG_CHAT_ID }} \
+            -d text="🧪 DEV Deploy SUCCESS | http://34.162.233.78:8000"
+
+      - name: Notify Telegram (dev fail)
+        if: failure()
+        run: |
+          curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
+            -d chat_id=${{ secrets.TG_CHAT_ID }} \
+            -d text="❌ DEV Deploy FAILED | Check GitHub Actions"
