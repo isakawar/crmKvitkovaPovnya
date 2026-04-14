@@ -36,7 +36,7 @@ jobs:
 
             sleep 8
 
-            curl -f https://povnyacrm.duckdns.org/health
+            curl -f https://povnyacrm.duckdns.org/auth/login
 
       - name: Notify Telegram (success)
         if: success()
