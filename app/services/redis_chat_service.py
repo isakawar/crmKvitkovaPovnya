@@ -1,6 +1,9 @@
 import json
+import logging
 import redis as redis_lib
 from flask import current_app
+
+logger = logging.getLogger(__name__)
 
 HISTORY_TTL = 259200   # 3 days
 PENDING_TTL = 600      # 10 minutes
@@ -25,15 +28,15 @@ def save_history(user_id: int, messages: list) -> None:
             HISTORY_TTL,
             json.dumps(messages, ensure_ascii=False)
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Redis: failed to save history for user {user_id}: {e}")
 
 
 def clear_history(user_id: int) -> None:
     try:
         _redis().delete(f'ai_chat_history:{user_id}')
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Redis: failed to clear history for user {user_id}: {e}")
 
 
 def save_pending_action(user_id: int, action_id: str, action: dict) -> None:
@@ -44,8 +47,8 @@ def save_pending_action(user_id: int, action_id: str, action: dict) -> None:
             PENDING_TTL,
             json.dumps(action, ensure_ascii=False)
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Redis: failed to save pending action {action_id} for user {user_id}: {e}")
 
 
 def get_pending_action(user_id: int, action_id: str) -> dict | None:
@@ -90,5 +93,5 @@ def claim_pending_action(user_id: int, action_id: str) -> bool:
 def delete_pending_action(user_id: int, action_id: str) -> None:
     try:
         _redis().delete(f'ai_pending:{user_id}:{action_id}')
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Redis: failed to delete pending action {action_id} for user {user_id}: {e}")

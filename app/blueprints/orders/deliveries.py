@@ -8,7 +8,7 @@ from app.blueprints.orders import orders_bp
 from app.blueprints.orders._helpers import parse_ymd, parse_hm
 from app.extensions import db
 from app.models import Order, Delivery
-from app.models.delivery_route import RouteDelivery, DeliveryRoute
+from app.models.delivery_route import RouteDelivery
 from app.models.recipient_phone import RecipientPhone
 from app.services.subscription_service import calculate_reschedule_plan, apply_reschedule_plan
 

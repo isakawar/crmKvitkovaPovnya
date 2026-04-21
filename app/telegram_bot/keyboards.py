@@ -4,7 +4,7 @@ Telegram Inline Keyboards for Kvitkova Povnya CRM Bot
 """
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from typing import List, Optional
+from typing import List
 
 
 class CourierKeyboards:

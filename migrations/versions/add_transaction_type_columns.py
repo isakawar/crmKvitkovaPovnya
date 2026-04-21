@@ -5,7 +5,6 @@ Revises: add_transactions_table
 Create Date: 2026-03-23 00:00:01.000000
 """
 from alembic import op
-import sqlalchemy as sa
 
 
 revision = 'add_transaction_type_columns'

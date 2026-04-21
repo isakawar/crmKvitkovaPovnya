@@ -5,9 +5,8 @@ Main Telegram Bot class for Kvitkova Povnya CRM
 
 import logging
 from typing import Optional
-from telegram import Update, Bot
+from telegram import Bot
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, MessageHandler, filters
-from flask import current_app
 
 from .handlers import CourierHandlers
 from .keyboards import CourierKeyboards

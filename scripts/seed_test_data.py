@@ -165,8 +165,8 @@ def clear_all():
         from app.models.delivery_route import DeliveryRoute, RouteDelivery
         RouteDelivery.query.delete()
         DeliveryRoute.query.delete()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Warning: failed to delete route data: {e}")
     print("Очищення бази даних...")
     Delivery.query.delete()
     Order.query.delete()

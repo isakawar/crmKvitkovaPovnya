@@ -138,12 +138,6 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
     return query.order_by(Order.id.desc()).all()
 
 
-def paginate_orders(orders, page=1, per_page=10):
-    start = (page - 1) * per_page
-    end = start + per_page
-    return orders[start:end], end < len(orders)
-
-
 def update_order(order, form):
     new_instagram = form.get('client_instagram')
     if new_instagram and new_instagram != order.client.instagram:

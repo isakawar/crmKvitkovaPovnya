@@ -80,14 +80,11 @@ def get_deliveries(date_from_str=None, date_to_str=None, client_instagram=None, 
         if isinstance(d.delivery_date, str):
             try:
                 d.delivery_date = datetime.strptime(d.delivery_date, '%Y-%m-%d').date()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning(f"delivery {d.id}: unexpected date format '{d.delivery_date}': {e}")
     grouped = group_deliveries_by_date(result)
     logger.info(f'Кількість доставок після фільтрації: {len(result)}')
     return result, '', grouped
-
-def get_delivery_by_id(delivery_id):
-    return Delivery.query.get_or_404(delivery_id)
 
 def update_delivery(d, data):
     logger.info(f'Оновлення доставки {d.id} даними: {data}')
@@ -169,9 +166,6 @@ def assign_deliveries(assignments):
                 d.status = 'Розподілено'
     db.session.commit()
     return True
-
-def get_all_deliveries_ordered():
-    return Delivery.query.order_by(Delivery.delivery_date).all()
 
 def get_all_couriers():
     return Courier.query.all()

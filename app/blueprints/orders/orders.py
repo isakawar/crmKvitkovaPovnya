@@ -1,7 +1,7 @@
 """Order CRUD, client search, CSV export, and subscription extension endpoints."""
 import logging
 
-from flask import render_template, request, redirect, url_for, jsonify, flash, Response
+from flask import render_template, request, redirect, jsonify, flash, Response
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
@@ -14,13 +14,11 @@ from app.models import Order, Client, Delivery
 from app.models.certificate import Certificate
 from app.models.subscription import Subscription
 from app.models.settings import Settings
-from app.models.delivery_route import RouteDelivery, DeliveryRoute
 from app.services.order_service import (
     SUBSCRIPTION_TYPES,
     create_order_and_deliveries,
     get_or_create_client,
     get_orders,
-    paginate_orders,
     update_order,
     delete_order,
 )

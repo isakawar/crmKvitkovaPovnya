@@ -5,10 +5,6 @@ Revises: add_performance_indexes
 Create Date: 2026-03-24 00:00:00.000000
 
 """
-from alembic import op
-import sqlalchemy as sa
-
-
 revision = 'add_subscription_is_wedding'
 down_revision = 'add_performance_indexes'
 branch_labels = None

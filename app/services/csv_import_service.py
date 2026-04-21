@@ -5,7 +5,7 @@ import logging
 import datetime
 
 from app.extensions import db
-from app.models import Client, Order, Delivery
+from app.models import Client, Delivery
 
 logger = logging.getLogger(__name__)
 
@@ -237,11 +237,6 @@ def parse_address(raw: str) -> dict:
         'delivery_method': delivery_method,
         'is_pickup': is_pickup,
     }
-
-
-# Keep backward-compat alias used in build_preview_row
-def detect_delivery_method(address: str) -> tuple[str, bool]:
-    return _detect_method(address)
 
 
 # ---------------------------------------------------------------------------

@@ -11,7 +11,6 @@ Covers:
 - find_existing_client: exact match, stripped match, phone-as-instagram
 - build_preview_row_kvitkovapovnya: action determination, warnings
 """
-import io
 import pytest
 from app.services.csv_import_service import (
     normalize_phone,

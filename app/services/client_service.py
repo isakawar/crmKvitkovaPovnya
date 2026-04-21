@@ -184,5 +184,3 @@ def get_clients_json():
     ]
 
 
-def get_clients(page=1, per_page=20):
-    return get_all_clients()

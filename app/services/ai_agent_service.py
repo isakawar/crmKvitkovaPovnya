@@ -12,7 +12,6 @@ from flask import current_app
 
 from app.extensions import db
 from app.models.delivery import Delivery
-from app.models.order import Order
 from app.models.client import Client
 from app.models.courier import Courier
 from app.models.ai_log import AIAgentLog

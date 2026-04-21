@@ -10,7 +10,6 @@ from typing import Optional
 
 from telegram import Update, KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes
-from flask import current_app
 
 from app.models.courier import Courier
 from app.models.delivery import Delivery

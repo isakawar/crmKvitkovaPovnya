@@ -12,7 +12,6 @@ from app.blueprints.orders._helpers import parse_ymd, parse_hm, parse_eta
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
-from app.models.courier import Courier
 from app.services.route_optimizer_service import (
     distribute_deliveries,
     RouteOptimizerError,
