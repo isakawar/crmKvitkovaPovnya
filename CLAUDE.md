@@ -1,279 +1,89 @@
 # CLAUDE.md — CRM Kvitkova Povnya
 
-## Про проект
-
-Flask CRM для квіткового магазину "Kvitkova Povnya". Управління клієнтами, замовленнями, підписками на букети, доставками, кур'єрами та маршрутами. Інтеграція з Telegram-ботом для кур'єрів.
+Flask CRM for a flower shop. Manages clients, orders, bouquet subscriptions, deliveries, couriers, and routes. Telegram bot integration for couriers.
 
 ---
 
-## Стек
+## 🤖 AI Workflow
 
-- **Backend:** Python / Flask
-- **ORM:** Flask-SQLAlchemy (SQLAlchemy)
-- **БД:** PostgreSQL 15
-- **Міграції:** Flask-Migrate / Alembic
-- **Автентифікація:** Flask-Login
-- **Шаблони:** Jinja2
-- **CSS:** Tailwind CSS v3 (компілюється через `npm run build`)
-- **UI компоненти:** Bootstrap 5.3.2 + Bootstrap Icons
-- **WSGI:** Gunicorn (production)
-- **Telegram:** python-telegram-bot 20.7
-- **Планувальник:** APScheduler
+1. Analyze the problem
+2. Propose a step-by-step plan
+3. **Wait for approval**
+4. Implement step-by-step
+5. Create/update task file in `tasks/` (format: `YYYY-MM-DD_short-description.md`, template in `tasks/README.md`)
+
+**First response — plan only. Do not write code before approval.**
+
+After implementation always: describe how to test, expected behavior, edge cases.
 
 ---
 
-## Запуск
+## Rules
 
-### Локально (без Docker)
-```bash
-python run.py  # http://localhost:5055, debug=True
-```
-
-### Docker (production-подібний режим)
-```bash
-docker compose up
-# Web: http://localhost:8002
-```
-
-### Tailwind CSS
-```bash
-npm run dev    # watch-режим під час розробки
-npm run build  # production build (мінімізований)
-```
-Вхід: `app/static/css/src/input.css` → вихід: `app/static/css/main.css`
+- Business logic only in `services/` — not in routes or templates
+- Extend existing services before creating new ones
+- Only touch files relevant to the current task
+- Read only relevant files — don't scan the whole project
+- If behavior is unclear — ask before implementing
 
 ---
 
-## Структура проекту
+## Service Navigation
 
-```
-app/
-├── __init__.py          # Flask app factory (create_app)
-├── extensions.py        # db, migrate, login_manager
-├── config.py            # Dev/Prod/Testing конфіги
-├── blueprints/          # Route handlers
-│   ├── auth/            # /auth/login, /auth/logout
-│   ├── orders/          # /orders, /orders/new, /subscriptions
-│   ├── clients/         # /clients
-│   ├── couriers/        # /couriers
-│   ├── certificates/    # /certificates
-│   ├── dashboard/       # / (головна)
-│   ├── routes/          # /routes, /route-generator
-│   ├── florist/         # /florist (окрема роль)
-│   ├── reports/         # /reports
-│   ├── settings/        # /settings
-│   └── import_csv/      # /import
-├── models/
-│   ├── order.py         # Order (таблиця "order")
-│   ├── delivery.py      # Delivery (таблиця "delivery")
-│   ├── client.py        # Client (таблиця "client")
-│   ├── courier.py       # Courier (таблиця "courier")
-│   ├── certificate.py   # Certificate (таблиця "certificates")
-│   ├── delivery_route.py# DeliveryRoute, RouteDelivery
-│   ├── price.py         # Price (таблиця "prices")
-│   ├── settings.py      # Settings (таблиця "settings")
-│   └── user.py          # User, Role (таблиці "user", "roles")
-├── services/
-│   ├── order_service.py         # Основна бізнес-логіка замовлень
-│   ├── delivery_service.py      # Групування доставок
-│   ├── client_service.py        # CRUD клієнтів
-│   ├── courier_service.py       # Створення кур'єрів
-│   ├── route_optimizer_service.py # Зовнішній API оптимізації
-│   ├── csv_import_service.py    # Імпорт CSV
-│   └── reports_service.py       # Звіти
-├── templates/
-│   ├── layout.html              # Базовий шаблон (sidebar, topbar)
-│   ├── macros.html              # render_toast(), render_alerts()
-│   ├── orders/
-│   │   ├── _composer_modal.html # Modal створення замовлення/підписки
-│   │   └── _composer_script.html# JS логіка composer modal (40KB)
-│   └── certificates/
-│       ├── list.html
-│       └── _create_modal.html
-├── static/
-│   ├── css/src/input.css        # Tailwind вхід
-│   ├── css/main.css             # Скомпільований CSS
-│   └── js/clients.js
-└── telegram_bot/                # Telegram бот для кур'єрів
-```
+| Task | File |
+|------|------|
+| Orders | `app/services/order_service.py` |
+| Deliveries | `app/services/delivery_service.py` |
+| Clients | `app/services/client_service.py` |
+| Route optimization | `app/services/route_optimizer_service.py` |
+| CSV import | `app/services/csv_import_service.py` |
+| Reports | `app/services/reports_service.py` |
 
 ---
 
-## База даних
+## Key Concepts
 
-### Важливо: назви таблиць
-SQLAlchemy за замовчуванням називає таблиці за класом у lowercase:
-- `Order` → таблиця **`order`** (не `orders`)
-- `User` → таблиця **`user`** (не `users`)
-- `Client` → таблиця **`client`**
-- `Delivery` → таблиця **`delivery`**
-- `Certificate` → таблиця **`certificates`** (явно задано `__tablename__`)
-- `DeliveryRoute` → таблиця **`delivery_routes`** (явно задано)
+**Subscriptions** — not a separate model. A subscription is an `Order` with `delivery_type` in `('Weekly', 'Monthly', 'Bi-weekly')`. On creation, 4 deliveries are auto-generated. Requires both type + size.
 
-При написанні міграцій завжди перевіряй справжню назву таблиці.
+**Certificates** — types: `amount` (UAH value), `size` (bouquet size), `subscription` (type + size). Auto-expire in 1 year. Status: `active` → `used` after applying to an order.
 
-### Запуск міграцій
-Міграції запускаються автоматично при старті Docker (`entrypoint.sh`).
-```bash
-# Вручну в контейнері:
-docker compose exec web flask db upgrade
+**Order sizes** — `S`, `M`, `L`, `XL`, `XXL`, `Власний` (requires `custom_amount`).
 
-# Або напряму в PostgreSQL:
-docker compose exec postgres psql -U kvitkova_user -d kvitkova_crm
-```
-
-### Написання міграцій
-Нова міграція — окремий файл у `migrations/versions/`. Дивись існуючі як зразок. При додаванні FK завжди перевіряй реальну назву таблиці (`order`, `user`, а не `orders`, `users`).
+**Roles** — `admin`/`manager`: full access. `florist`: `/florist` routes only. `courier`: Telegram bot only.
 
 ---
 
-## Ключові концепції
+## DB Table Names (gotcha)
 
-### Підписки
-Підписки — це **не окрема модель**, а замовлення (`Order`) з `delivery_type` в `('Weekly', 'Monthly', 'Bi-weekly')`. При створенні автоматично генерується 4 доставки. Підписка = тип + розмір (обидва поля обов'язкові).
+SQLAlchemy uses lowercase class name by default — always verify before writing migrations:
 
-### Сертифікати
-Типи: `amount` (на суму грн), `size` (на розмір букету), `subscription` (на підписку = тип + розмір). Термін дії — автоматично 1 рік від дати створення. Статус: `active` → `used` (після використання в замовленні).
-
-### Розміри замовлення
-`S`, `M`, `L`, `XL`, `XXL`, `Власний` (потребує `custom_amount`).
-
-### Ролі користувачів
-- `admin` / `manager` — повний доступ
-- `florist` — тільки `/florist` маршрути
-- `courier` — тільки через Telegram бот
+| Model | Table |
+|-------|-------|
+| `Order` | `order` (not `orders`) |
+| `User` | `user` (not `users`) |
+| `Client` | `client` |
+| `Delivery` | `delivery` |
+| `Certificate` | `certificates` (explicit `__tablename__`) |
+| `DeliveryRoute` | `delivery_routes` (explicit `__tablename__`) |
 
 ---
 
-## Патерни коду
+## Templates
 
-### Blueprint реєстрація
-```python
-# app/__init__.py
-from app.blueprints.example import example_bp
-app.register_blueprint(example_bp)
-
-# app/blueprints/example/__init__.py
-from flask import Blueprint
-example_bp = Blueprint('example', __name__)
-from app.blueprints.example import routes  # noqa
-```
-
-### AJAX ендпоінти
-```python
-# Всі AJAX запити перевіряємо через:
-if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-    return jsonify({'success': True, 'data': ...})
-
-# Або для JSON body:
-data = request.get_json()
-return jsonify({'success': False, 'errors': [...]})
-```
-
-### Шаблони
-- Всі шаблони розширюють `layout.html`
-- Toast-нотифікації: `{{ render_toast() }}` + `{{ toast_script() }}` + `showToast('text', 'success'|'error')`
-- Дати через фільтр: `{{ order.created_at | kyiv_time }}`
-- CSS класи: `.order-*` для composer modal, `.order-panel`, `.order-field`, `.order-input`, `.order-label`
-
-### Захист маршрутів
-```python
-from flask_login import login_required
-
-@blueprint.route('/path')
-@login_required
-def view():
-    ...
-```
-Глобальний захист всіх маршрутів реалізований у `before_request` в `app/__init__.py`.
+- Toast notifications: `{{ render_toast() }}` + `{{ toast_script() }}` + `showToast('text', 'success'|'error')`
+- Date filter: `{{ order.created_at | kyiv_time }}`
+- After adding new Tailwind classes to templates — run `npm run build`
+- `_composer_script.html` — 40KB JS file, understand before editing
 
 ---
 
-## Tailwind CSS
+## Git
 
-Кастомні компоненти визначені в `app/static/css/src/input.css` через `@layer components`:
-- `.order-*` — компоненти composer modal
-- `.client-*` — компоненти клієнтського modal
-- `.tag-*` — бейджі (розміри, типи)
-
-**Після змін у шаблонах** що використовують нові Tailwind класи — потрібно перебілдити CSS:
-```bash
-npm run build
-```
-У Docker це не потрібно якщо класи вже є в скомпільованому `main.css`.
-
----
-
-## Навігація (layout.html)
-
-Sidebar навігація — рядки ~178-257 в `layout.html`. Паттерн для нового пункту:
-```html
-<a href="/path"
-   class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-          {% if request.path.startswith('/path') %}bg-amber-50 border border-amber-200 text-amber-700
-          {% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-   title="Назва">
-    <i class="bi bi-icon-name text-lg flex-shrink-0"></i>
-    <span class="nav-label">Назва</span>
-</a>
-```
-
----
-
-## Тести
-
-```bash
-pytest                    # всі тести
-pytest tests/test_orders.py  # конкретний файл
-```
-
-Тести використовують SQLite in-memory БД (`sqlite:///:memory:`), CSRF вимкнений.
-
----
-
-## CI / GitHub Actions
-
-Файли в `.github/workflows/`:
-- `tests.yml` — запускається на кожен PR, виконує `pytest tests/unit/`
-- `auto-tag.yml` — запускається при merge PR в `main`: тести → semver тег → GitHub Release
-- `deploy.yml` — тільки `workflow_dispatch` (ручний запуск), автоматичного деплою немає
-
-### Conventional Commits (використовується для auto-bump версії)
+Conventional commits are required — they drive automatic versioning:
 
 ```
-feat: add bulk import        → minor bump (0.3.0 → 0.4.0)
-fix: correct date parsing    → patch bump (0.3.0 → 0.3.1)
-BREAKING CHANGE: ...         → major bump (0.3.0 → 1.0.0)
+feat: ...   → minor bump (0.3.0 → 0.4.0)
+fix: ...    → patch bump (0.3.0 → 0.3.1)
 ```
 
-### Ручний деплой на сервері
-
-```bash
-git fetch --tags
-git checkout v0.4.0
-docker compose up -d --build
-```
-
----
-
-## Змінні середовища (.env)
-
-```
-DATABASE_URL=postgresql://kvitkova_user:password@postgres:5432/kvitkova_crm
-TELEGRAM_BOT_TOKEN=...
-DEPOT_ADDRESS=...          # адреса депо для оптимізації маршрутів
-SECRET_KEY=...
-ROUTE_OPTIMIZER_URL=...    # зовнішній API оптимізації маршрутів
-```
-
----
-
-## Корисні скрипти
-
-```bash
-# Наповнити БД початковими налаштуваннями (міста, розміри, типи доставки)
-docker compose exec web python scripts/seed_settings.py
-
-# Бекап БД
-docker compose exec web python scripts/database_backup.py
-```
+PR merge to `main` → auto tag + GitHub Release. Deploy is manual only (`workflow_dispatch`).
