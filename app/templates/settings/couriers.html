@@ -1,0 +1,726 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+<style>
+  .courier-days-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .courier-day-btn {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1.5px solid #d1d5db; background: #fff; color: #374151;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .courier-day-btn.active {
+    background: #1d4ed8; border-color: #1d4ed8; color: #fff;
+  }
+  .courier-rating-picker { display: flex; gap: 4px; }
+  .courier-star-btn {
+    background: none; border: none; font-size: 1.6rem; cursor: pointer;
+    color: #d1d5db; padding: 0; line-height: 1;
+    transition: color 0.1s;
+  }
+  .courier-star-btn.active { color: #f59e0b; }
+  .day-chip {
+    display: inline-block; padding: 1px 6px; border-radius: 10px;
+    background: #dbeafe; color: #1e40af;
+    font-size: 0.72rem; font-weight: 600;
+  }
+  .channel-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.82rem; font-weight: 500;
+  }
+  .star-display { color: #f59e0b; font-size: 0.9rem; letter-spacing: 1px; }
+  .star-display .empty { color: #d1d5db; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="settings-hero__label">
+          <i class="bi bi-sliders2"></i>
+          Налаштування
+        </span>
+        <h1 class="settings-hero__title">Кур'єри</h1>
+        <p class="settings-hero__text">
+          Додавайте кур'єрів, оновлюйте статус активності та контролюйте Telegram-підключення.
+        </p>
+      </div>
+      <a class="settings-hero__back" href="{{ url_for('settings.settings_page') }}">
+        <i class="bi bi-arrow-left"></i>
+        Налаштування
+      </a>
+    </div>
+  </section>
+
+  <section class="settings-couriers">
+    <div class="settings-couriers__header">
+      <div>
+        <span class="settings-couriers__label"><i class="bi bi-person-badge"></i> Команда</span>
+        <h2 class="settings-couriers__title">База кур'єрів</h2>
+        <p class="settings-couriers__text">Керуйте кур'єрами CRM — призначайте маршрути та контролюйте Telegram-реєстрацію.</p>
+      </div>
+      <div class="settings-couriers__meta">
+        <span class="settings-couriers__chip">Всього: {{ courier_stats.total }}</span>
+        <span class="settings-couriers__chip">Активні: {{ courier_stats.active }}</span>
+        <span class="settings-couriers__chip">Telegram: {{ courier_stats.telegram }}</span>
+        <button type="button" class="settings-couriers__add" data-bs-toggle="modal" data-bs-target="#courierAddModal">
+          <i class="bi bi-plus-lg"></i>
+          Додати кур'єра
+        </button>
+      </div>
+    </div>
+
+    {% if couriers %}
+    <div class="settings-couriers__table-wrap">
+      <table class="settings-couriers__table">
+        <thead>
+          <tr>
+            <th>Кур'єр</th>
+            <th>Телефон</th>
+            <th>Канал</th>
+            <th>Дні роботи</th>
+            <th>Оцінка</th>
+            <th>Статус</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for courier in couriers %}
+          {% set days_map = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Нд'} %}
+          <tr class="js-courier-row"
+              style="cursor:pointer;"
+              data-courier-id="{{ courier.id }}"
+              data-courier-name="{{ courier.name }}"
+              data-courier-phone="{{ courier.phone or '' }}"
+              data-courier-is-taxi="{{ 'true' if courier.is_taxi else 'false' }}"
+              data-courier-channel="{{ courier.communication_channel or '' }}"
+              data-courier-nickname="{{ courier.nickname or '' }}"
+              data-courier-working-days="{{ courier.working_days or '' }}"
+              data-courier-comment="{{ courier.comment or '' }}"
+              data-courier-rating="{{ courier.rating or '' }}"
+              data-courier-active="{{ 'true' if courier.active else 'false' }}"
+              data-courier-telegram="{{ 'true' if courier.telegram_registered else 'false' }}">
+            <td>
+              <div class="settings-couriers__name">
+                {{ courier.name }}
+                {% if courier.is_taxi %}
+                  <span style="display:inline-flex;align-items:center;gap:4px;margin-left:6px;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:0.72rem;font-weight:600;">
+                    <i class="bi bi-taxi-front"></i> Таксі
+                  </span>
+                {% endif %}
+              </div>
+              {% if courier.nickname %}
+              <div class="courier-nick js-copy-nick" data-nick="{{ courier.nickname }}" title="Копіювати нік">
+                <i class="bi bi-at"></i>{{ courier.nickname }}<i class="bi bi-copy courier-nick__copy-icon"></i>
+              </div>
+              {% endif %}
+              {% if courier.comment %}
+              <div class="settings-couriers__phone" style="font-style:italic;color:#9ca3af;">{{ courier.comment }}</div>
+              {% endif %}
+            </td>
+            <td class="settings-couriers__phone">{{ courier.phone or '—' }}</td>
+            <td>
+              {% if courier.is_taxi %}
+                <span style="color:#92400e;font-weight:500;font-size:0.82rem;"><i class="bi bi-taxi-front"></i> Служба таксі</span>
+              {% elif courier.communication_channel %}
+                <div>
+                  {% if courier.communication_channel == 'telegram' %}
+                    <span class="channel-badge" style="color:#0088cc;"><i class="bi bi-telegram"></i> Telegram</span>
+                    {% if courier.telegram_registered %}
+                      <div class="settings-couriers__phone" style="color:#16a34a;">Підключено{% if courier.telegram_username %} @{{ courier.telegram_username }}{% endif %}</div>
+                    {% else %}
+                      <div class="settings-couriers__phone">Очікує активацію</div>
+                    {% endif %}
+                  {% elif courier.communication_channel == 'viber' %}
+                    <span class="channel-badge" style="color:#7360f2;"><i class="bi bi-phone"></i> Viber</span>
+                  {% elif courier.communication_channel == 'whatsapp' %}
+                    <span class="channel-badge" style="color:#25d366;"><i class="bi bi-whatsapp"></i> WhatsApp</span>
+                  {% elif courier.communication_channel == 'instagram' %}
+                    <span class="channel-badge" style="color:#e1306c;"><i class="bi bi-instagram"></i> Instagram</span>
+                  {% endif %}
+                </div>
+              {% else %}
+                {% if courier.telegram_registered %}
+                  <span class="channel-badge" style="color:#0088cc;"><i class="bi bi-telegram"></i> Telegram</span>
+                  {% if courier.telegram_username %}
+                  <div class="settings-couriers__phone">@{{ courier.telegram_username }}</div>
+                  {% endif %}
+                {% else %}
+                  <span style="color:#9ca3af;">—</span>
+                {% endif %}
+              {% endif %}
+            </td>
+            <td>
+              {% if courier.working_days %}
+                {% set selected = courier.working_days.split(',') | select('in', days_map) | list %}
+                {% if selected | length == 7 %}
+                  <span class="day-chip" style="background:#dcfce7;color:#166534;">ВСІ</span>
+                {% else %}
+                  <div style="display:flex;flex-wrap:wrap;gap:3px;">
+                    {% for day in selected %}
+                      <span class="day-chip">{{ days_map[day] }}</span>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              {% else %}
+                <span style="color:#9ca3af;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if courier.rating %}
+                <span class="star-display">
+                  {% for i in range(1, 6) %}
+                    {% if i <= courier.rating %}<span>★</span>{% else %}<span class="empty">★</span>{% endif %}
+                  {% endfor %}
+                </span>
+              {% else %}
+                <span style="color:#9ca3af;">—</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="settings-couriers__status {{ 'settings-couriers__status--active' if courier.active else 'settings-couriers__status--inactive' }}">
+                {{ 'Активний' if courier.active else 'Неактивний' }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="settings-couriers__empty">
+      <strong>Кур'єрів ще немає</strong>
+      Додайте першого кур'єра, щоб CRM могла призначати маршрути.
+      <div style="margin-top: 1rem;">
+        <button type="button" class="settings-couriers__add" data-bs-toggle="modal" data-bs-target="#courierAddModal">
+          <i class="bi bi-plus-lg"></i>
+          Додати кур'єра
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+</div>
+
+{{ render_toast() }}
+
+<!-- ===== ADD MODAL ===== -->
+<div class="modal fade settings-modal" id="courierAddModal" tabindex="-1" aria-labelledby="courierAddModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Команда</span>
+          <h2 class="settings-modal__title" id="courierAddModalLabel">Додати кур'єра</h2>
+          <p class="settings-modal__subtitle">Заповніть дані кур'єра, щоб він з'явився в маршрутах.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="courierAddForm" class="settings-couriers__form">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Ім'я кур'єра *</span>
+            <input type="text" class="settings-modal__input" id="courierName" name="name" required>
+          </label>
+
+          <label class="settings-modal__field" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="courierIsTaxi" name="is_taxi" style="width:18px;height:18px;accent-color:#92400e;flex-shrink:0;">
+            <span class="settings-modal__field-label" style="margin:0;"><i class="bi bi-taxi-front"></i> Служба таксі (без телефону та Telegram)</span>
+          </label>
+
+          <div id="courierPhoneWrap">
+            <label class="settings-modal__field">
+              <span class="settings-modal__field-label">Телефон *</span>
+              <input type="tel" class="settings-modal__input" id="courierPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
+            </label>
+          </div>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Канал комунікації</span>
+            <select class="settings-modal__input" id="courierChannel" name="communication_channel">
+              <option value="">— Не вказано —</option>
+              <option value="telegram">Telegram</option>
+              <option value="viber">Viber</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </label>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Нік</span>
+            <input type="text" class="settings-modal__input" id="courierNickname" name="nickname" placeholder="@username">
+          </label>
+
+          <div class="settings-modal__field">
+            <span class="settings-modal__field-label">Робочі дні</span>
+            <div class="courier-days-picker" id="courierDaysPicker">
+              <button type="button" class="courier-day-btn" data-day="mon">Пн</button>
+              <button type="button" class="courier-day-btn" data-day="tue">Вт</button>
+              <button type="button" class="courier-day-btn" data-day="wed">Ср</button>
+              <button type="button" class="courier-day-btn" data-day="thu">Чт</button>
+              <button type="button" class="courier-day-btn" data-day="fri">Пт</button>
+              <button type="button" class="courier-day-btn" data-day="sat">Сб</button>
+              <button type="button" class="courier-day-btn" data-day="sun">Нд</button>
+            </div>
+            <input type="hidden" id="courierWorkingDays" name="working_days">
+          </div>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Коментар</span>
+            <textarea class="settings-modal__input" id="courierComment" name="comment" rows="2" style="resize:vertical;"></textarea>
+          </label>
+
+          <div class="settings-modal__field">
+            <span class="settings-modal__field-label">Оцінка</span>
+            <div class="courier-rating-picker" id="courierRatingPicker">
+              <button type="button" class="courier-star-btn" data-value="1">★</button>
+              <button type="button" class="courier-star-btn" data-value="2">★</button>
+              <button type="button" class="courier-star-btn" data-value="3">★</button>
+              <button type="button" class="courier-star-btn" data-value="4">★</button>
+              <button type="button" class="courier-star-btn" data-value="5">★</button>
+            </div>
+            <input type="hidden" id="courierRatingValue" name="rating">
+          </div>
+
+          <div class="settings-error" id="courierAddError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions">
+            <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Додати кур'єра</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDIT MODAL ===== -->
+<div class="modal fade settings-modal" id="courierEditModal" tabindex="-1" aria-labelledby="courierEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Команда</span>
+          <h2 class="settings-modal__title" id="courierEditModalLabel">Редагувати кур'єра</h2>
+          <p class="settings-modal__subtitle">Оновіть дані кур'єра.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <form id="courierEditForm" class="settings-couriers__form">
+          <input type="hidden" id="courierEditId">
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Ім'я кур'єра *</span>
+            <input type="text" class="settings-modal__input" id="courierEditName" name="name" required>
+          </label>
+
+          <label class="settings-modal__field" style="flex-direction:row;align-items:center;gap:10px;cursor:pointer;">
+            <input type="checkbox" id="courierEditIsTaxi" name="is_taxi" style="width:18px;height:18px;accent-color:#92400e;flex-shrink:0;">
+            <span class="settings-modal__field-label" style="margin:0;"><i class="bi bi-taxi-front"></i> Служба таксі (без телефону та Telegram)</span>
+          </label>
+
+          <div id="courierEditPhoneWrap">
+            <label class="settings-modal__field">
+              <span class="settings-modal__field-label">Телефон *</span>
+              <input type="tel" class="settings-modal__input" id="courierEditPhone" name="phone" placeholder="+380XXXXXXXXX" value="+380" required>
+            </label>
+          </div>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Канал комунікації</span>
+            <select class="settings-modal__input" id="courierEditChannel" name="communication_channel">
+              <option value="">— Не вказано —</option>
+              <option value="telegram">Telegram</option>
+              <option value="viber">Viber</option>
+              <option value="whatsapp">WhatsApp</option>
+              <option value="instagram">Instagram</option>
+            </select>
+          </label>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Нік</span>
+            <input type="text" class="settings-modal__input" id="courierEditNickname" name="nickname" placeholder="@username">
+          </label>
+
+          <div class="settings-modal__field">
+            <span class="settings-modal__field-label">Робочі дні</span>
+            <div class="courier-days-picker" id="courierEditDaysPicker">
+              <button type="button" class="courier-day-btn" data-day="mon">Пн</button>
+              <button type="button" class="courier-day-btn" data-day="tue">Вт</button>
+              <button type="button" class="courier-day-btn" data-day="wed">Ср</button>
+              <button type="button" class="courier-day-btn" data-day="thu">Чт</button>
+              <button type="button" class="courier-day-btn" data-day="fri">Пт</button>
+              <button type="button" class="courier-day-btn" data-day="sat">Сб</button>
+              <button type="button" class="courier-day-btn" data-day="sun">Нд</button>
+            </div>
+            <input type="hidden" id="courierEditWorkingDays" name="working_days">
+          </div>
+
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Коментар</span>
+            <textarea class="settings-modal__input" id="courierEditComment" name="comment" rows="2" style="resize:vertical;"></textarea>
+          </label>
+
+          <div class="settings-modal__field">
+            <span class="settings-modal__field-label">Оцінка</span>
+            <div class="courier-rating-picker" id="courierEditRatingPicker">
+              <button type="button" class="courier-star-btn" data-value="1">★</button>
+              <button type="button" class="courier-star-btn" data-value="2">★</button>
+              <button type="button" class="courier-star-btn" data-value="3">★</button>
+              <button type="button" class="courier-star-btn" data-value="4">★</button>
+              <button type="button" class="courier-star-btn" data-value="5">★</button>
+            </div>
+            <input type="hidden" id="courierEditRatingValue" name="rating">
+          </div>
+
+          <input type="hidden" id="courierEditActive">
+          <input type="hidden" id="courierEditTelegramRegistered">
+
+          <div class="settings-error" id="courierEditError" role="alert" hidden></div>
+          <div class="settings-couriers__form-actions" style="justify-content:space-between;">
+            <div style="display:flex;gap:6px;">
+              <button type="button" class="courier-icon-btn js-modal-toggle" id="courierEditToggleBtn" title="Деактивувати / Активувати"></button>
+              <button type="button" class="courier-icon-btn js-modal-reset" id="courierEditResetBtn" title="Скинути Telegram" style="display:none;">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+              <button type="button" class="courier-icon-btn courier-icon-btn--danger js-modal-delete" title="Видалити">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Скасувати</button>
+              <button type="submit" class="settings-modal__footer-btn settings-modal__footer-btn--primary">Зберегти</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─── Phone mask ───────────────────────────────────────────────
+function applyPhoneMask(input) {
+    if (!input) return;
+    input.addEventListener('focus', function() { if (!this.value) this.value = '+380'; });
+    input.addEventListener('input', function() {
+        let digits = this.value.replace(/\D/g, '');
+        if (digits.startsWith('380')) digits = digits.slice(0, 12);
+        else if (digits.startsWith('38')) digits = digits.slice(0, 12);
+        else if (digits.startsWith('0')) digits = '38' + digits.slice(0, 10);
+        else digits = digits.slice(0, 12);
+        this.value = '+' + digits;
+    });
+    input.addEventListener('keydown', function(e) {
+        if ((e.key === 'Backspace' || e.key === 'Delete') && this.value.length <= 4) e.preventDefault();
+    });
+}
+
+// ─── Day picker ───────────────────────────────────────────────
+function syncDaysHidden(picker, hidden) {
+    const selected = [...picker.querySelectorAll('.courier-day-btn.active')].map(b => b.dataset.day);
+    hidden.value = selected.join(',');
+}
+
+function initDayPicker(pickerId, hiddenId) {
+    const picker = document.getElementById(pickerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!picker || !hidden) return;
+    picker.querySelectorAll('.courier-day-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.classList.toggle('active');
+            syncDaysHidden(picker, hidden);
+        });
+    });
+}
+
+function resetDayPicker(pickerId, hiddenId) {
+    const picker = document.getElementById(pickerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!picker || !hidden) return;
+    picker.querySelectorAll('.courier-day-btn').forEach(btn => btn.classList.remove('active'));
+    hidden.value = '';
+}
+
+function setDayPicker(pickerId, hiddenId, value) {
+    const picker = document.getElementById(pickerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!picker || !hidden) return;
+    const days = new Set(value ? value.split(',').filter(Boolean) : []);
+    picker.querySelectorAll('.courier-day-btn').forEach(btn => {
+        btn.classList.toggle('active', days.has(btn.dataset.day));
+    });
+    syncDaysHidden(picker, hidden);
+}
+
+// ─── Rating picker ────────────────────────────────────────────
+function initRatingPicker(pickerId, hiddenId) {
+    const picker = document.getElementById(pickerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!picker || !hidden) return;
+
+    function highlight(val) {
+        picker.querySelectorAll('.courier-star-btn').forEach(btn => {
+            btn.classList.toggle('active', parseInt(btn.dataset.value) <= val);
+        });
+    }
+
+    picker.querySelectorAll('.courier-star-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const val = parseInt(this.dataset.value);
+            const current = parseInt(hidden.value) || 0;
+            // click same star = deselect
+            const newVal = current === val ? 0 : val;
+            hidden.value = newVal || '';
+            highlight(newVal);
+        });
+        btn.addEventListener('mouseenter', function() { highlight(parseInt(this.dataset.value)); });
+    });
+    picker.addEventListener('mouseleave', function() { highlight(parseInt(hidden.value) || 0); });
+}
+
+function setRatingPicker(pickerId, hiddenId, value) {
+    const picker = document.getElementById(pickerId);
+    const hidden = document.getElementById(hiddenId);
+    if (!picker || !hidden) return;
+    hidden.value = value || '';
+    const val = parseInt(value) || 0;
+    picker.querySelectorAll('.courier-star-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.value) <= val);
+    });
+}
+
+// ─── Taxi toggle ──────────────────────────────────────────────
+function applyTaxiToggle(checkboxId, wrapId, inputId) {
+    const cb = document.getElementById(checkboxId);
+    const wrap = document.getElementById(wrapId);
+    const inp = document.getElementById(inputId);
+    if (!cb || !wrap || !inp) return;
+    function sync() {
+        if (cb.checked) { wrap.style.display = 'none'; inp.removeAttribute('required'); inp.value = ''; }
+        else { wrap.style.display = ''; inp.setAttribute('required', 'required'); }
+    }
+    cb.addEventListener('change', sync);
+    sync();
+}
+
+// ─── Error helper ─────────────────────────────────────────────
+function setCourierError(target, message) {
+    if (!target) return;
+    if (message) { target.textContent = message; target.hidden = false; }
+    else { target.textContent = ''; target.hidden = true; }
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    applyPhoneMask(document.getElementById('courierPhone'));
+    applyPhoneMask(document.getElementById('courierEditPhone'));
+
+    applyTaxiToggle('courierIsTaxi', 'courierPhoneWrap', 'courierPhone');
+    applyTaxiToggle('courierEditIsTaxi', 'courierEditPhoneWrap', 'courierEditPhone');
+
+    initDayPicker('courierDaysPicker', 'courierWorkingDays');
+    initRatingPicker('courierRatingPicker', 'courierRatingValue');
+
+    initDayPicker('courierEditDaysPicker', 'courierEditWorkingDays');
+    initRatingPicker('courierEditRatingPicker', 'courierEditRatingValue');
+
+    const addModal = document.getElementById('courierAddModal');
+    const editModal = document.getElementById('courierEditModal');
+    const addForm = document.getElementById('courierAddForm');
+    const editForm = document.getElementById('courierEditForm');
+    const addError = document.getElementById('courierAddError');
+    const editError = document.getElementById('courierEditError');
+
+    // Reset add modal on open
+    if (addModal) {
+        addModal.addEventListener('show.bs.modal', function() {
+            if (addForm) addForm.reset();
+            document.getElementById('courierIsTaxi').dispatchEvent(new Event('change'));
+            resetDayPicker('courierDaysPicker', 'courierWorkingDays');
+            setRatingPicker('courierRatingPicker', 'courierRatingValue', '');
+            setCourierError(addError, '');
+        });
+    }
+
+    if (editModal) {
+        editModal.addEventListener('show.bs.modal', function() { setCourierError(editError, ''); });
+    }
+
+    // ─── Add form submit ──────────────────────────────────────
+    if (addForm) {
+        addForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            setCourierError(addError, '');
+            const isTaxi = document.getElementById('courierIsTaxi').checked;
+            const data = {
+                name: document.getElementById('courierName').value,
+                phone: isTaxi ? null : document.getElementById('courierPhone').value,
+                is_taxi: isTaxi,
+                communication_channel: document.getElementById('courierChannel').value || null,
+                nickname: document.getElementById('courierNickname').value.trim() || null,
+                working_days: document.getElementById('courierWorkingDays').value || null,
+                comment: document.getElementById('courierComment').value.trim() || null,
+                rating: document.getElementById('courierRatingValue').value ? parseInt(document.getElementById('courierRatingValue').value) : null,
+            };
+            fetch('/couriers/new', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Кур\'єра додано', 'success');
+                    bootstrap.Modal.getInstance(addModal).hide();
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    setCourierError(addError, data.error || 'Помилка створення');
+                }
+            })
+            .catch(() => setCourierError(addError, 'Помилка мережі'));
+        });
+    }
+
+    // ─── Row click → open edit modal ─────────────────────────
+    function openEditModal(dataset) {
+        document.getElementById('courierEditId').value = dataset.courierId;
+        document.getElementById('courierEditName').value = dataset.courierName;
+        document.getElementById('courierEditPhone').value = dataset.courierPhone || '+380';
+        document.getElementById('courierEditIsTaxi').checked = dataset.courierIsTaxi === 'true';
+        document.getElementById('courierEditIsTaxi').dispatchEvent(new Event('change'));
+        document.getElementById('courierEditChannel').value = dataset.courierChannel || '';
+        document.getElementById('courierEditNickname').value = dataset.courierNickname || '';
+        document.getElementById('courierEditComment').value = dataset.courierComment || '';
+        setDayPicker('courierEditDaysPicker', 'courierEditWorkingDays', dataset.courierWorkingDays || '');
+        setRatingPicker('courierEditRatingPicker', 'courierEditRatingValue', dataset.courierRating || '');
+
+        const isActive = dataset.courierActive === 'true';
+        const hasTelegram = dataset.courierTelegram === 'true';
+        document.getElementById('courierEditActive').value = isActive ? 'true' : 'false';
+        document.getElementById('courierEditTelegramRegistered').value = hasTelegram ? 'true' : 'false';
+
+        const toggleBtn = document.getElementById('courierEditToggleBtn');
+        toggleBtn.innerHTML = isActive ? '<i class="bi bi-pause"></i>' : '<i class="bi bi-play"></i>';
+        toggleBtn.title = isActive ? 'Деактивувати' : 'Активувати';
+
+        const resetBtn = document.getElementById('courierEditResetBtn');
+        resetBtn.style.display = hasTelegram ? '' : 'none';
+
+        new bootstrap.Modal(editModal).show();
+    }
+
+    document.querySelectorAll('.js-courier-row').forEach(row => {
+        row.addEventListener('click', function() {
+            openEditModal(this.dataset);
+        });
+    });
+
+    // ─── Edit form submit ─────────────────────────────────────
+    if (editForm) {
+        editForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            setCourierError(editError, '');
+            const courierId = document.getElementById('courierEditId').value;
+            const isTaxi = document.getElementById('courierEditIsTaxi').checked;
+            const data = {
+                name: document.getElementById('courierEditName').value,
+                phone: isTaxi ? null : document.getElementById('courierEditPhone').value,
+                is_taxi: isTaxi,
+                communication_channel: document.getElementById('courierEditChannel').value || null,
+                nickname: document.getElementById('courierEditNickname').value.trim() || null,
+                working_days: document.getElementById('courierEditWorkingDays').value || null,
+                comment: document.getElementById('courierEditComment').value.trim() || null,
+                rating: document.getElementById('courierEditRatingValue').value ? parseInt(document.getElementById('courierEditRatingValue').value) : null,
+            };
+            fetch(`/couriers/${courierId}/edit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message || 'Дані оновлено', 'success');
+                    bootstrap.Modal.getInstance(editModal).hide();
+                    setTimeout(() => window.location.reload(), 600);
+                } else {
+                    setCourierError(editError, data.error || 'Помилка оновлення');
+                }
+            })
+            .catch(() => setCourierError(editError, 'Помилка мережі'));
+        });
+    }
+
+    // ─── Copy nick ───────────────────────────────────────────
+    document.querySelectorAll('.js-copy-nick').forEach(el => {
+        el.addEventListener('click', function(e) {
+            e.stopPropagation();
+            navigator.clipboard.writeText(this.dataset.nick).then(() => {
+                showToast('Нік скопійовано', 'success');
+            });
+        });
+    });
+
+    // ─── Modal: Toggle status ─────────────────────────────────
+    document.querySelector('.js-modal-toggle').addEventListener('click', function() {
+        const courierId = document.getElementById('courierEditId').value;
+        fetch(`/couriers/${courierId}/toggle`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Статус оновлено', 'success');
+                bootstrap.Modal.getInstance(editModal).hide();
+                setTimeout(() => window.location.reload(), 500);
+            } else showToast(data.error || 'Помилка оновлення', 'error');
+        })
+        .catch(() => showToast('Помилка мережі', 'error'));
+    });
+
+    // ─── Modal: Reset Telegram ────────────────────────────────
+    document.querySelector('.js-modal-reset').addEventListener('click', function() {
+        const courierId = document.getElementById('courierEditId').value;
+        const courierName = document.getElementById('courierEditName').value;
+        if (!confirm(`Скинути Telegram прив'язку для "${courierName}"?`)) return;
+        fetch(`/couriers/${courierId}/reset-telegram`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Telegram прив\'язку скинуто', 'success');
+                bootstrap.Modal.getInstance(editModal).hide();
+                setTimeout(() => window.location.reload(), 600);
+            } else showToast(data.error || 'Помилка скидання', 'error');
+        })
+        .catch(() => showToast('Помилка мережі', 'error'));
+    });
+
+    // ─── Modal: Delete ────────────────────────────────────────
+    document.querySelector('.js-modal-delete').addEventListener('click', function() {
+        const courierId = document.getElementById('courierEditId').value;
+        const courierName = document.getElementById('courierEditName').value;
+        if (!confirm(`Ви впевнені, що хочете видалити кур'єра "${courierName}"?`)) return;
+        fetch(`/couriers/${courierId}/delete`, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast(data.message || 'Кур\'єра видалено', 'success');
+                bootstrap.Modal.getInstance(editModal).hide();
+                setTimeout(() => window.location.reload(), 600);
+            } else showToast(data.error || 'Помилка видалення', 'error');
+        })
+        .catch(() => showToast('Помилка мережі', 'error'));
+    });
+});
+</script>
+{{ toast_script() }}
+{% endblock %}

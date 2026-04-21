@@ -68,7 +68,9 @@ def saved_routes():
             .joinedload(RouteDelivery.delivery)
             .joinedload(Delivery.client),
     ).all()
-    couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
+    couriers = Courier.query.filter_by(active=True).order_by(
+        Courier.rating.desc().nullslast(), Courier.name
+    ).all()
 
     # Nova Poshta deliveries for selected date
     np_date = selected_route_date or date_type.today()
@@ -233,6 +235,11 @@ def assign_and_send_route(route_id):
         arrival = stop.planned_arrival.strftime('%H:%M') if stop.planned_arrival else '—'
         addr_parts = [p for p in [city, street, build] if p]
         text += f"\n{stop.stop_order}. {', '.join(addr_parts)} — {arrival}"
+        bouquet_type = (d.bouquet_type if d else None) or (order.bouquet_type if order else None)
+        if bouquet_type:
+            text += f"\n   🎁 {bouquet_type}"
+        if d and d.address_comment:
+            text += f"\n   📝 {d.address_comment}"
 
     depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
     gmaps_parts = []

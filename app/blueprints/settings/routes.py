@@ -12,7 +12,13 @@ bp = Blueprint('settings', __name__)
 @login_required
 @permission_required('view_settings')
 def settings_page():
-    settings = Settings.query.first()
+    return render_template('settings/index.html')
+
+
+@bp.route('/settings/couriers')
+@login_required
+@permission_required('view_settings')
+def couriers_page():
     couriers = Courier.query.order_by(Courier.name).all()
     active_couriers = [c for c in couriers if c.active]
     telegram_couriers = [c for c in couriers if c.telegram_registered]
@@ -22,11 +28,31 @@ def settings_page():
         'telegram': len(telegram_couriers),
     }
     return render_template(
-        'settings/index.html',
-        settings=settings,
+        'settings/couriers.html',
         couriers=couriers,
         courier_stats=courier_stats
     )
+
+
+@bp.route('/settings/users')
+@login_required
+@permission_required('manage_users')
+def users_page():
+    return render_template('settings/users.html')
+
+
+@bp.route('/settings/directories')
+@login_required
+@permission_required('view_settings')
+def directories_page():
+    return render_template('settings/directories.html')
+
+
+@bp.route('/settings/features')
+@login_required
+@permission_required('edit_settings')
+def features_page():
+    return render_template('settings/features.html')
 
 @bp.route('/settings/update', methods=['POST'])
 @login_required
@@ -218,7 +244,7 @@ def save_prices():
 
 # ── User Management (admin only) ────────────────────────────────────────────
 
-@bp.route('/settings/users', methods=['GET'])
+@bp.route('/settings/users/list', methods=['GET'])
 @login_required
 @permission_required('manage_users')
 def get_users():
