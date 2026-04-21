@@ -831,6 +831,12 @@
             <i class="bi bi-person-gear"></i>
             {{ 'Змінити курʼєра' if route.courier else 'Призначити курʼєра' }}
           </button>
+          <button type="button"
+                  class="routes-action-btn"
+                  title="Скопіювати повідомлення"
+                  onclick="event.stopPropagation(); copyRouteMessage({{ route.id }}, this)">
+            <i class="bi bi-clipboard"></i>
+          </button>
           <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
                 onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
             <button type="submit" class="routes-action-btn routes-delete-btn">
@@ -1222,6 +1228,19 @@ function getAssignModal() {
     _assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
   }
   return _assignModal;
+}
+
+async function copyRouteMessage(routeId, btn) {
+  try {
+    const resp = await fetch('/routes/' + routeId + '/message-text');
+    const data = await resp.json();
+    await navigator.clipboard.writeText(data.text);
+    const icon = btn.querySelector('i');
+    icon.className = 'bi bi-check2';
+    setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
+  } catch (e) {
+    alert('Не вдалося скопіювати');
+  }
 }
 
 function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliveriesCount, currentCourierName, routeWeekday) {
