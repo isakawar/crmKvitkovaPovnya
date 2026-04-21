@@ -6,6 +6,13 @@ class Courier(db.Model):
     phone = db.Column(db.String(32), nullable=True, unique=True)
     is_taxi = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
+
+    # Profile fields
+    communication_channel = db.Column(db.String(20), nullable=True)
+    nickname = db.Column(db.String(64), nullable=True)
+    working_days = db.Column(db.String(50), nullable=True)
+    comment = db.Column(db.Text, nullable=True)
+    rating = db.Column(db.Integer, nullable=True)
     deliveries_count = db.Column(db.Integer, default=0)
 
     # Telegram integration fields

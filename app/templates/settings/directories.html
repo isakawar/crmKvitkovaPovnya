@@ -1,0 +1,350 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% macro settings_modal(id, label, subtitle, endpoint, placeholder) %}
+<div class="modal fade settings-modal" id="{{ id }}" tabindex="-1" aria-labelledby="{{ id }}Label" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title" id="{{ id }}Label">{{ label }}</h2>
+          <p class="settings-modal__subtitle">{{ subtitle }}</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <div class="settings-modal__section">
+          <div class="settings-modal__section-head">
+            <span class="settings-modal__section-label">Поточні значення</span>
+            <span class="settings-modal__section-hint">Оновлюється при відкритті</span>
+          </div>
+          <ul class="settings-modal__list" id="{{ id }}-list">
+            <li class="settings-modal__placeholder">Завантаження...</li>
+          </ul>
+        </div>
+
+        <form class="settings-add-form settings-modal__form" data-endpoint="{{ endpoint }}">
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Нове значення</span>
+            <input type="text" class="settings-modal__input" placeholder="{{ placeholder }}" required maxlength="100">
+          </label>
+          <button type="submit" class="settings-modal__submit">Додати</button>
+        </form>
+
+        <div class="settings-error" role="alert" hidden></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endmacro %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="settings-hero__label">
+          <i class="bi bi-sliders2"></i>
+          Налаштування
+        </span>
+        <h1 class="settings-hero__title">Довідники</h1>
+        <p class="settings-hero__text">
+          Оновлюйте довідники CRM та цінову матрицю в одному місці.
+        </p>
+      </div>
+      <a class="settings-hero__back" href="{{ url_for('settings.settings_page') }}">
+        <i class="bi bi-arrow-left"></i>
+        Налаштування
+      </a>
+    </div>
+  </section>
+
+  <section class="settings-grid" aria-label="Довідники CRM">
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#deliveryTypesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-arrow-repeat"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Сценарії</p>
+        <h2 class="settings-grid-card__title">Типи підписки</h2>
+        <p class="settings-grid-card__text">Варіанти циклів і форматів оформлення, які бачить менеджер у формах.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування списком</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#sizesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-box-seam"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Асортимент</p>
+        <h2 class="settings-grid-card__title">Розміри</h2>
+        <p class="settings-grid-card__text">Розміри букетів і композицій, які використовуються в цінах та оформленні.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Оновити довідник</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#forWhomModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-heart"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Контекст</p>
+        <h2 class="settings-grid-card__title">Для кого</h2>
+        <p class="settings-grid-card__text">Допомагає менеджеру швидше фіксувати, для кого готується букет або підписка.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Редагувати варіанти</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#marketingSourcesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-megaphone"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Маркетинг</p>
+        <h2 class="settings-grid-card__title">Звідки дізнались</h2>
+        <p class="settings-grid-card__text">Джерела залучення клієнтів для CRM-аналітики та роботи з маркетингом.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Оновити джерела</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#packagingTypesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-box2-heart"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Флорист</p>
+        <h2 class="settings-grid-card__title">Коробка / Букет</h2>
+        <p class="settings-grid-card__text">Типи пакування, які відображаються у плані флориста поруч із деталями замовлення.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування списком</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#pricesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-cash-stack"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Фінанси</p>
+        <h2 class="settings-grid-card__title">Ціни</h2>
+        <p class="settings-grid-card__text">Матриця вартості за типами підписки та розмірами букетів без переходу в окремі таблиці.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Відкрити матрицю</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+  </section>
+</div>
+
+{{ render_toast() }}
+
+{{ settings_modal('deliveryTypesModal', 'Типи підписки', 'Ці значення потрапляють у спільний flow оформлення й визначають сценарії CRM.', '/settings/delivery_types', 'Наприклад, Weekly') }}
+{{ settings_modal('sizesModal', 'Розміри', 'Розміри використовуються в прайсах, замовленнях і деталці підписок.', '/settings/sizes', 'Наприклад, XL') }}
+{{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
+{{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
+{{ settings_modal('packagingTypesModal', 'Коробка / Букет', 'Тип пакування для доставок — відображається у плані флориста.', '/settings/packaging_types', 'Наприклад, Коробка') }}
+
+<div class="modal fade settings-modal settings-modal--wide" id="pricesModal" tabindex="-1" aria-labelledby="pricesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Цінова матриця</span>
+          <h2 class="settings-modal__title" id="pricesModalLabel">Ціни</h2>
+          <p class="settings-modal__subtitle">Оновлюйте вартість комбінацій типу підписки та розміру без переходу в окремий модуль.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <div class="settings-modal__table-wrap">
+          <div id="pricesTableWrap" class="settings-modal__table-scroll">
+            <div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-modal__footer">
+        <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--ghost" data-bs-dismiss="modal">Закрити</button>
+        <button type="button" class="settings-modal__footer-btn settings-modal__footer-btn--primary" id="savePricesBtn">Зберегти</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderSettingsPlaceholder(message) {
+    return `<li class="settings-modal__placeholder">${escapeHtml(message)}</li>`;
+}
+
+function loadPrices() {
+    const wrap = document.getElementById('pricesTableWrap');
+    wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>';
+
+    fetch('/settings/prices')
+        .then(r => r.json())
+        .then(data => {
+            const subs = data.subscription_types;
+            const sizes = data.sizes.filter(s => s.value.toLowerCase() !== 'власний');
+            const prices = data.prices;
+
+            if (!subs.length || !sizes.length) {
+                wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Спочатку додайте типи підписки та розміри.</div>';
+                return;
+            }
+
+            let html = '<table class="settings-price-table">';
+            html += '<thead><tr><th>Тип підписки</th>';
+            sizes.forEach(size => { html += `<th>${size.value}</th>`; });
+            html += '</tr></thead><tbody>';
+
+            subs.forEach(sub => {
+                html += `<tr><td><span class="settings-price-label">${sub.value}</span></td>`;
+                sizes.forEach(size => {
+                    const key = `${sub.id}_${size.id}`;
+                    const value = prices[key] !== undefined ? prices[key] : '';
+                    html += `<td><input type="number" min="0" class="settings-price-input" data-key="${key}" value="${value}" placeholder="0"></td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        });
+}
+
+function loadSettings(modalId, endpoint) {
+    const list = document.getElementById(`${modalId}-list`);
+    list.innerHTML = renderSettingsPlaceholder('Завантаження...');
+
+    fetch(endpoint)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.length) {
+                list.innerHTML = renderSettingsPlaceholder('Поки що тут порожньо.');
+                return;
+            }
+
+            list.innerHTML = data.map((item, index) => `
+                <li class="settings-modal__list-item">
+                    <span class="settings-modal__item-index">${index + 1}</span>
+                    <span class="settings-modal__item-value">${escapeHtml(item.value)}</span>
+                    <button type="button" class="settings-modal__item-delete js-setting-delete"
+                            data-id="${item.id}" data-endpoint="${endpoint}" title="Видалити">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </li>
+            `).join('');
+        });
+}
+
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.js-setting-delete');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const endpoint = btn.dataset.endpoint;
+    if (!confirm('Видалити цей запис?')) return;
+    fetch(`/settings/${id}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                const modalEl = btn.closest('.modal');
+                const modalId = modalEl.id;
+                loadSettings(modalId, endpoint);
+            }
+        });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    [
+        {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
+        {id: 'sizesModal', endpoint: '/settings/sizes'},
+        {id: 'forWhomModal', endpoint: '/settings/for_whom'},
+        {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'},
+        {id: 'packagingTypesModal', endpoint: '/settings/packaging_types'}
+    ].forEach(function(modal) {
+        const modalEl = document.getElementById(modal.id);
+        const form = modalEl.querySelector('.settings-add-form');
+        const input = form.querySelector('input');
+        const error = modalEl.querySelector('.settings-error');
+
+        modalEl.addEventListener('show.bs.modal', function() {
+            error.hidden = true;
+            loadSettings(modal.id, modal.endpoint);
+        });
+
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            error.hidden = true;
+
+            fetch(modal.endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: input.value })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    input.value = '';
+                    loadSettings(modal.id, modal.endpoint);
+                    return;
+                }
+
+                error.textContent = data.error || 'Помилка';
+                error.hidden = false;
+            });
+        });
+    });
+
+    document.getElementById('pricesModal').addEventListener('show.bs.modal', function() {
+        loadPrices();
+    });
+
+    document.getElementById('savePricesBtn').addEventListener('click', function() {
+        const inputs = document.querySelectorAll('#pricesTableWrap input[data-key]');
+        const payload = {};
+
+        inputs.forEach(input => {
+            payload[input.dataset.key] = input.value === '' ? 0 : parseInt(input.value, 10);
+        });
+
+        fetch('/settings/prices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                loadPrices();
+                showToast('Ціни збережено', 'success');
+            }
+        });
+    });
+});
+</script>
+{{ toast_script() }}
+{% endblock %}

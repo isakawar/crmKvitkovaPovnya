@@ -53,6 +53,22 @@ After implementation always: describe how to test, expected behavior, edge cases
 
 ---
 
+## Migrations (gotcha)
+
+**Always find the actual current head before creating a new migration.**
+
+Before writing `down_revision`, run or grep to find which revision has no successor:
+
+```bash
+# find current head(s)
+grep -r "down_revision" migrations/versions/*.py | grep -v "__pycache__"
+# the revision that no other file references as down_revision → that is the head
+```
+
+Set `down_revision` to that value. **Never assume** the head is the last migration you worked on — another migration may have been added in between. Creating a branch (two files with the same `down_revision`) causes Alembic multiple-heads error and the container won't start.
+
+---
+
 ## DB Table Names (gotcha)
 
 SQLAlchemy uses lowercase class name by default — always verify before writing migrations:

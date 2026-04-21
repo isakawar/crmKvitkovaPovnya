@@ -4,7 +4,7 @@ import logging
 from . import couriers_bp
 from app.models.courier import Courier
 from app.models.delivery import Delivery
-from app.services.courier_service import create_courier
+from app.services.courier_service import create_courier, update_courier
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 @couriers_bp.route('/couriers', methods=['GET'])
 def couriers_list():
     """Перенаправлення в налаштування."""
-    return redirect(url_for('settings.settings_page') + '#couriers')
+    return redirect(url_for('settings.couriers_page'))
 
 @couriers_bp.route('/couriers/new', methods=['POST'])
 def create_new_courier():
@@ -23,6 +23,12 @@ def create_new_courier():
     phone = (data.get('phone') or '').strip()
     is_taxi_raw = data.get('is_taxi', False)
     is_taxi = is_taxi_raw in (True, 'true', 'on', '1') if not isinstance(is_taxi_raw, bool) else is_taxi_raw
+    communication_channel = (data.get('communication_channel') or '').strip() or None
+    nickname = (data.get('nickname') or '').strip() or None
+    working_days = (data.get('working_days') or '').strip() or None
+    comment = (data.get('comment') or '').strip() or None
+    rating_raw = data.get('rating')
+    rating = int(rating_raw) if rating_raw and str(rating_raw).isdigit() and 1 <= int(rating_raw) <= 5 else None
 
     if not name:
         if request.is_json:
@@ -46,7 +52,14 @@ def create_new_courier():
                 flash('Кур\'єр з таким телефоном вже існує', 'error')
                 return redirect(url_for('couriers.couriers_list'))
 
-        courier = create_courier(name, phone if phone else None, is_taxi=is_taxi)
+        courier = create_courier(
+            name, phone if phone else None, is_taxi=is_taxi,
+            communication_channel=communication_channel,
+            nickname=nickname,
+            working_days=working_days,
+            comment=comment,
+            rating=rating,
+        )
 
         logger.info(f'Created new courier: {courier.name} (is_taxi={courier.is_taxi})')
 
@@ -144,6 +157,12 @@ def edit_courier(courier_id):
     phone = (data.get('phone') or '').strip()
     is_taxi_raw = data.get('is_taxi', False)
     is_taxi = is_taxi_raw in (True, 'true', 'on', '1') if not isinstance(is_taxi_raw, bool) else is_taxi_raw
+    communication_channel = (data.get('communication_channel') or '').strip() or None
+    nickname = (data.get('nickname') or '').strip() or None
+    working_days = (data.get('working_days') or '').strip() or None
+    comment = (data.get('comment') or '').strip() or None
+    rating_raw = data.get('rating')
+    rating = int(rating_raw) if rating_raw and str(rating_raw).isdigit() and 1 <= int(rating_raw) <= 5 else None
 
     if not name:
         return jsonify({'success': False, 'error': 'Ім\'я обов\'язкове'}), 400
@@ -162,10 +181,17 @@ def edit_courier(courier_id):
             if existing_courier:
                 return jsonify({'success': False, 'error': 'Кур\'єр з таким телефоном вже існує'}), 400
 
-        courier.name = name
-        courier.phone = phone if phone else None
-        courier.is_taxi = is_taxi
-        db.session.commit()
+        update_courier(
+            courier,
+            name=name,
+            phone=phone if not is_taxi else None,
+            is_taxi=is_taxi,
+            communication_channel=communication_channel,
+            nickname=nickname,
+            working_days=working_days,
+            comment=comment,
+            rating=rating,
+        )
 
         logger.info(f'Updated courier: {courier.name} (is_taxi={courier.is_taxi})')
 

@@ -1,0 +1,161 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="settings-hero__label">
+          <i class="bi bi-sliders2"></i>
+          Налаштування
+        </span>
+        <h1 class="settings-hero__title">Фіче флаги</h1>
+        <p class="settings-hero__text">
+          Вмикайте та вимикайте функції системи без деплою — зміни застосовуються миттєво.
+        </p>
+      </div>
+      <a class="settings-hero__back" href="{{ url_for('settings.settings_page') }}">
+        <i class="bi bi-arrow-left"></i>
+        Налаштування
+      </a>
+    </div>
+  </section>
+
+  <section class="settings-grid" aria-label="Функції системи">
+    <div class="settings-grid-card" style="cursor:default;">
+      <span class="settings-grid-card__icon" id="ai-agent-card-icon"
+            style="background:{{ '#fef3c7' if ai_agent_enabled else '#f5f5f4' }}; color:{{ '#b45309' if ai_agent_enabled else '#a8a29e' }};">
+        <i class="bi bi-robot"></i>
+      </span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Функції</p>
+        <h2 class="settings-grid-card__title">AI Асистент</h2>
+        <p class="settings-grid-card__text">Чат-помічник для менеджерів і адміністраторів. Вимкніть, щоб приховати іконку та чат.</p>
+      </div>
+      <div class="settings-grid-card__meta" style="justify-content:space-between;">
+        <span id="ai-agent-status-text" style="color:{{ '#047857' if ai_agent_enabled else '#a8a29e' }}; font-weight:600;">
+          {{ 'Увімкнено' if ai_agent_enabled else 'Вимкнено' }}
+        </span>
+        <button id="ai-agent-toggle-btn"
+                onclick="toggleAiAgent()"
+                title="{{ 'Вимкнути AI Асистент' if ai_agent_enabled else 'Увімкнути AI Асистент' }}"
+                style="
+                  display:inline-flex; align-items:center; gap:0.5rem;
+                  padding:0.5rem 1rem; border-radius:999px; font-size:0.85rem; font-weight:600;
+                  border:1px solid {{ '#d1fae5' if ai_agent_enabled else '#e7e5e4' }};
+                  background:{{ '#ecfdf5' if ai_agent_enabled else '#f5f5f4' }};
+                  color:{{ '#065f46' if ai_agent_enabled else '#78716c' }};
+                  cursor:pointer; transition:0.16s ease;
+                "
+                data-enabled="{{ 'true' if ai_agent_enabled else 'false' }}">
+          <i class="bi bi-{{ 'toggle-on' if ai_agent_enabled else 'toggle-off' }}" style="font-size:1.1rem;"></i>
+          {{ 'Вимкнути' if ai_agent_enabled else 'Увімкнути' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-grid-card" style="cursor:default;">
+      <span class="settings-grid-card__icon" id="distribute-banner-card-icon"
+            style="background:{{ '#fef3c7' if distribute_banner_enabled else '#f5f5f4' }}; color:{{ '#b45309' if distribute_banner_enabled else '#a8a29e' }};">
+        <i class="bi bi-shuffle"></i>
+      </span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Функції</p>
+        <h2 class="settings-grid-card__title">Розподіл по маршрутах</h2>
+        <p class="settings-grid-card__text">Банер на сторінці маршрутів із кнопкою автоматичного розподілу нових доставок в існуючі маршрути.</p>
+      </div>
+      <div class="settings-grid-card__meta" style="justify-content:space-between;">
+        <span id="distribute-banner-status-text" style="color:{{ '#047857' if distribute_banner_enabled else '#a8a29e' }}; font-weight:600;">
+          {{ 'Увімкнено' if distribute_banner_enabled else 'Вимкнено' }}
+        </span>
+        <button id="distribute-banner-toggle-btn"
+                onclick="toggleDistributeBanner()"
+                title="{{ 'Вимкнути банер розподілу' if distribute_banner_enabled else 'Увімкнути банер розподілу' }}"
+                style="
+                  display:inline-flex; align-items:center; gap:0.5rem;
+                  padding:0.5rem 1rem; border-radius:999px; font-size:0.85rem; font-weight:600;
+                  border:1px solid {{ '#d1fae5' if distribute_banner_enabled else '#e7e5e4' }};
+                  background:{{ '#ecfdf5' if distribute_banner_enabled else '#f5f5f4' }};
+                  color:{{ '#065f46' if distribute_banner_enabled else '#78716c' }};
+                  cursor:pointer; transition:0.16s ease;
+                "
+                data-enabled="{{ 'true' if distribute_banner_enabled else 'false' }}">
+          <i class="bi bi-{{ 'toggle-on' if distribute_banner_enabled else 'toggle-off' }}" style="font-size:1.1rem;"></i>
+          {{ 'Вимкнути' if distribute_banner_enabled else 'Увімкнути' }}
+        </button>
+      </div>
+    </div>
+  </section>
+</div>
+
+{{ render_toast() }}
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function toggleAiAgent() {
+    const btn = document.getElementById('ai-agent-toggle-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/settings/ai-agent/toggle', { method: 'POST' });
+        const data = await resp.json();
+        if (!data.success) { showToast('Помилка збереження', 'error'); return; }
+        const enabled = data.enabled;
+        const statusText = document.getElementById('ai-agent-status-text');
+        const icon = document.getElementById('ai-agent-card-icon');
+        statusText.textContent = enabled ? 'Увімкнено' : 'Вимкнено';
+        statusText.style.color = enabled ? '#047857' : '#a8a29e';
+        icon.style.background = enabled ? '#fef3c7' : '#f5f5f4';
+        icon.style.color = enabled ? '#b45309' : '#a8a29e';
+        btn.innerHTML = `<i class="bi bi-toggle-${enabled ? 'on' : 'off'}" style="font-size:1.1rem;"></i> ${enabled ? 'Вимкнути' : 'Увімкнути'}`;
+        btn.title = enabled ? 'Вимкнути AI Асистент' : 'Увімкнути AI Асистент';
+        btn.style.borderColor = enabled ? '#d1fae5' : '#e7e5e4';
+        btn.style.background = enabled ? '#ecfdf5' : '#f5f5f4';
+        btn.style.color = enabled ? '#065f46' : '#78716c';
+        btn.dataset.enabled = enabled ? 'true' : 'false';
+        showToast(enabled ? 'AI Асистент увімкнено' : 'AI Асистент вимкнено', 'success');
+    } catch(e) {
+        showToast('Помилка мережі', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function toggleDistributeBanner() {
+    const btn = document.getElementById('distribute-banner-toggle-btn');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/settings/distribute-banner/toggle', { method: 'POST' });
+        const data = await resp.json();
+        if (!data.success) { showToast('Помилка збереження', 'error'); return; }
+        const enabled = data.enabled;
+        const statusText = document.getElementById('distribute-banner-status-text');
+        const icon = document.getElementById('distribute-banner-card-icon');
+        statusText.textContent = enabled ? 'Увімкнено' : 'Вимкнено';
+        statusText.style.color = enabled ? '#047857' : '#a8a29e';
+        icon.style.background = enabled ? '#fef3c7' : '#f5f5f4';
+        icon.style.color = enabled ? '#b45309' : '#a8a29e';
+        btn.innerHTML = `<i class="bi bi-toggle-${enabled ? 'on' : 'off'}" style="font-size:1.1rem;"></i> ${enabled ? 'Вимкнути' : 'Увімкнути'}`;
+        btn.title = enabled ? 'Вимкнути банер розподілу' : 'Увімкнути банер розподілу';
+        btn.style.borderColor = enabled ? '#d1fae5' : '#e7e5e4';
+        btn.style.background = enabled ? '#ecfdf5' : '#f5f5f4';
+        btn.style.color = enabled ? '#065f46' : '#78716c';
+        btn.dataset.enabled = enabled ? 'true' : 'false';
+        showToast(enabled ? 'Банер розподілу увімкнено' : 'Банер розподілу вимкнено', 'success');
+    } catch(e) {
+        showToast('Помилка мережі', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+</script>
+{{ toast_script() }}
+{% endblock %}

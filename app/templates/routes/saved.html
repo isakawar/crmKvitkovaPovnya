@@ -468,6 +468,64 @@
     box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.18);
   }
 
+  .assign-courier-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 260px;
+    overflow-y: auto;
+    padding: 2px;
+  }
+
+  .assign-courier-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    border: 1.5px solid #e7e5e4;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: #fff;
+  }
+
+  .assign-courier-card:hover { background: #fafaf9; border-color: #a8a29e; }
+
+  .assign-courier-card--selected {
+    border-color: #1c1917;
+    background: #fafaf9;
+    box-shadow: 0 0 0 3px rgba(28,25,23,0.08);
+  }
+
+  .assign-courier-card__main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .assign-courier-card__name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1c1917;
+  }
+
+  .assign-courier-card__stars { font-size: 0.85rem; letter-spacing: 1px; white-space: nowrap; }
+
+  .assign-courier-card__days { display: flex; flex-wrap: wrap; gap: 3px; }
+
+  .assign-day-chip {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    background: #dbeafe;
+    color: #1e40af;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+
+  .assign-day-chip--all { background: #dcfce7; color: #166534; }
+
   .route-assign-footer {
     display: flex;
     justify-content: flex-end;
@@ -766,6 +824,7 @@
                   data-courier-id="{{ route.courier_id or '' }}"
                   data-delivery-price="{{ route.delivery_price if route.delivery_price is not none else '' }}"
                   data-route-date="{{ formatted_date }}"
+                  data-route-weekday="{{ ['mon','tue','wed','thu','fri','sat','sun'][route.route_date.weekday()] }}"
                   data-deliveries-count="{{ route.deliveries_count }}"
                   data-current-courier="{{ courier_name }}"
                   data-route-status="{{ route.status }}">
@@ -1037,13 +1096,33 @@
             </div>
 
             <div class="route-assign-field">
-              <label class="route-assign-label" for="assign-courier-select">Кур'єр</label>
-              <select name="courier_id" id="assign-courier-select" class="route-assign-input">
-                <option value="">Оберіть кур'єра</option>
+              <label class="route-assign-label">Кур'єр</label>
+              <input type="hidden" name="courier_id" id="assign-courier-select">
+              {% set days_map = {'mon':'Пн','tue':'Вт','wed':'Ср','thu':'Чт','fri':'Пт','sat':'Сб','sun':'Нд'} %}
+              <div class="assign-courier-list" id="assign-courier-list">
                 {% for c in couriers %}
-                <option value="{{ c.id }}">{{ c.name }}</option>
+                <div class="assign-courier-card" data-id="{{ c.id }}" data-working-days="{{ c.working_days or '' }}">
+                  <div class="assign-courier-card__main">
+                    <span class="assign-courier-card__name">{{ c.name }}</span>
+                    {% if c.rating %}
+                    <span class="assign-courier-card__stars">
+                      {% for i in range(1,6) %}<span style="color:{{ '#f59e0b' if i <= c.rating else '#d1d5db' }};">★</span>{% endfor %}
+                    </span>
+                    {% endif %}
+                  </div>
+                  {% if c.working_days %}
+                  <div class="assign-courier-card__days">
+                    {% set selected = c.working_days.split(',') | select('in', days_map) | list %}
+                    {% if selected | length == 7 %}
+                      <span class="assign-day-chip assign-day-chip--all">ВСІ</span>
+                    {% else %}
+                      {% for d in selected %}<span class="assign-day-chip">{{ days_map[d] }}</span>{% endfor %}
+                    {% endif %}
+                  </div>
+                  {% endif %}
+                </div>
                 {% endfor %}
-              </select>
+              </div>
             </div>
 
             <div class="route-assign-field mb-0">
@@ -1145,11 +1224,19 @@ function getAssignModal() {
   return _assignModal;
 }
 
-function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliveriesCount, currentCourierName) {
+function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliveriesCount, currentCourierName, routeWeekday) {
   const form = document.getElementById('assign-form');
   const hasCourier = Boolean(courierId);
   form.action = '/routes/' + routeId + '/assign-and-send';
-  document.getElementById('assign-courier-select').value = courierId || '';
+  // Set courier picker
+  const hiddenCourierId = document.getElementById('assign-courier-select');
+  hiddenCourierId.value = courierId || '';
+  document.querySelectorAll('.assign-courier-card').forEach(function(card) {
+    card.classList.toggle('assign-courier-card--selected', card.dataset.id == courierId);
+    const days = card.dataset.workingDays;
+    const visible = !days || !routeWeekday || days.split(',').includes(routeWeekday);
+    card.style.display = visible ? '' : 'none';
+  });
   document.getElementById('assign-price-input').value = deliveryPrice || '';
   document.getElementById('assign-modal-title').textContent = hasCourier ? 'Змінити курʼєра' : 'Призначити курʼєра';
   document.getElementById('assign-modal-subtitle').textContent = hasCourier
@@ -1176,8 +1263,17 @@ document.querySelectorAll('.route-assign-trigger').forEach(function(button) {
       this.dataset.deliveryPrice || null,
       this.dataset.routeDate || '',
       this.dataset.deliveriesCount || '',
-      this.dataset.currentCourier || ''
+      this.dataset.currentCourier || '',
+      this.dataset.routeWeekday || ''
     );
+  });
+});
+
+document.querySelectorAll('.assign-courier-card').forEach(function(card) {
+  card.addEventListener('click', function() {
+    document.querySelectorAll('.assign-courier-card').forEach(c => c.classList.remove('assign-courier-card--selected'));
+    this.classList.add('assign-courier-card--selected');
+    document.getElementById('assign-courier-select').value = this.dataset.id;
   });
 });
 
