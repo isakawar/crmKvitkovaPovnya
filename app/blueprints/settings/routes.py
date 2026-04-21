@@ -119,6 +119,25 @@ def add_marketing_source():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/packaging_types', methods=['GET'])
+def get_packaging_types():
+    items = Settings.query.filter_by(type='packaging_type').order_by(Settings.value).all()
+    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+
+@bp.route('/settings/packaging_types', methods=['POST'])
+def add_packaging_type():
+    data = request.get_json()
+    value = (data.get('value') or '').strip()
+    if not value:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    if Settings.query.filter_by(type='packaging_type', value=value).first():
+        return jsonify({'success': False, 'error': 'Такий тип вже існує'}), 400
+    item = Settings(type='packaging_type', value=value)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+
 @bp.route('/settings/<int:item_id>', methods=['DELETE'])
 @login_required
 @permission_required('edit_settings')
