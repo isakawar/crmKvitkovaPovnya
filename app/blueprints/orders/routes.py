@@ -559,7 +559,7 @@ def reschedule_subsequent_deliveries():
 @orders_bp.route('/clients/search', methods=['GET'])
 @login_required
 def search_clients():
-    from sqlalchemy import or_, func
+    from sqlalchemy import or_
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])

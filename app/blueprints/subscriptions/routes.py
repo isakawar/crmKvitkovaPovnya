@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from app.blueprints.subscriptions import subscriptions_bp
 from app.extensions import db
-from app.models import Order, Delivery, Client
+from app.models import Order, Client
 from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.services.subscription_service import (

@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import date
 
 from flask import render_template, request, jsonify
 from flask_login import current_user, login_required
@@ -8,7 +8,7 @@ from app.blueprints.certificates import certificates_bp
 from app.extensions import db
 from app.models.certificate import Certificate, generate_certificate_code
 from app.models.order import Order
-from app.models.client import Client
+
 
 
 @certificates_bp.route('/certificates', methods=['GET'])

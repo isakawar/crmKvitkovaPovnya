@@ -58,8 +58,6 @@ def saved_routes():
 
     query = query.order_by(DeliveryRoute.route_date.asc(), DeliveryRoute.created_at.desc())
     from app.models.delivery import Delivery
-    from app.models.order import Order
-    from app.models.client import Client
     routes = query.options(
         joinedload(DeliveryRoute.stops)
             .joinedload(RouteDelivery.delivery)

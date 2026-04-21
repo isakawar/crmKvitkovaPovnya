@@ -9,8 +9,6 @@ from typing import List, Optional
 
 from app.models.courier import Courier
 from app.models.delivery import Delivery
-from app.models.order import Order
-from app.models.client import Client
 from app.extensions import db
 
 logger = logging.getLogger(__name__)

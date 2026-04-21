@@ -5,7 +5,7 @@ Telegram Notification Service for Kvitkova Povnya CRM
 
 import logging
 import asyncio
-from typing import List, Optional, Dict
+from typing import List
 
 from flask import current_app
 from app.models.courier import Courier

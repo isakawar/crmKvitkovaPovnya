@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify
 from app.extensions import db
-from app.services.client_service import get_all_clients, create_client, get_clients_json, get_client_by_id, update_client, search_clients
+from app.services.client_service import create_client, get_clients_json, get_client_by_id, update_client, search_clients
 from app.models.settings import Settings
 from app.models.subscription import Subscription
 

@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from app.models import Settings, Price
 from app.models.courier import Courier
-from app.models.user import User, Role, ROLE_PERMISSIONS
+from app.models.user import User, Role
 from app.extensions import db
 from app.utils.decorators import permission_required
 
