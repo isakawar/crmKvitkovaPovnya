@@ -1,3 +1,5 @@
+import logging
+
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
@@ -10,6 +12,7 @@ import urllib.parse
 import requests as http_requests
 
 routes_bp = Blueprint('routes', __name__)
+logger = logging.getLogger(__name__)
 
 
 def _telegram_send(bot_token, chat_id, text, reply_markup=None):
@@ -23,7 +26,7 @@ def _telegram_send(bot_token, chat_id, text, reply_markup=None):
         if data.get('ok'):
             return data['result']['message_id']
     except Exception:
-        pass
+        logger.warning('Telegram sendMessage failed for chat %s', chat_id, exc_info=True)
     return None
 
 
@@ -35,7 +38,7 @@ def _telegram_edit(bot_token, chat_id, message_id, text, reply_markup=None):
     try:
         http_requests.post(url, json=payload, timeout=30)
     except Exception:
-        pass
+        logger.warning('Telegram editMessage failed for chat %s', chat_id, exc_info=True)
 
 
 @routes_bp.route('/routes', methods=['GET'])
@@ -329,7 +332,7 @@ def route_message_text(route_id):
             if r.status_code == 200 and r.text.startswith('http'):
                 gmaps_url = r.text.strip()
         except Exception:
-            pass
+            logger.warning('TinyURL shortening failed, using full URL', exc_info=True)
         text += f"\n\n+ посилання на карті {gmaps_url}"
 
     return jsonify({'text': text})

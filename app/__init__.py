@@ -1,8 +1,11 @@
 import os
+import logging
 import datetime as _dt_module
 from flask import Flask, render_template, send_file, Response, redirect, url_for, request
 from dotenv import load_dotenv
 from flask_login import current_user
+
+logger = logging.getLogger(__name__)
 
 _last_route_cache_cleanup = None
 
@@ -16,7 +19,8 @@ def get_version():
     try:
         with open('VERSION', 'r') as f:
             return f.read().strip()
-    except:
+    except OSError as e:
+        logger.warning('Could not read VERSION file: %s', e)
         return '0.0.0.0'
 
 def create_app(config_class=DevelopmentConfig):

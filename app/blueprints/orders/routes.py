@@ -38,6 +38,7 @@ import csv
 from sqlalchemy.orm import joinedload
 
 orders_bp = Blueprint('orders', __name__)
+logger = logging.getLogger(__name__)
 
 
 @orders_bp.route('/orders', methods=['GET'])
@@ -104,7 +105,7 @@ def orders_list():
                     Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
                 )
             except ValueError:
-                pass
+                logger.warning('Invalid date_from %r, skipping filter', date_from)
         else:
             deliveries_query = deliveries_query.filter(
                 Delivery.delivery_date >= date.today()
@@ -115,7 +116,7 @@ def orders_list():
                     Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
                 )
             except ValueError:
-                pass
+                logger.warning('Invalid date_to %r, skipping filter', date_to)
         deliveries = deliveries_query.all()
         deliveries_count = len(deliveries)
         deliveries = deliveries[start_idx:end_idx]
@@ -322,7 +323,7 @@ def order_edit(order_id):
                 new_date = _dt.datetime.strptime(new_date_raw, '%Y-%m-%d').date()
                 reschedule_suggestion = calculate_reschedule_plan(first_delivery, old_date, new_date)
             except Exception:
-                pass
+                logger.exception('Failed to calculate reschedule plan for date %r', new_date_raw)
 
         return jsonify({'success': True, 'reschedule_suggestion': reschedule_suggestion})
 
@@ -535,7 +536,7 @@ def reschedule_subsequent_deliveries():
             try:
                 date_map[int(item['order_id'])] = datetime.strptime(item['new_date'], '%Y-%m-%d').date()
             except (KeyError, ValueError):
-                pass
+                logger.warning('Skipping invalid custom_date entry: %r', item)
 
         count = 0
         for order_id, new_date in date_map.items():
@@ -700,7 +701,7 @@ def route_generator():
                             dr.cached_at = datetime.utcnow()
                             db.session.commit()
                         except Exception:
-                            pass
+                            logger.exception('Route optimization failed for route %s', dr.id)
                 if not dr.cached_result_json:
                     continue
                 try:
@@ -1002,7 +1003,7 @@ def route_generator_save():
                     try:
                         dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
                     except ValueError:
-                        pass
+                        logger.warning('Invalid departure time %r, skipping', dep_str)
                 db.session.flush()
             else:
                 dr = None
@@ -1043,7 +1044,7 @@ def route_generator_save():
                         f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
                     )
                 except ValueError:
-                    pass
+                    logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
 
             rd = RouteDelivery(
                 route_id=dr.id,
@@ -1213,7 +1214,7 @@ def route_generator_distribute():
                         result['depot'] = cached['depot']
                         break
                 except (json.JSONDecodeError, ValueError):
-                    pass
+                    logger.warning('Failed to parse cached route JSON for route %s', dr.id)
 
     return jsonify({'success': True, 'result': result})
 
@@ -1256,7 +1257,7 @@ def route_generator_distribute_apply():
                             f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
                         )
                     except ValueError:
-                        pass
+                        logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
 
                 if delivery_id in existing_stop_map:
                     rd = existing_stop_map[delivery_id]
@@ -1284,7 +1285,7 @@ def route_generator_distribute_apply():
                 try:
                     dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
                 except ValueError:
-                    pass
+                    logger.warning('Invalid departure time %r, skipping', dep_str)
         else:
             start_time_val = None
             dep_str = (route_data.get('departureTime') or '').strip()
@@ -1292,7 +1293,7 @@ def route_generator_distribute_apply():
                 try:
                     start_time_val = datetime.strptime(dep_str, '%H:%M').time()
                 except ValueError:
-                    pass
+                    logger.warning('Invalid departure time %r, skipping', dep_str)
             dr = DeliveryRoute(
                 route_date=selected_date,
                 status='draft',
@@ -1315,7 +1316,7 @@ def route_generator_distribute_apply():
                             f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
                         )
                     except ValueError:
-                        pass
+                        logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
                 rd = RouteDelivery(
                     route_id=dr.id,
                     delivery_id=delivery_id,
@@ -1379,14 +1380,14 @@ def export_orders_csv():
                 Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
             )
         except ValueError:
-            pass
+            logger.warning('Invalid date_from %r, skipping filter', date_from)
     if date_to:
         try:
             deliveries_query = deliveries_query.filter(
                 Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
             )
         except ValueError:
-            pass
+            logger.warning('Invalid date_to %r, skipping filter', date_to)
 
     deliveries = deliveries_query.all()
 
