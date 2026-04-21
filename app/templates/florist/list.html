@@ -87,6 +87,7 @@
   .florist-badge-status-rejected { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
   .florist-badge-status-completed { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
 
+  .florist-badge-taxi { background: #fefce8; color: #a16207; border-color: #fde68a; }
   .florist-badge-prep-empty { background: #f5f5f4; color: #78716c; }
   .florist-badge-prep-assembled { background: #fff7ed; color: #b45309; border-color: #fed7aa; }
   .florist-badge-prep-handoff { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
@@ -505,7 +506,9 @@
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-base font-semibold text-stone-900">Маршрут #{{ loop.index }}</span>
               {% if route.courier %}
-                <span class="florist-badge"><i class="bi bi-person-badge"></i>{{ route.courier.name }}</span>
+                <span class="florist-badge {% if route.courier.is_taxi %}florist-badge-taxi{% endif %}">
+                  <i class="bi bi-{% if route.courier.is_taxi %}taxi-front{% else %}person-badge{% endif %}"></i>{{ route.courier.name }}{% if route.courier.is_taxi %} — виклик таксі{% endif %}
+                </span>
               {% else %}
                 <span class="florist-badge">Кур'єр не призначений</span>
               {% endif %}
