@@ -779,7 +779,39 @@
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-3">
             <h2 class="text-xl font-semibold text-stone-900">{{ formatted_date }}</h2>
-            <span class="route-badge route-badge-status-{{ route.status }}">{{ status_labels.get(route.status, route.status) }}</span>
+            <div class="relative route-status-wrap" onclick="event.stopPropagation()">
+              <span class="route-badge route-badge-status-{{ route.status }}"
+                    style="cursor:pointer; user-select:none;"
+                    title="Клікніть для зміни статусу"
+                    onclick="toggleStatusMenu({{ route.id }}, this)">
+                {{ status_labels.get(route.status, route.status) }}
+                <i class="bi bi-chevron-down" style="font-size:0.7rem; margin-left:0.2rem;"></i>
+              </span>
+              <div id="status-menu-{{ route.id }}" class="hidden" style="position:fixed; z-index:9999; min-width:220px; background:#fff; border:1px solid #e7e5e4; border-radius:0.85rem; box-shadow:0 8px 24px rgba(28,25,23,0.12); padding:0.35rem 0; overflow:hidden;">
+                {% for s_val, s_label in [('draft','Чернетка'),('sent','На узгодженні у курʼєра'),('accepted','Прийнято'),('rejected','Відхилено'),('completed','Завершено')] %}
+                <button type="button"
+                        class="route-status-option w-full text-left px-4 py-2 text-sm hover:bg-stone-50 transition-colors {% if route.status == s_val %}font-semibold text-stone-900{% else %}text-stone-600{% endif %}"
+                        style="display:flex; align-items:center; gap:0.5rem; border:none; background:transparent; cursor:pointer;"
+                        onclick="selectRouteStatus({{ route.id }}, '{{ s_val }}', {{ route.courier_id or 'null' }})">
+                  <span class="route-badge route-badge-status-{{ s_val }}" style="pointer-events:none; font-size:0.75rem; padding:0.15rem 0.55rem;">{{ s_label }}</span>
+                  {% if route.status == s_val %}<i class="bi bi-check2" style="margin-left:auto; color:#059669;"></i>{% endif %}
+                </button>
+                {% endfor %}
+                <div id="courier-picker-{{ route.id }}" style="display:none; border-top:1px solid #e7e5e4; padding:0.5rem 0.75rem 0.5rem;">
+                  <p style="font-size:0.75rem; color:#78716c; margin-bottom:0.35rem;">Оберіть курʼєра:</p>
+                  <select id="courier-select-{{ route.id }}" style="width:100%; border:1px solid #e7e5e4; border-radius:0.5rem; padding:0.3rem 0.5rem; font-size:0.82rem; color:#1c1917;">
+                    <option value="">— Курʼєр —</option>
+                    {% for c in couriers %}
+                    <option value="{{ c.id }}" {% if route.courier_id == c.id %}selected{% endif %}>{{ c.name }}</option>
+                    {% endfor %}
+                  </select>
+                  <button type="button" onclick="confirmSentStatus({{ route.id }})"
+                          style="margin-top:0.4rem; width:100%; background:#1c1917; color:#fff; border:none; border-radius:0.5rem; padding:0.35rem 0.75rem; font-size:0.82rem; cursor:pointer; font-weight:600;">
+                    Підтвердити
+                  </button>
+                </div>
+              </div>
+            </div>
             <span class="route-start-time-wrap" data-route-id="{{ route.id }}" onclick="event.stopPropagation()">
               <span class="route-badge route-start-time-display"
                     style="cursor:pointer; gap:0.3rem;"
@@ -830,6 +862,13 @@
                   data-route-status="{{ route.status }}">
             <i class="bi bi-person-gear"></i>
             {{ 'Змінити курʼєра' if route.courier else 'Призначити курʼєра' }}
+          </button>
+          <button type="button"
+                  class="routes-action-btn"
+                  title="Скопіювати повідомлення"
+                  data-status="{{ route.status }}"
+                  onclick="event.stopPropagation(); copyRouteMessage({{ route.id }}, this)">
+            <i class="bi bi-clipboard"></i>
           </button>
           <form method="post" action="{{ url_for('routes.delete_route', route_id=route.id) }}"
                 onsubmit="return confirm('Видалити маршрут?')" onclick="event.stopPropagation()">
@@ -1224,6 +1263,23 @@ function getAssignModal() {
   return _assignModal;
 }
 
+async function copyRouteMessage(routeId, btn) {
+  try {
+    const status = btn.dataset.status;
+    const url = status === 'accepted'
+      ? '/routes/' + routeId + '/delivery-text'
+      : '/routes/' + routeId + '/message-text';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    await navigator.clipboard.writeText(data.text);
+    const icon = btn.querySelector('i');
+    icon.className = 'bi bi-check2';
+    setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
+  } catch (e) {
+    alert('Не вдалося скопіювати');
+  }
+}
+
 function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliveriesCount, currentCourierName, routeWeekday) {
   const form = document.getElementById('assign-form');
   const hasCourier = Boolean(courierId);
@@ -1293,6 +1349,61 @@ function closeStartTimeEdit(btn) {
   const wrap = btn.closest('.route-start-time-wrap');
   wrap.querySelector('.route-start-time-editor').style.display = 'none';
   wrap.querySelector('.route-start-time-display').style.display = '';
+}
+
+function toggleStatusMenu(routeId, badgeEl) {
+  var menu = document.getElementById('status-menu-' + routeId);
+  var isHidden = menu.classList.contains('hidden');
+  document.querySelectorAll('[id^="status-menu-"]').forEach(function(m) { m.classList.add('hidden'); });
+  if (isHidden) {
+    var rect = badgeEl.getBoundingClientRect();
+    menu.style.top = (rect.bottom + 4) + 'px';
+    menu.style.left = rect.left + 'px';
+    menu.classList.remove('hidden');
+    function closeOnOutside(e) {
+      if (!menu.contains(e.target) && e.target !== badgeEl) {
+        menu.classList.add('hidden');
+        document.removeEventListener('click', closeOnOutside);
+      }
+    }
+    setTimeout(function() { document.addEventListener('click', closeOnOutside); }, 0);
+  }
+}
+
+function selectRouteStatus(routeId, status, currentCourierId) {
+  if (status === 'sent' || status === 'accepted') {
+    var picker = document.getElementById('courier-picker-' + routeId);
+    picker.dataset.pendingStatus = status;
+    picker.style.display = picker.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+  submitRouteStatus(routeId, status, null);
+}
+
+function confirmSentStatus(routeId) {
+  var picker = document.getElementById('courier-picker-' + routeId);
+  var status = picker.dataset.pendingStatus || 'sent';
+  var sel = document.getElementById('courier-select-' + routeId);
+  var courierId = sel.value ? parseInt(sel.value, 10) : null;
+  submitRouteStatus(routeId, status, courierId);
+}
+
+function submitRouteStatus(routeId, status, courierId) {
+  fetch('/routes/' + routeId + '/status', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+    body: JSON.stringify({status: status, courier_id: courierId})
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    if (data.ok) {
+      window.location.reload();
+    } else {
+      showToast(data.error || 'Помилка', 'error');
+      document.getElementById('status-menu-' + routeId).classList.add('hidden');
+    }
+  })
+  .catch(function() { showToast('Помилка збереження', 'error'); });
 }
 
 function saveStartTime(btn) {

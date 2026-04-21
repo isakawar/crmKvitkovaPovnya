@@ -284,6 +284,105 @@ def assign_and_send_route(route_id):
     return redirect(url_for('routes.saved_routes'))
 
 
+@routes_bp.route('/routes/<int:route_id>/message-text', methods=['GET'])
+@login_required
+def route_message_text(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+
+    text = f"🌸 Пропозиція маршруту на {route.route_date.strftime('%d.%m.%Y')}\n\n"
+    text += f"📦 Доставок: {route.deliveries_count}\n"
+    if route.delivery_price:
+        text += f"💰 Оплата: {route.delivery_price}₴\n"
+    text += "\nМаршрут:\n"
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or '—'
+        build = (d.building_number or (order.building_number if order else '')) or ''
+        arrival = stop.planned_arrival.strftime('%H:%M') if stop.planned_arrival else '—'
+        addr_parts = [p for p in [city, street, build] if p]
+        text += f"\n{stop.stop_order}. {', '.join(addr_parts)} — {arrival}"
+        bouquet_type = (d.bouquet_type if d else None) or (order.bouquet_type if order else None)
+        if bouquet_type:
+            text += f"\n   🎁 {bouquet_type}"
+        if d and d.address_comment:
+            text += f"\n   📝 {d.address_comment}"
+
+    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
+    gmaps_parts = []
+    if depot_address:
+        gmaps_parts.append(urllib.parse.quote(depot_address))
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        parts = [p for p in [
+            (order.city if order else '') or '',
+            (d.street or (order.street if order else '')) or '',
+            (d.building_number or (order.building_number if order else '')) or '',
+        ] if p]
+        if parts:
+            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+    if gmaps_parts:
+        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
+        try:
+            r = http_requests.get('https://tinyurl.com/api-create.php', params={'url': gmaps_url}, timeout=5)
+            if r.status_code == 200 and r.text.startswith('http'):
+                gmaps_url = r.text.strip()
+        except Exception:
+            pass
+        text += f"\n\n+ посилання на карті {gmaps_url}"
+
+    return jsonify({'text': text})
+
+
+@routes_bp.route('/routes/<int:route_id>/delivery-text', methods=['GET'])
+@login_required
+def route_delivery_text(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+
+    number_emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+
+    text = f"✅ Доставки {route.route_date.strftime('%d.%m.%Y')}\n"
+    for i, stop in enumerate(stops):
+        d = stop.delivery
+        order = d.order if d else None
+        num = number_emojis[i] if i < len(number_emojis) else f"{i + 1}."
+
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or ''
+        building = (d.building_number or (order.building_number if order else '')) or ''
+        addr_parts = [p for p in [city, street, building] if p]
+        address = ', '.join(addr_parts) or '—'
+
+        recipient = (order.recipient_name if order else '') or '—'
+        phone = (d.phone or (order.recipient_phone if order else '')) or '—'
+        bouquet = (d.bouquet_type or (order.bouquet_type if order else '')) or '—'
+
+        if stop.planned_arrival:
+            time_str = stop.planned_arrival.strftime('%H:%M')
+        elif d and d.time_from:
+            time_str = d.time_from.strftime('%H:%M')
+        else:
+            time_str = None
+
+        comment = (d.address_comment if d else '') or ''
+
+        text += f"\n{num}\n"
+        text += f"📍 {address}\n"
+        text += f"👤 {recipient}\n"
+        text += f"📞 {phone}\n"
+        text += f"📦 {bouquet}\n"
+        if time_str:
+            text += f"⏰ {time_str}\n"
+        if comment:
+            text += f"💬 {comment}\n"
+
+    return jsonify({'text': text})
+
+
 @routes_bp.route('/routes/<int:route_id>/start-time', methods=['POST'])
 @login_required
 def update_start_time(route_id):
@@ -321,6 +420,32 @@ def update_start_time(route_id):
 
     db.session.commit()
     return jsonify({'success': True, 'recalculated': recalculated, 'arrivals': arrivals})
+
+
+@routes_bp.route('/routes/<int:route_id>/status', methods=['POST'])
+@login_required
+def change_route_status(route_id):
+    route = DeliveryRoute.query.get_or_404(route_id)
+    data = request.get_json()
+    new_status = data.get('status')
+    courier_id = data.get('courier_id')
+
+    valid_statuses = ['draft', 'sent', 'accepted', 'rejected', 'completed']
+    if new_status not in valid_statuses:
+        return jsonify({'ok': False, 'error': 'Невірний статус'}), 400
+
+    if new_status == 'sent' and not courier_id and not route.courier_id:
+        return jsonify({'ok': False, 'error': 'Оберіть курʼєра для цього статусу'}), 400
+
+    route.status = new_status
+    if courier_id:
+        route.courier_id = courier_id
+    if new_status == 'completed':
+        for stop in route.stops:
+            if stop.delivery:
+                stop.delivery.status = 'Доставлено'
+    db.session.commit()
+    return jsonify({'ok': True})
 
 
 @routes_bp.route('/routes/<int:route_id>/delete', methods=['POST'])
