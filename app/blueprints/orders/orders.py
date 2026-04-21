@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
 from datetime import date, datetime
 
-from app.blueprints.orders.routes import orders_bp
+from app.blueprints.orders import orders_bp
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.certificate import Certificate

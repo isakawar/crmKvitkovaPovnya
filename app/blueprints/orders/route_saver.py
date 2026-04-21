@@ -6,7 +6,7 @@ from flask_login import login_required
 from sqlalchemy.orm import joinedload
 from datetime import date, datetime
 
-from app.blueprints.orders.routes import orders_bp
+from app.blueprints.orders import orders_bp
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery

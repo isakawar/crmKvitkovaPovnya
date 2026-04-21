@@ -4,7 +4,7 @@ from flask import request, jsonify
 from flask_login import login_required
 from datetime import datetime
 
-from app.blueprints.orders.routes import orders_bp
+from app.blueprints.orders import orders_bp
 from app.extensions import db
 from app.models import Order, Delivery
 from app.models.delivery_route import RouteDelivery, DeliveryRoute
