@@ -81,6 +81,7 @@ def orders_list():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    packaging_types = Settings.query.filter_by(type='packaging_type').order_by(Settings.value).all()
     deliveries = []
     grouped_deliveries = {}
     deliveries_count = 0
@@ -145,6 +146,7 @@ def orders_list():
         delivery_type_filter=delivery_type_filter,
         date_from_filter=date_from,
         date_to_filter=date_to,
+        packaging_types=packaging_types,
     )
 
 
@@ -391,6 +393,16 @@ def order_dependencies(order_id):
 def order_delete(order_id):
     order = Order.query.get_or_404(order_id)
     delete_order(order)
+    return jsonify({'success': True})
+
+
+@orders_bp.route('/orders/<int:order_id>/bouquet_type', methods=['POST'])
+@login_required
+def update_order_bouquet_type(order_id):
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    order.bouquet_type = data.get('bouquet_type') or None
+    db.session.commit()
     return jsonify({'success': True})
 
 

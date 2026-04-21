@@ -427,8 +427,8 @@
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Отримувач</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Адреса</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Телефон</th>
-              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Розмір</th>
-              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Підписка</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Розмір / Підписка</th>
+              <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Коробка / Букет</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Коментар</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Побажання</th>
               <th class="px-4 py-4 text-left text-sm font-semibold text-stone-900">Час</th>
@@ -559,23 +559,17 @@
               </td>
 
               <td class="px-4 py-4">
-                <span class="inline-flex items-center rounded-full border
-                  {% set size_value = delivery.size or order.size or '—' %}
-                  {% if size_value == 'M' %}border-emerald-200 bg-emerald-50 text-emerald-700
-                  {% elif size_value == 'L' %}border-lime-200 bg-lime-50 text-lime-700
-                  {% elif size_value == 'XL' %}border-amber-200 bg-amber-50 text-amber-700
-                  {% elif size_value == 'XXL' %}border-red-200 bg-red-50 text-red-700
-                  {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
-                  px-3 py-1 text-xs font-medium">
-                  {{ size_value }}
-                  {% if size_value == 'Власний' and order and order.custom_amount %}
-                    · {{ order.custom_amount }} грн
-                  {% endif %}
-                </span>
-              </td>
-
-              <td class="px-4 py-4">
                 <div class="flex flex-wrap gap-2">
+                  {% set size_value = delivery.size or (order.size if order else '') or '—' %}
+                  <span class="inline-flex items-center rounded-full border
+                    {% if size_value == 'M' %}border-emerald-200 bg-emerald-50 text-emerald-700
+                    {% elif size_value == 'L' %}border-lime-200 bg-lime-50 text-lime-700
+                    {% elif size_value == 'XL' %}border-amber-200 bg-amber-50 text-amber-700
+                    {% elif size_value == 'XXL' %}border-red-200 bg-red-50 text-red-700
+                    {% else %}border-stone-200 bg-stone-100 text-stone-600{% endif %}
+                    px-3 py-1 text-xs font-medium">
+                    {{ size_value }}{% if size_value == 'Власний' and order and order.custom_amount %} · {{ order.custom_amount }} грн{% endif %}
+                  </span>
                   <span class="inline-flex items-center rounded-full border
                     {% if delivery_type_label == 'Weekly' %}border-blue-200 bg-blue-50 text-blue-700
                     {% elif delivery_type_label == 'Monthly' %}border-violet-200 bg-violet-50 text-violet-700
@@ -590,6 +584,16 @@
                   </span>
                   {% endif %}
                 </div>
+              </td>
+
+              <td class="px-4 py-4">
+                {% set bouquet_val = delivery.bouquet_type or (order.bouquet_type if order else '') or '' %}
+                <select class="bouquet-type-select rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent min-w-[110px]">
+                  <option value="">—</option>
+                  {% for pt in packaging_types %}
+                    <option value="{{ pt.value }}" {% if bouquet_val == pt.value %}selected{% endif %}>{{ pt.value }}</option>
+                  {% endfor %}
+                </select>
               </td>
 
               <td class="px-4 py-4">
@@ -1204,6 +1208,28 @@
   window.showRescheduleModal = showRescheduleModal;
 
   updateSelectedCount();
+})();
+
+(function () {
+  document.addEventListener('change', function (e) {
+    const select = e.target.closest('.bouquet-type-select');
+    if (!select) return;
+    const row = select.closest('tr[data-order-id]');
+    if (!row) return;
+    const orderId = row.dataset.orderId;
+    if (!orderId) return;
+    fetch(`/orders/${orderId}/bouquet_type`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bouquet_type: select.value || null }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) showToast('Збережено', 'success');
+        else showToast(data.error || 'Помилка збереження', 'error');
+      })
+      .catch(() => showToast('Помилка зʼєднання', 'error'));
+  });
 })();
 
 (function () {
