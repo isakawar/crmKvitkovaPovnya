@@ -1,3 +1,4 @@
+"""Order CRUD, client search, CSV export, and subscription extension endpoints."""
 import logging
 
 from flask import render_template, request, redirect, url_for, jsonify, flash, Response

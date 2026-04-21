@@ -1,3 +1,4 @@
+"""Delivery mutation endpoints: delete, time updates, and reschedule."""
 import logging
 
 from flask import request, jsonify

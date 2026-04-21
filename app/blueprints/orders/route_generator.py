@@ -1,3 +1,4 @@
+"""Route optimiser UI and API: generate, recalculate, CSV import/export, job polling."""
 import logging
 import json
 import requests
