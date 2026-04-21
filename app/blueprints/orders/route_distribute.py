@@ -4,9 +4,10 @@ import json
 from flask import render_template, request, jsonify, current_app
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
-from datetime import date, datetime
+from datetime import date
 
 from app.blueprints.orders import orders_bp
+from app.blueprints.orders._helpers import parse_ymd, parse_hm, parse_eta
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 def route_generator_distribute_page():
     date_str = request.args.get('date', date.today().isoformat())
     try:
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        selected_date = parse_ymd(date_str)
     except ValueError:
         selected_date = date.today()
         date_str = selected_date.isoformat()
@@ -117,7 +118,7 @@ def route_generator_distribute_apply():
     selected_date_str = data.get('selected_date', date.today().isoformat())
 
     try:
-        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        selected_date = parse_ymd(selected_date_str)
     except ValueError:
         return jsonify({'error': 'Некоректна дата'}), 400
 
@@ -138,14 +139,7 @@ def route_generator_distribute_apply():
                 delivery_id = stop.get('id')
                 if not delivery_id:
                     continue
-                planned_arrival = None
-                if stop.get('eta'):
-                    try:
-                        planned_arrival = datetime.strptime(
-                            f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
-                        )
-                    except ValueError:
-                        logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
+                planned_arrival = parse_eta(selected_date_str, stop.get('eta') or '')
 
                 if delivery_id in existing_stop_map:
                     rd = existing_stop_map[delivery_id]
@@ -171,7 +165,7 @@ def route_generator_distribute_apply():
             dep_str = (route_data.get('departureTime') or '').strip()
             if dep_str:
                 try:
-                    dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
+                    dr.start_time = parse_hm(dep_str)
                 except ValueError:
                     logger.warning('Invalid departure time %r, skipping', dep_str)
         else:
@@ -179,7 +173,7 @@ def route_generator_distribute_apply():
             dep_str = (route_data.get('departureTime') or '').strip()
             if dep_str:
                 try:
-                    start_time_val = datetime.strptime(dep_str, '%H:%M').time()
+                    start_time_val = parse_hm(dep_str)
                 except ValueError:
                     logger.warning('Invalid departure time %r, skipping', dep_str)
             dr = DeliveryRoute(
@@ -197,14 +191,7 @@ def route_generator_distribute_apply():
                 delivery_id = stop.get('id')
                 if not delivery_id:
                     continue
-                planned_arrival = None
-                if stop.get('eta'):
-                    try:
-                        planned_arrival = datetime.strptime(
-                            f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
-                        )
-                    except ValueError:
-                        logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
+                planned_arrival = parse_eta(selected_date_str, stop.get('eta') or '')
                 rd = RouteDelivery(
                     route_id=dr.id,
                     delivery_id=delivery_id,

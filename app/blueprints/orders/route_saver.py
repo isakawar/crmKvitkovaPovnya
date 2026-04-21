@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from datetime import date, datetime
 
 from app.blueprints.orders import orders_bp
+from app.blueprints.orders._helpers import parse_ymd, parse_hm, parse_eta
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
@@ -27,7 +28,7 @@ def route_generator_save():
         return jsonify({'error': 'Некоректний JSON'}), 400
 
     try:
-        selected_date = datetime.strptime(selected_date_str, '%Y-%m-%d').date()
+        selected_date = parse_ymd(selected_date_str)
     except ValueError:
         return jsonify({'error': 'Некоректна дата'}), 400
 
@@ -109,7 +110,7 @@ def route_generator_save():
                 dep_str = (route_data.get('departureTime') or '').strip()
                 if dep_str:
                     try:
-                        dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
+                        dr.start_time = parse_hm(dep_str)
                     except ValueError:
                         logger.warning('Invalid departure time %r, skipping', dep_str)
                 db.session.flush()
@@ -121,7 +122,7 @@ def route_generator_save():
             dep_str = (route_data.get('departureTime') or '').strip()
             if dep_str:
                 try:
-                    start_time_val = datetime.strptime(dep_str, '%H:%M').time()
+                    start_time_val = parse_hm(dep_str)
                 except ValueError:
                     logger.warning('Invalid departure time %r, skipping', dep_str)
             dr = DeliveryRoute(
@@ -145,14 +146,7 @@ def route_generator_save():
             if not delivery_id:
                 continue
 
-            planned_arrival = None
-            if stop.get('eta'):
-                try:
-                    planned_arrival = datetime.strptime(
-                        f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
-                    )
-                except ValueError:
-                    logger.warning('Invalid ETA value %r, skipping planned_arrival', stop.get('eta'))
+            planned_arrival = parse_eta(selected_date_str, stop.get('eta') or '')
 
             rd = RouteDelivery(
                 route_id=dr.id,

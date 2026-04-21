@@ -4,9 +4,10 @@ from flask import render_template, request, redirect, url_for, jsonify, flash, R
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
 from sqlalchemy import or_
-from datetime import date, datetime
+from datetime import date
 
 from app.blueprints.orders import orders_bp
+from app.blueprints.orders._helpers import parse_ymd
 from app.extensions import db
 from app.models import Order, Client, Delivery
 from app.models.certificate import Certificate
@@ -93,7 +94,7 @@ def orders_list():
         if date_from:
             try:
                 deliveries_query = deliveries_query.filter(
-                    Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+                    Delivery.delivery_date >= parse_ymd(date_from)
                 )
             except ValueError:
                 logger.warning('Invalid date_from %r, skipping filter', date_from)
@@ -104,7 +105,7 @@ def orders_list():
         if date_to:
             try:
                 deliveries_query = deliveries_query.filter(
-                    Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+                    Delivery.delivery_date <= parse_ymd(date_to)
                 )
             except ValueError:
                 logger.warning('Invalid date_to %r, skipping filter', date_to)
@@ -159,8 +160,8 @@ def order_form():
 @orders_bp.route('/orders/new', methods=['POST'])
 @login_required
 def order_create():
-    logging.info('--- ORDER CREATE ---')
-    logging.info(f'Form data: {dict(request.form)}')
+    logger.info('--- ORDER CREATE ---')
+    logger.info('Form data: %s', dict(request.form))
 
     is_pickup = request.form.get('is_pickup') == 'on'
     delivery_type = (request.form.get('delivery_type') or '').strip()
@@ -269,11 +270,11 @@ def order_create():
     if is_subscription:
         entity = create_subscription(client, request.form)
         entity_id = entity.orders[0].id if entity.orders else None
-        logging.info(f'Subscription created: {entity.id}')
+        logger.info('Subscription created: %s', entity.id)
     else:
         entity = create_order_and_deliveries(client, request.form)
         entity_id = entity.id
-        logging.info(f'Order created: {entity_id}')
+        logger.info('Order created: %s', entity_id)
 
     if certificate:
         from datetime import datetime as _dt
@@ -293,7 +294,7 @@ def order_create():
 def order_edit(order_id):
     order = Order.query.get_or_404(order_id)
     if request.method == 'POST':
-        logging.info(f'EDIT ORDER {order_id}')
+        logger.info('EDIT ORDER %s', order_id)
 
         # Capture first active delivery + its date before update
         import datetime as _dt
@@ -310,7 +311,7 @@ def order_edit(order_id):
         new_date_raw = (request.form.get('first_delivery_date') or '').strip()
         if first_delivery and old_date and new_date_raw:
             try:
-                new_date = _dt.datetime.strptime(new_date_raw, '%Y-%m-%d').date()
+                new_date = parse_ymd(new_date_raw)
                 reschedule_suggestion = calculate_reschedule_plan(first_delivery, old_date, new_date)
             except Exception:
                 logger.exception('Failed to calculate reschedule plan for date %r', new_date_raw)
@@ -501,7 +502,7 @@ def extend_subscription(order_id):
         })
     except Exception as e:
         db.session.rollback()
-        logging.error(f'Помилка продовження підписки: {e}')
+        logger.exception('Помилка продовження підписки: %s', e)
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
 
 
@@ -523,14 +524,14 @@ def export_orders_csv():
     if date_from:
         try:
             deliveries_query = deliveries_query.filter(
-                Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+                Delivery.delivery_date >= parse_ymd(date_from)
             )
         except ValueError:
             logger.warning('Invalid date_from %r, skipping filter', date_from)
     if date_to:
         try:
             deliveries_query = deliveries_query.filter(
-                Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+                Delivery.delivery_date <= parse_ymd(date_to)
             )
         except ValueError:
             logger.warning('Invalid date_to %r, skipping filter', date_to)

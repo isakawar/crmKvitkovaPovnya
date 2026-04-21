@@ -2,9 +2,9 @@ import logging
 
 from flask import request, jsonify
 from flask_login import login_required
-from datetime import datetime
 
 from app.blueprints.orders import orders_bp
+from app.blueprints.orders._helpers import parse_ymd, parse_hm
 from app.extensions import db
 from app.models import Order, Delivery
 from app.models.delivery_route import RouteDelivery, DeliveryRoute
@@ -65,11 +65,9 @@ def update_delivery_times():
         return jsonify({'success': False, 'error': 'Вкажіть час доставки'}), 400
 
     if time_from != '∞':
-        def parse_time(value):
-            return datetime.strptime(value, '%H:%M').time()
         try:
-            parsed_from = parse_time(time_from) if time_from else None
-            parsed_to = parse_time(time_to) if time_to else None
+            parsed_from = parse_hm(time_from) if time_from else None
+            parsed_to = parse_hm(time_to) if time_to else None
         except ValueError:
             return jsonify({'success': False, 'error': 'Невірний формат часу. Використовуйте HH:MM'}), 400
 
@@ -79,7 +77,7 @@ def update_delivery_times():
     delivery_date = None
     if delivery_date_raw:
         try:
-            delivery_date = datetime.strptime(delivery_date_raw, '%Y-%m-%d').date()
+            delivery_date = parse_ymd(delivery_date_raw)
         except ValueError:
             return jsonify({'success': False, 'error': 'Невірний формат дати. Використовуйте YYYY-MM-DD'}), 400
 
@@ -137,7 +135,7 @@ def reschedule_subsequent_deliveries():
         date_map = {}
         for item in custom_dates:
             try:
-                date_map[int(item['order_id'])] = datetime.strptime(item['new_date'], '%Y-%m-%d').date()
+                date_map[int(item['order_id'])] = parse_ymd(item['new_date'])
             except (KeyError, ValueError):
                 logger.warning('Skipping invalid custom_date entry: %r', item)
 
