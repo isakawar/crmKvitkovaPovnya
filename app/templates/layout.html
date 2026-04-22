@@ -830,15 +830,28 @@ const aiChat = (() => {
 </script>
 {% endif %}
 <script>
-(function() {
-    var sy = sessionStorage.getItem('__scrollY');
-    if (sy !== null) { window.scrollTo(0, parseInt(sy)); sessionStorage.removeItem('__scrollY'); }
-})();
-function softReload() {
-    sessionStorage.setItem('__scrollY', window.scrollY);
+async function softReload() {
     var el = document.getElementById('page-content');
-    if (el) { el.style.transition = 'opacity 0.2s ease'; el.style.opacity = '0'; }
-    setTimeout(function() { location.reload(); }, 220);
+    if (el) { el.style.transition = 'opacity 0.15s ease'; el.style.opacity = '0'; }
+    try {
+        var resp = await fetch(location.href, { headers: { 'Cache-Control': 'no-cache' } });
+        var html = await resp.text();
+        var newDoc = new DOMParser().parseFromString(html, 'text/html');
+        var newEl = newDoc.getElementById('page-content');
+        if (el && newEl) {
+            el.innerHTML = newEl.innerHTML;
+            el.querySelectorAll('script').forEach(function(old) {
+                var s = document.createElement('script');
+                Array.from(old.attributes).forEach(function(a) { s.setAttribute(a.name, a.value); });
+                s.textContent = old.textContent;
+                old.parentNode.replaceChild(s, old);
+            });
+            el.style.transition = 'opacity 0.2s ease';
+            el.style.opacity = '1';
+            return;
+        }
+    } catch(e) {}
+    location.reload();
 }
 </script>
 </body>
