@@ -583,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     showToast(data.message || 'Кур\'єра додано', 'success');
                     bootstrap.Modal.getInstance(addModal).hide();
-                    setTimeout(() => window.location.reload(), 600);
+                    softReload();
                 } else {
                     setCourierError(addError, data.error || 'Помилка створення');
                 }
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     showToast(data.message || 'Дані оновлено', 'success');
                     bootstrap.Modal.getInstance(editModal).hide();
-                    setTimeout(() => window.location.reload(), 600);
+                    softReload();
                 } else {
                     setCourierError(editError, data.error || 'Помилка оновлення');
                 }
@@ -681,7 +681,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast(data.message || 'Статус оновлено', 'success');
                 bootstrap.Modal.getInstance(editModal).hide();
-                setTimeout(() => window.location.reload(), 500);
+                softReload();
             } else showToast(data.error || 'Помилка оновлення', 'error');
         })
         .catch(() => showToast('Помилка мережі', 'error'));
@@ -698,7 +698,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast(data.message || 'Telegram прив\'язку скинуто', 'success');
                 bootstrap.Modal.getInstance(editModal).hide();
-                setTimeout(() => window.location.reload(), 600);
+                softReload();
             } else showToast(data.error || 'Помилка скидання', 'error');
         })
         .catch(() => showToast('Помилка мережі', 'error'));
@@ -715,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 showToast(data.message || 'Кур\'єра видалено', 'success');
                 bootstrap.Modal.getInstance(editModal).hide();
-                setTimeout(() => window.location.reload(), 600);
+                softReload();
             } else showToast(data.error || 'Помилка видалення', 'error');
         })
         .catch(() => showToast('Помилка мережі', 'error'));

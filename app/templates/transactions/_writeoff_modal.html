@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setLoading(false);
         return;
       }
-      window.location.reload();
+      softReload();
     } catch (err) {
       showErrors('Не вдалося зберегти. Спробуйте ще раз.');
       setLoading(false);

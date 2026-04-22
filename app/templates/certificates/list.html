@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setSubmitLoading(false);
         return;
       }
-      window.location.reload();
+      softReload();
     } catch (error) {
       console.error('Помилка збереження сертифіката:', error);
       renderErrors('Не вдалося зберегти сертифікат. Спробуйте ще раз.');

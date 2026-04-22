@@ -787,7 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка');
           showToast(result.message || 'Підписку продовжено', 'success');
           detailModal.hide();
-          setTimeout(() => location.reload(), 900);
+          softReload();
         } catch (error) {
           showToast(error.message || 'Не вдалося продовжити підписку', 'error');
         }
@@ -802,7 +802,7 @@ document.addEventListener('DOMContentLoaded', function() {
           if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при видаленні');
           showToast('Підписку видалено', 'success');
           detailModal.hide();
-          setTimeout(() => location.reload(), 900);
+          softReload();
         } catch (error) {
           showToast(error.message || 'Не вдалося видалити підписку', 'error');
         }
@@ -886,7 +886,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
       draftCreateModal.hide();
       showToast('Чернетку створено', 'success');
-      setTimeout(() => location.reload(), 700);
+      softReload();
     } catch (err) {
       draftCreateError.textContent = err.message;
       draftCreateError.classList.remove('hidden');

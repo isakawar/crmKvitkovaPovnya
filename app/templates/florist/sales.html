@@ -301,7 +301,7 @@
       if (data.success) {
         showToast('Продаж додано', 'success');
         closeAddModal();
-        setTimeout(() => location.reload(), 800);
+        softReload();
       } else {
         showToast(data.error || 'Помилка', 'danger');
         btn.disabled = false;
@@ -346,7 +346,7 @@
       if (data.success) {
         showToast('Збережено', 'success');
         closeEditModal();
-        setTimeout(() => location.reload(), 800);
+        softReload();
       } else {
         showToast(data.error || 'Помилка', 'danger');
       }

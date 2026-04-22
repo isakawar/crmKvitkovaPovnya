@@ -1394,7 +1394,7 @@ function submitRouteStatus(routeId, status, courierId) {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.ok) {
-      window.location.reload();
+      softReload();
     } else {
       showToast(data.error || 'Помилка', 'error');
       document.getElementById('status-menu-' + routeId).classList.add('hidden');

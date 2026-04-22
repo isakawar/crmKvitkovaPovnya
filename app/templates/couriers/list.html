@@ -413,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (data.success) {
         showToast(data.message, 'success');
         bootstrap.Modal.getInstance(document.getElementById('addCourierModal')).hide();
-        setTimeout(() => window.location.reload(), 1000);
+        softReload();
       } else {
         showToast(data.error, 'danger');
       }
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (data.success) {
         showToast(data.message, 'success');
         bootstrap.Modal.getInstance(document.getElementById('editCourierModal')).hide();
-        setTimeout(() => window.location.reload(), 1000);
+        softReload();
       } else {
         showToast(data.error, 'danger');
       }
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(data => {
         if (data.success) {
           showToast(data.message, 'success');
-          setTimeout(() => window.location.reload(), 1000);
+          softReload();
         } else {
           showToast(data.error, 'danger');
         }
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
           if (data.success) {
             showToast(data.message, 'success');
-            setTimeout(() => window.location.reload(), 1000);
+            softReload();
           } else {
             showToast(data.error, 'danger');
           }
@@ -551,7 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(data => {
           if (data.success) {
             showToast(data.message, 'success');
-            setTimeout(() => window.location.reload(), 1000);
+            softReload();
           } else {
             showToast(data.error, 'danger');
           }

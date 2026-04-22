@@ -833,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
                 window.showRescheduleModal(data.reschedule_suggestion);
             } else {
-                setTimeout(() => location.reload(), 900);
+                softReload();
             }
         } catch (error) {
             console.error('Помилка збереження:', error);
@@ -1071,7 +1071,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     if (extendModal) extendModal.hide();
                     showToast('Підписку успішно продовжено!', 'success');
-                    setTimeout(() => location.reload(), 900);
+                    softReload();
                 } else {
                     showToast(`Помилка: ${data.error || 'Невідома помилка'}`, 'error');
                 }
@@ -1180,7 +1180,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (deleteOrderConfirmModal) deleteOrderConfirmModal.hide();
                 addOrderModal.hide();
                 showToast('Замовлення видалено', 'success');
-                setTimeout(() => location.reload(), 900);
+                softReload();
             } catch (e) {
                 alert('Помилка зʼєднання');
             }

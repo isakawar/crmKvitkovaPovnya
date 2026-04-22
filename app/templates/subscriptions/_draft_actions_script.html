@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
       draftEditModal?.hide();
       showToast('Чернетку оновлено', 'success');
-      setTimeout(() => location.reload(), 700);
+      softReload();
     } catch (err) {
       showToast(err.message || 'Помилка', 'error');
     }
@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
         showToast('Чернетку видалено', 'success');
-        setTimeout(() => location.reload(), 700);
+        softReload();
       } catch (err) {
         showToast(err.message || 'Помилка', 'error');
       }

@@ -158,6 +158,8 @@
             --shadow-lg: 0 8px 40px rgba(44,16,8,.12);
             --transition: 0.22s cubic-bezier(.4,0,.2,1);
         }
+        #page-content { animation: pageFadeIn 0.25s ease; }
+        @keyframes pageFadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
@@ -443,7 +445,7 @@
     </div>
 
     <!-- Page content -->
-    <div class="px-3 py-4 md:px-8 md:py-6">
+    <div id="page-content" class="px-3 py-4 md:px-8 md:py-6">
         {% block content %}{% endblock %}
     </div>
 </div>
@@ -827,5 +829,17 @@ const aiChat = (() => {
 })();
 </script>
 {% endif %}
+<script>
+(function() {
+    var sy = sessionStorage.getItem('__scrollY');
+    if (sy !== null) { window.scrollTo(0, parseInt(sy)); sessionStorage.removeItem('__scrollY'); }
+})();
+function softReload() {
+    sessionStorage.setItem('__scrollY', window.scrollY);
+    var el = document.getElementById('page-content');
+    if (el) { el.style.transition = 'opacity 0.2s ease'; el.style.opacity = '0'; }
+    setTimeout(function() { location.reload(); }, 220);
+}
+</script>
 </body>
 </html>

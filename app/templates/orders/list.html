@@ -1106,7 +1106,7 @@
       if (result && result.reschedule_suggestion) {
         showRescheduleModal(result.reschedule_suggestion);
       } else if (dateValue && prevDate && dateValue !== prevDate) {
-        location.reload();
+        softReload();
       }
     });
   }
@@ -1189,7 +1189,7 @@
         const data = await resp.json().catch(() => ({}));
         if (data.success) {
           showToast(`${data.rescheduled} доставок перенесено`, 'success');
-          location.reload();
+          softReload();
         } else {
           showToast(data.error || 'Помилка перенесення', 'error');
           newBtn.disabled = false;
