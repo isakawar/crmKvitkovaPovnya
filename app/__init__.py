@@ -85,6 +85,18 @@ def create_app(config_class=DevelopmentConfig):
         except Exception:
             db.session.rollback()
 
+    # Оновлення last_seen для авторизованих користувачів (throttle 1 хв)
+    @app.before_request
+    def track_last_seen():
+        if request.endpoint == 'static':
+            return
+        if not current_user.is_authenticated:
+            return
+        now = _dt_module.datetime.utcnow()
+        if current_user.last_seen is None or (now - current_user.last_seen).total_seconds() > 60:
+            current_user.last_seen = now
+            db.session.flush()
+
     # Захист всіх маршрутів за замовчуванням
     @app.before_request
     def require_login():

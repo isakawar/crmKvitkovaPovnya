@@ -1,5 +1,7 @@
+from datetime import datetime
 from flask import render_template, redirect, url_for, flash, request
 from flask_login import login_user, logout_user, login_required, current_user
+from app.extensions import db
 from app.models import User
 from . import bp
 
@@ -18,7 +20,9 @@ def login():
         
         if user and user.check_password(password):
             login_user(user)
-            
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+
             # Перенаправлення на сторінку, яку користувач намагався відвідати
             next_page = request.args.get('next')
             if not next_page or not next_page.startswith('/'):
