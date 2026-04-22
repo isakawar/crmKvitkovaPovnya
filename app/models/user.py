@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from app.extensions import db
@@ -46,11 +46,18 @@ class User(UserMixin, db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
+    last_seen = db.Column(db.DateTime, nullable=True)
     user_type = db.Column(db.String(20))  # 'courier', 'client', 'admin', 'manager'
     
     # Relationships
     roles = db.relationship('Role', secondary=user_roles, lazy='subquery',
                           backref=db.backref('user', lazy=True))
+
+    @property
+    def is_online(self):
+        if not self.last_seen:
+            return False
+        return self.last_seen > datetime.utcnow() - timedelta(minutes=5)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

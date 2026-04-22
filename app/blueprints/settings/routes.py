@@ -259,6 +259,9 @@ def get_users():
             'user_type': u.user_type,
             'roles': role_names,
             'is_active': u.is_active,
+            'is_online': u.is_online,
+            'last_seen': u.last_seen.isoformat() if u.last_seen else None,
+            'last_login': u.last_login.isoformat() if u.last_login else None,
         })
     return jsonify(result)
 

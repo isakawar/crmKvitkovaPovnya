@@ -49,11 +49,12 @@
             <th>Логін</th>
             <th>Роль</th>
             <th>Статус</th>
+            <th>Онлайн</th>
             <th>Дії</th>
           </tr>
         </thead>
         <tbody id="users-tbody">
-          <tr><td colspan="4" style="text-align:center;color:#a8a29e;padding:2rem;">Завантаження...</td></tr>
+          <tr><td colspan="5" style="text-align:center;color:#a8a29e;padding:2rem;">Завантаження...</td></tr>
         </tbody>
       </table>
     </div>
@@ -186,10 +187,42 @@
     return role;
   }
 
+  function dot(color) {
+    return `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>`;
+  }
+
+  function onlineLabel(u) {
+    if (u.is_online) {
+      return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;font-weight:500;">${dot('#22c55e')}Онлайн</span>`;
+    }
+    if (!u.last_seen) {
+      if (!u.last_login) {
+        return '<span style="color:#a8a29e;font-size:0.85rem;">Ніколи</span>';
+      }
+      const diff = Date.now() - new Date(u.last_login + (u.last_login.endsWith('Z') ? '' : 'Z')).getTime();
+      const color = diff < 300000 ? '#22c55e' : '#ef4444';
+      const ago = timeAgo(u.last_login);
+      return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;" title="Остання сесія">${dot(color)}${ago}</span>`;
+    }
+    const ago = timeAgo(u.last_seen);
+    return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;" title="Остання активність">${dot('#ef4444')}${ago}</span>`;
+  }
+
+  function timeAgo(isoStr) {
+    const diff = Date.now() - new Date(isoStr + (isoStr.endsWith('Z') ? '' : 'Z')).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'щойно';
+    if (mins < 60) return `${mins} хв тому`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs} год тому`;
+    const days = Math.floor(hrs / 24);
+    return `${days} дн тому`;
+  }
+
   function renderUsers(users) {
     const tbody = document.getElementById('users-tbody');
     if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#a8a29e;padding:2rem;">Користувачів ще немає</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#a8a29e;padding:2rem;">Користувачів ще немає</td></tr>';
       return;
     }
     tbody.innerHTML = users.map(u => `
@@ -204,6 +237,7 @@
             ${u.is_active ? 'Активний' : 'Неактивний'}
           </span>
         </td>
+        <td>${onlineLabel(u)}</td>
         <td>
           <div class="settings-couriers__actions">
             <button class="settings-couriers__action js-user-password"
@@ -229,7 +263,7 @@
       .then(renderUsers)
       .catch(() => {
         document.getElementById('users-tbody').innerHTML =
-          '<tr><td colspan="4" style="text-align:center;color:#ef4444;padding:2rem;">Помилка завантаження</td></tr>';
+          '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:2rem;">Помилка завантаження</td></tr>';
       });
   }
 

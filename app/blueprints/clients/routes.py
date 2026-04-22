@@ -111,12 +111,20 @@ def client_update(client_id):
 def client_delete(client_id):
     from app.models.client import Client
     from app.models.delivery import Delivery
+    from sqlalchemy.exc import IntegrityError
     client = Client.query.get_or_404(client_id)
+    has_subscriptions = Subscription.query.filter_by(client_id=client_id).first() is not None
+    if has_subscriptions:
+        return jsonify({'success': False, 'error': 'Неможливо видалити клієнта з активною підпискою'}), 400
     has_deliveries = Delivery.query.filter_by(client_id=client_id).first() is not None
     if has_deliveries:
         return jsonify({'success': False, 'error': 'Неможливо видалити клієнта з існуючими доставками'}), 400
-    db.session.delete(client)
-    db.session.commit()
+    try:
+        db.session.delete(client)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Неможливо видалити клієнта: є пов\'язані замовлення або записи'}), 400
     return jsonify({'success': True})
 
 @clients_bp.route('/clients/json', methods=['GET'])

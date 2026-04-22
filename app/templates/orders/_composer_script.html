@@ -518,6 +518,9 @@ document.addEventListener('DOMContentLoaded', function() {
             syncComposerBackButton();
         }
         clientSearch.value = clientInstagram;
+        if (clientInstagram) {
+            clientSearch.dispatchEvent(new Event('input'));
+        }
         setDeliveryMode('courier');
         syncCustomAmountState();
         setComposerFlow(flow, false);
@@ -638,7 +641,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         data-display="${client.display}">${client.display}</button>`
                 ).join('');
                 clientResults.classList.remove('d-none');
-                clientResults.querySelectorAll('button').forEach(btn => {
+                const allResultBtns = clientResults.querySelectorAll('button');
+                allResultBtns.forEach(btn => {
                     btn.addEventListener('click', async function() {
                         clientSearch.value = this.getAttribute('data-display') || this.textContent.trim();
                         const clientId = this.getAttribute('data-client-id');
@@ -673,6 +677,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 });
+                if (allResultBtns.length === 1) {
+                    allResultBtns[0].click();
+                }
             } catch (error) {
                 console.error('Помилка пошуку клієнтів:', error);
                 clearClientResults();

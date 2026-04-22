@@ -385,6 +385,8 @@ def parse_csv_rows_kvitkovapovnya(file_stream):
             'delivery_number_raw': normalized.get('№ доставки', ''),
             'is_wedding_raw': normalized.get('Відмітка якщо весільна', ''),
             'discount_raw': normalized.get('Відсоток знижки', ''),
+            'recipient_social_raw': normalized.get('Instagram / Telegram отримувача', ''),
+            'preferences_raw': normalized.get('Побажання', ''),
         })
     return rows
 
@@ -524,6 +526,8 @@ def build_preview_row_kvitkovapovnya(raw):
         'discount': discount,
         'action': action,
         'warnings': warnings,
+        'recipient_social': (raw.get('recipient_social_raw') or '').strip(),
+        'preferences': (raw.get('preferences_raw') or '').strip(),
     }
 
 
@@ -637,6 +641,8 @@ def execute_import_kvitkovapovnya(preview_rows):
                             'delivery_method': row.get('delivery_method', 'courier'),
                             'delivery_type': row['delivery_type'],
                             'is_wedding': 'on' if row.get('is_wedding') else '',
+                            'recipient_social': row.get('recipient_social') or '',
+                            'preferences': row.get('preferences') or '',
                         }
                         if action == 'one_time':
                             create_order_and_deliveries(client, form)
