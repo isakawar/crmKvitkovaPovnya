@@ -264,6 +264,7 @@
   {% set size = delivery.size or (order.size if order else '') %}
   {% set custom_amount = (order.custom_amount if order else None) %}
   {% set comment_text = delivery.comment or (order.comment if order else '') %}
+  {% set address_comment = delivery.address_comment or (order.address_comment if order else '') %}
   {% set preferences_text = delivery.preferences or (order.preferences if order else '') %}
   {% set packaging = delivery.bouquet_type or (order.bouquet_type if order else None) %}
   {% set is_subscription = order and order.subscription_id %}
@@ -351,6 +352,7 @@
           <div class="font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
           {% if instagram %}<div class="text-sm text-stone-500 break-all">{{ instagram }}</div>{% endif %}
           {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
+          {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
         </div>
       {% endif %}
     </td>

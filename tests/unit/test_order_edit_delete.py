@@ -245,7 +245,7 @@ def test_update_order_changes_client(session):
     new_client = _make_client(session, 'new_client')
     order, delivery = _make_order_with_delivery(session, old_client)
 
-    form = _base_edit_form(client_instagram='new_client')
+    form = _base_edit_form(client_id=str(new_client.id))
     update_order(order, form)
 
     assert order.client_id == new_client.id
@@ -261,7 +261,7 @@ def test_update_order_changes_client_syncs_delivery_client_id(session):
     new_client = _make_client(session, 'new_client_sync')
     order, delivery = _make_order_with_delivery(session, old_client)
 
-    form = _base_edit_form(client_instagram='new_client_sync')
+    form = _base_edit_form(client_id=str(new_client.id))
     update_order(order, form)
 
     session.refresh(delivery)
@@ -272,7 +272,7 @@ def test_update_order_unknown_client_raises_error(session):
     client = _make_client(session)
     order, delivery = _make_order_with_delivery(session, client)
 
-    form = _base_edit_form(client_instagram='nonexistent')
+    form = _base_edit_form(client_id='99999')
     with pytest.raises(ValueError, match='не знайдено'):
         update_order(order, form)
 

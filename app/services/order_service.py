@@ -145,12 +145,17 @@ def paginate_orders(orders, page=1, per_page=10):
 
 
 def update_order(order, form):
-    new_instagram = form.get('client_instagram')
-    if new_instagram and new_instagram != order.client.instagram:
-        new_client = Client.query.filter_by(instagram=new_instagram).first()
-        if not new_client:
-            raise ValueError('Клієнта з таким Instagram не знайдено!')
-        order.client_id = new_client.id
+    new_client_id = form.get('client_id', '').strip()
+    if new_client_id:
+        try:
+            new_client_id_int = int(new_client_id)
+        except (ValueError, TypeError):
+            new_client_id_int = None
+        if new_client_id_int and new_client_id_int != order.client_id:
+            new_client = Client.query.get(new_client_id_int)
+            if not new_client:
+                raise ValueError('Клієнта не знайдено!')
+            order.client_id = new_client.id
 
     delivery_date = datetime.datetime.strptime(form['first_delivery_date'], '%Y-%m-%d').date()
     is_pickup = form.get('is_pickup') == 'on'
