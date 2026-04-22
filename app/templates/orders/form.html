@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 showToast('Замовлення успішно створено!', 'success');
                 // Перенаправляємо на список замовлень через секунду
                 setTimeout(() => {
-                    window.location.href = '/orders';
+                    softNavigate('/orders');
                 }, 1000);
             } else {
                 console.log('Error from server:', data.error);

@@ -158,6 +158,7 @@
             --shadow-lg: 0 8px 40px rgba(44,16,8,.12);
             --transition: 0.22s cubic-bezier(.4,0,.2,1);
         }
+        @keyframes soft-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
@@ -443,7 +444,7 @@
     </div>
 
     <!-- Page content -->
-    <div class="px-3 py-4 md:px-8 md:py-6">
+    <div id="page-content" class="px-3 py-4 md:px-8 md:py-6">
         {% block content %}{% endblock %}
     </div>
 </div>
@@ -827,5 +828,30 @@ const aiChat = (() => {
 })();
 </script>
 {% endif %}
+<script>
+function showPageSpinner() {
+    if (document.getElementById('__pg-spinner')) return;
+    var ov = document.createElement('div');
+    ov.id = '__pg-spinner';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fafaf9;display:flex;align-items:center;justify-content:center;';
+    ov.innerHTML = '<div style="width:48px;height:48px;border-radius:50%;border:3px solid #e7e5e4;border-top-color:#78716c;animation:soft-spin 0.7s linear infinite;"></div>';
+    document.body.appendChild(ov);
+}
+function softReload() { showPageSpinner(); setTimeout(function() { location.reload(); }, 80); }
+function softNavigate(url) { showPageSpinner(); setTimeout(function() { window.location.href = url; }, 80); }
+
+// Intercept programmatic form.submit() calls on GET forms
+(function() {
+    var orig = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function() {
+        if (!this.method || this.method.toLowerCase() === 'get') showPageSpinner();
+        orig.call(this);
+    };
+})();
+// Intercept button/keyboard GET form submits
+document.addEventListener('submit', function(e) {
+    if (!e.target.method || e.target.method.toLowerCase() === 'get') showPageSpinner();
+});
+</script>
 </body>
 </html>

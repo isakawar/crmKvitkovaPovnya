@@ -745,7 +745,7 @@
       localStorage.setItem('distribute_result', JSON.stringify(data.result));
       localStorage.setItem('distribute_new_ids', JSON.stringify(_DIST_DELIVERY_IDS));
       localStorage.setItem('distribute_date', _DIST_DATE);
-      window.location.href = '/route-generator?delivery_date=' + _DIST_DATE;
+      softNavigate('/route-generator?delivery_date=' + _DIST_DATE);
     } catch(e) {
       alert('Помилка з\'єднання з сервером');
       btn.disabled = false;
@@ -1394,7 +1394,7 @@ function submitRouteStatus(routeId, status, courierId) {
   .then(function(r) { return r.json(); })
   .then(function(data) {
     if (data.ok) {
-      window.location.reload();
+      softReload();
     } else {
       showToast(data.error || 'Помилка', 'error');
       document.getElementById('status-menu-' + routeId).classList.add('hidden');

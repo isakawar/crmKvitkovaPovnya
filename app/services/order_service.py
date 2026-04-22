@@ -121,7 +121,7 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
         elif delivery_type == 'One-time':
             query = query.filter(Order.subscription_id.is_(None))
     if date_from or date_to:
-        query = query.join(Delivery)
+        query = query.join(Delivery, Delivery.order_id == Order.id)
         if date_from:
             try:
                 parsed = datetime.datetime.strptime(date_from, '%Y-%m-%d').date()

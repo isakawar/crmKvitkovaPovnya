@@ -316,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         modalInstance.hide();
         showToast('Клієнта видалено', 'success');
-        setTimeout(() => location.reload(), 900);
+        softReload();
       } catch (e) {
         alert('Помилка з\'єднання');
       }
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     showToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
     modalInstance.hide();
-    setTimeout(() => location.reload(), 900);
+    softReload();
     return true;
   }
 
