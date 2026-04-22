@@ -502,6 +502,12 @@
           </div>
         </section>
       </div>
+      <div class="border-t border-stone-200 bg-white px-6 py-4 flex justify-end">
+        <button type="button" id="subscription-delete-btn" class="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-100 hover:text-red-700">
+          <i class="bi bi-trash3"></i>
+          Видалити підписку
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -607,6 +613,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const relatedOrdersList = document.getElementById('subscription-related-orders');
   const openOrderBtn = document.getElementById('subscription-open-order-btn');
   const extendBtn = document.getElementById('subscription-extend-btn');
+  const deleteBtn = document.getElementById('subscription-delete-btn');
 
   let currentSubscriptionId = null;
 
@@ -783,6 +790,21 @@ document.addEventListener('DOMContentLoaded', function() {
           setTimeout(() => location.reload(), 900);
         } catch (error) {
           showToast(error.message || 'Не вдалося продовжити підписку', 'error');
+        }
+      };
+
+      deleteBtn.onclick = async () => {
+        const igLabel = document.getElementById('subscription-client-instagram').textContent || 'клієнта';
+        if (!confirm(`Видалити підписку разом з усіма замовленнями та доставками?\n\nКлієнт: ${igLabel}\n\nЦю дію неможливо скасувати.`)) return;
+        try {
+          const resp = await fetch(`/subscriptions/${data.id}/delete`, { method: 'POST' });
+          const result = await resp.json();
+          if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при видаленні');
+          showToast('Підписку видалено', 'success');
+          detailModal.hide();
+          setTimeout(() => location.reload(), 900);
+        } catch (error) {
+          showToast(error.message || 'Не вдалося видалити підписку', 'error');
         }
       };
 

@@ -21,7 +21,7 @@ class Client(db.Model):
     def display_name(self):
         """Primary display identifier: instagram → telegram → phone → name → id"""
         if self.instagram:
-            return f'@{self.instagram.lstrip("@")}'
+            return self.instagram.lstrip('@')
         if self.telegram:
             return f'@{self.telegram.lstrip("@")}'
         if self.phone:

@@ -516,7 +516,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (redirectToSubscription) {
       const instagramValue = fieldInstagram.value.trim();
-      window.location.href = `/subscriptions?compose=subscription&client_instagram=${encodeURIComponent(instagramValue)}`;
+      const telegramValue = fieldTelegram.value.trim();
+      const phoneValue = phoneInput.value.trim();
+      const clientIdentifier = instagramValue || telegramValue || phoneValue;
+      window.location.href = `/subscriptions?compose=subscription&client_instagram=${encodeURIComponent(clientIdentifier)}`;
       return true;
     }
 
