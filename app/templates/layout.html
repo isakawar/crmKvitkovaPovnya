@@ -158,11 +158,11 @@
             --shadow-lg: 0 8px 40px rgba(44,16,8,.12);
             --transition: 0.22s cubic-bezier(.4,0,.2,1);
         }
-        #page-content { animation: pageFadeIn 0.25s ease; }
+        body.page-ready { animation: pageFadeIn 0.2s ease; }
         @keyframes pageFadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
-<body class="bg-stone-50 font-sans text-stone-900" style="font-family: 'Inter', system-ui, sans-serif;">
+<body class="bg-stone-50 font-sans text-stone-900 page-ready" style="font-family: 'Inter', system-ui, sans-serif;">
 
 {% if current_user.is_authenticated %}
 <!-- Mobile Sidebar Overlay -->
@@ -830,28 +830,10 @@ const aiChat = (() => {
 </script>
 {% endif %}
 <script>
-async function softReload() {
-    var el = document.getElementById('page-content');
-    if (el) { el.style.transition = 'opacity 0.15s ease'; el.style.opacity = '0'; }
-    try {
-        var resp = await fetch(location.href, { headers: { 'Cache-Control': 'no-cache' } });
-        var html = await resp.text();
-        var newDoc = new DOMParser().parseFromString(html, 'text/html');
-        var newEl = newDoc.getElementById('page-content');
-        if (el && newEl) {
-            el.innerHTML = newEl.innerHTML;
-            el.querySelectorAll('script').forEach(function(old) {
-                var s = document.createElement('script');
-                Array.from(old.attributes).forEach(function(a) { s.setAttribute(a.name, a.value); });
-                s.textContent = old.textContent;
-                old.parentNode.replaceChild(s, old);
-            });
-            el.style.transition = 'opacity 0.2s ease';
-            el.style.opacity = '1';
-            return;
-        }
-    } catch(e) {}
-    location.reload();
+function softReload() {
+    document.body.style.transition = 'opacity 0.15s ease';
+    document.body.style.opacity = '0';
+    setTimeout(function() { location.reload(); }, 160);
 }
 </script>
 </body>
