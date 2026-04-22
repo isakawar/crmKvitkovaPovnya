@@ -829,13 +829,29 @@ const aiChat = (() => {
 </script>
 {% endif %}
 <script>
-function softReload() {
+function showPageSpinner() {
+    if (document.getElementById('__pg-spinner')) return;
     var ov = document.createElement('div');
+    ov.id = '__pg-spinner';
     ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fafaf9;display:flex;align-items:center;justify-content:center;';
     ov.innerHTML = '<div style="width:48px;height:48px;border-radius:50%;border:3px solid #e7e5e4;border-top-color:#78716c;animation:soft-spin 0.7s linear infinite;"></div>';
     document.body.appendChild(ov);
-    setTimeout(function() { location.reload(); }, 80);
 }
+function softReload() { showPageSpinner(); setTimeout(function() { location.reload(); }, 80); }
+function softNavigate(url) { showPageSpinner(); setTimeout(function() { window.location.href = url; }, 80); }
+
+// Intercept programmatic form.submit() calls on GET forms
+(function() {
+    var orig = HTMLFormElement.prototype.submit;
+    HTMLFormElement.prototype.submit = function() {
+        if (!this.method || this.method.toLowerCase() === 'get') showPageSpinner();
+        orig.call(this);
+    };
+})();
+// Intercept button/keyboard GET form submits
+document.addEventListener('submit', function(e) {
+    if (!e.target.method || e.target.method.toLowerCase() === 'get') showPageSpinner();
+});
 </script>
 </body>
 </html>

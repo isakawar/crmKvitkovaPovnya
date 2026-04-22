@@ -1404,10 +1404,10 @@ document.addEventListener('click', function(e) {
         if (resendModalEl) {
           new bootstrap.Modal(resendModalEl).show();
           resendModalEl.addEventListener('hidden.bs.modal', function() {
-            window.location.href = '/routes';
+            softNavigate('/routes');
           }, { once: true });
         } else {
-          window.location.href = '/routes';
+          softNavigate('/routes');
         }
         return;
       }

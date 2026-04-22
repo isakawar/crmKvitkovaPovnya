@@ -386,7 +386,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Зміна періоду статистики
   document.getElementById('period-filter').addEventListener('change', function() {
     const period = this.value;
-    window.location.href = `/couriers?period=${period}`;
+    softNavigate(`/couriers?period=${period}`);
   });
 
   // Додавання нового кур'єра

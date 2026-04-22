@@ -437,7 +437,7 @@ async function applyResult() {
       return;
     }
 
-    window.location.href = '/routes?date=' + DATE_STR;
+    softNavigate('/routes?date=' + DATE_STR);
   } catch (e) {
     showError('Помилка з\'єднання з сервером');
     btn.innerHTML = '<i class="bi bi-check-lg"></i> Застосувати всі';
