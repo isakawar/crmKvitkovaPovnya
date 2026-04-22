@@ -39,10 +39,12 @@ def normalize_phone(raw: str) -> str | None:
     if re.match(r'^[1-9]\d{8}$', digits_only):
         return '+380' + digits_only
     # Concatenated phones or names+phones — extract first valid 10-digit number
+    # Only attempt if there are clearly more digits than a single phone (>13 with +)
     all_digits = re.sub(r'[^\d]', '', raw)
-    m = re.search(r'0\d{9}', all_digits)
-    if m:
-        return '+38' + m.group(0)
+    if len(all_digits) > 13:
+        m = re.search(r'0\d{9}', all_digits)
+        if m:
+            return '+38' + m.group(0)
     return None
 
 
@@ -81,6 +83,7 @@ def parse_client_field(raw: str) -> dict:
         # e.g. "@Old_sema (Ігор Стародуб)"
         handle = re.split(r'\s', raw)[0]  # take first word
         result['telegram'] = handle
+        result['instagram'] = handle
         return result
 
     # 2. Contains (телеграм) suffix
@@ -99,7 +102,7 @@ def parse_client_field(raw: str) -> dict:
         normalized = normalize_phone(raw_no_parens)
         if normalized:
             result['phone'] = normalized
-            # instagram stays None — display_name falls back to phone
+            result['instagram'] = normalized
             return result
 
     # 4. Everything else → Instagram
@@ -407,7 +410,7 @@ def _parse_kvp_discount(raw):
     raw = raw.strip().rstrip('%').strip()
     try:
         val = int(float(raw))
-        return str(val) if val > 0 else None
+        return val if val > 0 else None
     except (ValueError, TypeError):
         return None
 

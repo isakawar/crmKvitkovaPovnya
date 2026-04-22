@@ -15,6 +15,7 @@ from flask import current_app
 from app.models.courier import Courier
 from app.models.delivery import Delivery
 from app.extensions import db
+from app.services.csv_import_service import normalize_phone
 from .keyboards import CourierKeyboards
 from .services import TelegramService
 
@@ -124,18 +125,18 @@ class CourierHandlers:
             )
             return
         
-        phone = context.args[0].strip()
-        
-        # Validate phone format
-        if not phone.startswith('+380') or len(phone) != 13:
+        raw_input = context.args[0].strip()
+        phone = normalize_phone(raw_input)
+
+        if not phone:
             await update.message.reply_text(
                 "❌ Неправильний формат номера телефону.\n\n"
-                "📱 **Правильний формат:** +380XXXXXXXXX\n"
-                "📱 **Приклад:** +380501234567\n\n"
+                "📱 Правильний формат: +380XXXXXXXXX або 0XXXXXXXXX\n"
+                "📱 Приклад: +380501234567 або 0501234567\n\n"
                 "Спробуйте ще раз з правильним форматом."
             )
             return
-        
+
         # Find courier by phone
         courier = Courier.query.filter_by(phone=phone).first()
         
