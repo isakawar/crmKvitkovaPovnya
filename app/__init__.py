@@ -95,7 +95,18 @@ def create_app(config_class=DevelopmentConfig):
         now = _dt_module.datetime.utcnow()
         if current_user.last_seen is None or (now - current_user.last_seen).total_seconds() > 60:
             current_user.last_seen = now
-            db.session.flush()
+
+    @app.after_request
+    def commit_last_seen(response):
+        if request.endpoint == 'static':
+            return response
+        if not current_user.is_authenticated:
+            return response
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+        return response
 
     # Захист всіх маршрутів за замовчуванням
     @app.before_request

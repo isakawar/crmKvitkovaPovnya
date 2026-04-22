@@ -187,22 +187,25 @@
     return role;
   }
 
+  function dot(color) {
+    return `<span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0;"></span>`;
+  }
+
   function onlineLabel(u) {
     if (u.is_online) {
-      return '<span style="display:inline-flex;align-items:center;gap:0.35rem;color:#22c55e;font-size:0.85rem;font-weight:500;"><span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;"></span>Онлайн</span>';
+      return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;font-weight:500;">${dot('#22c55e')}Онлайн</span>`;
     }
     if (!u.last_seen) {
       if (!u.last_login) {
         return '<span style="color:#a8a29e;font-size:0.85rem;">Ніколи</span>';
       }
+      const diff = Date.now() - new Date(u.last_login + (u.last_login.endsWith('Z') ? '' : 'Z')).getTime();
+      const color = diff < 300000 ? '#22c55e' : '#ef4444';
       const ago = timeAgo(u.last_login);
-      return `<span style="display:inline-flex;align-items:center;gap:0.35rem;color:#a8a29e;font-size:0.85rem;" title="Остання сесія"><span style="width:8px;height:8px;border-radius:50%;background:#a8a29e;display:inline-block;"></span>${ago}</span>`;
+      return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;" title="Остання сесія">${dot(color)}${ago}</span>`;
     }
-    const diff = Date.now() - new Date(u.last_seen + 'Z').getTime();
-    const mins = Math.floor(diff / 60000);
-    const color = mins < 60 ? '#f59e0b' : '#ef4444';
     const ago = timeAgo(u.last_seen);
-    return `<span style="display:inline-flex;align-items:center;gap:0.35rem;color:${color};font-size:0.85rem;" title="Остання активність"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block;"></span>${ago}</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;" title="Остання активність">${dot('#ef4444')}${ago}</span>`;
   }
 
   function timeAgo(isoStr) {
