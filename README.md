@@ -199,20 +199,25 @@ docker compose exec web flask db upgrade
 
 ### Повністю видалити БД та почати з нуля
 
+Дані PostgreSQL зберігаються фізично у папці `./data/postgres/` всередині проекту (не в Docker volume).
+
 ```bash
 # 1. Зупинити контейнери
 docker compose down
 
-# 2. Видалити volume з даними (дізнатись назву: docker volume ls | grep postgres)
-docker volume rm crmkvitkovapovnya_postgres_data
+# 2. Видалити папку з даними БД
+rm -rf ./data/postgres
 
-# 3. Запустити — БД і міграції застосуються автоматично
+# 3. Запустити — postgres стартує з чистою БД
 docker compose up -d
 
-# 4. Наповнити початковими налаштуваннями
+# 4. Застосувати міграції
+docker compose exec web flask db upgrade
+
+# 5. Наповнити початковими налаштуваннями
 docker compose exec web python scripts/seed_settings.py
 
-# 5. Створити адміна
+# 6. Створити адміна
 docker compose exec web flask ensure-admin
 ```
 

@@ -1389,6 +1389,16 @@ document.addEventListener('click', function(e) {
         alert('Помилка збереження: ' + (data.error || resp.status));
         return;
       }
+      // Persist returned DB IDs into currentRoutes so re-saves update instead of duplicate
+      if (data.route_ids && data.route_ids.length) {
+        let savedIdx = 0;
+        currentRoutes.forEach(function(r) {
+          if ((r.stops || []).length && savedIdx < data.route_ids.length) {
+            r.routeDbId = data.route_ids[savedIdx++];
+          }
+        });
+      }
+
       if (EDITING_ROUTE_ID) {
         const resendModalEl = EDITING_HAS_COURIER ? document.getElementById('resendModal') : null;
         if (resendModalEl) {

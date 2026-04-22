@@ -13,12 +13,8 @@ class CourierKeyboards:
     """
     
     @staticmethod
-    def main_menu() -> InlineKeyboardMarkup:
-        """Main menu keyboard — minimal, routes come from admin"""
-        keyboard = [
-            [InlineKeyboardButton("ℹ️ Мій профіль", callback_data="profile")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
+    def main_menu() -> Optional[InlineKeyboardMarkup]:
+        return None
     
     @staticmethod
     def delivery_actions(delivery_id: int) -> InlineKeyboardMarkup:
@@ -83,12 +79,9 @@ class CourierKeyboards:
                 InlineKeyboardButton("📅 Цей тиждень", callback_data="period_week"),
                 InlineKeyboardButton("📅 Наступний тиждень", callback_data="period_next_week")
             ],
-            [
-                InlineKeyboardButton("🔙 Головне меню", callback_data="main_menu")
-            ]
         ]
         return InlineKeyboardMarkup(keyboard)
-    
+
     @staticmethod
     def registration_confirmation(phone: str) -> InlineKeyboardMarkup:
         """Keyboard for registration confirmation"""
@@ -101,12 +94,8 @@ class CourierKeyboards:
         return InlineKeyboardMarkup(keyboard)
     
     @staticmethod
-    def back_to_main() -> InlineKeyboardMarkup:
-        """Simple back to main menu keyboard"""
-        keyboard = [
-            [InlineKeyboardButton("🔙 Головне меню", callback_data="main_menu")]
-        ]
-        return InlineKeyboardMarkup(keyboard)
+    def back_to_main() -> Optional[InlineKeyboardMarkup]:
+        return None
     
     @staticmethod
     def today_deliveries_menu() -> InlineKeyboardMarkup:
@@ -115,9 +104,6 @@ class CourierKeyboards:
             [
                 InlineKeyboardButton("📍 Надіслати адреси", callback_data="send_today_addresses")
             ],
-            [
-                InlineKeyboardButton("🔙 Головне меню", callback_data="main_menu")
-            ]
         ]
         return InlineKeyboardMarkup(keyboard)
     
@@ -169,11 +155,6 @@ class CourierKeyboards:
             keyboard.append([
                 InlineKeyboardButton(f"Сторінка {page + 1} з {total_pages}", callback_data="page_info")
             ])
-        
-        # Back to main menu
-        keyboard.append([
-            InlineKeyboardButton("🔙 Головне меню", callback_data="main_menu")
-        ])
         
         return InlineKeyboardMarkup(keyboard)
     

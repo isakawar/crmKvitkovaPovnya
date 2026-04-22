@@ -1070,24 +1070,24 @@ class CourierHandlers:
 
                 recipient = (order.recipient_name if order else '') or ''
                 phone = (d.phone or (order.recipient_phone if order else '')) or ''
-                size = d.size or (order.size if order else '') or ''
+                bouquet = (d.bouquet_type or (order.bouquet_type if order else '')) or ''
 
                 if stop.planned_arrival:
                     time_str = stop.planned_arrival.strftime('%H:%M')
-                elif d and (d.time_from or d.time_to):
-                    time_str = f"{d.time_from or '?'}–{d.time_to or '?'}"
+                elif d and d.time_from:
+                    time_str = d.time_from.strftime('%H:%M')
                 else:
                     time_str = ''
 
-                comment = d.comment or (order.comment if order else '') or ''
+                address_comment = (d.address_comment if d else '') or ''
 
                 text += f"{num}\n"
-                text += f"📍 {addr}{addr_extra}\n"
+                if time_str: text += f"⏰ {time_str}\n"
                 if recipient: text += f"👤 {recipient}\n"
                 if phone: text += f"📞 {phone}\n"
-                if size: text += f"📦 {size}\n"
-                if time_str: text += f"⏰ {time_str}\n"
-                if comment: text += f"💬 {comment}\n"
+                if bouquet: text += f"📦 {bouquet}\n"
+                text += f"📍 {addr}{addr_extra}\n"
+                if address_comment: text += f"💬 {address_comment}\n"
                 text += "\n"
 
             # Build Google Maps multi-stop URL
