@@ -657,7 +657,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         clearClientResults();
 
                         // Show loading state immediately, then fetch last order
-                        if (clientId) {
+                        const isEditingNow = Boolean(addOrderForm && addOrderForm.getAttribute('data-edit-id'));
+                        if (clientId && !isEditingNow) {
                             hidePrefillBanner();
                             if (lastOrderBanner) lastOrderBanner.classList.remove('hidden');
                             try {

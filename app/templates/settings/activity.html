@@ -1,0 +1,94 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div>
+      <a href="{{ url_for('settings.settings_page') }}" class="settings-hero__label" style="text-decoration:none;">
+        <i class="bi bi-arrow-left"></i> Налаштування
+      </a>
+      <h1 class="settings-hero__title">Історія дій</h1>
+      <p class="settings-hero__text">Дії менеджерів на платформі: створення, редагування та видалення записів.</p>
+    </div>
+  </section>
+
+  <section class="settings-couriers" style="max-width:900px;">
+
+    <div class="mb-4">
+      <form method="get" action="" class="flex gap-2 items-center">
+        <select name="entity_type" onchange="this.form.submit()"
+                class="rounded-lg border border-stone-200 px-3 py-1.5 text-sm text-stone-700 bg-white focus:outline-none">
+          <option value="" {% if not entity_type %}selected{% endif %}>Всі дії</option>
+          <option value="client"       {% if entity_type == 'client' %}selected{% endif %}>Клієнти</option>
+          <option value="order"        {% if entity_type == 'order' %}selected{% endif %}>Замовлення</option>
+          <option value="subscription" {% if entity_type == 'subscription' %}selected{% endif %}>Підписки</option>
+          <option value="route"        {% if entity_type == 'route' %}selected{% endif %}>Маршрути</option>
+        </select>
+      </form>
+    </div>
+
+    {% if pagination.items %}
+    <div class="overflow-x-auto rounded-2xl border border-stone-100">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-stone-100 bg-stone-50 text-left text-xs font-semibold uppercase tracking-wide text-stone-400">
+            <th class="px-4 py-3 whitespace-nowrap">Дата / час</th>
+            <th class="px-4 py-3">Менеджер</th>
+            <th class="px-4 py-3">Дія</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100">
+          {% for entry in pagination.items %}
+          <tr class="hover:bg-stone-50 transition-colors">
+            <td class="px-4 py-3 whitespace-nowrap text-stone-400 text-xs">
+              {{ entry.created_at | kyiv_time if entry.created_at else '—' }}
+            </td>
+            <td class="px-4 py-3 text-stone-600 font-medium">{{ entry.user_label or '—' }}</td>
+            <td class="px-4 py-3 text-stone-700">{{ entry.description }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="border-t border-stone-100 px-4 py-3 flex items-center justify-between text-sm text-stone-500">
+      <span>Сторінка {{ pagination.page }} з {{ pagination.pages }}</span>
+      <div class="flex gap-1">
+        {% if pagination.has_prev %}
+        <a href="?entity_type={{ entity_type }}&page={{ pagination.prev_num }}"
+           class="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          ← Попередня
+        </a>
+        {% endif %}
+        {% if pagination.has_next %}
+        <a href="?entity_type={{ entity_type }}&page={{ pagination.next_num }}"
+           class="rounded-lg border border-stone-200 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+          Наступна →
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="rounded-2xl border border-stone-100 px-6 py-12 text-center text-stone-400">
+      <i class="bi bi-clock-history text-3xl mb-2 block"></i>
+      Дій ще не зафіксовано
+    </div>
+    {% endif %}
+
+  </section>
+</div>
+{{ render_toast() }}
+{% endblock %}
+
+{% block scripts %}
+{{ toast_script() }}
+{% endblock %}
