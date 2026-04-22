@@ -832,7 +832,7 @@ const aiChat = (() => {
 function softReload() {
     var ov = document.createElement('div');
     ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#fafaf9;display:flex;align-items:center;justify-content:center;';
-    ov.innerHTML = '<div style="width:26px;height:26px;border-radius:50%;border:2px solid #e7e5e4;border-top-color:#a8a29e;animation:soft-spin 0.7s linear infinite;"></div>';
+    ov.innerHTML = '<div style="width:48px;height:48px;border-radius:50%;border:3px solid #e7e5e4;border-top-color:#78716c;animation:soft-spin 0.7s linear infinite;"></div>';
     document.body.appendChild(ov);
     setTimeout(function() { location.reload(); }, 80);
 }
