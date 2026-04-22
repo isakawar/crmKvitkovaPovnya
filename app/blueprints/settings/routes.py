@@ -248,7 +248,7 @@ def save_prices():
 @login_required
 @permission_required('manage_users')
 def get_users():
-    users = User.query.filter(User.id != current_user.id).order_by(User.username).all()
+    users = User.query.order_by(User.username).all()
     result = []
     for u in users:
         role_names = [r.name for r in u.roles]
@@ -286,8 +286,8 @@ def create_user():
         errors.append('Пароль має бути не менше 6 символів')
     if password != password_confirm:
         errors.append('Паролі не збігаються')
-    if role_name not in ('manager', 'florist'):
-        errors.append('Роль має бути manager або florist')
+    if role_name not in ('admin', 'manager', 'florist'):
+        errors.append('Роль має бути admin, manager або florist')
     if username and User.query.filter_by(username=username).first():
         errors.append('Користувач з таким логіном вже існує')
 
@@ -314,6 +314,62 @@ def create_user():
         'user_type': user.user_type,
         'roles': [role_name],
         'is_active': user.is_active,
+    }})
+
+
+@bp.route('/settings/users/<int:user_id>', methods=['PUT'])
+@login_required
+@permission_required('manage_users')
+def update_user(user_id):
+    user = User.query.get_or_404(user_id)
+    data = request.get_json()
+
+    username = (data.get('username') or '').strip()
+    display_name = (data.get('display_name') or '').strip() or None
+    role_name = (data.get('role') or '').strip()
+    password = (data.get('password') or '').strip()
+    password_confirm = (data.get('password_confirm') or '').strip()
+
+    errors = []
+    if not username:
+        errors.append('Логін не може бути порожнім')
+    if role_name not in ('admin', 'manager', 'florist'):
+        errors.append('Недійсна роль')
+    if password and len(password) < 6:
+        errors.append('Пароль має бути не менше 6 символів')
+    if password and password != password_confirm:
+        errors.append('Паролі не збігаються')
+    if username and User.query.filter(User.username == username, User.id != user_id).first():
+        errors.append('Користувач з таким логіном вже існує')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    user.username = username
+    user.display_name = display_name
+    user.user_type = role_name
+
+    role = Role.query.filter_by(name=role_name).first()
+    if not role:
+        role = Role(name=role_name, description=role_name.capitalize())
+        db.session.add(role)
+        db.session.flush()
+    user.roles = [role]
+
+    if password:
+        user.set_password(password)
+
+    db.session.commit()
+    return jsonify({'success': True, 'user': {
+        'id': user.id,
+        'username': user.username,
+        'display_name': user.display_name or '',
+        'user_type': user.user_type,
+        'roles': [role_name],
+        'is_active': user.is_active,
+        'is_online': user.is_online,
+        'last_seen': user.last_seen.isoformat() if user.last_seen else None,
+        'last_login': user.last_login.isoformat() if user.last_login else None,
     }})
 
 
