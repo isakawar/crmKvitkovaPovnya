@@ -35,16 +35,25 @@ def normalize_phone(raw: str) -> str | None:
         return '+' + digits_only
     if digits_only.startswith('0') and len(digits_only) == 10:
         return '+38' + digits_only
-    # Probably not a valid phone
+    # 9 digits without leading 0 (e.g. '634365806' → '0634365806')
+    if re.match(r'^[1-9]\d{8}$', digits_only):
+        return '+380' + digits_only
+    # Concatenated phones or names+phones — extract first valid 10-digit number
+    # Only attempt if there are clearly more digits than a single phone (>13 with +)
+    all_digits = re.sub(r'[^\d]', '', raw)
+    if len(all_digits) > 13:
+        m = re.search(r'0\d{9}', all_digits)
+        if m:
+            return '+38' + m.group(0)
     return None
 
 
 def _is_phone_string(s: str) -> bool:
     """Returns True if the string looks like a phone number."""
-    # Strip parenthetical notes and check remaining part
     cleaned = re.sub(r'\([^)]*\)', '', s).strip()
     digits = re.sub(r'[\s\-+]', '', cleaned)
-    return bool(re.match(r'^0\d{8,9}$|^\+?380\d{9}$', digits))
+    # 0XXXXXXXXX, +380XXXXXXXXX, or 9-digit without leading 0 (e.g. 632113420)
+    return bool(re.match(r'^0\d{8,9}$|^\+?380\d{9}$|^[1-9]\d{8}$', digits))
 
 
 # ---------------------------------------------------------------------------
@@ -69,12 +78,12 @@ def parse_client_field(raw: str) -> dict:
 
     result = {'instagram': None, 'phone': None, 'telegram': None}
 
-    # 1. Starts with @ → Telegram (possibly followed by name in parentheses)
+    # 1. Starts with @ → Telegram handle only (not instagram)
     if raw.startswith('@'):
         # e.g. "@Old_sema (Ігор Стародуб)"
         handle = re.split(r'\s', raw)[0]  # take first word
         result['telegram'] = handle
-        result['instagram'] = handle  # use as display id
+        result['instagram'] = handle
         return result
 
     # 2. Contains (телеграм) suffix
@@ -93,7 +102,7 @@ def parse_client_field(raw: str) -> dict:
         normalized = normalize_phone(raw_no_parens)
         if normalized:
             result['phone'] = normalized
-            result['instagram'] = normalized  # use normalized phone as identifier
+            result['instagram'] = normalized
             return result
 
     # 4. Everything else → Instagram
@@ -272,7 +281,11 @@ def normalize_delivery_type(raw: str) -> str:
 def _strip_suffix(name: str) -> str:
     if not name:
         return name
-    # Remove trailing " (N)" or " N" or "(N)" suffixes
+    # Don't strip from phone-like values — trailing digits are part of the number
+    if _is_phone_string(name):
+        return name
+    # Remove trailing " (N)" or " N" or "(N)" suffixes from instagram handles
+    # e.g. "chrisfetisova 1" → "chrisfetisova", "lanatremtii(2)" → "lanatremtii"
     cleaned = re.sub(r'\s*\(\d+\)\s*$', '', name).strip()
     cleaned = re.sub(r'\s+\d+\s*$', '', cleaned).strip()
     return cleaned
@@ -349,7 +362,7 @@ def parse_csv_rows_kvitkovapovnya(file_stream):
         if not raw_client:
             continue
 
-        phones_raw = normalized.get('Номер телефону отримувача', '')
+        phones_raw = normalized.get('Номертелефону') or normalized.get('Номер телефону отримувача', '')
         phone_lines = [p.strip() for p in phones_raw.replace('\r', '').split('\n') if p.strip()]
         recipient_phone = normalize_phone(phone_lines[0]) if phone_lines else ''
         extra_phones = [normalize_phone(p) for p in phone_lines[1:] if normalize_phone(p)]
@@ -452,6 +465,35 @@ def build_preview_row_kvitkovapovnya(raw):
     size_map = {'s': 'S', 'm': 'M', 'l': 'L', 'xl': 'XL', 'xxl': 'XXL'}
     size = size_map.get(size_raw.lower(), size_raw) or 'M'
 
+    # Parse client identifier: @handle → telegram, plain text → instagram
+    client_parsed = parse_client_field(_strip_suffix(raw['raw_client']))
+
+    # Detect delivery method from address, comment, or city
+    city_raw = (raw.get('city') or '').strip()
+    address_raw = (raw.get('address_raw') or '').strip()
+    addr_comment = (raw.get('address_comment_raw') or '').strip()
+
+    comment_method, _ = _detect_method(addr_comment)
+    addr_method, _ = _detect_method(address_raw)
+    city_method, _ = _detect_method(city_raw)
+
+    if comment_method == 'nova_poshta':
+        # NP address is fully described in the comment — use it as the street address
+        resolved_delivery_method = 'nova_poshta'
+        address_raw = addr_comment
+        addr_comment = ''
+    elif addr_method == 'nova_poshta':
+        resolved_delivery_method = 'nova_poshta'
+    elif city_method == 'nova_poshta' and not address_raw:
+        resolved_delivery_method = 'nova_poshta'
+        address_raw = city_raw
+    else:
+        resolved_delivery_method = 'courier'
+
+    city = city_raw or 'Київ'
+    if city.startswith('#') or city.lower() in ('n/a', '#n/a'):
+        city = 'Київ'
+
     warnings = []
     if action in ('one_time', 'subscription', 'subscription_followup') and not planned_date:
         warnings.append('Відсутня планова дата доставки')
@@ -461,15 +503,19 @@ def build_preview_row_kvitkovapovnya(raw):
     return {
         'row_num': raw['row_num'],
         'raw_client': raw['raw_client'],
+        'client_instagram': client_parsed['instagram'],
+        'client_telegram': client_parsed['telegram'],
+        'client_phone_id': client_parsed['phone'],
         'recipient_name': (raw.get('recipient_name') or '').strip(),
         'recipient_phone': raw.get('recipient_phone') or '',
         'recipient_phones_extra': raw.get('recipient_phones_extra') or [],
         'delivery_type': delivery_type,
         'delivery_day': delivery_day,
         'size': size,
-        'city': (raw.get('city') or 'Київ').strip() or 'Київ',
-        'address_raw': (raw.get('address_raw') or '').strip(),
+        'city': city,
+        'address_raw': address_raw,
         'address_comment': (raw.get('address_comment_raw') or '').strip(),
+        'delivery_method': resolved_delivery_method,
         'for_whom': (raw.get('for_whom') or '').strip(),
         'marketing_source': (raw.get('marketing_source') or '').strip(),
         'planned_date': planned_date.strftime('%Y-%m-%d') if planned_date else None,
@@ -497,10 +543,12 @@ def preview_import_kvitkovapovnya(file_stream):
 
     for raw in raw_rows:
         row = build_preview_row_kvitkovapovnya(raw)
-        instagram = _strip_suffix(raw['raw_client'])
-        existing = find_existing_client(instagram)
+        existing = find_existing_client(
+            instagram=row['client_instagram'],
+            telegram=row['client_telegram'],
+            phone=row['client_phone_id'],
+        )
         row['is_new_client'] = existing is None
-        row['instagram'] = instagram
 
         summary['total'] += 1
         if existing:
@@ -533,73 +581,73 @@ def execute_import_kvitkovapovnya(preview_rows):
 
     for row in preview_rows:
         try:
-            instagram = row['instagram']
-            client = find_existing_client(instagram)
-            if not client:
-                client = Client(
-                    instagram=instagram,
-                    phone=row['recipient_phone'] or '',
+            with db.session.begin_nested():
+                client = find_existing_client(
+                    instagram=row.get('client_instagram'),
+                    telegram=row.get('client_telegram'),
+                    phone=row.get('client_phone_id'),
                 )
-                db.session.add(client)
+                if not client:
+                    client = Client(
+                        instagram=row.get('client_instagram'),
+                        telegram=row.get('client_telegram'),
+                        phone=row['recipient_phone'] or row.get('client_phone_id') or '',
+                    )
+                    db.session.add(client)
+                    db.session.flush()
+                    created_clients += 1
+                else:
+                    existing_clients += 1
+
+                if row.get('marketing_source'):
+                    client.marketing_source = row['marketing_source']
+                if row.get('discount'):
+                    client.personal_discount = str(row['discount'])
+
                 db.session.flush()
-                created_clients += 1
-            else:
-                existing_clients += 1
 
-            if row.get('marketing_source'):
-                client.marketing_source = row['marketing_source']
-            if row.get('discount'):
-                client.personal_discount = row['discount']
-
-            db.session.flush()
-
-            action = row['action']
-            if action == 'client_only':
-                continue
-
-            planned_date = row.get('planned_date')
-            if not planned_date:
-                errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): відсутня дата доставки')
-                continue
-
-            form = {
-                'recipient_name': row['recipient_name'] or '',
-                'recipient_phone': row['recipient_phone'] or '',
-                'additional_phones': row['recipient_phones_extra'] or [],
-                'city': row['city'],
-                'street': row['address_raw'],
-                'address_comment': row['address_comment'],
-                'building_number': '',
-                'floor': '',
-                'entrance': '',
-                'is_pickup': '',
-                'size': row['size'],
-                'custom_amount': '',
-                'first_delivery_date': planned_date,
-                'delivery_day': row['delivery_day'],
-                'time_from': '',
-                'time_to': '',
-                'comment': '',
-                'preferences': '',
-                'bouquet_type': '',
-                'composition_type': '',
-                'for_whom': row['for_whom'],
-                'delivery_method': 'courier',
-                'delivery_type': row['delivery_type'],
-                'is_wedding': 'on' if row.get('is_wedding') else '',
-            }
-
-            if action == 'one_time':
-                create_order_and_deliveries(client, form)
-                created_orders += 1
-            elif action in ('subscription', 'subscription_followup'):
-                create_subscription_from_import(client, form, row['delivery_number'])
-                created_orders += 1
+                action = row['action']
+                if action != 'client_only':
+                    planned_date = row.get('planned_date')
+                    if not planned_date:
+                        errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): відсутня дата доставки')
+                    else:
+                        form = {
+                            'recipient_name': row['recipient_name'] or '',
+                            'recipient_phone': row['recipient_phone'] or '',
+                            'additional_phones': row['recipient_phones_extra'] or [],
+                            'city': row['city'],
+                            'street': row['address_raw'],
+                            'address_comment': row['address_comment'],
+                            'building_number': '',
+                            'floor': '',
+                            'entrance': '',
+                            'is_pickup': '',
+                            'size': row['size'],
+                            'custom_amount': '',
+                            'first_delivery_date': planned_date,
+                            'delivery_day': row['delivery_day'],
+                            'time_from': '',
+                            'time_to': '',
+                            'comment': '',
+                            'preferences': '',
+                            'bouquet_type': '',
+                            'composition_type': '',
+                            'for_whom': row['for_whom'],
+                            'delivery_method': row.get('delivery_method', 'courier'),
+                            'delivery_type': row['delivery_type'],
+                            'is_wedding': 'on' if row.get('is_wedding') else '',
+                        }
+                        if action == 'one_time':
+                            create_order_and_deliveries(client, form)
+                            created_orders += 1
+                        elif action in ('subscription', 'subscription_followup'):
+                            create_subscription_from_import(client, form, row['delivery_number'])
+                            created_orders += 1
 
         except Exception as e:
             logger.error(f'KvP import error row {row["row_num"]}: {e}', exc_info=True)
             errors.append(f'Рядок {row["row_num"]} ({row["raw_client"]}): {e}')
-            db.session.rollback()
 
     try:
         db.session.commit()

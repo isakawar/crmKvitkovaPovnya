@@ -380,6 +380,30 @@ def route_delivery_text(route_id):
         if comment:
             text += f"💬 {comment}\n"
 
+    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
+    gmaps_parts = []
+    if depot_address:
+        gmaps_parts.append(urllib.parse.quote(depot_address))
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        parts = [p for p in [
+            (order.city if order else '') or '',
+            (d.street or (order.street if order else '')) or '',
+            (d.building_number or (order.building_number if order else '')) or '',
+        ] if p]
+        if parts:
+            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+    if gmaps_parts:
+        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
+        try:
+            r = http_requests.get('https://tinyurl.com/api-create.php', params={'url': gmaps_url}, timeout=5)
+            if r.status_code == 200 and r.text.startswith('http'):
+                gmaps_url = r.text.strip()
+        except Exception:
+            pass
+        text += f"\n🗺 {gmaps_url}"
+
     return jsonify({'text': text})
 
 

@@ -193,9 +193,9 @@
 
   .route-badge-status-draft { background: #f5f5f4; color: #57534e; }
   .route-badge-status-sent { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-  .route-badge-status-accepted { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+  .route-badge-status-accepted { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
   .route-badge-status-rejected { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
-  .route-badge-status-completed { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+  .route-badge-status-completed { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
 
   .routes-board-actions {
     display: flex;
@@ -1265,10 +1265,7 @@ function getAssignModal() {
 
 async function copyRouteMessage(routeId, btn) {
   try {
-    const status = btn.dataset.status;
-    const url = status === 'accepted'
-      ? '/routes/' + routeId + '/delivery-text'
-      : '/routes/' + routeId + '/message-text';
+    const url = '/routes/' + routeId + '/delivery-text';
     const resp = await fetch(url);
     const data = await resp.json();
     await navigator.clipboard.writeText(data.text);
