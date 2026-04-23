@@ -410,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setLoading(false);
         return;
       }
-      softReload();
+      softReloadWithToast('Транзакцію збережено', 'success');
     } catch (err) {
       showErrors('Не вдалося зберегти транзакцію. Спробуйте ще раз.');
       setLoading(false);

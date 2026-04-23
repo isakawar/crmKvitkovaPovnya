@@ -349,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
         setSubmitLoading(false);
         return;
       }
-      softReload();
+      softReloadWithToast(editCertId ? 'Сертифікат оновлено' : 'Сертифікат створено', 'success');
     } catch (error) {
       console.error('Помилка збереження сертифіката:', error);
       renderErrors('Не вдалося зберегти сертифікат. Спробуйте ще раз.');

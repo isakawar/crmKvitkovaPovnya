@@ -279,6 +279,18 @@ def order_create():
         entity = create_subscription(client, request.form)
         entity_id = entity.orders[0].id if entity.orders else None
         logging.info(f'Subscription created: {entity.id}')
+
+        extend_from_order_id = (request.form.get('extend_from_order_id') or '').strip()
+        if extend_from_order_id and extend_from_order_id.isdigit():
+            parent_order = Order.query.get(int(extend_from_order_id))
+            if parent_order and parent_order.subscription_id:
+                parent_sub = Subscription.query.get(parent_order.subscription_id)
+                if parent_sub:
+                    parent_sub.is_extended = True
+                    db.session.commit()
+
+        Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
+        db.session.commit()
     else:
         entity = create_order_and_deliveries(client, request.form)
         entity_id = entity.id

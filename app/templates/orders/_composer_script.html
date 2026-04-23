@@ -829,11 +829,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const successMessage = isEditing
                 ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
                 : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
-            showToast(successMessage, 'success');
             if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
+                showToast(successMessage, 'success');
                 window.showRescheduleModal(data.reschedule_suggestion);
             } else {
-                softReload();
+                softReloadWithToast(successMessage, 'success');
             }
         } catch (error) {
             console.error('Помилка збереження:', error);
