@@ -315,8 +315,7 @@ document.addEventListener('DOMContentLoaded', function () {
           return;
         }
         modalInstance.hide();
-        showToast('Клієнта видалено', 'success');
-        softReload();
+        softReloadWithToast('Клієнта видалено', 'success');
       } catch (e) {
         alert('Помилка з\'єднання');
       }
@@ -523,9 +522,8 @@ document.addEventListener('DOMContentLoaded', function () {
       return true;
     }
 
-    showToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
     modalInstance.hide();
-    softReload();
+    softReloadWithToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
     return true;
   }
 
@@ -661,27 +659,3 @@ document.addEventListener('DOMContentLoaded', function () {
   updatePreviewCard();
 });
 
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('notification-toast');
-  if (!toast) return;
-  const toastBody = toast.querySelector('.toast-body');
-  const toastHeader = toast.querySelector('.toast-header');
-  const icon = toast.querySelector('.toast-header i');
-  toastBody.textContent = message;
-  toastHeader.className = 'toast-header';
-  icon.className = 'me-2';
-  switch (type) {
-    case 'success':
-      toastHeader.classList.add('bg-success', 'text-white');
-      icon.classList.add('bi', 'bi-check-circle-fill');
-      break;
-    case 'danger': case 'error':
-      toastHeader.classList.add('bg-danger', 'text-white');
-      icon.classList.add('bi', 'bi-exclamation-triangle-fill');
-      break;
-    default:
-      toastHeader.classList.add('bg-primary', 'text-white');
-      icon.classList.add('bi', 'bi-info-circle');
-  }
-  new bootstrap.Toast(toast, { autohide: true, delay: 4000 }).show();
-}

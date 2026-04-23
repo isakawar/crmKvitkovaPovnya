@@ -838,7 +838,34 @@ function showPageSpinner() {
     document.body.appendChild(ov);
 }
 function softReload() { showPageSpinner(); setTimeout(function() { location.reload(); }, 80); }
+function softReloadWithToast(msg, type) {
+    if (msg) sessionStorage.setItem('__pending_toast', JSON.stringify({msg: msg, type: type || 'success'}));
+    softReload();
+}
 function softNavigate(url) { showPageSpinner(); setTimeout(function() { window.location.href = url; }, 80); }
+function showToast(message, type) {
+    var toast = document.getElementById('__global-toast');
+    if (!toast) return;
+    var body = toast.querySelector('.toast-body');
+    var header = toast.querySelector('.toast-header');
+    var icon = toast.querySelector('.toast-header i');
+    body.textContent = message;
+    header.className = 'toast-header';
+    icon.className = 'me-2';
+    if (type === 'success') { header.classList.add('bg-success','text-white'); icon.classList.add('bi','bi-check-circle-fill'); }
+    else if (type === 'error' || type === 'danger') { header.classList.add('bg-danger','text-white'); icon.classList.add('bi','bi-exclamation-triangle-fill'); }
+    else if (type === 'warning') { header.classList.add('bg-warning','text-dark'); icon.classList.add('bi','bi-exclamation-triangle'); }
+    else { header.classList.add('bg-primary','text-white'); icon.classList.add('bi','bi-info-circle'); }
+    var bsToast = new bootstrap.Toast(toast, {autohide: true, delay: 5000});
+    bsToast.show();
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var pending = sessionStorage.getItem('__pending_toast');
+    if (pending) {
+        sessionStorage.removeItem('__pending_toast');
+        try { var t = JSON.parse(pending); showToast(t.msg, t.type); } catch(e) {}
+    }
+});
 
 // Intercept programmatic form.submit() calls on GET forms
 (function() {
@@ -850,8 +877,19 @@ function softNavigate(url) { showPageSpinner(); setTimeout(function() { window.l
 })();
 // Intercept button/keyboard GET form submits
 document.addEventListener('submit', function(e) {
+    if (e.defaultPrevented) return;
     if (!e.target.method || e.target.method.toLowerCase() === 'get') showPageSpinner();
 });
 </script>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:99998;">
+  <div id="__global-toast" class="toast" role="alert" aria-live="assertive">
+    <div class="toast-header">
+      <i class="me-2"></i>
+      <strong class="me-auto">Повідомлення</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body"></div>
+  </div>
+</div>
 </body>
 </html>

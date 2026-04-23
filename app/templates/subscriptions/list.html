@@ -785,9 +785,8 @@ document.addEventListener('DOMContentLoaded', function() {
           const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
           const result = await resp.json();
           if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка');
-          showToast(result.message || 'Підписку продовжено', 'success');
           detailModal.hide();
-          softReload();
+          softReloadWithToast(result.message || 'Підписку продовжено', 'success');
         } catch (error) {
           showToast(error.message || 'Не вдалося продовжити підписку', 'error');
         }
@@ -800,9 +799,8 @@ document.addEventListener('DOMContentLoaded', function() {
           const resp = await fetch(`/subscriptions/${data.id}/delete`, { method: 'POST' });
           const result = await resp.json();
           if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при видаленні');
-          showToast('Підписку видалено', 'success');
           detailModal.hide();
-          softReload();
+          softReloadWithToast('Підписку видалено', 'success');
         } catch (error) {
           showToast(error.message || 'Не вдалося видалити підписку', 'error');
         }
@@ -885,8 +883,7 @@ document.addEventListener('DOMContentLoaded', function () {
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
       draftCreateModal.hide();
-      showToast('Чернетку створено', 'success');
-      softReload();
+      softReloadWithToast('Чернетку створено', 'success');
     } catch (err) {
       draftCreateError.textContent = err.message;
       draftCreateError.classList.remove('hidden');

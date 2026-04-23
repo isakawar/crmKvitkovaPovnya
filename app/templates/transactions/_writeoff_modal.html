@@ -134,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setLoading(false);
         return;
       }
-      softReload();
+      softReloadWithToast('Списання збережено', 'success');
     } catch (err) {
       showErrors('Не вдалося зберегти. Спробуйте ще раз.');
       setLoading(false);
