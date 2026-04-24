@@ -78,7 +78,7 @@ def dashboard_page():
     ).scalar() or 0
     extended_today = db.session.query(func.count(Subscription.id)).filter(
         Subscription.followup_status == 'extended',
-        func.date(Subscription.followup_at) == today
+        func.date(Subscription.planned_contact_date) == today
     ).scalar() or 0
     one_time_today = new_orders_today
 
@@ -171,7 +171,7 @@ def dashboard_page():
             Subscription.is_renewal_reminder.is_(True),
             or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
         )
-        .order_by(Subscription.created_at.asc())
+        .order_by(Subscription.planned_contact_date.asc().nullslast())
         .all()
     )
     for sub, client in renewal_rows:
@@ -185,6 +185,7 @@ def dashboard_page():
             'last_delivery_date': None,
             'days_overdue': 0,
             'is_renewal_reminder': True,
+            'planned_contact_date': sub.planned_contact_date,
         })
 
     draft_reminders = get_draft_subscriptions(contact_date_to=today)
@@ -236,7 +237,7 @@ def update_subscription_followup(subscription_id):
 
     sub = Subscription.query.get_or_404(subscription_id)
     sub.followup_status = status
-    sub.followup_at = datetime.utcnow()
+    sub.planned_contact_date = datetime.utcnow()
     if status == 'extended':
         sub.is_extended = True
 

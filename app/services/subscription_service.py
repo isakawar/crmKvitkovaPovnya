@@ -521,7 +521,7 @@ def extend_subscription(subscription):
 
     subscription.is_extended = True
     subscription.followup_status = 'extended'
-    subscription.followup_at = datetime.datetime.utcnow()
+    subscription.planned_contact_date = datetime.datetime.utcnow()
     db.session.commit()
     return subscription
 

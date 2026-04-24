@@ -53,7 +53,7 @@ class Subscription(db.Model):
     # Продовження підписки
     is_extended = db.Column(db.Boolean, default=False)
     followup_status = db.Column(db.String(32), nullable=True)
-    followup_at = db.Column(db.DateTime, nullable=True)
+    planned_contact_date = db.Column(db.DateTime, nullable=True)
 
     # Нагадування про продовження (без замовлень, тільки для дашборду)
     is_renewal_reminder = db.Column(db.Boolean, default=False, nullable=False)

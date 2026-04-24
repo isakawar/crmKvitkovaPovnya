@@ -461,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Address
         if (data.city && citySelect) citySelect.value = data.city;
         if (addressInput) addressInput.value = data.street || '';
-        if (addressCommentInput) addressCommentInput.value = data.address_comment || '';
+        if (addressCommentInput) { addressCommentInput.value = data.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
 
         // Size — setSelectValueOrAdd also dispatches change → triggers syncCustomAmountState
         if (data.size) setSelectValueOrAdd(sizeSelect, data.size);
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
-        if (addressCommentInput) addressCommentInput.value = orderData.address_comment || '';
+        if (addressCommentInput) { addressCommentInput.value = orderData.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
@@ -694,10 +694,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function sanitizeRecipientPhone() {
         let value = recipientPhoneInput.value.replace(/[^\d+]/g, '');
-        if (!value.startsWith('+')) {
-            value = `+${value.replace(/^\+/, '')}`;
-        }
         recipientPhoneInput.value = value.slice(0, 13);
+        clearFieldInvalid(recipientPhoneInput);
     }
 
     function clearExtraPhones() {
@@ -709,16 +707,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const row = document.createElement('div');
         row.className = 'flex items-center gap-1.5 mt-1.5 extra-phone-row';
         row.innerHTML = `
-            <input type="text" class="order-input flex-1 extra-phone-input" placeholder="+380XXXXXXXXX" maxlength="13" value="${value || '+380'}">
+            <input type="text" class="order-input flex-1 extra-phone-input" placeholder="0XXXXXXXXX або +380XXXXXXXXX" maxlength="13" value="${value || ''}">
             <button type="button" class="remove-extra-phone flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-stone-200 bg-white text-stone-400 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-colors" title="Видалити">
               <i class="bi bi-x text-base"></i>
             </button>`;
         row.querySelector('.remove-extra-phone').addEventListener('click', () => row.remove());
         const input = row.querySelector('.extra-phone-input');
-        input.addEventListener('focus', () => { if (!input.value) input.value = '+380'; });
         input.addEventListener('input', () => {
             let v = input.value.replace(/[^\d+]/g, '');
-            if (!v.startsWith('+')) v = '+' + v.replace(/^\+/, '');
             input.value = v.slice(0, 13);
         });
         extraPhonesContainer.appendChild(row);
@@ -763,10 +759,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        const phoneValue = recipientPhoneInput.value.trim();
-        const phonePattern = /^\+380[0-9]{9}$/;
-        if (!phonePattern.test(phoneValue)) {
-            showOrderError('Телефон має бути у форматі +380XXXXXXXXX');
+        let phoneValue = recipientPhoneInput.value.trim();
+        if (/^0\d{9}$/.test(phoneValue)) {
+            phoneValue = '+38' + phoneValue;
+            recipientPhoneInput.value = phoneValue;
+        }
+        if (!/^\+380\d{9}$/.test(phoneValue)) {
+            recipientPhoneInput.classList.add('order-input--invalid');
+            showOrderError('Телефон має бути у форматі 0XXXXXXXXX або +380XXXXXXXXX');
             return;
         }
 
@@ -809,7 +809,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const fd = new FormData(addOrderForm);
             if (extraPhonesContainer) {
                 extraPhonesContainer.querySelectorAll('.extra-phone-input').forEach(inp => {
-                    const v = inp.value.trim();
+                    let v = inp.value.trim();
+                    if (/^0\d{9}$/.test(v)) v = '+38' + v;
                     if (v) fd.append('additional_phones', v);
                 });
             }
@@ -857,7 +858,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
-        if (addressCommentInput) addressCommentInput.value = orderData.address_comment || '';
+        if (addressCommentInput) { addressCommentInput.value = orderData.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
         customAmountInput.value = orderData.custom_amount || '';
@@ -932,11 +933,6 @@ document.addEventListener('DOMContentLoaded', function() {
         addExtraPhoneBtn.addEventListener('click', () => addExtraPhoneRow());
     }
 
-    recipientPhoneInput.addEventListener('focus', function() {
-        if (!recipientPhoneInput.value) {
-            recipientPhoneInput.value = '+380';
-        }
-    });
     recipientPhoneInput.addEventListener('input', sanitizeRecipientPhone);
     sizeSelect.addEventListener('change', syncCustomAmountState);
     addOrderForm.addEventListener('submit', submitComposerForm);

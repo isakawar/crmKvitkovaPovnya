@@ -502,7 +502,7 @@
 </div>
 
 {% if editing_route and editing_couriers %}
-<div class="modal fade" id="resendModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="resendModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
     <div class="modal-content rounded-2xl border border-stone-200 shadow-xl">
       <form method="post" action="{{ url_for('routes.assign_and_send_route', route_id=editing_route.id) }}">
@@ -548,7 +548,7 @@
 </div>
 {% endif %}
 
-<div class="modal fade" id="viewDateSaveModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="viewDateSaveModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered" style="max-width:660px;">
     <div class="modal-content rounded-2xl border border-stone-200 shadow-xl">
       <div class="p-6 pb-4">
