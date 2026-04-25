@@ -807,7 +807,7 @@
               <span>{{ item.recipient_name or 'Отримувач не вказаний' }}</span>
               <span>{{ item.client_phone or 'Телефон не вказано' }}</span>
               {% if item.is_renewal_reminder %}
-              <span>Потрібен контакт для продовження</span>
+              <span>Плановий контакт: {% if item.planned_contact_date %}{{ item.planned_contact_date.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</span>
               {% else %}
               <span>Остання доставка: {{ item.last_delivery_date.strftime('%d.%m.%Y') }}</span>
               {% endif %}

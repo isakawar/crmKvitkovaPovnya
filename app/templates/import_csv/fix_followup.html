@@ -1,0 +1,239 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <h2 class="mb-0">Оновлення дат нагадувань</h2>
+  <span class="badge bg-secondary">planned_contact_date</span>
+  <a href="{{ url_for('settings.settings_page') }}" class="btn btn-outline-secondary btn-sm ms-auto">
+    <i class="bi bi-arrow-left me-1"></i>Налаштування
+  </a>
+</div>
+
+<!-- Step 1: Upload -->
+<div class="card p-4 mb-4" style="max-width: 640px; border-radius: 16px;">
+  <h5 class="mb-3">Крок 1 — Завантажте CSV файл</h5>
+  <div class="mb-3">
+    <label class="form-label fw-semibold">CSV файл (Операційна_Квіткова_Повня_2026)</label>
+    <input type="file" class="form-control" id="csvFile" accept=".csv">
+    <div class="form-text">Оновлюються лише рядки, де "№ доставки" = 5. Дата береться з колонки "Планова доставка".</div>
+  </div>
+  <button class="btn btn-primary" id="previewBtn">
+    <i class="bi bi-eye me-1"></i>Переглянути
+  </button>
+  <div id="previewError" class="text-danger mt-2" style="display:none;"></div>
+</div>
+
+<!-- Step 2: Preview -->
+<div id="previewSection" style="display:none;">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h5 class="mb-0">Крок 2 — Перегляд змін</h5>
+    <div id="summaryBadges" class="d-flex gap-2 flex-wrap"></div>
+  </div>
+  <p class="text-muted mb-3" style="font-size:.88rem;"><i class="bi bi-info-circle me-1"></i>Оновляться лише рядки зі статусом "Знайдено". Інші пропускаються.</p>
+
+  <div class="table-responsive mb-3" style="max-height: 580px; overflow-y: auto; border-radius: 12px; border: 1px solid #e2e8f0;">
+    <table class="table table-bordered mb-0 fix-table">
+      <thead style="position: sticky; top: 0; background: #f1f5f9; z-index: 5;">
+        <tr>
+          <th style="width:36px">#</th>
+          <th style="min-width:130px">Оригінал CSV</th>
+          <th style="min-width:140px">Клієнт</th>
+          <th style="min-width:110px">Поточна дата</th>
+          <th style="min-width:110px">Нова дата</th>
+          <th style="min-width:120px">Статус</th>
+        </tr>
+      </thead>
+      <tbody id="previewTableBody"></tbody>
+    </table>
+  </div>
+
+  <div class="d-flex gap-3 align-items-center flex-wrap">
+    <button class="btn btn-success" id="applyBtn">
+      <i class="bi bi-pencil-square me-1"></i>Застосувати оновлення
+    </button>
+    <button class="btn btn-outline-secondary" id="resetBtn">
+      <i class="bi bi-arrow-counterclockwise me-1"></i>Скинути
+    </button>
+    <div id="applySpinner" class="spinner-border spinner-border-sm text-primary" role="status" style="display:none;"></div>
+  </div>
+  <div id="applyError" class="text-danger mt-2" style="display:none;"></div>
+</div>
+
+<!-- Step 3: Result -->
+<div id="resultSection" style="display:none;">
+  <div class="card p-4" style="max-width: 520px; border-radius: 16px; border: 1.5px solid #b6f5c8; background: #f0fdf4;">
+    <h5 class="mb-3 text-success"><i class="bi bi-check-circle-fill me-2"></i>Оновлення завершено</h5>
+    <div id="resultBody"></div>
+    <div class="mt-3 d-flex gap-2">
+      <a href="/subscriptions" class="btn btn-primary btn-sm">Перейти до підписок</a>
+      <button class="btn btn-outline-secondary btn-sm" id="againBtn">Оновити ще раз</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.fix-table { font-size: .93rem; }
+.fix-table td { padding: 5px 7px !important; vertical-align: middle; }
+.fix-table th { padding: 9px 7px !important; font-size: .88rem !important; font-weight: 600; white-space: nowrap; color: #1e293b; background: #f1f5f9; }
+.tr-found td { background: #f0fdf4 !important; }
+.tr-warn  td { background: #fffbeb !important; }
+.tr-skip  td { background: #f8fafc !important; color: #94a3b8; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let parsedRows = [];
+
+function esc(str) {
+  return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function statusBadge(status) {
+  if (status === 'found')             return '<span class="badge bg-success">Знайдено</span>';
+  if (status === 'client_not_found')  return '<span class="badge bg-danger">Клієнт не знайдений</span>';
+  if (status === 'no_subscription')   return '<span class="badge bg-warning text-dark">Немає підписки</span>';
+  if (status === 'no_date')           return '<span class="badge bg-secondary">Немає дати</span>';
+  return '<span class="badge bg-secondary">—</span>';
+}
+
+function renderPreview(rows, summary) {
+  const sb = document.getElementById('summaryBadges');
+  sb.innerHTML = `
+    <span class="badge bg-secondary" style="font-size:.82rem;padding:5px 10px">${summary.total} рядків з №5</span>
+    <span class="badge bg-success" style="font-size:.82rem;padding:5px 10px">${summary.found} знайдено</span>
+    ${summary.client_not_found > 0 ? `<span class="badge bg-danger" style="font-size:.82rem;padding:5px 10px">${summary.client_not_found} клієнт не знайдений</span>` : ''}
+    ${summary.no_subscription > 0 ? `<span class="badge bg-warning text-dark" style="font-size:.82rem;padding:5px 10px">${summary.no_subscription} без підписки</span>` : ''}
+    ${summary.no_date > 0 ? `<span class="badge bg-secondary" style="font-size:.82rem;padding:5px 10px">${summary.no_date} без дати</span>` : ''}
+  `;
+
+  const tbody = document.getElementById('previewTableBody');
+  tbody.innerHTML = '';
+
+  rows.forEach(function(row, i) {
+    let trClass = row.status === 'found' ? 'tr-found' : (row.status === 'no_date' || row.status === 'no_subscription' || row.status === 'client_not_found' ? 'tr-warn' : 'tr-skip');
+
+    const clientHtml = row.client_id
+      ? `<a href="/clients/${row.client_id}" target="_blank" style="font-size:.88rem">${esc(row.client_display)}</a>`
+      : '<span class="text-muted" style="font-size:.82rem">—</span>';
+
+    const currentDate = row.current_planned_contact_date
+      ? `<span style="font-size:.88rem;color:#64748b">${esc(row.current_planned_contact_date)}</span>`
+      : '<span class="text-muted" style="font-size:.82rem">не встановлено</span>';
+
+    const newDate = row.new_date
+      ? `<span style="font-size:.88rem;font-weight:600;color:#15803d">${esc(row.new_date)}</span>`
+      : `<span class="text-danger" style="font-size:.82rem">${esc(row.new_date_raw) || 'немає'}</span>`;
+
+    const tr = document.createElement('tr');
+    tr.className = trClass;
+    tr.innerHTML = [
+      `<td class="text-muted" style="font-size:.82rem;text-align:center">${row.row_num}</td>`,
+      `<td><span style="font-size:.82rem;color:#64748b;white-space:nowrap;overflow:hidden;display:block;max-width:130px;text-overflow:ellipsis" title="${esc(row.raw_client)}">${esc(row.raw_client)}</span></td>`,
+      `<td>${clientHtml}</td>`,
+      `<td>${currentDate}</td>`,
+      `<td>${newDate}</td>`,
+      `<td>${statusBadge(row.status)}</td>`,
+    ].join('');
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── preview fetch ───────────────────────────────────────────────────────────
+
+document.getElementById('previewBtn').addEventListener('click', async function () {
+  const file = document.getElementById('csvFile').files[0];
+  const errEl = document.getElementById('previewError');
+  errEl.style.display = 'none';
+
+  if (!file) { errEl.textContent = 'Виберіть CSV файл'; errEl.style.display = 'block'; return; }
+
+  const formData = new FormData();
+  formData.append('file', file);
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Завантаження...';
+
+  try {
+    const res = await fetch('/import/fix-followup/preview', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!res.ok || data.error) { errEl.textContent = data.error || 'Помилка'; errEl.style.display = 'block'; return; }
+    parsedRows = data.rows;
+    renderPreview(data.rows, data.summary);
+    document.getElementById('previewSection').style.display = 'block';
+    document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {
+    errEl.textContent = 'Помилка зʼєднання'; errEl.style.display = 'block';
+  } finally {
+    this.disabled = false;
+    this.innerHTML = '<i class="bi bi-eye me-1"></i>Переглянути';
+  }
+});
+
+// ─── apply ───────────────────────────────────────────────────────────────────
+
+document.getElementById('applyBtn').addEventListener('click', async function () {
+  const errEl = document.getElementById('applyError');
+  errEl.style.display = 'none';
+  this.disabled = true;
+  document.getElementById('applySpinner').style.display = 'inline-block';
+
+  try {
+    const res = await fetch('/import/fix-followup/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: parsedRows })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { errEl.textContent = data.error || 'Помилка'; errEl.style.display = 'block'; return; }
+    showResult(data);
+  } catch(e) {
+    errEl.textContent = 'Помилка зʼєднання'; errEl.style.display = 'block';
+  } finally {
+    this.disabled = false;
+    document.getElementById('applySpinner').style.display = 'none';
+  }
+});
+
+// ─── result ──────────────────────────────────────────────────────────────────
+
+function showResult(data) {
+  document.getElementById('previewSection').style.display = 'none';
+  const rs = document.getElementById('resultSection');
+  rs.style.display = 'block';
+  let html = `
+    <div class="row g-3 mb-3">
+      <div class="col-6"><div class="p-3 rounded-3 text-center" style="background:#dcfce7;">
+        <div style="font-size:1.7rem;font-weight:700;color:#15803d;">${data.updated}</div>
+        <div class="text-muted" style="font-size:.82rem;">оновлено</div>
+      </div></div>
+      <div class="col-6"><div class="p-3 rounded-3 text-center" style="background:#f1f5f9;">
+        <div style="font-size:1.7rem;font-weight:700;color:#64748b;">${data.skipped}</div>
+        <div class="text-muted" style="font-size:.82rem;">пропущено</div>
+      </div></div>
+    </div>`;
+  if (data.errors && data.errors.length > 0) {
+    html += `<div class="alert alert-danger py-2 px-3" style="font-size:.82rem;">
+      <strong>Помилки (${data.errors.length}):</strong><ul class="mb-0 mt-1">
+      ${data.errors.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>`;
+  }
+  document.getElementById('resultBody').innerHTML = html;
+  rs.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ─── reset ───────────────────────────────────────────────────────────────────
+
+document.getElementById('resetBtn').addEventListener('click', function () {
+  parsedRows = [];
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+});
+
+document.getElementById('againBtn').addEventListener('click', function () {
+  parsedRows = [];
+  document.getElementById('resultSection').style.display = 'none';
+  document.getElementById('previewSection').style.display = 'none';
+  document.getElementById('csvFile').value = '';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+{% endblock %}

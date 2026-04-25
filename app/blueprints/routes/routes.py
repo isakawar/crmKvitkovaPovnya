@@ -56,7 +56,7 @@ def saved_routes():
 
     query = DeliveryRoute.query.filter(DeliveryRoute.route_date == selected_route_date)
 
-    query = query.order_by(DeliveryRoute.route_date.asc(), DeliveryRoute.created_at.desc())
+    query = query.order_by(DeliveryRoute.start_time.asc().nullslast())
     from app.models.delivery import Delivery
     from app.models.order import Order
     from app.models.client import Client

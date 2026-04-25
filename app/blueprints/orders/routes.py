@@ -575,12 +575,13 @@ def search_clients():
     query = request.args.get('q', '').strip()
     if not query:
         return jsonify([])
-    like_q = f'%{query}%'
+    query_stripped = query.lstrip('@')
+    like_q = f'%{query_stripped}%'
     clients = Client.query.filter(
         or_(
             Client.instagram.ilike(like_q),
             Client.telegram.ilike(like_q),
-            Client.phone.contains(query),
+            Client.phone.contains(query_stripped),
             Client.name.ilike(like_q),
         )
     ).order_by(Client.id.desc()).limit(10).all()

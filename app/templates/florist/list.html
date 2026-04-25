@@ -230,8 +230,6 @@
     <span class="florist-badge florist-badge-prep-handoff">Передано кур'єру</span>
   {% elif status == 'Доставлено' %}
     <span class="florist-badge florist-badge-prep-delivered">Доставлено</span>
-  {% else %}
-    <span class="florist-badge florist-badge-prep-empty">Не проставлено</span>
   {% endif %}
 {% endmacro %}
 
@@ -313,6 +311,9 @@
           {% endif %}
         {% else %}
           <span class="florist-tag">Разовий</span>
+        {% endif %}
+        {% if delivery.florist_status %}
+          {{ florist_status_badge(delivery.florist_status) }}
         {% endif %}
       </div>
     </td>

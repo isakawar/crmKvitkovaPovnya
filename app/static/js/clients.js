@@ -86,9 +86,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function syncNickFields() {
     const p1 = nickPlatformVal1.value;
-    const v1 = nickInput1.value.trim().replace(/^@/, '');
+    const raw1 = nickInput1.value.trim();
+    const v1 = p1 === 'instagram' ? raw1.replace(/^@/, '') : raw1;
     const p2 = nickPlatformVal2.value;
-    const v2 = nickInput2.value.trim().replace(/^@/, '');
+    const raw2 = nickInput2.value.trim();
+    const v2 = p2 === 'instagram' ? raw2.replace(/^@/, '') : raw2;
 
     fieldInstagram.value = '';
     fieldTelegram.value = '';
@@ -218,28 +220,15 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function fillFormWithClientData(client) {
-    // Reset nick slots first
     nickInput1.value = '';
     nickInput2.value = '';
-
-    const hasInstagram = Boolean(client.instagram);
-    const hasTelegram = Boolean(client.telegram);
+    setPlatform(1, 'instagram');
+    setPlatform(2, 'telegram');
 
     const tgWithAt = (v) => v ? (v.startsWith('@') ? v : `@${v}`) : '';
 
-    if (hasInstagram && hasTelegram) {
-      // Both: slot 1 = instagram, slot 2 = telegram
-      setPlatform(1, 'instagram');
-      nickInput1.value = client.instagram;
-      setPlatform(2, 'telegram');
-      nickInput2.value = tgWithAt(client.telegram);
-    } else if (hasInstagram) {
-      setPlatform(1, 'instagram');
-      nickInput1.value = client.instagram;
-    } else if (hasTelegram) {
-      setPlatform(1, 'telegram');
-      nickInput1.value = tgWithAt(client.telegram);
-    }
+    if (client.instagram) nickInput1.value = client.instagram;
+    if (client.telegram) nickInput2.value = tgWithAt(client.telegram);
 
     syncNickFields();
 
