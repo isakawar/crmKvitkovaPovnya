@@ -324,9 +324,9 @@ document.addEventListener('DOMContentLoaded', function () {
     clientDropdown.innerHTML = '';
   }
 
-  function selectClient(id, instagram) {
+  function selectClient(id, name) {
     clientIdInput.value = id;
-    clientSearch.value = instagram;
+    clientSearch.value = name;
     hideDropdown();
   }
 
@@ -340,18 +340,20 @@ document.addEventListener('DOMContentLoaded', function () {
       const clients = await res.json();
       if (!clients.length) { hideDropdown(); return; }
 
-      clientDropdown.innerHTML = clients.map(c => `
-        <button type="button" data-id="${c.id}" data-instagram="${c.instagram}">
-          ${c.instagram}
-          ${c.phone ? `<span class="txn-dd-phone">${c.phone}</span>` : ''}
-        </button>
-      `).join('');
+      clientDropdown.innerHTML = clients.map(c => {
+        const displayName = c.instagram || c.telegram || c.phone;
+        return `
+        <button type="button" data-id="${c.id}" data-name="${displayName}">
+          ${displayName}
+          ${c.phone && c.phone !== displayName ? `<span class="txn-dd-phone">${c.phone}</span>` : ''}
+        </button>`;
+      }).join('');
       clientDropdown.style.display = 'block';
 
       clientDropdown.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          selectClient(this.dataset.id, this.dataset.instagram);
+          selectClient(this.dataset.id, this.dataset.name);
         });
       });
     } catch (err) {

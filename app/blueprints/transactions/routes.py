@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from flask import render_template, request, jsonify
+from sqlalchemy import or_
 from flask_login import login_required
 
 from app.blueprints.transactions import transactions_bp
@@ -39,15 +40,18 @@ def transactions_list():
 @transactions_bp.route('/transactions/clients/search', methods=['GET'])
 @login_required
 def search_clients():
-    query = request.args.get('q', '').strip()
+    query = request.args.get('q', '').strip().lstrip('@')
     if not query:
         return jsonify([])
     clients = (Client.query
-               .filter(Client.instagram.ilike(f'%{query}%'))
-               .order_by(Client.instagram)
+               .filter(or_(
+                   Client.instagram.ilike(f'%{query}%'),
+                   Client.telegram.ilike(f'%{query}%'),
+               ))
+               .order_by(Client.instagram.nullslast(), Client.telegram)
                .limit(10)
                .all())
-    return jsonify([{'id': c.id, 'instagram': c.instagram, 'phone': c.phone or ''} for c in clients])
+    return jsonify([{'id': c.id, 'instagram': c.instagram, 'telegram': c.telegram, 'phone': c.phone or ''} for c in clients])
 
 
 @transactions_bp.route('/transactions/create', methods=['POST'])
