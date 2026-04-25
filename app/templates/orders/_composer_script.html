@@ -586,6 +586,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             setDeliveryMode('courier');
         }
+        if (addressCommentInput) { addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         syncCustomAmountState();
         setComposerFlow('subscription', true);
         if (extendHeaderBtn) {
@@ -876,6 +877,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             setDeliveryMode('courier');
         }
+        if (addressCommentInput) { addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         syncCustomAmountState();
         window.currentDeliveryId = options.deliveryId || null;
         setComposerFlow(flow, true);
@@ -1203,6 +1205,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const origReset = resetComposerForm;
     // Patch: clear cert on every reset
     addOrderModalElement.addEventListener('hidden.bs.modal', clearCertificate);
+
+    addOrderModalElement.addEventListener('shown.bs.modal', function() {
+        if (addressCommentInput) {
+            addressCommentInput.style.height = 'auto';
+            addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px';
+        }
+    });
 
     if (certCodeInput) {
         certCodeInput.addEventListener('input', function() {
