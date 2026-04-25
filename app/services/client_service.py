@@ -15,7 +15,7 @@ def search_clients(q=None, sub_filter=None, page=1, per_page=28):
     query = Client.query
 
     if q:
-        like_q = f'%{q}%'
+        like_q = f'%{q.lstrip("@")}%'
         query = query.filter(
             or_(
                 Client.instagram.ilike(like_q),

@@ -668,3 +668,146 @@ def execute_import_kvitkovapovnya(preview_rows):
         'created_orders': created_orders,
         'errors': errors,
     }
+
+
+# ---------------------------------------------------------------------------
+# Fix followup dates — update planned_contact_date for renewal reminder subscriptions
+# ---------------------------------------------------------------------------
+
+def preview_followup_dates(file_stream):
+    """
+    Read CSV, find rows with № доставки = 5, match to subscriptions,
+    return preview rows + summary (no DB writes).
+    """
+    from app.models.subscription import Subscription
+
+    content = file_stream.read()
+    if isinstance(content, bytes):
+        content = content.decode('utf-8-sig')
+
+    reader = csv.DictReader(io.StringIO(content))
+    rows = []
+    summary = {'total': 0, 'found': 0, 'client_not_found': 0, 'no_subscription': 0, 'no_date': 0}
+
+    for i, raw_row in enumerate(reader, start=2):
+        normalized = {k.strip(): v.strip() if isinstance(v, str) else (v or '') for k, v in raw_row.items()}
+
+        delivery_number_raw = normalized.get('№ доставки', '').strip()
+        if delivery_number_raw != '5':
+            continue
+
+        raw_client = normalized.get('Name of clients', '').strip().strip('\n')
+        planned_date_raw = normalized.get('Планова доставка', '').strip()
+        summary['total'] += 1
+
+        planned_date = _parse_kvp_date(planned_date_raw)
+        if not planned_date:
+            rows.append({
+                'row_num': i,
+                'raw_client': raw_client,
+                'client_id': None,
+                'client_display': None,
+                'subscription_id': None,
+                'current_planned_contact_date': None,
+                'new_date': None,
+                'new_date_raw': planned_date_raw or '—',
+                'status': 'no_date',
+            })
+            summary['no_date'] += 1
+            continue
+
+        client_fields = parse_client_field(raw_client)
+        client = find_existing_client(**client_fields)
+
+        if not client:
+            rows.append({
+                'row_num': i,
+                'raw_client': raw_client,
+                'client_id': None,
+                'client_display': None,
+                'subscription_id': None,
+                'current_planned_contact_date': None,
+                'new_date': planned_date.strftime('%d.%m.%Y'),
+                'new_date_raw': planned_date_raw,
+                'status': 'client_not_found',
+            })
+            summary['client_not_found'] += 1
+            continue
+
+        subscription = (
+            Subscription.query
+            .filter_by(client_id=client.id, is_renewal_reminder=True)
+            .order_by(Subscription.created_at.desc())
+            .first()
+        )
+
+        if not subscription:
+            rows.append({
+                'row_num': i,
+                'raw_client': raw_client,
+                'client_id': client.id,
+                'client_display': client.display_name,
+                'subscription_id': None,
+                'current_planned_contact_date': None,
+                'new_date': planned_date.strftime('%d.%m.%Y'),
+                'new_date_raw': planned_date_raw,
+                'status': 'no_subscription',
+            })
+            summary['no_subscription'] += 1
+            continue
+
+        current = subscription.planned_contact_date.strftime('%d.%m.%Y') if subscription.planned_contact_date else None
+        rows.append({
+            'row_num': i,
+            'raw_client': raw_client,
+            'client_id': client.id,
+            'client_display': client.display_name,
+            'subscription_id': subscription.id,
+            'current_planned_contact_date': current,
+            'new_date': planned_date.strftime('%d.%m.%Y'),
+            'new_date_raw': planned_date_raw,
+            'status': 'found',
+        })
+        summary['found'] += 1
+
+    return rows, summary
+
+
+def execute_followup_dates_update(rows):
+    """Update planned_contact_date for rows with status='found'."""
+    from app.models.subscription import Subscription
+
+    updated = 0
+    skipped = 0
+    errors = []
+
+    for row in rows:
+        if row.get('status') != 'found':
+            skipped += 1
+            continue
+        sub_id = row.get('subscription_id')
+        new_date_str = row.get('new_date')
+        if not sub_id or not new_date_str:
+            skipped += 1
+            continue
+        try:
+            planned_date = datetime.datetime.strptime(new_date_str, '%d.%m.%Y').date()
+            subscription = Subscription.query.get(sub_id)
+            if not subscription:
+                errors.append(f'Підписка #{sub_id} не знайдена')
+                continue
+            subscription.planned_contact_date = datetime.datetime.combine(planned_date, datetime.time.min)
+            updated += 1
+        except Exception as e:
+            logger.error(f'followup update error sub#{sub_id}: {e}', exc_info=True)
+            errors.append(f'Підписка #{sub_id}: {e}')
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'followup commit error: {e}', exc_info=True)
+        errors.append(f'Помилка збереження: {e}')
+        updated = 0
+
+    return {'updated': updated, 'skipped': skipped, 'errors': errors}

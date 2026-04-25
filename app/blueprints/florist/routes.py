@@ -133,7 +133,7 @@ def florist_routes():
             DeliveryRoute.route_date == selected_date,
             DeliveryRoute.status != 'rejected'
         )
-        .order_by(DeliveryRoute.id)
+        .order_by(DeliveryRoute.start_time.asc().nullslast())
         .all()
     )
 
