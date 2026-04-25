@@ -246,7 +246,7 @@ def test_extend_subscription_sets_extended_flags(session):
 
     assert sub.is_extended is True
     assert sub.followup_status == 'extended'
-    assert sub.followup_at is not None
+    assert sub.planned_contact_date is not None
 
 
 def test_extend_subscription_new_orders_have_correct_sequence(session):
