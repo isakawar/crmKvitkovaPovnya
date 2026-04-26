@@ -1,5 +1,15 @@
 {% extends 'layout.html' %}
 {% from "macros.html" import render_toast, toast_script %}
+{% block head %}
+{{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-input { cursor: pointer; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
+  .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+</style>
+{% endblock %}
 
 {% block content %}
 <section class="mb-6 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
@@ -25,7 +35,7 @@
     <div class="flex items-center gap-3">
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><i class="bi bi-wallet2"></i></span>
       <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Баланс</p>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Загальний баланс</p>
         <p class="text-2xl font-semibold text-stone-900">{{ total_balance | int }} грн</p>
       </div>
     </div>
@@ -34,11 +44,41 @@
     <div class="flex items-center gap-3">
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><i class="bi bi-graph-up-arrow"></i></span>
       <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Revenue · {{ current_month }}</p>
-        <p class="text-2xl font-semibold text-stone-900">{{ monthly_revenue | int }} грн</p>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Надходження · період</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ period_revenue | int }} грн</p>
       </div>
     </div>
   </article>
+</section>
+
+<section class="mb-4 rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+  <form id="filterForm" method="get" action="/transactions" class="flex flex-wrap items-center gap-2">
+    <input type="hidden" name="date_from" id="date_from" value="{{ date_from }}">
+    <input type="hidden" name="date_to" id="date_to" value="{{ date_to }}">
+
+    <div class="relative flex-shrink-0">
+      <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+      <input type="text" id="date-range-picker" placeholder="Дата" readonly
+        class="w-44 rounded-xl border border-stone-200 bg-stone-50 py-2 pl-9 pr-3 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+    </div>
+
+    <div class="flex items-center gap-1">
+      <button type="button" data-preset="today" class="preset-btn rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100">Сьогодні</button>
+      <button type="button" data-preset="this_month" class="preset-btn rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100">Цей місяць</button>
+      <button type="button" data-preset="prev_month" class="preset-btn rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100">Минулий місяць</button>
+    </div>
+
+    <div class="relative">
+      <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+      <input type="text" name="client_q" id="client_q" value="{{ client_q }}" placeholder="Клієнт"
+        class="w-40 rounded-xl border border-stone-200 bg-stone-50 py-2 pl-9 pr-3 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+    </div>
+
+    <button type="submit" class="rounded-xl bg-stone-900 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-stone-700">Застосувати</button>
+    <a href="/transactions" title="Скинути фільтр" class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-stone-50 text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-100 hover:text-stone-600">
+      <i class="bi bi-x text-base leading-none"></i>
+    </a>
+  </form>
 </section>
 
 <section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
@@ -119,9 +159,109 @@
   {% endif %}
 </section>
 
+{% if pagination.pages > 1 %}
+<nav class="mt-4 flex items-center justify-between">
+  <p class="text-xs text-stone-400">
+    Показано {{ pagination.first }}–{{ pagination.last }} з {{ pagination.total }}
+  </p>
+  <div class="flex items-center gap-1">
+    {% if pagination.has_prev %}
+    <a href="?page={{ pagination.prev_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}"
+       class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
+      <i class="bi bi-chevron-left text-xs"></i>
+    </a>
+    {% endif %}
+
+    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if p %}
+        {% if p == pagination.page %}
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-stone-900 text-xs font-medium text-white">{{ p }}</span>
+        {% else %}
+        <a href="?page={{ p }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}"
+           class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50">{{ p }}</a>
+        {% endif %}
+      {% else %}
+        <span class="inline-flex h-8 w-8 items-center justify-center text-xs text-stone-300">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+    <a href="?page={{ pagination.next_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}"
+       class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
+      <i class="bi bi-chevron-right text-xs"></i>
+    </a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
 {% include 'transactions/_create_modal.html' %}
 {% include 'transactions/_writeoff_modal.html' %}
 
 {{ render_toast() }}
 {{ toast_script() }}
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
+<script>
+  const dateFromEl = document.getElementById('date_from');
+  const dateToEl   = document.getElementById('date_to');
+  const form       = document.getElementById('filterForm');
+
+  const initialFrom = dateFromEl.value;
+  const initialTo   = dateToEl.value;
+  const defaultDate = initialFrom
+    ? (initialTo && initialTo !== initialFrom ? [initialFrom, initialTo] : [initialFrom])
+    : [];
+
+  const fp = flatpickr('#date-range-picker', {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    locale: 'uk',
+    defaultDate: defaultDate,
+    disableMobile: true,
+    onReady(_, __, instance) {
+      if (defaultDate.length) {
+        const [from, to] = instance.selectedDates;
+        instance.element.value = to
+          ? instance.formatDate(from, 'd.m.Y') + ' — ' + instance.formatDate(to, 'd.m.Y')
+          : instance.formatDate(from, 'd.m.Y');
+      }
+    },
+    onChange(dates, _, instance) {
+      if (dates.length === 1) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
+        instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+      } else if (dates.length === 2) {
+        dateFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+        dateToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
+        instance.element.value =
+          instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+      }
+    },
+  });
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const today = new Date();
+      if (btn.dataset.preset === 'today') {
+        fp.setDate([today, today], false);
+        dateFromEl.value = dateToEl.value = fp.formatDate(today, 'Y-m-d');
+      } else if (btn.dataset.preset === 'this_month') {
+        const first = new Date(today.getFullYear(), today.getMonth(), 1);
+        fp.setDate([first, today], false);
+        dateFromEl.value = fp.formatDate(first, 'Y-m-d');
+        dateToEl.value   = fp.formatDate(today, 'Y-m-d');
+      } else if (btn.dataset.preset === 'prev_month') {
+        const first = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const last  = new Date(today.getFullYear(), today.getMonth(), 0);
+        fp.setDate([first, last], false);
+        dateFromEl.value = fp.formatDate(first, 'Y-m-d');
+        dateToEl.value   = fp.formatDate(last,  'Y-m-d');
+      }
+      form.submit();
+    });
+  });
+</script>
 {% endblock %}

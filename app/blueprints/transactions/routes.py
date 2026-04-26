@@ -12,28 +12,64 @@ from app.models.client import Client
 @transactions_bp.route('/transactions', methods=['GET'])
 @login_required
 def transactions_list():
-    transactions = (Transaction.query
-                    .order_by(Transaction.date.desc(), Transaction.created_at.desc())
-                    .all())
+    today = date.today()
+    default_from = today.replace(day=1).isoformat()
+    default_to = today.isoformat()
 
+    date_from_str = request.args.get('date_from', default_from)
+    date_to_str = request.args.get('date_to', default_to)
+
+    try:
+        date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_from = today.replace(day=1)
+        date_from_str = date_from.isoformat()
+
+    try:
+        date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_to = today
+        date_to_str = date_to.isoformat()
+
+    client_q = request.args.get('client_q', '').strip().lstrip('@')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    filtered_query = Transaction.query.filter(
+        Transaction.date >= date_from,
+        Transaction.date <= date_to,
+    )
+
+    if client_q:
+        filtered_query = (filtered_query
+                          .join(Client, Transaction.client_id == Client.id)
+                          .filter(or_(
+                              Client.instagram.ilike(f'%{client_q}%'),
+                              Client.telegram.ilike(f'%{client_q}%'),
+                          )))
+
+    pagination = (filtered_query
+                  .order_by(Transaction.date.desc(), Transaction.created_at.desc())
+                  .paginate(page=page, per_page=per_page, error_out=False))
+
+    all_transactions = Transaction.query.all()
     total_balance = sum(
         t.amount if t.transaction_type == 'credit' else -t.amount
-        for t in transactions
+        for t in all_transactions
     )
 
-    today = date.today()
-    monthly_revenue = sum(
-        t.amount for t in transactions
-        if t.transaction_type == 'credit'
-        and t.date.year == today.year and t.date.month == today.month
-    )
+    period_transactions = filtered_query.all()
+    period_revenue = sum(t.amount for t in period_transactions if t.transaction_type == 'credit')
 
     return render_template(
         'transactions/list.html',
-        transactions=transactions,
+        transactions=pagination.items,
+        pagination=pagination,
         total_balance=total_balance,
-        monthly_revenue=monthly_revenue,
-        current_month=today.strftime('%B %Y'),
+        period_revenue=period_revenue,
+        date_from=date_from_str,
+        date_to=date_to_str,
+        client_q=client_q,
     )
 
 
