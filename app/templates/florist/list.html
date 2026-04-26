@@ -504,7 +504,7 @@
       </div>
 
       {% for route in routes %}
-        <details class="florist-disclosure" open>
+        <details class="florist-disclosure" open data-route-id="{{ route.id }}">
           <summary class="florist-disclosure-head">
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-base font-semibold text-stone-900">Маршрут #{{ loop.index }}</span>
@@ -762,6 +762,46 @@
     });
 
     updateSelectionUi();
+
+    // Route disclosure state persistence (24h TTL)
+    (function() {
+      const STORAGE_KEY = 'florist-routes-state';
+      const TTL = 86400000;
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return {};
+          const data = JSON.parse(raw);
+          if (Date.now() - data.ts > TTL) { localStorage.removeItem(STORAGE_KEY); return {}; }
+          return data.routes || {};
+        } catch { return {}; }
+      }
+
+      function saveState(routes) {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ ts: Date.now(), routes })); } catch {}
+      }
+
+      function getRoutes() {
+        return document.querySelectorAll('.florist-disclosure[data-route-id]');
+      }
+
+      const state = loadState();
+      getRoutes().forEach(function(el) {
+        const id = el.dataset.routeId;
+        if (Object.prototype.hasOwnProperty.call(state, id)) {
+          if (state[id]) { el.setAttribute('open', ''); } else { el.removeAttribute('open'); }
+        }
+      });
+
+      getRoutes().forEach(function(el) {
+        el.addEventListener('toggle', function() {
+          const current = {};
+          getRoutes().forEach(function(d) { current[d.dataset.routeId] = d.open; });
+          saveState(current);
+        });
+      });
+    })();
 
     // Collapsible address cells
     document.addEventListener('click', function(e) {

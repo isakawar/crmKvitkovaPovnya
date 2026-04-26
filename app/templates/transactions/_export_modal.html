@@ -1,0 +1,178 @@
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered txn-modal-dialog">
+    <div class="modal-content txn-modal-content">
+
+      <div class="txn-modal-header">
+        <div class="txn-modal-header-left">
+          <div class="txn-modal-icon">
+            <i class="bi bi-download"></i>
+          </div>
+          <div>
+            <h2 class="txn-modal-title">Звіт транзакцій</h2>
+            <p class="txn-modal-subtitle">Оберіть період та формат</p>
+          </div>
+        </div>
+        <button type="button" class="txn-close-btn" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <div class="txn-modal-body">
+
+        <div class="txn-field">
+          <label class="txn-label">Період</label>
+          <div style="position:relative;">
+            <i class="bi bi-calendar3" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#a8a29e;font-size:14px;pointer-events:none;"></i>
+            <input type="text" id="exportDatePicker" placeholder="Оберіть діапазон" readonly
+              class="txn-input" style="padding-left:2.2rem;cursor:pointer;">
+          </div>
+          <input type="hidden" id="exportDateFrom">
+          <input type="hidden" id="exportDateTo">
+        </div>
+
+        <div class="txn-field">
+          <label class="txn-label">Формат</label>
+          <div style="display:flex;gap:8px;">
+            <button type="button" id="fmtCsv" class="export-fmt-btn export-fmt-btn--active">
+              <i class="bi bi-filetype-csv"></i> CSV
+            </button>
+            <button type="button" id="fmtXlsx" class="export-fmt-btn">
+              <i class="bi bi-filetype-xlsx"></i> XLSX
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="txn-modal-footer">
+        <button type="button" data-bs-dismiss="modal" class="txn-btn txn-btn--ghost">Скасувати</button>
+        <button type="button" id="doExportBtn" class="txn-btn txn-btn--primary">
+          <i class="bi bi-download"></i>
+          <span>Вивантажити</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  .export-fmt-btn {
+    flex: 1;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid #d6d3d1;
+    background: #ffffff;
+    color: #78716c;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .export-fmt-btn:hover {
+    border-color: #a8a29e;
+    color: #1c1917;
+  }
+  .export-fmt-btn--active {
+    border-color: #1c1917;
+    background: #1c1917;
+    color: #ffffff;
+  }
+  .export-fmt-btn--active:hover {
+    background: #292524;
+    border-color: #292524;
+    color: #ffffff;
+  }
+</style>
+
+<script>
+(function () {
+  const exportModal = document.getElementById('exportModal');
+  const exportFromEl = document.getElementById('exportDateFrom');
+  const exportToEl   = document.getElementById('exportDateTo');
+  const csvBtn  = document.getElementById('fmtCsv');
+  const xlsxBtn = document.getElementById('fmtXlsx');
+  const doBtn   = document.getElementById('doExportBtn');
+
+  let exportFormat = 'csv';
+
+  let exportFp = null;
+
+  exportModal.addEventListener('show.bs.modal', function () {
+    if (!exportFp) {
+      exportFp = flatpickr('#exportDatePicker', {
+        mode: 'range',
+        dateFormat: 'Y-m-d',
+        locale: 'uk',
+        disableMobile: true,
+        onReady(_, __, instance) {
+          const from = document.getElementById('date_from').value;
+          const to   = document.getElementById('date_to').value;
+          if (from) {
+            const dates = (to && to !== from) ? [from, to] : [from];
+            instance.setDate(dates, false);
+            exportFromEl.value = from;
+            exportToEl.value   = to || from;
+            instance.element.value = to && to !== from
+              ? instance.formatDate(instance.selectedDates[0], 'd.m.Y') + ' — ' + instance.formatDate(instance.selectedDates[1], 'd.m.Y')
+              : instance.formatDate(instance.selectedDates[0], 'd.m.Y');
+          }
+        },
+        onChange(dates, _, instance) {
+          if (dates.length === 1) {
+            exportFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+            exportToEl.value   = instance.formatDate(dates[0], 'Y-m-d');
+            instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+          } else if (dates.length === 2) {
+            exportFromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+            exportToEl.value   = instance.formatDate(dates[1], 'Y-m-d');
+            instance.element.value =
+              instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+          }
+        },
+      });
+    } else {
+      const from = document.getElementById('date_from').value;
+      const to   = document.getElementById('date_to').value;
+      if (from) {
+        const dates = (to && to !== from) ? [from, to] : [from];
+        exportFp.setDate(dates, false);
+        exportFromEl.value = from;
+        exportToEl.value   = to || from;
+      }
+    }
+  });
+
+  csvBtn.addEventListener('click', function () {
+    exportFormat = 'csv';
+    csvBtn.classList.add('export-fmt-btn--active');
+    xlsxBtn.classList.remove('export-fmt-btn--active');
+  });
+
+  xlsxBtn.addEventListener('click', function () {
+    exportFormat = 'xlsx';
+    xlsxBtn.classList.add('export-fmt-btn--active');
+    csvBtn.classList.remove('export-fmt-btn--active');
+  });
+
+  doBtn.addEventListener('click', function () {
+    const from = exportFromEl.value;
+    const to   = exportToEl.value;
+    if (!from || !to) {
+      alert('Оберіть період для звіту');
+      return;
+    }
+    const url = `/transactions/export?date_from=${from}&date_to=${to}&format=${exportFormat}`;
+    window.location.href = url;
+    bootstrap.Modal.getInstance(exportModal).hide();
+  });
+
+  document.getElementById('openExportModal').addEventListener('click', function () {
+    bootstrap.Modal.getOrCreateInstance(exportModal).show();
+  });
+})();
+</script>

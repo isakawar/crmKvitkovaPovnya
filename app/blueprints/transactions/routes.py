@@ -1,7 +1,9 @@
+import io
 from datetime import date, datetime
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, send_file, abort
 from sqlalchemy import or_
-from flask_login import login_required
+from sqlalchemy.orm import joinedload
+from flask_login import login_required, current_user
 
 from app.blueprints.transactions import transactions_bp
 from app.extensions import db
@@ -12,28 +14,151 @@ from app.models.client import Client
 @transactions_bp.route('/transactions', methods=['GET'])
 @login_required
 def transactions_list():
-    transactions = (Transaction.query
-                    .order_by(Transaction.date.desc(), Transaction.created_at.desc())
-                    .all())
+    today = date.today()
+    default_from = today.replace(day=1).isoformat()
+    default_to = today.isoformat()
 
+    date_from_str = request.args.get('date_from', default_from)
+    date_to_str = request.args.get('date_to', default_to)
+
+    try:
+        date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_from = today.replace(day=1)
+        date_from_str = date_from.isoformat()
+
+    try:
+        date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_to = today
+        date_to_str = date_to.isoformat()
+
+    client_q = request.args.get('client_q', '').strip().lstrip('@')
+    page = request.args.get('page', 1, type=int)
+    per_page = 50
+
+    filtered_query = Transaction.query.filter(
+        Transaction.date >= date_from,
+        Transaction.date <= date_to,
+    )
+
+    if client_q:
+        filtered_query = (filtered_query
+                          .join(Client, Transaction.client_id == Client.id)
+                          .filter(or_(
+                              Client.instagram.ilike(f'%{client_q}%'),
+                              Client.telegram.ilike(f'%{client_q}%'),
+                          )))
+
+    pagination = (filtered_query
+                  .order_by(Transaction.date.desc(), Transaction.created_at.desc())
+                  .paginate(page=page, per_page=per_page, error_out=False))
+
+    all_transactions = Transaction.query.all()
     total_balance = sum(
         t.amount if t.transaction_type == 'credit' else -t.amount
-        for t in transactions
+        for t in all_transactions
     )
 
-    today = date.today()
-    monthly_revenue = sum(
-        t.amount for t in transactions
-        if t.transaction_type == 'credit'
-        and t.date.year == today.year and t.date.month == today.month
-    )
+    period_transactions = filtered_query.all()
+    period_revenue = sum(t.amount for t in period_transactions if t.transaction_type == 'credit')
 
     return render_template(
         'transactions/list.html',
-        transactions=transactions,
+        transactions=pagination.items,
+        pagination=pagination,
         total_balance=total_balance,
-        monthly_revenue=monthly_revenue,
-        current_month=today.strftime('%B %Y'),
+        period_revenue=period_revenue,
+        date_from=date_from_str,
+        date_to=date_to_str,
+        client_q=client_q,
+    )
+
+
+@transactions_bp.route('/transactions/export', methods=['GET'])
+@login_required
+def export_transactions():
+    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+        abort(403)
+
+    today = date.today()
+    date_from_str = request.args.get('date_from', today.replace(day=1).isoformat()).strip()
+    date_to_str   = request.args.get('date_to',   today.isoformat()).strip()
+    fmt           = request.args.get('format', 'csv').lower()
+
+    try:
+        date_from = datetime.strptime(date_from_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_from = today.replace(day=1)
+        date_from_str = date_from.isoformat()
+
+    try:
+        date_to = datetime.strptime(date_to_str, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        date_to = today
+        date_to_str = date_to.isoformat()
+
+    transactions = (
+        Transaction.query
+        .options(joinedload(Transaction.client))
+        .filter(Transaction.date >= date_from, Transaction.date <= date_to)
+        .order_by(Transaction.date.asc(), Transaction.created_at.asc())
+        .all()
+    )
+
+    headers_row = ['Дата', 'Тип', 'Клієнт', 'Телефон', 'Сума (грн)',
+                   'Спосіб оплати', 'Тип витрати', 'Коментар', 'Записано']
+
+    def make_row(t):
+        kyiv_offset = 3
+        created = (t.created_at.replace(tzinfo=None) if t.created_at else None)
+        if created:
+            from datetime import timedelta
+            created_str = (created + timedelta(hours=kyiv_offset)).strftime('%d.%m.%Y %H:%M')
+        else:
+            created_str = ''
+        return [
+            t.date.strftime('%d.%m.%Y'),
+            'Поповнення' if t.transaction_type == 'credit' else 'Списання',
+            t.client.instagram if t.client else '',
+            t.client.phone if t.client and t.client.phone else '',
+            t.amount,
+            t.payment_type or '',
+            t.expense_type or '',
+            t.comment or '',
+            created_str,
+        ]
+
+    filename_base = f'transactions_{date_from_str}_{date_to_str}'
+
+    if fmt == 'xlsx':
+        from openpyxl import Workbook
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet('Транзакції')
+        ws.append(headers_row)
+        for t in transactions:
+            ws.append(make_row(t))
+        buf = io.BytesIO()
+        wb.save(buf)
+        buf.seek(0)
+        return send_file(
+            buf,
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            as_attachment=True,
+            download_name=f'{filename_base}.xlsx',
+        )
+
+    lines = [','.join('"' + h.replace('"', '""') + '"' for h in headers_row)]
+    for t in transactions:
+        row = [str(x) for x in make_row(t)]
+        lines.append(','.join('"' + x.replace('"', '""') + '"' for x in row))
+    csv_bytes = ('﻿' + '\r\n'.join(lines) + '\r\n').encode('utf-8')
+    buf = io.BytesIO(csv_bytes)
+    return send_file(
+        buf,
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=f'{filename_base}.csv',
     )
 
 

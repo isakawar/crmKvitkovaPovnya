@@ -195,3 +195,4 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover __pycache__/
+db_2026-04-25-22-26.sql.gz
