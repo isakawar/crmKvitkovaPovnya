@@ -1,0 +1,191 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block content %}
+{{ render_toast() }}
+
+{# ── Header ── #}
+<section class="mb-5 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-6 py-5 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <p class="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
+        <i class="bi bi-images"></i> Фото
+      </p>
+      <h1 class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">Фото букетів</h1>
+    </div>
+
+    {# Filter inline in header #}
+    <form method="get" action="{{ url_for('photos.list_photos') }}" class="flex items-center gap-2">
+      <div class="relative">
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
+        <input
+          type="number" name="order_id" min="1"
+          value="{{ order_id_filter or '' }}"
+          placeholder="Замовлення #"
+          class="h-9 w-36 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+        >
+      </div>
+      <button type="submit" class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors">
+        Фільтр
+      </button>
+      {% if order_id_filter %}
+      <a href="{{ url_for('photos.list_photos') }}" class="inline-flex h-9 items-center justify-center w-9 rounded-xl border border-stone-200 bg-white text-stone-400 hover:bg-stone-50 transition-colors" title="Скинути">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </form>
+  </div>
+</section>
+
+{# ── Upload form ── #}
+<section class="mb-5 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+  <form method="post" action="{{ url_for('photos.upload_photo') }}" enctype="multipart/form-data" id="photo-upload-form">
+    <div class="flex flex-wrap items-center gap-3 px-5 py-4">
+
+      {# Custom file picker #}
+      <label id="photo-pick-label"
+             class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-stone-300 bg-stone-50 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700">
+        <i class="bi bi-paperclip text-base"></i>
+        <span id="photo-pick-text">Вибрати фото</span>
+        <input type="file" name="photo" id="photo-file-input" accept=".jpg,.jpeg,.png,.webp,.heic" required class="hidden">
+      </label>
+
+      {# Order ID #}
+      <input
+        type="number" name="order_id" min="1" required
+        value="{{ order_id_filter or '' }}"
+        placeholder="ID замовлення"
+        class="h-10 w-36 rounded-xl border border-stone-200 px-3 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+      >
+
+      {# Comment #}
+      <input
+        type="text" name="comment" maxlength="500"
+        placeholder="Коментар…"
+        class="h-10 flex-1 min-w-[160px] rounded-xl border border-stone-200 px-3 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+      >
+
+      <button type="submit"
+              class="inline-flex h-10 items-center gap-2 rounded-xl bg-stone-900 px-5 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap">
+        <i class="bi bi-cloud-upload"></i> Завантажити
+      </button>
+    </div>
+    <p class="px-5 pb-3 text-xs text-stone-400">JPG, PNG, WEBP, HEIC · до 15 МБ</p>
+  </form>
+</section>
+
+{# ── Photos grid / table ── #}
+{% if photos %}
+<section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+  <div class="w-full overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
+          <th class="w-20 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Фото</th>
+          <th class="w-24 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Замовлення</th>
+          <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Клієнт</th>
+          <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Коментар</th>
+          <th class="w-40 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Дата</th>
+          <th class="w-28 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Ким</th>
+          <th class="w-24 px-4 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stone-100">
+        {% for photo in photos %}
+        <tr class="group transition-colors hover:bg-stone-50/60">
+          <td class="px-4 py-2.5">
+            <a href="{{ url_for('photos.serve_photo', filename=photo.filename) }}" target="_blank" rel="noopener"
+               class="block h-14 w-14 overflow-hidden rounded-xl border border-stone-200 hover:border-amber-300 transition-colors">
+              <img
+                src="{{ url_for('photos.serve_photo', filename=photo.filename) }}"
+                alt="{{ photo.original_name }}"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              >
+            </a>
+          </td>
+          <td class="px-4 py-2.5">
+            <a href="{{ url_for('photos.list_photos', order_id=photo.order_id) }}"
+               class="inline-flex items-center gap-1 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-700 hover:bg-amber-100 hover:text-amber-700 transition-colors">
+              #{{ photo.order_id }}
+            </a>
+          </td>
+          <td class="px-4 py-2.5 text-stone-600">
+            {% if photo.order and photo.order.client %}
+              {{ photo.order.client.instagram or photo.order.client.phone or '—' }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-stone-400 max-w-[200px]">
+            <span class="line-clamp-2 text-xs">{{ photo.comment or '—' }}</span>
+          </td>
+          <td class="px-4 py-2.5 text-stone-400 whitespace-nowrap text-xs">{{ photo.created_at | kyiv_time }}</td>
+          <td class="px-4 py-2.5 text-stone-500 text-xs">
+            {{ photo.uploader.display_name if photo.uploader and photo.uploader.display_name else (photo.uploader.username if photo.uploader else '—') }}
+          </td>
+          <td class="px-4 py-2.5">
+            {% if can_delete %}
+            <form method="post" action="{{ url_for('photos.delete_photo', photo_id=photo.id) }}"
+                  onsubmit="return confirm('Видалити фото?')" class="flex justify-end">
+              <input type="hidden" name="order_id" value="{{ order_id_filter or '' }}">
+              <button type="submit"
+                      class="inline-flex items-center gap-1 rounded-lg border border-transparent px-2.5 py-1.5 text-xs font-medium text-stone-300 transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500 group-hover:text-stone-400">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Pagination #}
+  {% if pagination.pages > 1 %}
+  <div class="flex items-center justify-between border-t border-stone-100 px-5 py-3">
+    <p class="text-xs text-stone-400">{{ pagination.total }} фото</p>
+    <div class="flex items-center gap-1">
+      {% if pagination.has_prev %}
+      <a href="{{ url_for('photos.list_photos', page=pagination.prev_num, order_id=order_id_filter) }}"
+         class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50">
+        <i class="bi bi-chevron-left"></i>
+      </a>
+      {% endif %}
+      <span class="px-2 text-sm text-stone-600">{{ pagination.page }} / {{ pagination.pages }}</span>
+      {% if pagination.has_next %}
+      <a href="{{ url_for('photos.list_photos', page=pagination.next_num, order_id=order_id_filter) }}"
+         class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-stone-200 text-sm text-stone-600 hover:bg-stone-50">
+        <i class="bi bi-chevron-right"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{% else %}
+<section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+  <div class="flex flex-col items-center py-16 text-center">
+    <span class="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-stone-100 text-stone-400">
+      <i class="bi bi-images text-2xl"></i>
+    </span>
+    <p class="text-sm font-medium text-stone-500">
+      {% if order_id_filter %}Немає фото для замовлення #{{ order_id_filter }}{% else %}Ще немає завантажених фото{% endif %}
+    </p>
+    <p class="mt-1 text-xs text-stone-400">Завантажте перше фото за допомогою форми вище</p>
+  </div>
+</section>
+{% endif %}
+
+<script>
+  const input = document.getElementById('photo-file-input');
+  const label = document.getElementById('photo-pick-text');
+  if (input && label) {
+    input.addEventListener('change', function () {
+      label.textContent = this.files[0] ? this.files[0].name : 'Вибрати фото';
+    });
+  }
+</script>
+
+{{ toast_script() }}
+{% endblock %}

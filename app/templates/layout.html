@@ -195,6 +195,12 @@
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span>Офлайн продажі</span>
         </a>
+        <a href="/photos" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/photos') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-images text-lg flex-shrink-0"></i>
+            <span>Фото</span>
+        </a>
         {% else %}
         <a href="/dashboard" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
@@ -260,6 +266,12 @@
             <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
             <span>Транзакції</span>
         </a>
+        <a href="/photos" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/photos') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-images text-lg flex-shrink-0"></i>
+            <span>Фото</span>
+        </a>
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-1
@@ -305,6 +317,13 @@
            title="Офлайн продажі">
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span class="nav-label">Офлайн продажі</span>
+        </a>
+        <a href="/photos"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/photos') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Фото букетів">
+            <i class="bi bi-images text-lg flex-shrink-0"></i>
+            <span class="nav-label">Фото</span>
         </a>
         {% else %}
         <a href="/dashboard"
@@ -380,6 +399,13 @@
            title="Транзакції">
             <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
             <span class="nav-label">Транзакції</span>
+        </a>
+        <a href="/photos"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/photos') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Фото букетів">
+            <i class="bi bi-images text-lg flex-shrink-0"></i>
+            <span class="nav-label">Фото</span>
         </a>
 
         <!-- Spacer -->
