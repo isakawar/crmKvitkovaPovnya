@@ -18,6 +18,12 @@
       <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Транзакції</h1>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+      {% if current_user.has_role('admin') or current_user.has_role('manager') %}
+      <button type="button" id="openExportModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50">
+        <i class="bi bi-download"></i>
+        Звіт
+      </button>
+      {% endif %}
       <button type="button" id="openWriteoffModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100">
         <i class="bi bi-dash-circle"></i>
         Списання
@@ -197,6 +203,9 @@
 
 {% include 'transactions/_create_modal.html' %}
 {% include 'transactions/_writeoff_modal.html' %}
+{% if current_user.has_role('admin') or current_user.has_role('manager') %}
+{% include 'transactions/_export_modal.html' %}
+{% endif %}
 
 {{ render_toast() }}
 {{ toast_script() }}
