@@ -167,8 +167,11 @@ class CourierKeyboards:
                 InlineKeyboardButton("📋 Адреси по одному", callback_data=f"route_copy_addresses_{route_id}"),
             ],
             [
+                InlineKeyboardButton("🚫 Відмовитись від маршруту", callback_data=f"route_cancel_{route_id}"),
+            ],
+            [
                 InlineKeyboardButton("✅ Маршрут завершено", callback_data=f"route_done_{route_id}"),
-            ]
+            ],
         ]
         return InlineKeyboardMarkup(keyboard)
 

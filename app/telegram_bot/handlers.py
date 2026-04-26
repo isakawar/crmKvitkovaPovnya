@@ -396,6 +396,12 @@ class CourierHandlers:
             await self._send_route_addresses(query, route_id=int(data.split("_")[-1]))
         elif data.startswith("route_done_"):
             await self._handle_route_done(query, courier, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_cancel_confirm_"):
+            await self._handle_route_cancel(query, courier, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_cancel_abort_"):
+            await self._handle_route_cancel_abort(query, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_cancel_"):
+            await self._handle_route_cancel_confirm(query, route_id=int(data.split("_")[-1]))
         else:
             logger.warning(f"Unknown callback command: {data}")
             await query.edit_message_text("❌ Невідома команда")
@@ -983,6 +989,69 @@ class CourierHandlers:
             if street: parts.append(street)
             if building: parts.append(building)
             await query.message.reply_text(f"{stop.stop_order}. {', '.join(parts) or '—'}")
+
+    async def _handle_route_cancel_confirm(self, query, route_id: int):
+        """Show confirmation prompt before cancelling an accepted route"""
+        from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+        keyboard = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("✅ Так, відмовляюсь", callback_data=f"route_cancel_confirm_{route_id}"),
+                InlineKeyboardButton("◀️ Назад", callback_data=f"route_cancel_abort_{route_id}"),
+            ]
+        ])
+        await query.answer("⚠️ Ви впевнені? Підтвердіть відмову кнопкою нижче.", show_alert=True)
+        await query.edit_message_reply_markup(reply_markup=keyboard)
+
+    async def _handle_route_cancel_abort(self, query, route_id: int):
+        """Restore original keyboard after user declines the cancel confirmation"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all() if route else []
+        gmaps_stops = []
+        for stop in stops:
+            d = stop.delivery
+            order = d.order if d else None
+            parts = [p for p in [
+                (order.city if order else '') or '',
+                (d.street or (order.street if order else '')) or '',
+                (d.building_number or (order.building_number if order else '')) or '',
+            ] if p]
+            if parts:
+                gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops) if gmaps_stops else ''
+        await query.edit_message_reply_markup(
+            reply_markup=self.keyboards.route_accepted_menu(gmaps_url, route_id)
+        )
+
+    async def _handle_route_cancel(self, query, courier: Courier, route_id: int):
+        """Allow courier to cancel an already accepted route"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        if not route:
+            await query.edit_message_text("❌ Маршрут не знайдено")
+            return
+        if route.status != 'accepted':
+            await query.answer("Цей маршрут вже не є прийнятим", show_alert=True)
+            return
+
+        route.status = 'draft'
+        route.courier_id = None
+        route.accepted_at = None
+        stops = RouteDelivery.query.filter_by(route_id=route_id).all()
+        for stop in stops:
+            if stop.delivery:
+                stop.delivery.courier_id = None
+                stop.delivery.status = 'Очікує'
+        db.session.commit()
+
+        await query.edit_message_text(
+            f"🚫 <b>Маршрут скасовано</b>\n\n"
+            f"📅 {route.route_date.strftime('%d.%m.%Y')} · {route.deliveries_count} доставок\n\n"
+            f"Менеджер отримає сповіщення та призначить іншого кур'єра.",
+            parse_mode='HTML'
+        )
 
     async def _handle_route_done(self, query, courier: Courier, route_id: int):
         """Mark entire route as completed"""

@@ -223,6 +223,8 @@ def assign_and_send_route(route_id):
 
     text = f"🌸 <b>Пропозиція маршруту на {route.route_date.strftime('%d.%m.%Y')}</b>\n\n"
     text += f"📦 Доставок: <b>{route.deliveries_count}</b>\n"
+    if route.total_distance_km:
+        text += f"📏 Відстань: <b>{route.total_distance_km:.1f} км</b>\n"
     if route.delivery_price:
         text += f"💰 Оплата: <b>{route.delivery_price}₴</b>\n"
     text += "\n<b>Маршрут:</b>\n"
@@ -292,6 +294,8 @@ def route_message_text(route_id):
 
     text = f"🌸 Пропозиція маршруту на {route.route_date.strftime('%d.%m.%Y')}\n\n"
     text += f"📦 Доставок: {route.deliveries_count}\n"
+    if route.total_distance_km:
+        text += f"📏 Відстань: {route.total_distance_km:.1f} км\n"
     if route.delivery_price:
         text += f"💰 Оплата: {route.delivery_price}₴\n"
     text += "\nМаршрут:\n"
