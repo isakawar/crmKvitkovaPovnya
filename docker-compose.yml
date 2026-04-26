@@ -38,6 +38,7 @@ services:
       - ./scripts:/app/scripts
       - ./instance:/app/instance
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
     env_file:
       - .env
     environment:

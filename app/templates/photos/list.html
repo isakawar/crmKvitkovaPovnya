@@ -14,7 +14,6 @@
       <h1 class="mt-1.5 text-2xl font-semibold tracking-tight text-stone-900">Фото букетів</h1>
     </div>
 
-    {# Filter inline in header #}
     <form method="get" action="{{ url_for('photos.list_photos') }}" class="flex items-center gap-2">
       <div class="relative">
         <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
@@ -41,30 +40,23 @@
 <section class="mb-5 overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
   <form method="post" action="{{ url_for('photos.upload_photo') }}" enctype="multipart/form-data" id="photo-upload-form">
     <div class="flex flex-wrap items-center gap-3 px-5 py-4">
-
-      {# Custom file picker #}
       <label id="photo-pick-label"
              class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-stone-300 bg-stone-50 px-4 py-2.5 text-sm font-medium text-stone-600 transition-colors hover:border-amber-400 hover:bg-amber-50 hover:text-amber-700">
         <i class="bi bi-paperclip text-base"></i>
         <span id="photo-pick-text">Вибрати фото</span>
         <input type="file" name="photo" id="photo-file-input" accept=".jpg,.jpeg,.png,.webp,.heic" required class="hidden">
       </label>
-
-      {# Order ID #}
       <input
         type="number" name="order_id" min="1" required
         value="{{ order_id_filter or '' }}"
         placeholder="ID замовлення"
         class="h-10 w-36 rounded-xl border border-stone-200 px-3 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
       >
-
-      {# Comment #}
       <input
         type="text" name="comment" maxlength="500"
         placeholder="Коментар…"
         class="h-10 flex-1 min-w-[160px] rounded-xl border border-stone-200 px-3 text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
       >
-
       <button type="submit"
               class="inline-flex h-10 items-center gap-2 rounded-xl bg-stone-900 px-5 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap">
         <i class="bi bi-cloud-upload"></i> Завантажити
@@ -74,13 +66,35 @@
   </form>
 </section>
 
-{# ── Photos grid / table ── #}
+{# ── Bulk delete toolbar ── #}
+{% if can_delete and photos %}
+<div id="bulk-toolbar" style="display:none;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;border-radius:12px;background:#dc2626;padding:12px 20px;box-shadow:0 2px 8px rgba(220,38,38,0.3);">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span id="bulk-count-badge" style="display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.25);font-size:13px;font-weight:700;color:#fff;">0</span>
+    <span style="font-size:14px;font-weight:500;color:#fff;">фото вибрано</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <button id="bulk-delete-btn"
+            style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;background:#fff;padding:8px 16px;font-size:14px;font-weight:600;color:#dc2626;border:none;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+      <i class="bi bi-trash3"></i> Видалити вибрані
+    </button>
+    <button id="bulk-cancel-btn" style="font-size:13px;color:rgba(255,255,255,0.8);background:none;border:none;cursor:pointer;padding:4px;">Скасувати</button>
+  </div>
+</div>
+{% endif %}
+
+{# ── Photos table ── #}
 {% if photos %}
 <section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
   <div class="w-full overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
+          {% if can_delete %}
+          <th class="w-10 px-4 py-3">
+            <input type="checkbox" id="select-all" class="h-4 w-4 rounded border-stone-300 accent-amber-500 cursor-pointer">
+          </th>
+          {% endif %}
           <th class="w-20 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Фото</th>
           <th class="w-24 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Замовлення</th>
           <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Клієнт</th>
@@ -92,7 +106,12 @@
       </thead>
       <tbody class="divide-y divide-stone-100">
         {% for photo in photos %}
-        <tr class="group transition-colors hover:bg-stone-50/60">
+        <tr class="group transition-colors hover:bg-stone-50/60" data-photo-id="{{ photo.id }}">
+          {% if can_delete %}
+          <td class="px-4 py-2.5">
+            <input type="checkbox" class="photo-checkbox h-4 w-4 rounded border-stone-300 accent-amber-500 cursor-pointer" value="{{ photo.id }}">
+          </td>
+          {% endif %}
           <td class="px-4 py-2.5">
             <a href="{{ url_for('photos.serve_photo', filename=photo.filename) }}" target="_blank" rel="noopener"
                class="block h-14 w-14 overflow-hidden rounded-xl border border-stone-200 hover:border-amber-300 transition-colors">
@@ -185,6 +204,97 @@
       label.textContent = this.files[0] ? this.files[0].name : 'Вибрати фото';
     });
   }
+
+  {% if can_delete and photos %}
+  const selectAll     = document.getElementById('select-all');
+  const toolbar       = document.getElementById('bulk-toolbar');
+  const bulkBadge     = document.getElementById('bulk-count-badge');
+  const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+  const bulkCancelBtn = document.getElementById('bulk-cancel-btn');
+
+  function getChecked() {
+    return [...document.querySelectorAll('.photo-checkbox:checked')];
+  }
+
+  function setRowHighlight(cb, on) {
+    cb.closest('tr').style.background = on ? '#fff1f2' : '';
+  }
+
+  function updateToolbar() {
+    const checked = getChecked();
+    if (checked.length > 0) {
+      toolbar.style.display = 'flex';
+      bulkBadge.textContent = checked.length;
+    } else {
+      toolbar.style.display = 'none';
+    }
+    const all = document.querySelectorAll('.photo-checkbox');
+    selectAll.checked = all.length > 0 && checked.length === all.length;
+    selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+  }
+
+  selectAll.addEventListener('change', function () {
+    document.querySelectorAll('.photo-checkbox').forEach(cb => {
+      cb.checked = this.checked;
+      setRowHighlight(cb, this.checked);
+    });
+    updateToolbar();
+  });
+
+  document.querySelectorAll('.photo-checkbox').forEach(cb => {
+    cb.addEventListener('change', function () {
+      setRowHighlight(this, this.checked);
+      updateToolbar();
+    });
+  });
+
+  bulkCancelBtn.addEventListener('click', function () {
+    document.querySelectorAll('.photo-checkbox').forEach(cb => {
+      cb.checked = false;
+      setRowHighlight(cb, false);
+    });
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    updateToolbar();
+  });
+
+  bulkDeleteBtn.addEventListener('click', async function () {
+    const checked = getChecked();
+    if (!checked.length) return;
+    if (!confirm(`Видалити ${checked.length} фото? Це незворотна дія.`)) return;
+
+    bulkDeleteBtn.disabled = true;
+    bulkDeleteBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Видалення…';
+
+    const ids = checked.map(cb => parseInt(cb.value));
+    try {
+      const res = await fetch('{{ url_for("photos.bulk_delete_photos") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        checked.forEach(cb => cb.closest('tr').remove());
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+        toolbar.style.display = 'none';
+        showToast(`Видалено ${data.deleted} фото`, 'success');
+        if (!document.querySelectorAll('.photo-checkbox').length) {
+          setTimeout(() => location.reload(), 800);
+        }
+      } else {
+        showToast(data.error || 'Помилка видалення', 'error');
+        bulkDeleteBtn.disabled = false;
+        bulkDeleteBtn.innerHTML = '<i class="bi bi-trash3"></i> Видалити вибрані';
+      }
+    } catch (_) {
+      showToast('Помилка зʼєднання', 'error');
+      bulkDeleteBtn.disabled = false;
+      bulkDeleteBtn.innerHTML = '<i class="bi bi-trash3"></i> Видалити вибрані';
+    }
+  });
+  {% endif %}
 </script>
 
 {{ toast_script() }}
