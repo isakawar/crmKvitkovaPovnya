@@ -411,6 +411,35 @@
                 <div id="cert-result" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
               </div>
             </section>
+
+            <!-- Photo section -->
+            <section class="order-section" id="order-photos-section">
+              <h3 class="order-section-title">
+                <i class="bi bi-images"></i>
+                Фото букету
+              </h3>
+              <div class="order-field">
+                <!-- Uploaded photos list (edit mode) -->
+                <div id="order-photos-list" class="flex flex-wrap gap-2 mb-3 hidden"></div>
+
+                <!-- Upload row -->
+                <div class="flex items-center gap-2 flex-wrap">
+                  <label class="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+                         id="order-photo-label">
+                    <i class="bi bi-cloud-upload"></i>
+                    <span id="order-photo-label-text">Вибрати фото</span>
+                    <input type="file" id="order-photo-input" accept=".jpg,.jpeg,.png,.webp,.heic" class="hidden">
+                  </label>
+                  <span id="order-photo-filename" class="text-sm text-stone-400 hidden"></span>
+                  <span id="order-photo-uploading" class="text-xs text-stone-400 hidden">
+                    <i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;display:inline-block"></i> Завантаження…
+                  </span>
+                </div>
+                <p id="order-photo-hint" class="mt-1 text-xs text-stone-400">
+                  Формати: JPG, PNG, WEBP, HEIC · до 15 МБ
+                </p>
+              </div>
+            </section>
           </div>
 
           <div class="order-composer-footer">

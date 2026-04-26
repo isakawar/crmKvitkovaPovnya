@@ -183,6 +183,9 @@ config.local.py
 *.bak
 *.backup
 
+# Uploaded files
+uploads/
+
 # Node modules (if any frontend)
 node_modules/
 npm-debug.log*
