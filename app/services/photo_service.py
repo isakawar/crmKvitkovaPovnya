@@ -1,13 +1,28 @@
+import io
 import os
 import uuid
+
+import pillow_heif
+from PIL import Image
 from flask import current_app
+
 from app.extensions import db
 from app.models import OrderPhoto
+
+pillow_heif.register_heif_opener()
 
 
 def _allowed(filename):
     ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
     return ext in current_app.config.get('ALLOWED_PHOTO_EXTENSIONS', set())
+
+
+def _to_webp(stream, quality=82):
+    img = Image.open(stream)
+    buf = io.BytesIO()
+    img.convert('RGB').save(buf, format='WEBP', quality=quality)
+    buf.seek(0)
+    return buf
 
 
 def save_photo(file, order_id, uploaded_by_id, comment=None):
@@ -16,11 +31,13 @@ def save_photo(file, order_id, uploaded_by_id, comment=None):
     if not _allowed(file.filename):
         return None, 'Недозволений формат файлу'
 
-    ext = file.filename.rsplit('.', 1)[-1].lower()
-    filename = f"{uuid.uuid4().hex}.{ext}"
     upload_folder = current_app.config['UPLOAD_FOLDER']
     os.makedirs(upload_folder, exist_ok=True)
-    file.save(os.path.join(upload_folder, filename))
+
+    filename = f"{uuid.uuid4().hex}.webp"
+    data = _to_webp(file.stream)
+    with open(os.path.join(upload_folder, filename), 'wb') as f:
+        f.write(data.read())
 
     photo = OrderPhoto(
         order_id=order_id,
@@ -47,6 +64,18 @@ def get_all_photos(page=1, per_page=20, order_id=None):
 
 def get_photo_by_id(photo_id):
     return OrderPhoto.query.get(photo_id)
+
+
+def bulk_delete_photos(ids):
+    photos = OrderPhoto.query.filter(OrderPhoto.id.in_(ids)).all()
+    upload_folder = current_app.config['UPLOAD_FOLDER']
+    for photo in photos:
+        filepath = os.path.join(upload_folder, photo.filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        db.session.delete(photo)
+    db.session.commit()
+    return len(photos)
 
 
 def delete_photo(photo_id):

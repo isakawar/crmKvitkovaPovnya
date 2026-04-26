@@ -1,3 +1,4 @@
+import mimetypes
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify
 from flask_login import current_user, login_required
@@ -16,7 +17,7 @@ def _can_delete():
 def list_photos():
     order_id = request.args.get('order_id', type=int)
     page = request.args.get('page', 1, type=int)
-    pagination = photo_service.get_all_photos(page=page, per_page=20, order_id=order_id)
+    pagination = photo_service.get_all_photos(page=page, per_page=25, order_id=order_id)
     return render_template(
         'photos/list.html',
         pagination=pagination,
@@ -55,7 +56,10 @@ def upload_photo():
 @login_required
 def serve_photo(filename):
     upload_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), 'uploads', 'order_photos')
-    return send_from_directory(upload_folder, filename)
+    mimetype, _ = mimetypes.guess_type(filename)
+    if not mimetype or not mimetype.startswith('image/'):
+        mimetype = 'image/webp'
+    return send_from_directory(upload_folder, filename, mimetype=mimetype)
 
 
 @photos_bp.route('/order/<int:order_id>/json')
@@ -110,6 +114,18 @@ def delete_photo_ajax(photo_id):
     if not ok:
         return jsonify({'success': False, 'error': error}), 404
     return jsonify({'success': True})
+
+
+@photos_bp.route('/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_photos():
+    if not _can_delete():
+        return jsonify({'success': False, 'error': 'Недостатньо прав'}), 403
+    ids = request.json.get('ids', []) if request.is_json else request.form.getlist('ids', type=int)
+    if not ids:
+        return jsonify({'success': False, 'error': 'Не вибрано жодного фото'}), 400
+    deleted = photo_service.bulk_delete_photos(ids)
+    return jsonify({'success': True, 'deleted': deleted})
 
 
 @photos_bp.route('/<int:photo_id>/delete', methods=['POST'])
