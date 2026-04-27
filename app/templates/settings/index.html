@@ -79,6 +79,19 @@
     </a>
     {% endif %}
 
+    <a class="settings-grid-card" href="{{ url_for('photos.list_photos') }}">
+      <span class="settings-grid-card__icon"><i class="bi bi-images"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Технічне</p>
+        <h2 class="settings-grid-card__title">Фото букетів</h2>
+        <p class="settings-grid-card__text">Перегляд, завантаження та масове видалення фото букетів прив'язаних до замовлень.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Відкрити галерею</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </a>
+
     <a class="settings-grid-card" href="{{ url_for('import_csv.kvitkovapovnya_import_page') }}">
       <span class="settings-grid-card__icon"><i class="bi bi-file-earmark-arrow-up"></i></span>
       <div>

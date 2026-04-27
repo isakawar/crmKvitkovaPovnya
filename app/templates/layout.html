@@ -381,7 +381,6 @@
             <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
             <span class="nav-label">Транзакції</span>
         </a>
-
         <!-- Spacer -->
         <div class="flex-1"></div>
 
@@ -881,14 +880,14 @@ document.addEventListener('submit', function(e) {
     if (!e.target.method || e.target.method.toLowerCase() === 'get') showPageSpinner();
 });
 </script>
-<div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:99998;">
-  <div id="__global-toast" class="toast" role="alert" aria-live="assertive">
-    <div class="toast-header">
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:99998;">
+  <div id="__global-toast" class="toast" role="alert" aria-live="assertive" style="max-width:280px;font-size:0.85rem;">
+    <div class="toast-header py-1">
       <i class="me-2"></i>
       <strong class="me-auto">Повідомлення</strong>
       <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
     </div>
-    <div class="toast-body"></div>
+    <div class="toast-body py-2"></div>
   </div>
 </div>
 </body>

@@ -172,6 +172,7 @@ def search_clients():
                .filter(or_(
                    Client.instagram.ilike(f'%{query}%'),
                    Client.telegram.ilike(f'%{query}%'),
+                   Client.phone.ilike(f'%{query}%'),
                ))
                .order_by(Client.instagram.nullslast(), Client.telegram)
                .limit(10)

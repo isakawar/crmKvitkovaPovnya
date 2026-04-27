@@ -51,6 +51,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.transactions import transactions_bp
     from app.blueprints.subscriptions import subscriptions_bp
     from app.blueprints.ai_agent import ai_agent_bp
+    from app.blueprints.photos.routes import photos_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -66,6 +67,10 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(transactions_bp)
     app.register_blueprint(subscriptions_bp)
     app.register_blueprint(ai_agent_bp)
+    app.register_blueprint(photos_bp)
+
+    # Ensure upload folder exists
+    os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads/order_photos'), exist_ok=True)
 
     # Cleanup old route cache (раз на добу, старше 7 днів)
     @app.before_request
@@ -120,6 +125,7 @@ def create_app(config_class=DevelopmentConfig):
                 and getattr(current_user, 'user_type', None) == 'florist'
                 and request.endpoint
                 and not request.endpoint.startswith('florist.')
+                and not request.endpoint.startswith('photos.')
                 and not request.endpoint.startswith('auth.')
                 and request.endpoint != 'static'):
             return redirect(url_for('florist.florist_routes'))

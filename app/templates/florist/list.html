@@ -332,6 +332,26 @@
         <span class="text-sm text-stone-300">—</span>
       {% endif %}
     </td>
+    <td>
+      {% if order %}
+        {% set order_photos = order.photos.all() %}
+        {% if order_photos %}
+          <div class="flex flex-wrap items-center gap-1.5">
+            <a href="{{ url_for('photos.serve_photo', filename=order_photos[0].filename) }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
+              <i class="bi bi-image"></i> Фото
+            </a>
+            {% if order_photos | length > 1 %}
+              <span class="text-xs text-stone-400">+{{ order_photos | length - 1 }}</span>
+            {% endif %}
+          </div>
+        {% else %}
+          <span class="text-xs text-stone-300">—</span>
+        {% endif %}
+      {% else %}
+        <span class="text-xs text-stone-300">—</span>
+      {% endif %}
+    </td>
     <td class="whitespace-nowrap text-sm">{{ time_slot }}</td>
     <td class="addr-cell">
       {% if delivery.is_pickup %}
@@ -369,6 +389,7 @@
       <th>Коробка / Букет</th>
       <th>Побажання</th>
       <th>Коментар</th>
+      <th>Фото</th>
       <th>Час</th>
       <th>Адреса</th>
     </tr>

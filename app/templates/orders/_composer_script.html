@@ -831,6 +831,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const successMessage = isEditing
                 ? (currentComposerFlow === 'subscription' ? 'Підписку успішно оновлено!' : 'Замовлення успішно оновлено!')
                 : (currentComposerFlow === 'subscription' ? 'Підписку успішно створено!' : 'Замовлення успішно створено!');
+
+            // Upload pending photo after order creation
+            if (!isEditing && data.order_id && typeof window._uploadPendingOrderPhoto === 'function') {
+                await window._uploadPendingOrderPhoto(data.order_id);
+            }
+
             if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
                 showToast(successMessage, 'success');
                 window.showRescheduleModal(data.reschedule_suggestion);
@@ -1299,4 +1305,176 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+</script>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function () {
+    const photoInput    = document.getElementById('order-photo-input');
+    const photoList     = document.getElementById('order-photos-list');
+    const photoFilename = document.getElementById('order-photo-filename');
+    const photoUploading = document.getElementById('order-photo-uploading');
+    const addOrderForm  = document.getElementById('addOrderForm');
+    if (!photoInput || !addOrderForm) return;
+
+    let pendingPhotoFile = null;
+
+    // ---------- helpers ----------
+    function getEditId() {
+        return addOrderForm.getAttribute('data-edit-id') || null;
+    }
+
+    function buildThumb(photo) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;width:64px;height:64px;flex-shrink:0;';
+        wrap.dataset.photoId = photo.id;
+        wrap.innerHTML = `
+            <img src="${photo.url}" alt="${photo.original_name}"
+                 style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e7e5e4;cursor:pointer;display:block;"
+                 onclick="window.open('${photo.url}','_blank')">
+            <button type="button" data-delete-photo-id="${photo.id}"
+                    style="position:absolute;top:4px;right:4px;z-index:10;width:20px;height:20px;border-radius:50%;background:#ef4444;color:#fff;font-size:14px;line-height:1;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3);"
+                    title="Видалити">×</button>`;
+        return wrap;
+    }
+
+    function addThumbToList(photo) {
+        photoList.classList.remove('hidden');
+        const thumb = buildThumb(photo);
+        photoList.appendChild(thumb);
+    }
+
+    async function loadPhotosForOrder(orderId) {
+        photoList.innerHTML = '';
+        photoList.classList.add('hidden');
+        try {
+            const res = await fetch(`/photos/order/${orderId}/json`);
+            const photos = await res.json();
+            photos.forEach(addThumbToList);
+        } catch (_) {}
+    }
+
+    // ---------- delete via click on × ----------
+    photoList.addEventListener('click', async function (e) {
+        const btn = e.target.closest('[data-delete-photo-id]');
+        if (!btn) return;
+        if (!confirm('Видалити фото?')) return;
+        const photoId = btn.dataset.deletePhotoId;
+        try {
+            const res = await fetch(`/photos/${photoId}/delete/ajax`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                btn.closest('[data-photo-id]').remove();
+                if (!photoList.children.length) photoList.classList.add('hidden');
+            } else {
+                showToast(data.error || 'Помилка видалення', 'error');
+            }
+        } catch (_) {
+            showToast('Помилка зʼєднання', 'error');
+        }
+    });
+
+    // ---------- pending photo preview (create mode) ----------
+    let pendingObjectUrl = null;
+
+    function _showPendingThumb(file) {
+        _clearPendingThumb();
+        pendingObjectUrl = URL.createObjectURL(file);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'position:relative;width:64px;height:64px;flex-shrink:0;';
+        wrap.id = 'pending-photo-thumb';
+        wrap.innerHTML = `
+            <img src="${pendingObjectUrl}" alt="${file.name}"
+                 style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e7e5e4;display:block;">
+            <button type="button" id="cancel-pending-photo"
+                    style="position:absolute;top:4px;right:4px;z-index:10;width:20px;height:20px;border-radius:50%;background:#ef4444;color:#fff;font-size:14px;line-height:1;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.3);"
+                    title="Скасувати">×</button>`;
+        photoList.classList.remove('hidden');
+        photoList.appendChild(wrap);
+        wrap.querySelector('#cancel-pending-photo').addEventListener('click', function () {
+            _clearPendingThumb();
+            pendingPhotoFile = null;
+            photoInput.value = '';
+            if (!photoList.children.length) photoList.classList.add('hidden');
+        });
+    }
+
+    function _clearPendingThumb() {
+        const existing = document.getElementById('pending-photo-thumb');
+        if (existing) existing.remove();
+        if (pendingObjectUrl) { URL.revokeObjectURL(pendingObjectUrl); pendingObjectUrl = null; }
+    }
+
+    // ---------- file selected ----------
+    photoInput.addEventListener('change', async function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const editId = getEditId();
+        if (editId) {
+            // Edit mode — upload immediately
+            photoFilename.classList.add('hidden');
+            photoUploading.classList.remove('hidden');
+            const fd = new FormData();
+            fd.append('photo', file);
+            fd.append('order_id', editId);
+            try {
+                const res = await fetch('/photos/upload/ajax', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.success) {
+                    addThumbToList(data.photo);
+                    showToast('Фото завантажено', 'success');
+                } else {
+                    showToast(data.error || 'Помилка завантаження', 'error');
+                }
+            } catch (_) {
+                showToast('Помилка зʼєднання', 'error');
+            } finally {
+                photoUploading.classList.add('hidden');
+                photoInput.value = '';
+            }
+        } else {
+            // Create mode — remember file and show preview
+            pendingPhotoFile = file;
+            _showPendingThumb(file);
+        }
+    });
+
+    // ---------- upload pending photo after order creation ----------
+    window._uploadPendingOrderPhoto = async function (orderId) {
+        if (!pendingPhotoFile) return;
+        const fd = new FormData();
+        fd.append('photo', pendingPhotoFile);
+        fd.append('order_id', orderId);
+        try {
+            await fetch('/photos/upload/ajax', { method: 'POST', body: fd });
+        } catch (_) {}
+        pendingPhotoFile = null;
+        _clearPendingThumb();
+    };
+
+    // ---------- hook into modal open / reset ----------
+    const modalEl = document.getElementById('addOrderModal');
+    if (modalEl) {
+        modalEl.addEventListener('show.bs.modal', function () {
+            pendingPhotoFile = null;
+            _clearPendingThumb();
+            photoFilename.textContent = '';
+            photoFilename.classList.add('hidden');
+            photoUploading.classList.add('hidden');
+            photoInput.value = '';
+            photoList.innerHTML = '';
+            photoList.classList.add('hidden');
+        });
+
+        // When the modal is fully shown in edit mode — load photos
+        modalEl.addEventListener('shown.bs.modal', function () {
+            const editId = getEditId();
+            if (editId) loadPhotosForOrder(editId);
+        });
+    }
+})();
 </script>

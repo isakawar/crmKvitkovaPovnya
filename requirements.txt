@@ -13,3 +13,5 @@ psycopg2-binary
 requests
 redis
 openpyxl
+Pillow
+pillow-heif

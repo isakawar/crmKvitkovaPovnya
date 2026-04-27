@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+_BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://kvitkova_user:kvitkova_password@localhost:5432/kvitkova_crm'
@@ -26,6 +28,11 @@ class Config:
     AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1')
     AI_MODEL = os.environ.get('AI_MODEL', 'qwen/qwen3-235b-a22b:free')
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+    # Photo uploads
+    UPLOAD_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'order_photos')
+    MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 MB
+    ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
 
 class DevelopmentConfig:
     DEBUG = True
@@ -54,6 +61,11 @@ class DevelopmentConfig:
     AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1')
     AI_MODEL = os.environ.get('AI_MODEL', 'qwen/qwen3-235b-a22b:free')
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+    # Photo uploads
+    UPLOAD_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'order_photos')
+    MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 MB
+    ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False
