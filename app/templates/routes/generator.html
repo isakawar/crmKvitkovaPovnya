@@ -54,12 +54,10 @@
     font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
     background: #fef3c7; color: #92400e; margin-left: 6px; vertical-align: middle;
   }
-  .drag-handle {
-    color: #d6d3d1; cursor: grab; font-size: 1.1rem;
-    flex-shrink: 0; margin-top: 2px; transition: color 0.15s;
-  }
-  .drag-handle:hover { color: #78716c; }
-  .drag-handle:active { cursor: grabbing; }
+  .drag-handle { display: none; }
+  .route-stops-list li { cursor: grab; }
+  .route-stops-list li:active { cursor: grabbing; }
+  .sortable-chosen { cursor: grabbing; }
   .route-stops-list.drag-over { background: #fef9ee; border-radius: 8px; }
   .stop-num {
     display: inline-flex; align-items: center; justify-content: center;
@@ -294,21 +292,9 @@
   </div>
   {% endif %}
 
-  <!-- Tabs + Form -->
+  <!-- Form -->
   <div class="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-    <div class="flex border-b border-stone-200 px-5 pt-4 gap-1">
-      <button id="tab-crm" type="button"
-              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px {% if not csv_mode %}border-stone-900 text-stone-900{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">
-        <i class="bi bi-database me-1"></i> З CRM
-      </button>
-      <button id="tab-csv" type="button"
-              class="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px {% if csv_mode %}border-stone-900 text-stone-900{% else %}border-transparent text-stone-500 hover:text-stone-700{% endif %}">
-        <i class="bi bi-filetype-csv me-1"></i> Завантажити CSV
-      </button>
-    </div>
-
-    <!-- CRM panel -->
-    <div id="panel-crm" class="px-5 py-4" {% if csv_mode %}style="display:none;"{% endif %}>
+    <div class="px-5 py-4">
       <form method="post" id="optimizer-form" class="flex flex-wrap items-end gap-4">
         {% if edit_route_id %}<input type="hidden" name="editing_route_id" value="{{ edit_route_id }}">{% endif %}
         <div class="flex flex-col gap-1.5">
@@ -319,23 +305,6 @@
         <button type="button" id="btn-open-picker"
                 class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
           <i class="bi bi-magic"></i> Побудувати маршрут
-        </button>
-      </form>
-    </div>
-
-    <!-- CSV panel -->
-    <div id="panel-csv" class="px-5 py-4" {% if not csv_mode %}style="display:none;"{% endif %}>
-      <form method="post" action="{{ url_for('orders.route_generator_optimize_csv') }}"
-            enctype="multipart/form-data" class="flex flex-wrap items-end gap-4" id="csv-form">
-        <div class="flex flex-col gap-1.5" style="width:260px;">
-          <label class="text-xs font-semibold uppercase tracking-wide text-stone-400">CSV файл з замовленнями</label>
-          <input type="file" name="file" id="csv-file-input" accept=".csv"
-                 class="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 file:mr-3 file:border-0 file:bg-stone-900 file:text-white file:text-xs file:font-medium file:px-3 file:py-1 file:rounded">
-        
-        </div>
-        <button type="submit"
-                class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
-          <i class="bi bi-magic"></i> Розрахувати
         </button>
       </form>
     </div>
@@ -405,14 +374,6 @@
 
     <!-- Action buttons -->
     <div class="flex flex-wrap gap-2">
-      <form method="post" action="{{ url_for('orders.route_generator_export_csv') }}" id="export-form">
-        <input type="hidden" name="result_json" id="export-result-json">
-        <input type="hidden" name="selected_date" id="export-selected-date" value="{{ selected_date }}">
-        <button type="submit"
-                class="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
-          <i class="bi bi-download"></i> Експорт CSV
-        </button>
-      </form>
       <button id="btn-add-courier"
               class="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
         <i class="bi bi-person-plus"></i> Додати кур'єра
@@ -440,10 +401,6 @@
           <button id="btn-recalculate"
                   class="inline-flex items-center gap-1.5 rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-stone-700">
             <i class="bi bi-arrow-repeat"></i> Перерахувати
-          </button>
-          <button id="btn-export-modified"
-                  class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-50">
-            <i class="bi bi-download"></i> Експорт CSV
           </button>
         </div>
       </div>
@@ -635,59 +592,6 @@ function startJobPolling(jobId, csvMode, date) {
     }
   }, 2000);
 }
-
-// ── CSV form — AJAX submit ────────────────────────────────────────────────────
-const csvForm = document.getElementById('csv-form');
-if (csvForm) {
-  csvForm.addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const fileInput = document.getElementById('csv-file-input');
-    if (!fileInput || !fileInput.files.length) {
-      alert('Оберіть CSV файл');
-      return;
-    }
-    document.getElementById('loading-overlay').classList.add('active');
-    try {
-      const resp = await fetch('/route-generator/optimize-csv', {
-        method: 'POST',
-        body: new FormData(this),
-      });
-      const data = await resp.json();
-      if (data.result) {
-        document.getElementById('loading-overlay').classList.remove('active');
-        window.renderResult(data.result, true);
-      } else if (data.job_id) {
-        startJobPolling(data.job_id, true);
-      } else {
-        document.getElementById('loading-overlay').classList.remove('active');
-        alert(data.error || 'Помилка');
-      }
-    } catch(e) {
-      document.getElementById('loading-overlay').classList.remove('active');
-      alert('Помилка з\'єднання: ' + e.message);
-    }
-  });
-}
-
-// ── Mode tab switching ────────────────────────────────────────────────────────
-document.getElementById('tab-crm').addEventListener('click', function() {
-  this.classList.add('border-stone-900', 'text-stone-900');
-  this.classList.remove('border-transparent', 'text-stone-500');
-  const tabCsv = document.getElementById('tab-csv');
-  tabCsv.classList.remove('border-stone-900', 'text-stone-900');
-  tabCsv.classList.add('border-transparent', 'text-stone-500');
-  document.getElementById('panel-crm').style.display = '';
-  document.getElementById('panel-csv').style.display = 'none';
-});
-document.getElementById('tab-csv').addEventListener('click', function() {
-  this.classList.add('border-stone-900', 'text-stone-900');
-  this.classList.remove('border-transparent', 'text-stone-500');
-  const tabCrm = document.getElementById('tab-crm');
-  tabCrm.classList.remove('border-stone-900', 'text-stone-900');
-  tabCrm.classList.add('border-transparent', 'text-stone-500');
-  document.getElementById('panel-csv').style.display = '';
-  document.getElementById('panel-crm').style.display = 'none';
-});
 
 // ── Delivery picker ───────────────────────────────────────────────────────────
 let _pickerModalInstance = null;
@@ -979,7 +883,6 @@ document.addEventListener('click', function(e) {
   let originalResult = null;
   let currentRoutes = [];
   let hasChanges = false;
-  let isCsvMode = false;
   let distributeNewIds = new Set();
   let selectedDate = '{{ selected_date }}';
 
@@ -1113,17 +1016,6 @@ document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-remove-stop')) return;
         const newIdx = activeRouteIdx === idx ? null : idx;
         highlightRoute(newIdx);
-        if (newIdx !== null && window.routeMapLayers[idx]) {
-          const bounds = [];
-          const entry = window.routeMapLayers[idx];
-          if (entry.line) {
-            entry.line.getLatLngs().forEach(function(ll) {
-              (Array.isArray(ll[0]) ? ll : [ll]).forEach(function(p) { bounds.push(p); });
-            });
-          }
-          entry.markers.forEach(function(m) { bounds.push(m.getLatLng()); });
-          if (bounds.length) map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 15 });
-        }
       });
 
       const list = card.querySelector('.route-stops-list');
@@ -1225,7 +1117,6 @@ document.addEventListener('click', function(e) {
   function initSortable(listEl) {
     Sortable.create(listEl, {
       group: 'routes',
-      handle: '.drag-handle',
       animation: 150,
       ghostClass: 'sortable-ghost',
       chosenClass: 'sortable-chosen',
@@ -1246,25 +1137,6 @@ document.addEventListener('click', function(e) {
     hasChanges = false;
     document.getElementById('changes-banner').classList.remove('visible');
     renderRoutes(currentRoutes);
-  });
-
-  document.getElementById('btn-export-modified').addEventListener('click', function() {
-    syncRoutesFromDOM();
-    const modifiedResult = Object.assign({}, originalResult, { routes: currentRoutes });
-
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ url_for("orders.route_generator_export_csv") }}';
-
-    [['result_json', JSON.stringify(modifiedResult)],
-     ['selected_date', selectedDate]].forEach(function([n, v]) {
-      const inp = document.createElement('input');
-      inp.type = 'hidden'; inp.name = n; inp.value = v;
-      form.appendChild(inp);
-    });
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
   });
 
   document.getElementById('btn-recalculate').addEventListener('click', async function() {
@@ -1643,16 +1515,7 @@ document.addEventListener('click', function(e) {
     document.getElementById('stat-dropped').textContent = dropped;
   }
 
-  document.getElementById('export-form').addEventListener('submit', function() {
-    syncRoutesFromDOM();
-    document.getElementById('export-result-json').value = JSON.stringify(
-      Object.assign({}, originalResult, { routes: currentRoutes })
-    );
-    document.getElementById('export-selected-date').value = selectedDate;
-  });
-
-  window.renderResult = function(result, csvMode) {
-    isCsvMode = !!csvMode;
+  window.renderResult = function(result) {
     originalResult = result;
     currentRoutes = JSON.parse(JSON.stringify(result.routes || []));
     hasChanges = false;
@@ -1666,14 +1529,12 @@ document.addEventListener('click', function(e) {
     }
 
     document.getElementById('result-section').style.display = '';
-    const saveBtn = document.getElementById('btn-save-routes');
-    saveBtn.style.display = isCsvMode ? 'none' : '';
+    document.getElementById('btn-save-routes').style.display = '';
 
     updateStats(result.stats || {});
     updateMap(result);
     renderRoutes(currentRoutes);
 
-    document.getElementById('export-result-json').value = JSON.stringify(result);
     document.getElementById('changes-banner').classList.remove('visible');
   };
 
