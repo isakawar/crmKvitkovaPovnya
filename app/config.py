@@ -22,6 +22,7 @@ class Config:
     REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')
@@ -55,6 +56,7 @@ class DevelopmentConfig:
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')

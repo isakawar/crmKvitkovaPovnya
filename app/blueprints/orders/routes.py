@@ -916,6 +916,34 @@ def route_generator_deliveries():
     return jsonify(result)
 
 
+def _gmaps_distance_for_stops(stops: list, depot_address: str, api_key: str):
+    """Build ordered address list from stop delivery IDs and call Google Maps Directions API."""
+    from app.models.delivery import Delivery
+    from app.services.google_maps_service import get_route_distance_km
+    from sqlalchemy.orm import joinedload
+
+    addresses = []
+    if depot_address:
+        addresses.append(depot_address)
+    for stop in stops:
+        delivery_id = stop.get('id')
+        if not delivery_id:
+            continue
+        d = Delivery.query.options(joinedload(Delivery.order)).get(delivery_id)
+        if not d:
+            continue
+        order = d.order
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or ''
+        building = (d.building_number or (order.building_number if order else '')) or ''
+        parts = [p for p in [city, street, building] if p]
+        if parts:
+            addresses.append(', '.join(parts))
+    if len(addresses) < 2:
+        return None
+    return get_route_distance_km(addresses, api_key)
+
+
 @orders_bp.route('/route-generator/save', methods=['POST'])
 @login_required
 def route_generator_save():
@@ -988,6 +1016,10 @@ def route_generator_save():
             'routes': [route_data],
         })
 
+        _gmaps_key = current_app.config.get('GOOGLE_MAPS_API_KEY', '')
+        _depot = current_app.config.get('DEPOT_ADDRESS', '')
+        _distance_km = _gmaps_distance_for_stops(stops, _depot, _gmaps_key) or route_data.get('totalDistanceKm')
+
         dr = None
         # Per-route routeDbId takes priority (view_date multi-edit mode)
         route_db_id = route_data.get('routeDbId')
@@ -1006,7 +1038,7 @@ def route_generator_save():
                 RouteDelivery.query.filter_by(route_id=dr.id).delete()
                 dr.route_date = selected_date
                 dr.deliveries_count = len(stops)
-                dr.total_distance_km = route_data.get('totalDistanceKm')
+                dr.total_distance_km = _distance_km
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
                 dr.cached_result_json = single_route_cache
                 dr.cached_at = datetime.utcnow()
@@ -1032,7 +1064,7 @@ def route_generator_save():
                 route_date=selected_date,
                 status='draft',
                 deliveries_count=len(stops),
-                total_distance_km=route_data.get('totalDistanceKm'),
+                total_distance_km=_distance_km,
                 estimated_duration_min=route_data.get('totalDriveMin'),
                 start_time=start_time_val,
                 cached_result_json=single_route_cache,
@@ -1252,6 +1284,10 @@ def route_generator_distribute_apply():
         route_db_id = route_data.get('routeDbId')
         stops = route_data.get('stops', [])
 
+        _gmaps_key = current_app.config.get('GOOGLE_MAPS_API_KEY', '')
+        _depot = current_app.config.get('DEPOT_ADDRESS', '')
+        _distance_km = _gmaps_distance_for_stops(stops, _depot, _gmaps_key) or route_data.get('totalDistanceKm')
+
         if route_db_id:
             dr = DeliveryRoute.query.get(route_db_id)
             if not dr:
@@ -1290,7 +1326,7 @@ def route_generator_distribute_apply():
                         delivery.status = 'Розподілено'
 
             dr.deliveries_count = len(stops)
-            dr.total_distance_km = route_data.get('totalDistanceKm')
+            dr.total_distance_km = _distance_km
             dr.estimated_duration_min = route_data.get('totalDriveMin')
             dep_str = (route_data.get('departureTime') or '').strip()
             if dep_str:
@@ -1310,7 +1346,7 @@ def route_generator_distribute_apply():
                 route_date=selected_date,
                 status='draft',
                 deliveries_count=len(stops),
-                total_distance_km=route_data.get('totalDistanceKm'),
+                total_distance_km=_distance_km,
                 estimated_duration_min=route_data.get('totalDriveMin'),
                 start_time=start_time_val,
             )
