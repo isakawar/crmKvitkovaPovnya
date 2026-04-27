@@ -122,6 +122,8 @@
             {% if txn.transaction_type == 'credit' and txn.client %}
             <a href="/clients?open={{ txn.client_id }}" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2">{{ txn.client.instagram }}</a>
             {% if txn.client.phone %}<span class="ml-1.5 text-xs text-stone-400">{{ txn.client.phone }}</span>{% endif %}
+            {% elif txn.transaction_type == 'credit' and not txn.client_id %}
+            <span class="text-stone-500 italic">Офлайн продаж</span>
             {% elif txn.expense_type %}
             <span class="text-stone-700">{{ txn.expense_type }}</span>
             {% else %}
