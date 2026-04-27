@@ -376,6 +376,10 @@
 
     <!-- Action buttons -->
     <div class="flex flex-wrap gap-2">
+      <button id="btn-add-courier"
+              class="inline-flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50">
+        <i class="bi bi-person-plus"></i> Додати кур'єра
+      </button>
       <button id="btn-save-routes" style="display:none;"
               class="inline-flex items-center gap-2 rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-700">
         <i class="bi bi-floppy"></i> Зберегти маршрути
@@ -1465,6 +1469,56 @@ document.addEventListener('click', function(e) {
 
     if (allPoints.length > 0) map.fitBounds(allPoints, { padding: [36, 36] });
   }
+
+  document.getElementById('btn-add-courier').addEventListener('click', function() {
+    const maxId = currentRoutes.reduce(function(acc, r) {
+      return Math.max(acc, typeof r.courierId === 'number' ? r.courierId : 0);
+    }, 0);
+    const newRoute = {
+      courierId: maxId + 1,
+      stops: [],
+      totalDistanceKm: null,
+      totalDriveMin: null,
+    };
+    currentRoutes.push(newRoute);
+
+    const container = document.getElementById('routes-container');
+    const idx = currentRoutes.length - 1;
+    const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+    const card = document.createElement('div');
+    card.className = 'rounded-xl border border-stone-200 bg-white overflow-hidden';
+    card.dataset.routeIdx = idx;
+    card.innerHTML = `
+      <div class="route-card-header flex items-center justify-between px-4 py-3 border-b border-stone-100 bg-stone-50">
+        <div class="flex items-center gap-2">
+          <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+          <span style="font-weight:600;font-size:0.9rem;color:#1c1917;">Кур'єр ${newRoute.courierId}</span>
+          <span style="font-size:0.72rem;background:#f5f5f4;color:#78716c;padding:2px 8px;border-radius:20px;">новий</span>
+        </div>
+        <span style="font-size:0.78rem;color:#a8a29e;">
+          <span class="stops-count">0</span> зупинок
+        </span>
+      </div>
+      <div>
+        <ul class="route-stops-list list-unstyled mb-0"
+            id="stop-list-${idx}"
+            data-route-idx="${idx}"
+            data-color="${color}">
+          <li class="empty-hint" style="text-align:center;padding:20px;font-size:0.85rem;color:#a8a29e;pointer-events:none;">
+            <i class="bi bi-arrow-left-right me-1"></i>Перетягніть сюди доставки
+          </li>
+        </ul>
+      </div>
+    `;
+    container.appendChild(card);
+
+    const list = card.querySelector('.route-stops-list');
+    initSortable(list);
+
+    hasChanges = true;
+    document.getElementById('changes-banner').classList.add('visible');
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 
   function updateStats(stats) {
     document.getElementById('stat-deliveries').textContent = stats.totalDeliveries ?? 0;
