@@ -397,6 +397,12 @@ class CourierHandlers:
             await self._send_route_addresses(query, route_id=int(data.split("_")[-1]))
         elif data.startswith("route_done_"):
             await self._handle_route_done(query, courier, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_abandon_yes_"):
+            await self._handle_route_abandon_yes(query, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_abandon_no_"):
+            await self._handle_route_abandon_no(query, route_id=int(data.split("_")[-1]))
+        elif data.startswith("route_abandon_"):
+            await self._handle_route_abandon(query, route_id=int(data.split("_")[-1]))
         else:
             logger.warning(f"Unknown callback command: {data}")
             await query.edit_message_text("❌ Невідома команда")
@@ -1009,6 +1015,129 @@ class CourierHandlers:
             parse_mode='HTML'
         )
 
+    async def _handle_route_abandon(self, query, route_id: int):
+        """Show abandonment confirmation"""
+        await query.answer()
+        await query.edit_message_text(
+            "⚠️ <b>Відмова від маршруту</b>\n\nВи впевнені, що хочете відмовитись від маршруту?",
+            parse_mode='HTML',
+            reply_markup=self.keyboards.route_abandon_confirm_menu(route_id),
+        )
+
+    async def _handle_route_abandon_yes(self, query, route_id: int):
+        """Courier confirmed abandonment — revert route to rejected"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        if not route:
+            await query.edit_message_text("❌ Маршрут не знайдено")
+            return
+        if route.status != 'accepted':
+            await query.answer("Маршрут вже не активний", show_alert=True)
+            return
+        route.status = 'rejected'
+        route.rejected_at = datetime.utcnow()
+        stops = RouteDelivery.query.filter_by(route_id=route_id).all()
+        for stop in stops:
+            if stop.delivery:
+                stop.delivery.courier_id = None
+                stop.delivery.status = 'Призначено'
+        db.session.commit()
+        await query.edit_message_text(
+            f"❌ <b>Ви відмовились від маршруту</b>\n\n"
+            f"📅 {route.route_date.strftime('%d.%m.%Y')} · {route.deliveries_count} доставок\n\n"
+            f"Менеджер отримає сповіщення та призначить іншого кур'єра.",
+            parse_mode='HTML',
+        )
+
+    async def _handle_route_abandon_no(self, query, route_id: int):
+        """Courier cancelled abandonment — restore route detail view"""
+        from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        await query.answer()
+        route = DeliveryRoute.query.get(route_id)
+        if not route or route.status != 'accepted':
+            await query.edit_message_text("❌ Маршрут не знайдено або вже не активний")
+            return
+
+        stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
+        num_emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']
+        text = f"✅ <b>Доставки {route.route_date.strftime('%d.%m.%Y')}</b>\n"
+        if route.delivery_price:
+            text += f"💰 Вартість = {route.delivery_price}₴\n"
+        text += "\n"
+
+        for stop in stops:
+            d = stop.delivery
+            order = d.order if d else None
+            idx = stop.stop_order - 1
+            num = num_emojis[idx] if idx < len(num_emojis) else f"{stop.stop_order}."
+            addr_parts = []
+            city = (order.city if order else '') or ''
+            street = (d.street or (order.street if order else '')) or ''
+            building = (d.building_number or (order.building_number if order else '')) or ''
+            if city: addr_parts.append(city)
+            if street: addr_parts.append(street)
+            if building: addr_parts.append(building)
+            addr = ', '.join(addr_parts) or '—'
+            floor = (d.floor or (order.floor if order else '')) or ''
+            entrance = (d.entrance or (order.entrance if order else '')) or ''
+            addr_extra = ''
+            if floor: addr_extra += f', {floor} поверх'
+            if entrance: addr_extra += f', під\'їзд {entrance}'
+            recipient = (order.recipient_name if order else '') or ''
+            phone = (d.phone or (order.recipient_phone if order else '')) or ''
+            bouquet = (d.bouquet_type or (order.bouquet_type if order else '')) or ''
+            if stop.planned_arrival:
+                time_str = stop.planned_arrival.strftime('%H:%M')
+            elif d and d.time_from:
+                time_str = d.time_from.strftime('%H:%M')
+            else:
+                time_str = ''
+            address_comment = (d.address_comment if d else '') or ''
+            text += f"{num}\n"
+            if time_str: text += f"⏰ {time_str}\n"
+            if recipient: text += f"👤 {recipient}\n"
+            if phone: text += f"📞 {phone}\n"
+            if bouquet: text += f"📦 {bouquet}\n"
+            text += f"📍 {addr}{addr_extra}\n"
+            if address_comment: text += f"💬 {address_comment}\n"
+            text += "\n"
+
+        cached_stops = []
+        if route.cached_result_json:
+            try:
+                cached = json.loads(route.cached_result_json)
+                cached_stops = (cached.get('routes') or [{}])[0].get('stops', [])
+            except (json.JSONDecodeError, IndexError, KeyError):
+                pass
+        depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
+        gmaps_stops = []
+        if depot_address:
+            gmaps_stops.append(urllib.parse.quote(depot_address))
+        for i, stop in enumerate(stops):
+            cached_stop = cached_stops[i] if i < len(cached_stops) else {}
+            if cached_stop.get('lat') and cached_stop.get('lng'):
+                gmaps_stops.append(f"{cached_stop['lat']},{cached_stop['lng']}")
+            else:
+                d = stop.delivery
+                order = d.order if d else None
+                parts = []
+                city = (order.city if order else '') or ''
+                street = (d.street or (order.street if order else '')) or ''
+                building = (d.building_number or (order.building_number if order else '')) or ''
+                if city: parts.append(city)
+                if street: parts.append(street)
+                if building: parts.append(building)
+                if parts:
+                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
+
+        await query.edit_message_text(
+            text,
+            parse_mode='HTML',
+            reply_markup=self.keyboards.route_accepted_menu(gmaps_url, route_id),
+        )
+
     async def _handle_route_response(self, query, courier: Courier, data: str):
         """Handle courier accept/reject for a delivery route proposal"""
         from app.models.delivery_route import DeliveryRoute, RouteDelivery
@@ -1101,7 +1230,10 @@ class CourierHandlers:
                 except (json.JSONDecodeError, IndexError, KeyError):
                     pass
 
+            depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
             gmaps_stops = []
+            if depot_address:
+                gmaps_stops.append(urllib.parse.quote(depot_address))
             for i, stop in enumerate(stops):
                 cached_stop = cached_stops[i] if i < len(cached_stops) else {}
                 if cached_stop.get('lat') and cached_stop.get('lng'):
