@@ -1016,17 +1016,6 @@ document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-remove-stop')) return;
         const newIdx = activeRouteIdx === idx ? null : idx;
         highlightRoute(newIdx);
-        if (newIdx !== null && window.routeMapLayers[idx]) {
-          const bounds = [];
-          const entry = window.routeMapLayers[idx];
-          if (entry.line) {
-            entry.line.getLatLngs().forEach(function(ll) {
-              (Array.isArray(ll[0]) ? ll : [ll]).forEach(function(p) { bounds.push(p); });
-            });
-          }
-          entry.markers.forEach(function(m) { bounds.push(m.getLatLng()); });
-          if (bounds.length) map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 15 });
-        }
       });
 
       const list = card.querySelector('.route-stops-list');
