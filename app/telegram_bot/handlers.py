@@ -1110,7 +1110,10 @@ class CourierHandlers:
                 cached_stops = (cached.get('routes') or [{}])[0].get('stops', [])
             except (json.JSONDecodeError, IndexError, KeyError):
                 pass
+        depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
         gmaps_stops = []
+        if depot_address:
+            gmaps_stops.append(urllib.parse.quote(depot_address))
         for i, stop in enumerate(stops):
             cached_stop = cached_stops[i] if i < len(cached_stops) else {}
             if cached_stop.get('lat') and cached_stop.get('lng'):
@@ -1227,7 +1230,10 @@ class CourierHandlers:
                 except (json.JSONDecodeError, IndexError, KeyError):
                     pass
 
+            depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
             gmaps_stops = []
+            if depot_address:
+                gmaps_stops.append(urllib.parse.quote(depot_address))
             for i, stop in enumerate(stops):
                 cached_stop = cached_stops[i] if i < len(cached_stops) else {}
                 if cached_stop.get('lat') and cached_stop.get('lng'):
