@@ -162,16 +162,10 @@ class CourierKeyboards:
     def route_accepted_menu(gmaps_url: str, route_id: int) -> InlineKeyboardMarkup:
         """Keyboard shown after courier accepts a route"""
         keyboard = [
-            [
-                InlineKeyboardButton("🗺 Відкрити маршрут", url=gmaps_url),
-                InlineKeyboardButton("📋 Адреси по одному", callback_data=f"route_copy_addresses_{route_id}"),
-            ],
-            [
-                InlineKeyboardButton("🚫 Відмовитись від маршруту", callback_data=f"route_abandon_{route_id}"),
-            ],
-            [
-                InlineKeyboardButton("✅ Маршрут завершено", callback_data=f"route_done_{route_id}"),
-            ]
+            [InlineKeyboardButton("🗺 Відкрити маршрут", url=gmaps_url)],
+            [InlineKeyboardButton("📋 Адреси по одному", callback_data=f"route_copy_addresses_{route_id}")],
+            [InlineKeyboardButton("🚫 Відмовитись від маршруту", callback_data=f"route_abandon_{route_id}")],
+            [InlineKeyboardButton("✅ Маршрут завершено", callback_data=f"route_done_{route_id}")],
         ]
         return InlineKeyboardMarkup(keyboard)
 
