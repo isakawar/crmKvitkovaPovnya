@@ -243,20 +243,32 @@ def assign_and_send_route(route_id):
         if d and d.address_comment:
             text += f"\n   📝 {d.address_comment}"
 
+    cached_stops = []
+    if route.cached_result_json:
+        try:
+            cached = json.loads(route.cached_result_json)
+            cached_stops = (cached.get('routes') or [{}])[0].get('stops', [])
+        except (json.JSONDecodeError, IndexError, KeyError):
+            pass
+
     depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
     gmaps_parts = []
     if depot_address:
         gmaps_parts.append(urllib.parse.quote(depot_address))
-    for stop in stops:
-        d = stop.delivery
-        order = d.order if d else None
-        parts = [p for p in [
-            (order.city if order else '') or '',
-            (d.street or (order.street if order else '')) or '',
-            (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+    for i, stop in enumerate(stops):
+        cached_stop = cached_stops[i] if i < len(cached_stops) else {}
+        if cached_stop.get('lat') and cached_stop.get('lng'):
+            gmaps_parts.append(f"{cached_stop['lat']},{cached_stop['lng']}")
+        else:
+            d = stop.delivery
+            order = d.order if d else None
+            parts = [p for p in [
+                (order.city if order else '') or '',
+                (d.street or (order.street if order else '')) or '',
+                (d.building_number or (order.building_number if order else '')) or '',
+            ] if p]
+            if parts:
+                gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
     gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts) if gmaps_parts else None
 
     inline_keyboard = []
