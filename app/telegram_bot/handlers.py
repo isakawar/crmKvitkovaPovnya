@@ -3,6 +3,7 @@
 Telegram Bot Command Handlers for Kvitkova Povnya CRM
 """
 
+import json
 import logging
 import urllib.parse
 from datetime import datetime, timedelta
@@ -1091,20 +1092,32 @@ class CourierHandlers:
                 if address_comment: text += f"💬 {address_comment}\n"
                 text += "\n"
 
-            # Build Google Maps multi-stop URL
+            # Build Google Maps multi-stop URL using coordinates from optimizer (more reliable than text)
+            cached_stops = []
+            if route.cached_result_json:
+                try:
+                    cached = json.loads(route.cached_result_json)
+                    cached_stops = (cached.get('routes') or [{}])[0].get('stops', [])
+                except (json.JSONDecodeError, IndexError, KeyError):
+                    pass
+
             gmaps_stops = []
-            for stop in stops:
-                d = stop.delivery
-                order = d.order if d else None
-                parts = []
-                city = (order.city if order else '') or ''
-                street = (d.street or (order.street if order else '')) or ''
-                building = (d.building_number or (order.building_number if order else '')) or ''
-                if city: parts.append(city)
-                if street: parts.append(street)
-                if building: parts.append(building)
-                if parts:
-                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+            for i, stop in enumerate(stops):
+                cached_stop = cached_stops[i] if i < len(cached_stops) else {}
+                if cached_stop.get('lat') and cached_stop.get('lng'):
+                    gmaps_stops.append(f"{cached_stop['lat']},{cached_stop['lng']}")
+                else:
+                    d = stop.delivery
+                    order = d.order if d else None
+                    parts = []
+                    city = (order.city if order else '') or ''
+                    street = (d.street or (order.street if order else '')) or ''
+                    building = (d.building_number or (order.building_number if order else '')) or ''
+                    if city: parts.append(city)
+                    if street: parts.append(street)
+                    if building: parts.append(building)
+                    if parts:
+                        gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
             gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
         else:
             route.status = 'rejected'

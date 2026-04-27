@@ -100,6 +100,7 @@
             <th class="px-4 py-3 text-left font-semibold text-stone-600">Дата</th>
             <th class="px-4 py-3 text-right font-semibold text-stone-600">Сума</th>
             <th class="px-4 py-3 text-right font-semibold text-stone-600">Бонус</th>
+            <th class="px-4 py-3 text-left font-semibold text-stone-600">Оплата</th>
             <th class="px-4 py-3 text-left font-semibold text-stone-600">Коментар</th>
             <th class="px-4 py-3 text-center font-semibold text-stone-600">Дії</th>
           </tr>
@@ -111,11 +112,28 @@
             <td class="px-4 py-3 text-stone-700 whitespace-nowrap">{{ sale.created_at | kyiv_time }}</td>
             <td class="px-4 py-3 text-right font-semibold text-stone-900 whitespace-nowrap">{{ "%.2f"|format(sale.amount|float) }} ₴</td>
             <td class="px-4 py-3 text-right text-amber-700 whitespace-nowrap">{{ "%.2f"|format(sale.bonus_amount|float) }} ₴</td>
+            <td class="px-4 py-3">
+              {% if sale.payment_type == 'monobank' %}
+              <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+                <i class="bi bi-credit-card"></i> Monobank
+              </span>
+              {% elif sale.payment_type == 'cash' %}
+              <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+                <i class="bi bi-cash"></i> Готівка
+              </span>
+              {% else %}
+              <span class="text-stone-300">—</span>
+              {% endif %}
+            </td>
             <td class="px-4 py-3 text-stone-500">{{ sale.comment or '—' }}</td>
             <td class="px-4 py-3 text-center">
               {% if editable %}
               <button type="button"
-                      onclick="openEditModal({{ sale.id }}, {{ sale.amount|float }}, {{ sale.comment|tojson }})"
+                      data-id="{{ sale.id }}"
+                      data-amount="{{ sale.amount|float }}"
+                      data-comment="{{ sale.comment or '' }}"
+                      data-payment="{{ sale.payment_type or 'cash' }}"
+                      onclick="openEditModal(this)"
                       class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100">
                 <i class="bi bi-pencil"></i>
                 Змінити
@@ -188,6 +206,14 @@
                class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
       </div>
       <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Тип оплати <span class="text-red-500">*</span></label>
+        <select id="addPaymentType"
+                class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+          <option value="cash" selected>Готівка</option>
+          <option value="monobank">Monobank</option>
+        </select>
+      </div>
+      <div>
         <label class="block text-sm font-medium text-stone-700 mb-1">Коментар</label>
         <textarea id="addComment" rows="2"
                   placeholder="Необов'язково"
@@ -223,6 +249,14 @@
                class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
       </div>
       <div>
+        <label class="block text-sm font-medium text-stone-700 mb-1">Тип оплати <span class="text-red-500">*</span></label>
+        <select id="editPaymentType"
+                class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+          <option value="cash">Готівка</option>
+          <option value="monobank">Monobank</option>
+        </select>
+      </div>
+      <div>
         <label class="block text-sm font-medium text-stone-700 mb-1">Коментар</label>
         <textarea id="editComment" rows="2"
                   class="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
@@ -252,6 +286,7 @@
   function openAddModal() {
     document.getElementById('addAmount').value = '';
     document.getElementById('addComment').value = '';
+    document.getElementById('addPaymentType').value = 'cash';
     document.getElementById('addWarning').classList.add('hidden');
     addConfirmed = false;
     document.getElementById('addModal').style.display = 'flex';
@@ -287,6 +322,7 @@
       return;
     }
     const comment = document.getElementById('addComment').value.trim();
+    const payment_type = document.getElementById('addPaymentType').value;
     const btn = document.getElementById('addSubmitBtn');
     btn.disabled = true;
     btn.textContent = 'Збереження...';
@@ -294,7 +330,7 @@
     fetch('/florist/sales', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-      body: JSON.stringify({amount, comment}),
+      body: JSON.stringify({amount, comment, payment_type}),
     })
     .then(r => r.json())
     .then(data => {
@@ -315,10 +351,11 @@
     });
   }
 
-  function openEditModal(id, amount, comment) {
-    currentEditId = id;
-    document.getElementById('editAmount').value = amount;
-    document.getElementById('editComment').value = comment || '';
+  function openEditModal(btn) {
+    currentEditId = parseInt(btn.dataset.id);
+    document.getElementById('editAmount').value = btn.dataset.amount;
+    document.getElementById('editComment').value = btn.dataset.comment;
+    document.getElementById('editPaymentType').value = btn.dataset.payment || 'cash';
     document.getElementById('editModal').style.display = 'flex';
     document.getElementById('editAmount').focus();
   }
@@ -335,11 +372,12 @@
       return;
     }
     const comment = document.getElementById('editComment').value.trim();
+    const payment_type = document.getElementById('editPaymentType').value;
 
     fetch(`/florist/sales/${currentEditId}/edit`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
-      body: JSON.stringify({amount, comment}),
+      body: JSON.stringify({amount, comment, payment_type}),
     })
     .then(r => r.json())
     .then(data => {

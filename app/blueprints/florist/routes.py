@@ -308,6 +308,7 @@ def florist_sales():
 @login_required
 def florist_sales_add():
     from app.models.florist_sale import FloristSale
+    from app.models.transaction import Transaction
 
     data = request.get_json(silent=True) or {}
     try:
@@ -317,6 +318,10 @@ def florist_sales_add():
 
     if amount <= 0:
         return jsonify({'success': False, 'error': 'Сума має бути більше нуля'}), 400
+
+    payment_type = data.get('payment_type', 'cash')
+    if payment_type not in ('monobank', 'cash'):
+        payment_type = 'cash'
 
     comment = (data.get('comment') or '').strip() or None
     bonus_percent = Decimal('5.0')
@@ -328,9 +333,24 @@ def florist_sales_add():
         amount=amount,
         bonus_percent=bonus_percent,
         bonus_amount=bonus_amount,
+        payment_type=payment_type,
         comment=comment,
     )
     db.session.add(sale)
+    db.session.flush()
+
+    txn = Transaction(
+        transaction_type='credit',
+        client_id=None,
+        amount=int(amount),
+        payment_type=payment_type,
+        comment='Офлайн продаж',
+        date=date.today(),
+    )
+    db.session.add(txn)
+    db.session.flush()
+    sale.transaction_id = txn.id
+
     try:
         db.session.commit()
     except Exception as e:
@@ -344,6 +364,7 @@ def florist_sales_add():
 @login_required
 def florist_sales_edit(sale_id):
     from app.models.florist_sale import FloristSale
+    from app.models.transaction import Transaction
 
     sale = FloristSale.query.filter_by(id=sale_id, florist_id=current_user.id).first()
     if not sale:
@@ -361,10 +382,21 @@ def florist_sales_edit(sale_id):
     if amount <= 0:
         return jsonify({'success': False, 'error': 'Сума має бути більше нуля'}), 400
 
+    payment_type = data.get('payment_type', sale.payment_type or 'cash')
+    if payment_type not in ('monobank', 'cash'):
+        payment_type = 'cash'
+
     comment = (data.get('comment') or '').strip() or None
     sale.amount = amount
     sale.bonus_amount = (amount * sale.bonus_percent / Decimal('100')).quantize(Decimal('0.01'))
+    sale.payment_type = payment_type
     sale.comment = comment
+
+    if sale.transaction_id:
+        txn = Transaction.query.get(sale.transaction_id)
+        if txn:
+            txn.amount = int(amount)
+            txn.payment_type = payment_type
 
     try:
         db.session.commit()

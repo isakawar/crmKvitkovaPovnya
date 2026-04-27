@@ -318,6 +318,11 @@
             class="w-32 sm:w-36 rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-3 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
         </div>
+        <button
+          type="button"
+          id="today-filter-btn"
+          class="flex-shrink-0 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-colors hover:bg-stone-100 whitespace-nowrap"
+        >Сьогодні</button>
       </div>
       <input type="hidden" name="date_from" id="date_from" value="{{ date_from_filter }}">
       <input type="hidden" name="date_to" id="date_to" value="{{ date_to_filter }}">
@@ -911,6 +916,18 @@
       const params = new URLSearchParams(window.location.search);
       ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
       softNavigate(window.location.pathname + (params.toString() ? '?' + params.toString() : ''));
+    });
+  }
+
+  const todayBtn = document.getElementById('today-filter-btn');
+  if (todayBtn) {
+    todayBtn.addEventListener('click', () => {
+      const today = todayIso();
+      fp.setDate(today);
+      dateFromEl.value = today;
+      dateToEl.value   = today;
+      saveDates(today, today);
+      document.getElementById('orders-filter-form').submit();
     });
   }
 })();
