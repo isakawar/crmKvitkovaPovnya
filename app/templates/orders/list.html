@@ -321,60 +321,91 @@
         <button
           type="button"
           id="today-filter-btn"
-          class="flex-shrink-0 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-sm text-stone-700 transition-colors hover:bg-stone-100 whitespace-nowrap"
+          class="flex-shrink-0 rounded-lg border px-3 py-1.5 text-sm transition-colors whitespace-nowrap border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100"
         >Сьогодні</button>
       </div>
       <input type="hidden" name="date_from" id="date_from" value="{{ date_from_filter }}">
       <input type="hidden" name="date_to" id="date_to" value="{{ date_to_filter }}">
-      <!-- Selects + actions: wrapping row -->
-      <div class="flex flex-wrap items-center gap-2">
-        <select
-          name="city"
-          id="filter-city"
-          class="flex-1 min-w-[100px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
-          <option value="">Всі міста</option>
-          {% for city in cities %}
-            <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
-          {% endfor %}
-        </select>
-        <select
-          name="delivery_type"
-          id="filter-delivery-type"
-          class="flex-1 min-w-[100px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
-          <option value="">Усі типи</option>
-          {% for item in delivery_types %}
-            <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
-          {% endfor %}
-        </select>
-        <select
-          name="size"
-          id="filter-size"
-          class="flex-1 min-w-[90px] rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
-          <option value="">Розмір</option>
-          {% for item in sizes %}
-            <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
-          {% endfor %}
-        </select>
-        <button
-          type="submit"
-          class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap"
-        >
-          Застосувати
-        </button>
-        {% if search_query or city_filter or delivery_type_filter or size_filter or date_from_filter or date_to_filter %}
+      <!-- Filter button + dropdown -->
+      <div class="relative" id="filter-dropdown-wrapper">
+        {% set active_filter_count = (1 if city_filter else 0) + (1 if delivery_type_filter else 0) + (1 if size_filter else 0) %}
         <button
           type="button"
-          id="reset-filters-btn"
-          title="Скинути фільтри"
-          class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-50 hover:text-stone-700"
+          id="filter-toggle-btn"
+          class="inline-flex items-center gap-2 rounded-lg border {% if active_filter_count > 0 %}border-stone-900 bg-stone-900 text-white hover:bg-stone-700{% else %}border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100{% endif %} px-3 py-1.5 text-sm font-medium transition-colors"
         >
-          <i class="bi bi-x text-base leading-none"></i>
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M11.5 1a.5.5 0 0 1 .5.5v2h2.5a.5.5 0 0 1 0 1H12v2a.5.5 0 0 1-1 0V4H.5a.5.5 0 0 1 0-1H11V1.5a.5.5 0 0 1 .5-.5M4 7a.5.5 0 0 1 .5.5v2h10a.5.5 0 0 1 0 1H4.5v2a.5.5 0 0 1-1 0V10H.5a.5.5 0 0 1 0-1H3.5V7.5A.5.5 0 0 1 4 7m6 4a.5.5 0 0 1 .5.5v2h2.5a.5.5 0 0 1 0 1H10.5v.5a.5.5 0 0 1-1 0V16H.5a.5.5 0 0 1 0-1H9.5v-3.5a.5.5 0 0 1 .5-.5"/>
+          </svg>
+          <span>Фільтри</span>
+          {% if active_filter_count > 0 %}
+          <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-stone-900 text-[11px] font-bold leading-none">{{ active_filter_count }}</span>
+          {% endif %}
         </button>
-        {% endif %}
+
+        <div id="filter-dropdown-panel"
+             class="absolute left-0 top-full z-50 mt-2 hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-xl"
+             style="width: 22rem;">
+          <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400">Фільтри</p>
+          <div class="space-y-3">
+            <div>
+              <label class="mb-1 block text-xs font-medium text-stone-500">Місто</label>
+              <select
+                name="city"
+                id="filter-city"
+                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Всі міста</option>
+                {% for city in cities %}
+                  <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-stone-500">Тип доставки</label>
+              <select
+                name="delivery_type"
+                id="filter-delivery-type"
+                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Усі типи</option>
+                {% for item in delivery_types %}
+                  <option value="{{ item.value }}" {% if delivery_type_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="mb-1 block text-xs font-medium text-stone-500">Розмір</label>
+              <select
+                name="size"
+                id="filter-size"
+                class="w-full rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <option value="">Всі розміри</option>
+                {% for item in sizes %}
+                  <option value="{{ item.value }}" {% if size_filter == item.value %}selected{% endif %}>{{ item.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
+      <button
+        type="submit"
+        class="rounded-lg bg-stone-900 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 whitespace-nowrap"
+      >
+        Застосувати
+      </button>
+      {% if search_query or city_filter or delivery_type_filter or size_filter or date_from_filter or date_to_filter %}
+      <button
+        type="button"
+        id="reset-filters-btn"
+        title="Скинути всі фільтри"
+        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-600 transition-colors hover:bg-amber-100 hover:text-amber-800"
+      >
+        <i class="bi bi-x text-lg leading-none"></i>
+      </button>
+      {% endif %}
   </form>
 
   {% if deliveries %}
@@ -920,6 +951,19 @@
   }
 
   const todayBtn = document.getElementById('today-filter-btn');
+
+  function syncTodayBtnState() {
+    if (!todayBtn) return;
+    const today = todayIso();
+    const isToday = dateFromEl.value === today && (dateToEl.value === today || !dateToEl.value);
+    todayBtn.classList.toggle('border-amber-300', isToday);
+    todayBtn.classList.toggle('bg-amber-50', isToday);
+    todayBtn.classList.toggle('text-amber-700', isToday);
+    todayBtn.classList.toggle('border-stone-200', !isToday);
+    todayBtn.classList.toggle('bg-stone-50', !isToday);
+    todayBtn.classList.toggle('text-stone-700', !isToday);
+  }
+
   if (todayBtn) {
     todayBtn.addEventListener('click', () => {
       const today = todayIso();
@@ -930,6 +974,8 @@
       document.getElementById('orders-filter-form').submit();
     });
   }
+
+  syncTodayBtnState();
 })();
 
 (function () {
@@ -1246,6 +1292,23 @@
         else showToast(data.error || 'Помилка збереження', 'error');
       })
       .catch(() => showToast('Помилка зʼєднання', 'error'));
+  });
+})();
+
+(function () {
+  const toggleBtn = document.getElementById('filter-toggle-btn');
+  const panel = document.getElementById('filter-dropdown-panel');
+  if (!toggleBtn || !panel) return;
+
+  toggleBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    panel.classList.toggle('hidden');
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!panel.classList.contains('hidden') && !panel.contains(e.target) && e.target !== toggleBtn) {
+      panel.classList.add('hidden');
+    }
   });
 })();
 
