@@ -1128,9 +1128,15 @@
                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Доставок</p>
                 <p class="mt-2 text-sm font-semibold text-stone-900" id="assign-modal-deliveries">—</p>
               </div>
-              <div class="route-assign-info-card">
+              <div class="route-assign-info-card" id="assign-modal-courier-card"
+                   style="cursor:pointer; position:relative; transition: background 0.15s;"
+                   onclick="openDispatchLog()"
+                   title="Переглянути журнал відправок">
                 <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Поточний кур'єр</p>
                 <p class="mt-2 text-sm font-semibold text-stone-900" id="assign-modal-current-courier">Не призначено</p>
+                <p id="dispatch-log-hint" style="display:none; font-size:0.7rem; color:#a8a29e; margin-top:0.25rem;">
+                  <i class="bi bi-clock-history"></i> Журнал відправок
+                </p>
               </div>
             </div>
 
@@ -1185,6 +1191,17 @@
           </div>
         </div>
       </form>
+      <div id="dispatch-log-panel" style="display:none; position:absolute; inset:0; background:#fff; border-radius:inherit; overflow-y:auto; z-index:10; padding:1.5rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
+          <button type="button" onclick="closeDispatchLog()" style="background:transparent; border:none; cursor:pointer; color:#78716c; padding:0.25rem; line-height:1;">
+            <i class="bi bi-arrow-left" style="font-size:1.1rem;"></i>
+          </button>
+          <h3 style="font-size:1rem; font-weight:600; color:#1c1917; margin:0;">Журнал відправок</h3>
+        </div>
+        <div id="dispatch-log-content">
+          <p style="color:#78716c; font-size:0.85rem;">Завантаження...</p>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1301,7 +1318,53 @@ function openAssignModal(routeId, courierId, deliveryPrice, routeDate, deliverie
   document.getElementById('assign-modal-submit').innerHTML = hasCourier
     ? '<i class="bi bi-arrow-repeat"></i> Оновити та надіслати'
     : '<i class="bi bi-telegram"></i> Зберегти та надіслати';
+  _dispatchRouteId = routeId;
+  document.getElementById('dispatch-log-panel').style.display = 'none';
+  document.getElementById('dispatch-log-hint').style.display = hasCourier ? '' : 'none';
   getAssignModal().show();
+}
+
+var _dispatchRouteId = null;
+
+function openDispatchLog() {
+  if (!_dispatchRouteId) return;
+  document.getElementById('dispatch-log-panel').style.display = 'block';
+  var content = document.getElementById('dispatch-log-content');
+  content.innerHTML = '<p style="color:#78716c;font-size:0.85rem;">Завантаження...</p>';
+  var statusEmoji = { pending: '⏳', accepted: '✅', rejected: '❌' };
+  fetch('/routes/' + _dispatchRouteId + '/dispatch-log')
+    .then(function(r) { return r.json(); })
+    .then(function(entries) {
+      if (!entries.length) {
+        content.innerHTML = '<p style="color:#78716c;font-size:0.85rem;">Маршрут ще не відправлявся.</p>';
+        return;
+      }
+      content.innerHTML = entries.map(function(e) {
+        var statusLine = (statusEmoji[e.status] || '?') + ' <span style="font-size:0.82rem;font-weight:600;color:#1c1917;">' + e.courier_name + '</span>';
+        var metaLine = '<i class="bi bi-person"></i> ' + e.sent_by_name;
+        if (e.delivery_price != null) metaLine += ' · ' + e.delivery_price + '₴';
+        if (e.deliveries_count != null) metaLine += ' · ' + e.deliveries_count + ' дост.';
+        if (e.total_distance_km != null) metaLine += ' · ' + e.total_distance_km.toFixed(1) + ' км';
+        var respondedLine = e.responded_at
+          ? '<p style="font-size:0.75rem;color:#78716c;margin:0.1rem 0;"><i class="bi bi-reply"></i> Відповів: ' + e.responded_at + '</p>'
+          : '';
+        return '<div style="border:1px solid #e7e5e4;border-radius:0.75rem;padding:0.85rem 1rem;margin-bottom:0.65rem;">'
+          + '<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.35rem;">'
+          + statusLine
+          + '<span style="font-size:0.75rem;color:#78716c;margin-left:auto;">' + (e.sent_at || '') + '</span>'
+          + '</div>'
+          + '<p style="font-size:0.78rem;color:#57534e;margin:0.1rem 0;">' + metaLine + '</p>'
+          + respondedLine
+          + '</div>';
+      }).join('');
+    })
+    .catch(function() {
+      content.innerHTML = '<p style="color:#dc2626;font-size:0.85rem;">Помилка завантаження</p>';
+    });
+}
+
+function closeDispatchLog() {
+  document.getElementById('dispatch-log-panel').style.display = 'none';
 }
 
 document.querySelectorAll('.route-assign-trigger').forEach(function(button) {

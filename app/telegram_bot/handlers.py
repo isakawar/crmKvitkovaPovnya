@@ -1141,6 +1141,7 @@ class CourierHandlers:
     async def _handle_route_response(self, query, courier: Courier, data: str):
         """Handle courier accept/reject for a delivery route proposal"""
         from app.models.delivery_route import DeliveryRoute, RouteDelivery
+        from app.models.route_dispatch_log import RouteDispatchLog
 
         try:
             action, route_id_str = data.rsplit('_', 1)
@@ -1160,11 +1161,21 @@ class CourierHandlers:
             await query.edit_message_text(f"ℹ️ Цей маршрут {label}.")
             return
 
+        pending_log = (
+            RouteDispatchLog.query
+            .filter_by(route_id=route_id, status='pending')
+            .order_by(RouteDispatchLog.sent_at.desc())
+            .first()
+        )
+
         accepted = data.startswith('route_accept_')
 
         if accepted:
             route.status = 'accepted'
             route.accepted_at = datetime.utcnow()
+            if pending_log:
+                pending_log.status = 'accepted'
+                pending_log.responded_at = datetime.utcnow()
             stops = RouteDelivery.query.filter_by(route_id=route_id).order_by(RouteDelivery.stop_order).all()
             for stop in stops:
                 if stop.delivery:
@@ -1254,6 +1265,9 @@ class CourierHandlers:
         else:
             route.status = 'rejected'
             route.rejected_at = datetime.utcnow()
+            if pending_log:
+                pending_log.status = 'rejected'
+                pending_log.responded_at = datetime.utcnow()
             db.session.commit()
             text = (
                 f"❌ <b>Маршрут відхилено</b>\n\n"
