@@ -32,6 +32,6 @@ class RouteDispatchLog(db.Model):
     deliveries_count = db.Column(db.Integer, nullable=True)
     total_distance_km = db.Column(db.Float, nullable=True)
 
-    route = db.relationship('DeliveryRoute', backref=db.backref('dispatch_logs', lazy='dynamic'))
-    courier = db.relationship('Courier', backref=db.backref('dispatch_logs', lazy='dynamic'))
-    sent_by = db.relationship('User', backref=db.backref('route_dispatches', lazy='dynamic'))
+    route = db.relationship('DeliveryRoute')
+    courier = db.relationship('Courier')
+    sent_by = db.relationship('User')

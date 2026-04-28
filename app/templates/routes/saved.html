@@ -196,6 +196,17 @@
   .route-badge-status-accepted { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
   .route-badge-status-rejected { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
   .route-badge-status-completed { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+  .route-badge-unsent { background: #fffbeb; color: #b45309; border-color: #fcd34d; }
+
+  .route-assign-trigger--unsent {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #b45309;
+  }
+  .route-assign-trigger--unsent:hover {
+    background: #fef3c7;
+    color: #92400e;
+  }
 
   .routes-board-actions {
     display: flex;
@@ -774,6 +785,7 @@
     {% set formatted_date = route.route_date.day ~ ' ' ~ months[route.route_date.month] ~ ', ' ~ route.route_date.year %}
     {% set courier_name = route.courier.name if route.courier else 'Не призначено' %}
     {% set delivery_price = route.delivery_price if route.delivery_price is not none else '—' %}
+    {% set has_unsent_changes = route.sent_at and route.content_changed_at and route.content_changed_at > route.sent_at %}
     <article class="routes-board-card">
       <div class="routes-board-header" data-target="stops-{{ route.id }}" id="hdr-{{ route.id }}">
         <div class="min-w-0 flex-1">
@@ -812,6 +824,11 @@
                 </div>
               </div>
             </div>
+            {% if has_unsent_changes %}
+            <span class="route-badge route-badge-unsent">
+              <i class="bi bi-exclamation-triangle-fill"></i> Зміни не надіслано
+            </span>
+            {% endif %}
             <span class="route-start-time-wrap" data-route-id="{{ route.id }}" onclick="event.stopPropagation()">
               <span class="route-badge route-start-time-display"
                     style="cursor:pointer; gap:0.3rem;"
@@ -851,7 +868,7 @@
             Редагувати
           </a>
           <button type="button"
-                  class="routes-action-btn route-assign-trigger"
+                  class="routes-action-btn route-assign-trigger{% if has_unsent_changes %} route-assign-trigger--unsent{% endif %}"
                   data-route-id="{{ route.id }}"
                   data-courier-id="{{ route.courier_id or '' }}"
                   data-delivery-price="{{ route.delivery_price if route.delivery_price is not none else '' }}"
@@ -860,8 +877,16 @@
                   data-deliveries-count="{{ route.deliveries_count }}"
                   data-current-courier="{{ courier_name }}"
                   data-route-status="{{ route.status }}">
+            {% if has_unsent_changes %}
+            <i class="bi bi-arrow-repeat"></i>
+            Надіслати оновлення
+            {% elif route.courier %}
             <i class="bi bi-person-gear"></i>
-            {{ 'Змінити курʼєра' if route.courier else 'Призначити курʼєра' }}
+            Змінити курʼєра
+            {% else %}
+            <i class="bi bi-person-gear"></i>
+            Призначити курʼєра
+            {% endif %}
           </button>
           <button type="button"
                   class="routes-action-btn"

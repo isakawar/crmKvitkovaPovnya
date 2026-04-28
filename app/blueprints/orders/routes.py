@@ -964,6 +964,7 @@ def route_generator_save():
             addr_to_delivery_id[key] = d.id
 
     editing_route_id = data.get('editing_route_id')
+    is_single_route_edit = bool(editing_route_id)
     saved_route_ids = []
 
     for route_data in routes:
@@ -1010,6 +1011,7 @@ def route_generator_save():
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
                 dr.cached_result_json = single_route_cache
                 dr.cached_at = datetime.utcnow()
+                dr.content_changed_at = datetime.utcnow()
                 dep_str = (route_data.get('departureTime') or '').strip()
                 if dep_str:
                     try:
@@ -1073,10 +1075,11 @@ def route_generator_save():
 
         saved_route_ids.append(dr.id)
 
-    # Clean up routes for this date that existed before but were not included in the save
-    # (handles the case where a courier's route became empty and the frontend omitted it entirely)
+    # Clean up routes for this date that existed before but were not included in the save.
+    # Skip when editing a single specific route — only the edited route is in the payload,
+    # so all other routes for the date would be incorrectly treated as stale.
     any_db_id = any(r.get('routeDbId') for r in routes)
-    if any_db_id and saved_route_ids:
+    if not is_single_route_edit and any_db_id and saved_route_ids:
         stale_routes = DeliveryRoute.query.filter(
             DeliveryRoute.route_date == selected_date,
             ~DeliveryRoute.id.in_(saved_route_ids)

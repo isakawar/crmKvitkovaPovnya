@@ -27,6 +27,8 @@ class DeliveryRoute(db.Model):
     cached_result_json = db.Column(db.Text, nullable=True)
     cached_at = db.Column(db.DateTime, nullable=True)
 
+    content_changed_at = db.Column(db.DateTime, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 

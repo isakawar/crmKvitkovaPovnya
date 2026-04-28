@@ -184,6 +184,7 @@ def assign_and_send_route(route_id):
         if delivery_price is not None:
             route.delivery_price = delivery_price
         route.status = 'accepted'
+        route.content_changed_at = None
         db.session.add(RouteDispatchLog(
             route_id=route.id,
             courier_id=courier_id,
@@ -300,6 +301,7 @@ def assign_and_send_route(route_id):
     route.status = 'sent'
     route.telegram_message_id = msg_id
     route.sent_at = datetime.utcnow()
+    route.content_changed_at = None
     db.session.add(RouteDispatchLog(
         route_id=route.id,
         courier_id=courier_id,
@@ -476,6 +478,8 @@ def update_start_time(route_id):
         return jsonify({'success': False, 'error': 'Невірний формат часу'}), 400
 
     route.start_time = parsed
+    if route.sent_at:
+        route.content_changed_at = datetime.utcnow()
 
     stops = sorted(route.stops, key=lambda s: s.stop_order)
     current_dt = dt.combine(route.route_date, parsed)
