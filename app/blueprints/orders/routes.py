@@ -55,6 +55,8 @@ def orders_list():
     delivery_type_filter = request.args.get('delivery_type', '').strip()
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
+    subscription_id_raw = request.args.get('subscription_id', '').strip()
+    subscription_id = int(subscription_id_raw) if subscription_id_raw.isdigit() else None
     page = int(request.args.get('page', 1))
     per_page = 100
     start_idx = (page - 1) * per_page
@@ -70,6 +72,7 @@ def orders_list():
         delivery_type=delivery_type_filter or None,
         date_from=date_from or None,
         date_to=date_to or None,
+        subscription_id=subscription_id,
     )
     filtered_order_ids = [order.id for order in orders]
     prev_page = page - 1 if page > 1 else 1
@@ -105,7 +108,7 @@ def orders_list():
                 )
             except ValueError:
                 pass
-        else:
+        elif not (search_query or phone or instagram or subscription_id):
             deliveries_query = deliveries_query.filter(
                 Delivery.delivery_date >= date.today()
             )
@@ -147,6 +150,7 @@ def orders_list():
         date_from_filter=date_from,
         date_to_filter=date_to,
         packaging_types=packaging_types,
+        subscription_id_filter=subscription_id,
     )
 
 

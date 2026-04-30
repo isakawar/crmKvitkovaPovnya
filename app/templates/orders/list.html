@@ -407,6 +407,17 @@
       </button>
       {% endif %}
   </form>
+  {% if subscription_id_filter %}
+  <div class="flex items-center gap-2">
+    <span class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-1.5 text-sm font-medium text-blue-700">
+      <i class="bi bi-arrow-repeat"></i>
+      Підписка #{{ subscription_id_filter }}
+      <a href="{{ url_for('orders.orders_list') }}" class="ml-1 flex h-4 w-4 items-center justify-center rounded-full hover:bg-blue-200 transition-colors" title="Скинути фільтр підписки">
+        <i class="bi bi-x text-base leading-none"></i>
+      </a>
+    </span>
+  </div>
+  {% endif %}
 
   {% if deliveries %}
   {% set weekday_map = {
@@ -945,7 +956,7 @@
       dateToEl.value   = '';
       clearStored();
       const params = new URLSearchParams(window.location.search);
-      ['date_from','date_to','q','city','delivery_type','size','page'].forEach(k => params.delete(k));
+      ['date_from','date_to','q','city','delivery_type','size','page','subscription_id'].forEach(k => params.delete(k));
       softNavigate(window.location.pathname + (params.toString() ? '?' + params.toString() : ''));
     });
   }
