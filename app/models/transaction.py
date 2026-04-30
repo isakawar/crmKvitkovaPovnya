@@ -14,5 +14,7 @@ class Transaction(db.Model):
     comment = db.Column(db.Text, nullable=True)
     date = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     client = db.relationship('Client', backref='transactions', foreign_keys=[client_id])
+    created_by = db.relationship('User', foreign_keys=[created_by_id])

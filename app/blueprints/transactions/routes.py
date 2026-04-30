@@ -9,6 +9,7 @@ from app.blueprints.transactions import transactions_bp
 from app.extensions import db
 from app.models.transaction import Transaction
 from app.models.client import Client
+from app.models.user import User, Role, user_roles
 
 
 @transactions_bp.route('/transactions', methods=['GET'])
@@ -34,6 +35,7 @@ def transactions_list():
         date_to_str = date_to.isoformat()
 
     client_q = request.args.get('client_q', '').strip().lstrip('@')
+    created_by_filter = request.args.get('created_by', '').strip()
     page = request.args.get('page', 1, type=int)
     per_page = 50
 
@@ -49,6 +51,16 @@ def transactions_list():
                               Client.instagram.ilike(f'%{client_q}%'),
                               Client.telegram.ilike(f'%{client_q}%'),
                           )))
+
+    if created_by_filter == 'florist':
+        florist_ids = (
+            db.session.query(User.id)
+            .join(user_roles, User.id == user_roles.c.user_id)
+            .join(Role, user_roles.c.role_id == Role.id)
+            .filter(Role.name == 'florist')
+            .subquery()
+        )
+        filtered_query = filtered_query.filter(Transaction.created_by_id.in_(florist_ids))
 
     pagination = (filtered_query
                   .order_by(Transaction.date.desc(), Transaction.created_at.desc())
@@ -72,6 +84,7 @@ def transactions_list():
         date_from=date_from_str,
         date_to=date_to_str,
         client_q=client_q,
+        created_by_filter=created_by_filter,
     )
 
 
@@ -100,14 +113,14 @@ def export_transactions():
 
     transactions = (
         Transaction.query
-        .options(joinedload(Transaction.client))
+        .options(joinedload(Transaction.client), joinedload(Transaction.created_by))
         .filter(Transaction.date >= date_from, Transaction.date <= date_to)
         .order_by(Transaction.date.asc(), Transaction.created_at.asc())
         .all()
     )
 
     headers_row = ['Дата', 'Тип', 'Клієнт', 'Телефон', 'Сума (грн)',
-                   'Спосіб оплати', 'Тип витрати', 'Коментар', 'Записано']
+                   'Спосіб оплати', 'Тип витрати', 'Коментар', 'Записано', 'Хто вніс']
 
     def make_row(t):
         kyiv_offset = 3
@@ -117,6 +130,8 @@ def export_transactions():
             created_str = (created + timedelta(hours=kyiv_offset)).strftime('%d.%m.%Y %H:%M')
         else:
             created_str = ''
+        creator = t.created_by.display_name if t.created_by and t.created_by.display_name else (
+            t.created_by.username if t.created_by else '')
         return [
             t.date.strftime('%d.%m.%Y'),
             'Поповнення' if t.transaction_type == 'credit' else 'Списання',
@@ -127,6 +142,7 @@ def export_transactions():
             t.expense_type or '',
             t.comment or '',
             created_str,
+            creator,
         ]
 
     filename_base = f'transactions_{date_from_str}_{date_to_str}'
@@ -218,6 +234,7 @@ def create_transaction():
         amount=int(amount),
         payment_type=payment_type,
         date=txn_date,
+        created_by_id=current_user.id,
     )
     client.credits = (client.credits or 0) + int(amount)
 
@@ -260,6 +277,7 @@ def create_writeoff():
         expense_type=expense_type,
         comment=comment or None,
         date=txn_date,
+        created_by_id=current_user.id,
     )
 
     db.session.add(txn)

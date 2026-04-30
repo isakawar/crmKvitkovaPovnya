@@ -370,7 +370,7 @@
               </div>
               <button type="button" class="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 hover:text-stone-900" id="subscription-open-order-btn">
                 <i class="bi bi-pencil-square"></i>
-                Відкрити замовлення
+                Відкрити всі замовлення
               </button>
             </div>
 
@@ -768,13 +768,8 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('subscription-composition-type').textContent = data.notes.composition_type || '—';
       document.getElementById('subscription-unpaid-delivery').textContent = data.stats.final_delivery_date || 'Немає';
 
-      openOrderBtn.onclick = async () => {
-        detailModal.hide();
-        try {
-          await window.orderComposerApi?.openOrderEditor(data.id, { returnToModalId: 'subscriptionDetailModal' });
-        } catch (error) {
-          showToast('Не вдалося відкрити замовлення', 'error');
-        }
+      openOrderBtn.onclick = () => {
+        window.location.href = `/orders?subscription_id=${data.id}`;
       };
 
       extendBtn.disabled = !data.stats.can_extend;

@@ -93,9 +93,11 @@ def create_order_and_deliveries(client, form):
     return order
 
 
-def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None):
+def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None, subscription_id=None):
     from app.models.subscription import Subscription as _Subscription
     query = Order.query.options(joinedload(Order.client)).join(Client)
+    if subscription_id:
+        query = query.filter(Order.subscription_id == subscription_id)
     if q:
         like_q = f'%{q}%'
         query = query.filter(or_(

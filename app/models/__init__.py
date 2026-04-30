@@ -13,5 +13,6 @@ from .delivery_route import DeliveryRoute, RouteDelivery
 from .price import Price
 from .certificate import Certificate
 from .order_photo import OrderPhoto
+from .route_dispatch_log import RouteDispatchLog
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price', 'Certificate', 'OrderPhoto']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog']

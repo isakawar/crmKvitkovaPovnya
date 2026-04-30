@@ -141,6 +141,7 @@ def dashboard_page():
             last_delivery_subq.c.last_delivery_date <= today - timedelta(days=4),
             Subscription.is_extended.is_(False),
             or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
+            or_(Subscription.snooze_until.is_(None), Subscription.snooze_until <= today),
         )
         .order_by(last_delivery_subq.c.last_delivery_date.asc())
         .limit(30)
@@ -161,6 +162,7 @@ def dashboard_page():
             'last_delivery_date': last_date,
             'days_overdue': days_overdue,
             'is_renewal_reminder': False,
+            'snooze_comment': sub.snooze_comment,
         })
 
     # Renewal reminders from import (delivery_number >= 5, no orders created)
@@ -170,6 +172,7 @@ def dashboard_page():
         .filter(
             Subscription.is_renewal_reminder.is_(True),
             or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
+            or_(Subscription.snooze_until.is_(None), Subscription.snooze_until <= today),
         )
         .order_by(Subscription.planned_contact_date.asc().nullslast())
         .all()
@@ -186,6 +189,7 @@ def dashboard_page():
             'days_overdue': 0,
             'is_renewal_reminder': True,
             'planned_contact_date': sub.planned_contact_date,
+            'snooze_comment': sub.snooze_comment,
         })
 
     draft_reminders = get_draft_subscriptions(contact_date_to=today)
@@ -241,5 +245,41 @@ def update_subscription_followup(subscription_id):
     if status == 'extended':
         sub.is_extended = True
 
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@dashboard_bp.route('/dashboard/subscriptions/<int:subscription_id>/snooze', methods=['POST'])
+@login_required
+def snooze_subscription(subscription_id):
+    payload = request.get_json() or {}
+    snooze_until_str = (payload.get('snooze_until') or '').strip()
+    snooze_comment = (payload.get('comment') or '').strip() or None
+
+    if not snooze_until_str:
+        return jsonify({'success': False, 'error': "Дата обов'язкова"}), 400
+
+    try:
+        from datetime import date as date_cls
+        snooze_until = date_cls.fromisoformat(snooze_until_str)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Невірний формат дати'}), 400
+
+    if snooze_until <= date.today():
+        return jsonify({'success': False, 'error': 'Дата повинна бути в майбутньому'}), 400
+
+    sub = Subscription.query.get_or_404(subscription_id)
+    sub.snooze_until = snooze_until
+    sub.snooze_comment = snooze_comment
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@dashboard_bp.route('/dashboard/subscriptions/<int:subscription_id>/unsnooze', methods=['POST'])
+@login_required
+def unsnooze_subscription(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    sub.snooze_until = None
+    sub.snooze_comment = None
     db.session.commit()
     return jsonify({'success': True})
