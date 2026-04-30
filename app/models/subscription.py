@@ -71,6 +71,9 @@ class Subscription(db.Model):
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
 
+    # Тимчасова зупинка підписки
+    is_stopped = db.Column(db.Boolean, default=False, nullable=False)
+
     # Кількість доставок у підписці
     delivery_count = db.Column(db.Integer, nullable=False, default=4)
 

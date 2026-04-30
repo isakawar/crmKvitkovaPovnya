@@ -16,6 +16,9 @@ from app.services.subscription_service import (
     update_draft_subscription,
     extend_subscription,
     delete_subscription,
+    stop_subscription,
+    build_resume_plan,
+    apply_resume_plan,
 )
 import logging
 
@@ -246,8 +249,9 @@ def subscription_detail(subscription_id):
             'total_deliveries': total_deliveries,
             'completed_deliveries': completed_deliveries,
             'active_deliveries': max(total_deliveries - completed_deliveries, 0),
-            'can_extend': not subscription.is_extended,
+            'can_extend': not subscription.is_extended and not subscription.is_stopped,
             'is_extended': bool(subscription.is_extended),
+            'is_stopped': bool(subscription.is_stopped),
             'next_delivery_date': next_delivery.delivery_date.strftime('%d.%m.%Y') if next_delivery else '',
             'final_delivery_date': final_delivery.delivery_date.strftime('%d.%m.%Y') if final_delivery else '',
         },
@@ -293,6 +297,60 @@ def subscription_extend(subscription_id):
         db.session.rollback()
         logger.error(f'Error extending subscription {subscription_id}: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/stop', methods=['POST'])
+@login_required
+def subscription_stop(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Вже зупинена'}), 400
+    try:
+        stop_subscription(sub)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error stopping subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при зупинці підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/plan', methods=['POST'])
+@login_required
+def subscription_resume_plan(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    data = request.get_json() or {}
+    next_delivery_date_raw = (data.get('next_delivery_date') or '').strip()
+    if not next_delivery_date_raw:
+        return jsonify({'success': False, 'error': 'Дата обовʼязкова'}), 400
+    try:
+        new_date = dt.datetime.strptime(next_delivery_date_raw, '%Y-%m-%d').date()
+        if new_date < dt.date.today():
+            return jsonify({'success': False, 'error': 'Дата не може бути в минулому'}), 400
+        plan = build_resume_plan(sub, new_date)
+        return jsonify({'success': True, 'plan': plan})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/apply', methods=['POST'])
+@login_required
+def subscription_resume_apply(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    data = request.get_json() or {}
+    plan = data.get('plan', [])
+    try:
+        apply_resume_plan(sub, plan)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error resuming subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при відновленні підписки'}), 500
 
 
 @subscriptions_bp.route('/subscriptions/declined')
@@ -349,8 +407,24 @@ def subscription_declined_list():
         for sub, client, last_date in fetch_rows(Subscription.snooze_until.isnot(None))
     ]
 
+    stopped = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.is_stopped.is_(True))
+    ]
+
     tab = request.args.get('tab', 'declined')
-    return render_template('subscriptions/declined.html', declined=declined, snoozed=snoozed, tab=tab, today=date_cls.today())
+    return render_template(
+        'subscriptions/declined.html',
+        declined=declined,
+        snoozed=snoozed,
+        stopped=stopped,
+        tab=tab,
+        today=date_cls.today(),
+    )
 
 
 @subscriptions_bp.route('/subscriptions/<int:subscription_id>/requeue', methods=['POST'])

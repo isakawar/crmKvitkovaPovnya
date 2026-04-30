@@ -92,7 +92,10 @@ def orders_list():
     if filtered_order_ids:
         deliveries_query = (
             Delivery.query
-            .options(joinedload(Delivery.order), joinedload(Delivery.client))
+            .options(
+                joinedload(Delivery.order).joinedload(Order.subscription),
+                joinedload(Delivery.client),
+            )
             .filter(Delivery.order_id.in_(filtered_order_ids))
             .order_by(
                 Delivery.delivery_date.asc(),
