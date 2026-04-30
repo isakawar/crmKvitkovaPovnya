@@ -668,6 +668,7 @@ def route_generator():
     editing_cached_result = None
     editing_courier = None
     editing_couriers = []
+    editing_color_idx = 0
     if edit_route_id:
         from app.models.delivery_route import DeliveryRoute
         from app.models.courier import Courier
@@ -680,6 +681,11 @@ def route_generator():
                 editing_cached_result = editing_route.cached_result_json
             editing_courier = editing_route.courier
             editing_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
+            day_routes_ordered = DeliveryRoute.query.filter_by(route_date=editing_route.route_date)\
+                .order_by(DeliveryRoute.start_time.asc().nullslast(), DeliveryRoute.id.asc()).all()
+            editing_color_idx = next(
+                (i for i, dr in enumerate(day_routes_ordered) if dr.id == edit_route_id), 0
+            )
 
     view_date_str = request.args.get('view_date')
     view_date_routes_json = None
@@ -693,7 +699,7 @@ def route_generator():
         if vd:
             if not selected_date_str:
                 selected_date_str = view_date_str
-            day_routes = DR.query.filter_by(route_date=vd).order_by(DR.id).all()
+            day_routes = DR.query.filter_by(route_date=vd).order_by(DR.start_time.asc().nullslast(), DR.id.asc()).all()
             combined_routes = []
             first_cache = None
             for dr in day_routes:
@@ -795,6 +801,7 @@ def route_generator():
         editing_cached_result=editing_cached_result,
         editing_courier=editing_courier,
         editing_couriers=editing_couriers,
+        editing_color_idx=editing_color_idx,
         view_date_routes=view_date_routes_json,
         view_date=view_date_str,
         view_date_couriers=[{'id': c.id, 'name': c.name} for c in view_date_couriers],
