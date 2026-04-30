@@ -64,6 +64,10 @@ class Subscription(db.Model):
     draft_bank_link = db.Column(db.String(512), nullable=True)
     draft_wedding_date = db.Column(db.Date, nullable=True)
 
+    # Відкладення нагадування (snooze)
+    snooze_until = db.Column(db.Date, nullable=True)
+    snooze_comment = db.Column(db.String(500), nullable=True)
+
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
 

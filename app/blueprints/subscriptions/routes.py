@@ -295,6 +295,75 @@ def subscription_extend(subscription_id):
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
 
 
+@subscriptions_bp.route('/subscriptions/declined')
+@login_required
+def subscription_declined_list():
+    from sqlalchemy import func as sa_func
+    from app.models import Order, Delivery
+
+    last_delivery_subq = (
+        db.session.query(
+            Order.subscription_id.label('subscription_id'),
+            sa_func.max(Delivery.delivery_date).label('last_delivery_date')
+        )
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(
+            Order.subscription_id.isnot(None),
+            Delivery.status != 'Скасовано'
+        )
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
+    def fetch_rows(extra_filter):
+        return (
+            db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date)
+            .join(Client, Subscription.client_id == Client.id)
+            .outerjoin(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
+            .filter(extra_filter)
+            .order_by(Subscription.planned_contact_date.desc().nullslast())
+            .limit(200)
+            .all()
+        )
+
+    declined = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+            'declined_at': sub.planned_contact_date,
+            'snooze_comment': sub.snooze_comment,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.followup_status == 'declined')
+    ]
+
+    from datetime import date as date_cls
+    snoozed = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+            'snooze_until': sub.snooze_until,
+            'snooze_comment': sub.snooze_comment,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.snooze_until.isnot(None))
+    ]
+
+    tab = request.args.get('tab', 'declined')
+    return render_template('subscriptions/declined.html', declined=declined, snoozed=snoozed, tab=tab, today=date_cls.today())
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/requeue', methods=['POST'])
+@login_required
+def subscription_requeue(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    sub.followup_status = None
+    sub.snooze_until = None
+    sub.snooze_comment = None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @subscriptions_bp.route('/subscriptions/<int:subscription_id>/delete', methods=['POST'])
 @login_required
 def subscription_delete(subscription_id):
