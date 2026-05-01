@@ -19,6 +19,7 @@ from app.services.subscription_service import (
     stop_subscription,
     build_resume_plan,
     apply_resume_plan,
+    schedule_single_delivery,
 )
 import logging
 
@@ -185,6 +186,11 @@ def subscription_detail(subscription_id):
     # First order date = subscription start
     first_order = min(subscription.orders, key=lambda o: o.delivery_date, default=None)
 
+    # Subscription creation date: prefer subscription.created_at, fall back to earliest order.created_at
+    _sub_created = subscription.created_at or (
+        min((o.created_at for o in subscription.orders if o.created_at), default=None)
+    )
+
     # Build "related orders" — show each order as a cycle row
     orders_sorted = sorted(subscription.orders, key=lambda o: o.delivery_date)
     related_orders = []
@@ -204,10 +210,22 @@ def subscription_detail(subscription_id):
             'deliveries_total': len(order_deliveries),
             'deliveries_completed': completed_count,
             'sequence_number': order.sequence_number,
+            'deliveries': [
+                {
+                    'id': d.id,
+                    'delivery_date': d.delivery_date.strftime('%d.%m.%Y') if d.delivery_date else '',
+                    'status': d.status,
+                    'time_from': d.time_from or '',
+                    'time_to': d.time_to or '',
+                    'is_next': bool(next_delivery and d.id == next_delivery.id),
+                }
+                for d in order_deliveries
+            ],
         })
 
     return jsonify({
         'id': subscription.id,
+        'created_at': _sub_created.strftime('%d.%m.%Y') if _sub_created else '',
         'client': {
             'instagram': subscription.client.instagram if subscription.client else '',
             'phone': subscription.client.phone if subscription.client else '',
@@ -351,6 +369,32 @@ def subscription_resume_apply(subscription_id):
         db.session.rollback()
         logger.error(f'Error resuming subscription {subscription_id}: {e}')
         return jsonify({'success': False, 'error': 'Помилка при відновленні підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/single', methods=['POST'])
+@login_required
+def subscription_resume_single(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    payload = request.get_json() or {}
+    delivery_id = payload.get('delivery_id')
+    date_str = payload.get('delivery_date', '')
+    if not delivery_id or not date_str:
+        return jsonify({'success': False, 'error': "delivery_id та delivery_date обов'язкові"}), 400
+    try:
+        new_date = dt.datetime.strptime(date_str, '%Y-%m-%d').date()
+        if new_date < dt.date.today():
+            return jsonify({'success': False, 'error': 'Дата не може бути в минулому'}), 400
+        schedule_single_delivery(sub, delivery_id, new_date)
+        db.session.commit()
+        return jsonify({'success': True})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error scheduling single delivery for subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при плануванні доставки'}), 500
 
 
 @subscriptions_bp.route('/subscriptions/declined')

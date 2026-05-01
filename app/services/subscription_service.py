@@ -507,6 +507,24 @@ def apply_resume_plan(subscription, plan):
     subscription.is_stopped = False
 
 
+def schedule_single_delivery(subscription, delivery_id, new_date):
+    from app.models.delivery_route import RouteDelivery
+    delivery_map = {
+        d.id: d
+        for order in subscription.orders
+        for d in order.deliveries
+    }
+    delivery = delivery_map.get(delivery_id)
+    if not delivery:
+        raise ValueError('Доставку не знайдено')
+    if delivery.status in ('Доставлено', 'Скасовано'):
+        raise ValueError('Доставка вже завершена або скасована')
+    delivery.delivery_date = new_date
+    if delivery.status == 'Розподілено':
+        RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+        delivery.status = 'Очікує'
+
+
 def extend_subscription(subscription):
     """Add another cycle of 4 orders/deliveries to the subscription."""
     if subscription.is_stopped:
