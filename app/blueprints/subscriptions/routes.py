@@ -16,6 +16,10 @@ from app.services.subscription_service import (
     update_draft_subscription,
     extend_subscription,
     delete_subscription,
+    stop_subscription,
+    build_resume_plan,
+    apply_resume_plan,
+    schedule_single_delivery,
 )
 import logging
 
@@ -182,6 +186,11 @@ def subscription_detail(subscription_id):
     # First order date = subscription start
     first_order = min(subscription.orders, key=lambda o: o.delivery_date, default=None)
 
+    # Subscription creation date: prefer subscription.created_at, fall back to earliest order.created_at
+    _sub_created = subscription.created_at or (
+        min((o.created_at for o in subscription.orders if o.created_at), default=None)
+    )
+
     # Build "related orders" — show each order as a cycle row
     orders_sorted = sorted(subscription.orders, key=lambda o: o.delivery_date)
     related_orders = []
@@ -201,10 +210,22 @@ def subscription_detail(subscription_id):
             'deliveries_total': len(order_deliveries),
             'deliveries_completed': completed_count,
             'sequence_number': order.sequence_number,
+            'deliveries': [
+                {
+                    'id': d.id,
+                    'delivery_date': d.delivery_date.strftime('%d.%m.%Y') if d.delivery_date else '',
+                    'status': d.status,
+                    'time_from': d.time_from or '',
+                    'time_to': d.time_to or '',
+                    'is_next': bool(next_delivery and d.id == next_delivery.id),
+                }
+                for d in order_deliveries
+            ],
         })
 
     return jsonify({
         'id': subscription.id,
+        'created_at': _sub_created.strftime('%d.%m.%Y') if _sub_created else '',
         'client': {
             'instagram': subscription.client.instagram if subscription.client else '',
             'phone': subscription.client.phone if subscription.client else '',
@@ -246,8 +267,9 @@ def subscription_detail(subscription_id):
             'total_deliveries': total_deliveries,
             'completed_deliveries': completed_deliveries,
             'active_deliveries': max(total_deliveries - completed_deliveries, 0),
-            'can_extend': not subscription.is_extended,
+            'can_extend': not subscription.is_extended and not subscription.is_stopped,
             'is_extended': bool(subscription.is_extended),
+            'is_stopped': bool(subscription.is_stopped),
             'next_delivery_date': next_delivery.delivery_date.strftime('%d.%m.%Y') if next_delivery else '',
             'final_delivery_date': final_delivery.delivery_date.strftime('%d.%m.%Y') if final_delivery else '',
         },
@@ -293,6 +315,171 @@ def subscription_extend(subscription_id):
         db.session.rollback()
         logger.error(f'Error extending subscription {subscription_id}: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/stop', methods=['POST'])
+@login_required
+def subscription_stop(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Вже зупинена'}), 400
+    try:
+        stop_subscription(sub)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error stopping subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при зупинці підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/plan', methods=['POST'])
+@login_required
+def subscription_resume_plan(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    data = request.get_json() or {}
+    next_delivery_date_raw = (data.get('next_delivery_date') or '').strip()
+    if not next_delivery_date_raw:
+        return jsonify({'success': False, 'error': 'Дата обовʼязкова'}), 400
+    try:
+        new_date = dt.datetime.strptime(next_delivery_date_raw, '%Y-%m-%d').date()
+        if new_date < dt.date.today():
+            return jsonify({'success': False, 'error': 'Дата не може бути в минулому'}), 400
+        plan = build_resume_plan(sub, new_date)
+        return jsonify({'success': True, 'plan': plan})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/apply', methods=['POST'])
+@login_required
+def subscription_resume_apply(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    data = request.get_json() or {}
+    plan = data.get('plan', [])
+    try:
+        apply_resume_plan(sub, plan)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error resuming subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при відновленні підписки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/resume/single', methods=['POST'])
+@login_required
+def subscription_resume_single(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    if not sub.is_stopped:
+        return jsonify({'success': False, 'error': 'Підписка не зупинена'}), 400
+    payload = request.get_json() or {}
+    delivery_id = payload.get('delivery_id')
+    date_str = payload.get('delivery_date', '')
+    if not delivery_id or not date_str:
+        return jsonify({'success': False, 'error': "delivery_id та delivery_date обов'язкові"}), 400
+    try:
+        new_date = dt.datetime.strptime(date_str, '%Y-%m-%d').date()
+        if new_date < dt.date.today():
+            return jsonify({'success': False, 'error': 'Дата не може бути в минулому'}), 400
+        schedule_single_delivery(sub, delivery_id, new_date)
+        db.session.commit()
+        return jsonify({'success': True})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error scheduling single delivery for subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при плануванні доставки'}), 500
+
+
+@subscriptions_bp.route('/subscriptions/declined')
+@login_required
+def subscription_declined_list():
+    from sqlalchemy import func as sa_func
+    from app.models import Order, Delivery
+
+    last_delivery_subq = (
+        db.session.query(
+            Order.subscription_id.label('subscription_id'),
+            sa_func.max(Delivery.delivery_date).label('last_delivery_date')
+        )
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(
+            Order.subscription_id.isnot(None),
+            Delivery.status != 'Скасовано'
+        )
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
+    def fetch_rows(extra_filter):
+        return (
+            db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date)
+            .join(Client, Subscription.client_id == Client.id)
+            .outerjoin(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
+            .filter(extra_filter)
+            .order_by(Subscription.planned_contact_date.desc().nullslast())
+            .limit(200)
+            .all()
+        )
+
+    declined = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+            'declined_at': sub.planned_contact_date,
+            'snooze_comment': sub.snooze_comment,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.followup_status == 'declined')
+    ]
+
+    from datetime import date as date_cls
+    snoozed = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+            'snooze_until': sub.snooze_until,
+            'snooze_comment': sub.snooze_comment,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.snooze_until.isnot(None))
+    ]
+
+    stopped = [
+        {
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+        }
+        for sub, client, last_date in fetch_rows(Subscription.is_stopped.is_(True))
+    ]
+
+    tab = request.args.get('tab', 'declined')
+    return render_template(
+        'subscriptions/declined.html',
+        declined=declined,
+        snoozed=snoozed,
+        stopped=stopped,
+        tab=tab,
+        today=date_cls.today(),
+    )
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/requeue', methods=['POST'])
+@login_required
+def subscription_requeue(subscription_id):
+    sub = Subscription.query.get_or_404(subscription_id)
+    sub.followup_status = None
+    sub.snooze_until = None
+    sub.snooze_comment = None
+    db.session.commit()
+    return jsonify({'success': True})
 
 
 @subscriptions_bp.route('/subscriptions/<int:subscription_id>/delete', methods=['POST'])

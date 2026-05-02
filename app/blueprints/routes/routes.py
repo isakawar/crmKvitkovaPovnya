@@ -1,9 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, current_app
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.courier import Courier
+from app.models.route_dispatch_log import RouteDispatchLog
 from datetime import datetime, date as date_type
 import json
 import urllib.parse
@@ -183,6 +184,16 @@ def assign_and_send_route(route_id):
         if delivery_price is not None:
             route.delivery_price = delivery_price
         route.status = 'accepted'
+        route.content_changed_at = None
+        db.session.add(RouteDispatchLog(
+            route_id=route.id,
+            courier_id=courier_id,
+            sent_by_user_id=current_user.id,
+            status='accepted',
+            delivery_price=route.delivery_price,
+            deliveries_count=route.deliveries_count,
+            total_distance_km=route.total_distance_km,
+        ))
         db.session.commit()
         if is_ajax:
             return jsonify({'success': True, 'message': f'Маршрут призначено службі таксі «{courier.name}»'})
@@ -290,6 +301,17 @@ def assign_and_send_route(route_id):
     route.status = 'sent'
     route.telegram_message_id = msg_id
     route.sent_at = datetime.utcnow()
+    route.content_changed_at = None
+    db.session.add(RouteDispatchLog(
+        route_id=route.id,
+        courier_id=courier_id,
+        sent_by_user_id=current_user.id,
+        status='pending',
+        message_text=text,
+        delivery_price=route.delivery_price,
+        deliveries_count=route.deliveries_count,
+        total_distance_km=route.total_distance_km,
+    ))
     db.session.commit()
 
     if is_ajax:
@@ -456,6 +478,8 @@ def update_start_time(route_id):
         return jsonify({'success': False, 'error': 'Невірний формат часу'}), 400
 
     route.start_time = parsed
+    if route.sent_at:
+        route.content_changed_at = datetime.utcnow()
 
     stops = sorted(route.stops, key=lambda s: s.stop_order)
     current_dt = dt.combine(route.route_date, parsed)
@@ -519,3 +543,25 @@ def delete_route(route_id):
     db.session.commit()
     flash('Маршрут видалено', 'success')
     return redirect(url_for('routes.saved_routes'))
+
+
+@routes_bp.route('/routes/<int:route_id>/dispatch-log', methods=['GET'])
+@login_required
+def route_dispatch_log(route_id):
+    DeliveryRoute.query.get_or_404(route_id)
+    entries = (
+        RouteDispatchLog.query
+        .filter_by(route_id=route_id)
+        .order_by(RouteDispatchLog.sent_at.desc())
+        .all()
+    )
+    return jsonify([{
+        'sent_at': e.sent_at.strftime('%d.%m.%Y %H:%M') if e.sent_at else None,
+        'status': e.status,
+        'responded_at': e.responded_at.strftime('%d.%m.%Y %H:%M') if e.responded_at else None,
+        'courier_name': e.courier.name if e.courier else '(видалено)',
+        'sent_by_name': (e.sent_by.display_name or e.sent_by.username) if e.sent_by else '(видалено)',
+        'delivery_price': e.delivery_price,
+        'deliveries_count': e.deliveries_count,
+        'total_distance_km': e.total_distance_km,
+    } for e in entries])

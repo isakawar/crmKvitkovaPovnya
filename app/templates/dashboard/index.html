@@ -557,9 +557,18 @@
 
   .dash-row__actions {
     display: flex;
-    gap: 0.55rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-width: 9rem;
+  }
+
+  .dash-row__actions-secondary {
+    display: flex;
+    gap: 0.45rem;
+  }
+
+  .dash-row__actions-secondary .dash-action-btn {
+    flex: 1;
   }
 
   .dash-action-btn {
@@ -628,9 +637,7 @@
       grid-template-columns: 1fr;
     }
 
-    .dash-row__actions {
-      justify-content: flex-start;
-    }
+
 
     .dash-queue__head {
       flex-direction: column;
@@ -773,6 +780,9 @@
           <span class="dash-queue__eyebrow"><i class="bi bi-arrow-repeat"></i> Продовження</span>
           <h2 class="dash-queue__title">Кого потрібно продовжити</h2>
           <p class="dash-queue__copy">Критичні кейси, завершені підписки та імпортні нагадування зібрані в одну робочу чергу.</p>
+          <a href="/subscriptions/declined" class="text-xs text-stone-400 hover:text-stone-600 mt-1 inline-block">
+            <i class="bi bi-slash-circle"></i> Переглянути відмови
+          </a>
         </div>
         <div class="dash-queue__stat">
           <strong>{{ ended_subscriptions|length }}</strong>
@@ -787,7 +797,7 @@
       <div class="dash-queue__list" data-collapsible-list>
         {% for item in ended_subscriptions %}
         {% set row_class = 'dash-row--danger' if item.days_overdue >= 6 else ('dash-row--warn' if item.days_overdue >= 3 else 'dash-row--calm') %}
-        <article class="dash-row {{ row_class }}{% if loop.index > 8 %} is-collapsed-extra{% endif %}"
+        <article class="dash-row {{ row_class }}"
                  data-ended-id="{{ item.order_id }}"
                  data-last-order-id="{{ item.last_order_id or '' }}"
                  data-client-instagram="{{ item.client_instagram or '' }}"
@@ -806,6 +816,9 @@
             <div class="dash-row__meta">
               <span>{{ item.recipient_name or 'Отримувач не вказаний' }}</span>
               <span>{{ item.client_phone or 'Телефон не вказано' }}</span>
+              {% if item.delivery_type or item.size %}
+              <span class="text-stone-400">{{ item.delivery_type }}{% if item.delivery_type and item.size %} · {% endif %}{{ item.size }}</span>
+              {% endif %}
               {% if item.is_renewal_reminder %}
               <span>Плановий контакт: {% if item.planned_contact_date %}{{ item.planned_contact_date.strftime('%d.%m.%Y') }}{% else %}—{% endif %}</span>
               {% else %}
@@ -816,33 +829,47 @@
               {% if item.is_renewal_reminder %}
               Новий цикл ще не створено, але клієнта вже час повертати в роботу.
               {% else %}
-              Підписка закінчилась {{ item.days_overdue }} днів тому. Краще зв'язатися до втрати темпу.
+              Підписка закінчилась {{ item.days_overdue }} днів тому.
+              {% endif %}
+              {% if item.snooze_comment %}
+              <em class="block mt-1 text-stone-500">Нотатка: {{ item.snooze_comment }}</em>
               {% endif %}
             </div>
           </div>
-          <div class="dash-row__tags">
-            {% if item.delivery_type %}
-            <span class="dash-badge">{{ item.delivery_type }}</span>
-            {% endif %}
-            {% if item.size %}
-            <span class="dash-badge">Розмір: {{ item.size }}</span>
-            {% endif %}
-          </div>
           <div class="dash-row__actions">
             <button class="dash-action-btn dash-action-btn--primary" data-action="renew">Продовжити</button>
-            <button class="dash-action-btn dash-action-btn--ghost" data-followup-status="declined">Відмова</button>
+            <div class="dash-row__actions-secondary">
+              <button class="dash-action-btn dash-action-btn--ghost" data-followup-status="declined">Відмова</button>
+              <button class="dash-action-btn dash-action-btn--ghost" data-action="snooze">Перенести</button>
+            </div>
           </div>
         </article>
         {% endfor %}
       </div>
-      <button type="button" class="dash-show-more" data-expand-list {% if ended_subscriptions|length <= 8 %}hidden{% endif %}>
-        Показати ще {{ ended_subscriptions|length - 8 }} кейсів
-      </button>
       {% else %}
       <div class="dash-empty">Немає підписок, що потребують продовження.</div>
       {% endif %}
     </div>
   </section>
+
+  <!-- Snooze Modal -->
+  <div id="snoozeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;" aria-modal="true" role="dialog">
+    <div style="background:#fff;border-radius:1rem;box-shadow:0 20px 50px rgba(0,0,0,0.18);padding:1.5rem;width:100%;max-width:380px;margin:1rem;">
+      <h3 style="font-size:1rem;font-weight:700;color:#1c1917;margin:0 0 1.2rem;">Перенести нагадування</h3>
+      <div style="margin-bottom:1rem;">
+        <label style="display:block;font-size:0.8rem;font-weight:600;color:#57534e;margin-bottom:0.4rem;" for="snoozeDate">Нагадати знову</label>
+        <input type="date" id="snoozeDate" style="width:100%;border:1.5px solid #e7e5e4;border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.9rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:1.4rem;">
+        <label style="display:block;font-size:0.8rem;font-weight:600;color:#57534e;margin-bottom:0.4rem;" for="snoozeComment">Нотатка (необов'язково)</label>
+        <textarea id="snoozeComment" rows="3" placeholder="напр. клієнт у відпустці, передзвонити після 10-го" style="width:100%;border:1.5px solid #e7e5e4;border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.9rem;outline:none;resize:none;box-sizing:border-box;font-family:inherit;"></textarea>
+      </div>
+      <div style="display:flex;gap:0.75rem;justify-content:flex-end;">
+        <button id="snoozeCancelBtn" style="padding:0.5rem 1rem;font-size:0.875rem;border-radius:0.5rem;border:1.5px solid #e7e5e4;background:#fff;color:#57534e;cursor:pointer;">Скасувати</button>
+        <button id="snoozeConfirmBtn" style="padding:0.5rem 1.1rem;font-size:0.875rem;border-radius:0.5rem;border:none;background:#1c1917;color:#fff;font-weight:600;cursor:pointer;">Зберегти</button>
+      </div>
+    </div>
+  </div>
 
   <section class="dash-section">
     <div class="dash-section__head">
@@ -1062,6 +1089,68 @@ document.addEventListener('DOMContentLoaded', function() {
           showToast(error.message || 'Помилка збереження', 'error');
         }
       });
+    }
+
+    const snoozeBtn = card.querySelector('[data-action="snooze"]');
+    if (snoozeBtn) {
+      snoozeBtn.addEventListener('click', function() {
+        openSnoozeModal(subscriptionId, card);
+      });
+    }
+  });
+
+  // Snooze modal logic
+  let _snoozeSubId = null;
+  let _snoozeCard = null;
+  const snoozeModal = document.getElementById('snoozeModal');
+  const snoozeDate = document.getElementById('snoozeDate');
+  const snoozeComment = document.getElementById('snoozeComment');
+
+  // Set min date to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  snoozeDate.min = tomorrow.toISOString().split('T')[0];
+
+  function openSnoozeModal(subId, card) {
+    _snoozeSubId = subId;
+    _snoozeCard = card;
+    snoozeDate.value = '';
+    snoozeComment.value = '';
+    snoozeModal.style.display = 'flex';
+    snoozeDate.focus();
+  }
+
+  function closeSnoozeModal() {
+    snoozeModal.style.display = 'none';
+    _snoozeSubId = null;
+    _snoozeCard = null;
+  }
+
+  document.getElementById('snoozeCancelBtn').addEventListener('click', closeSnoozeModal);
+  snoozeModal.addEventListener('click', function(e) {
+    if (e.target === snoozeModal) closeSnoozeModal();
+  });
+
+  document.getElementById('snoozeConfirmBtn').addEventListener('click', async function() {
+    if (!snoozeDate.value) {
+      showToast('Оберіть дату', 'error');
+      return;
+    }
+    try {
+      const response = await fetch(`/dashboard/subscriptions/${_snoozeSubId}/snooze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snooze_until: snoozeDate.value, comment: snoozeComment.value })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Не вдалося зберегти');
+      }
+      if (_snoozeCard) _snoozeCard.remove();
+      closeSnoozeModal();
+      showToast('Нагадування перенесено', 'success');
+    } catch (error) {
+      showToast(error.message || 'Помилка збереження', 'error');
     }
   });
 });

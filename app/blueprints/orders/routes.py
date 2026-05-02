@@ -55,6 +55,8 @@ def orders_list():
     delivery_type_filter = request.args.get('delivery_type', '').strip()
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
+    subscription_id_raw = request.args.get('subscription_id', '').strip()
+    subscription_id = int(subscription_id_raw) if subscription_id_raw.isdigit() else None
     page = int(request.args.get('page', 1))
     per_page = 100
     start_idx = (page - 1) * per_page
@@ -70,6 +72,7 @@ def orders_list():
         delivery_type=delivery_type_filter or None,
         date_from=date_from or None,
         date_to=date_to or None,
+        subscription_id=subscription_id,
     )
     filtered_order_ids = [order.id for order in orders]
     prev_page = page - 1 if page > 1 else 1
@@ -89,7 +92,10 @@ def orders_list():
     if filtered_order_ids:
         deliveries_query = (
             Delivery.query
-            .options(joinedload(Delivery.order), joinedload(Delivery.client))
+            .options(
+                joinedload(Delivery.order).joinedload(Order.subscription),
+                joinedload(Delivery.client),
+            )
             .filter(Delivery.order_id.in_(filtered_order_ids))
             .order_by(
                 Delivery.delivery_date.asc(),
@@ -105,7 +111,7 @@ def orders_list():
                 )
             except ValueError:
                 pass
-        else:
+        elif not (search_query or phone or instagram or subscription_id):
             deliveries_query = deliveries_query.filter(
                 Delivery.delivery_date >= date.today()
             )
@@ -147,6 +153,7 @@ def orders_list():
         date_from_filter=date_from,
         date_to_filter=date_to,
         packaging_types=packaging_types,
+        subscription_id_filter=subscription_id,
     )
 
 
@@ -668,6 +675,7 @@ def route_generator():
     editing_cached_result = None
     editing_courier = None
     editing_couriers = []
+    editing_color_idx = 0
     if edit_route_id:
         from app.models.delivery_route import DeliveryRoute
         from app.models.courier import Courier
@@ -680,6 +688,11 @@ def route_generator():
                 editing_cached_result = editing_route.cached_result_json
             editing_courier = editing_route.courier
             editing_couriers = Courier.query.filter_by(active=True).order_by(Courier.name).all()
+            day_routes_ordered = DeliveryRoute.query.filter_by(route_date=editing_route.route_date)\
+                .order_by(DeliveryRoute.start_time.asc().nullslast(), DeliveryRoute.id.asc()).all()
+            editing_color_idx = next(
+                (i for i, dr in enumerate(day_routes_ordered) if dr.id == edit_route_id), 0
+            )
 
     view_date_str = request.args.get('view_date')
     view_date_routes_json = None
@@ -693,7 +706,7 @@ def route_generator():
         if vd:
             if not selected_date_str:
                 selected_date_str = view_date_str
-            day_routes = DR.query.filter_by(route_date=vd).order_by(DR.id).all()
+            day_routes = DR.query.filter_by(route_date=vd).order_by(DR.start_time.asc().nullslast(), DR.id.asc()).all()
             combined_routes = []
             first_cache = None
             for dr in day_routes:
@@ -795,6 +808,7 @@ def route_generator():
         editing_cached_result=editing_cached_result,
         editing_courier=editing_courier,
         editing_couriers=editing_couriers,
+        editing_color_idx=editing_color_idx,
         view_date_routes=view_date_routes_json,
         view_date=view_date_str,
         view_date_couriers=[{'id': c.id, 'name': c.name} for c in view_date_couriers],
@@ -964,6 +978,7 @@ def route_generator_save():
             addr_to_delivery_id[key] = d.id
 
     editing_route_id = data.get('editing_route_id')
+    is_single_route_edit = bool(editing_route_id)
     saved_route_ids = []
 
     for route_data in routes:
@@ -1010,6 +1025,7 @@ def route_generator_save():
                 dr.estimated_duration_min = route_data.get('totalDriveMin')
                 dr.cached_result_json = single_route_cache
                 dr.cached_at = datetime.utcnow()
+                dr.content_changed_at = datetime.utcnow()
                 dep_str = (route_data.get('departureTime') or '').strip()
                 if dep_str:
                     try:
@@ -1073,10 +1089,11 @@ def route_generator_save():
 
         saved_route_ids.append(dr.id)
 
-    # Clean up routes for this date that existed before but were not included in the save
-    # (handles the case where a courier's route became empty and the frontend omitted it entirely)
+    # Clean up routes for this date that existed before but were not included in the save.
+    # Skip when editing a single specific route — only the edited route is in the payload,
+    # so all other routes for the date would be incorrectly treated as stale.
     any_db_id = any(r.get('routeDbId') for r in routes)
-    if any_db_id and saved_route_ids:
+    if not is_single_route_edit and any_db_id and saved_route_ids:
         stale_routes = DeliveryRoute.query.filter(
             DeliveryRoute.route_date == selected_date,
             ~DeliveryRoute.id.in_(saved_route_ids)

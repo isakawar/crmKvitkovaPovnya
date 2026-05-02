@@ -346,6 +346,7 @@ def florist_sales_add():
         payment_type=payment_type,
         comment='Офлайн продаж',
         date=date.today(),
+        created_by_id=current_user.id,
     )
     db.session.add(txn)
     db.session.flush()

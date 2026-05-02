@@ -93,9 +93,26 @@ def create_order_and_deliveries(client, form):
     return order
 
 
-def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None):
+def get_orders(q=None, phone=None, instagram=None, city=None, size=None, delivery_type=None, date_from=None, date_to=None, subscription_id=None):
     from app.models.subscription import Subscription as _Subscription
     query = Order.query.options(joinedload(Order.client)).join(Client)
+    is_client_search = bool(q or phone or instagram)
+
+    if subscription_id:
+        query = query.filter(Order.subscription_id == subscription_id)
+    elif not is_client_search:
+        # Default: hide stopped-subscription orders, but keep already-delivered ones
+        from app.extensions import db as _db
+        not_stopped = ~_db.session.query(_Subscription.id).filter(
+            _Subscription.id == Order.subscription_id,
+            _Subscription.is_stopped.is_(True),
+        ).correlate(Order).exists()
+        has_delivered = _db.session.query(Delivery.id).filter(
+            Delivery.order_id == Order.id,
+            Delivery.status == 'Доставлено',
+        ).correlate(Order).exists()
+        query = query.filter(or_(not_stopped, has_delivered))
+    # When searching by client: include all orders (stopped subscriptions visible with СТОП badge)
     if q:
         like_q = f'%{q}%'
         query = query.filter(or_(

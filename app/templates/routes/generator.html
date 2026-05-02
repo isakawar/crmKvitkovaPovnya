@@ -540,6 +540,7 @@
 <script>
 // ── Edit mode ─────────────────────────────────────────────────────────────────
 const EDITING_ROUTE_ID = {{ edit_route_id | tojson }};
+const EDITING_COLOR_IDX = {{ editing_color_idx | tojson }};
 const EDITING_DELIVERY_IDS = {{ editing_delivery_ids | tojson }};
 const EDITING_COURIER_NAME = {{ (editing_courier.name | tojson) if editing_courier else 'null' }};
 const EDITING_HAS_COURIER = {{ 'true' if (editing_route and editing_route.courier_id) else 'false' }};
@@ -950,7 +951,8 @@ document.addEventListener('click', function(e) {
     container.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;align-items:start;';
 
     routes.forEach(function(route, idx) {
-      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+      const colorIdx = (EDITING_ROUTE_ID && routes.length === 1) ? EDITING_COLOR_IDX : idx;
+      const color = ROUTE_COLORS[colorIdx % ROUTE_COLORS.length];
       const card = document.createElement('div');
       card.className = 'rounded-xl border border-stone-200 bg-white overflow-hidden';
       card.dataset.routeIdx = idx;
@@ -1415,7 +1417,8 @@ document.addEventListener('click', function(e) {
     }
 
     (result.routes || []).forEach(function(route, idx) {
-      const color = ROUTE_COLORS[idx % ROUTE_COLORS.length];
+      const mapColorIdx = (EDITING_ROUTE_ID && (result.routes || []).length === 1) ? EDITING_COLOR_IDX : idx;
+      const color = ROUTE_COLORS[mapColorIdx % ROUTE_COLORS.length];
       const entry = { line: null, markers: [] };
 
       const geometry = route.geometry;

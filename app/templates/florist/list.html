@@ -249,7 +249,7 @@
   {% endif %}
 {% endmacro %}
 
-{% macro delivery_row(delivery, stop_order='—', planned_arrival=None) %}
+{% macro delivery_row(delivery, stop_order='—', planned_arrival=None, show_time=True) %}
   {% set order = delivery.order %}
   {% set client = delivery.client %}
   {% set _primary = delivery.phone or (order.recipient_phone if order else '') %}
@@ -352,13 +352,19 @@
         <span class="text-xs text-stone-300">—</span>
       {% endif %}
     </td>
-    <td class="whitespace-nowrap text-sm">{{ time_slot }}</td>
+    {% if show_time %}<td class="whitespace-nowrap text-sm">{{ time_slot }}</td>{% endif %}
     <td class="addr-cell">
       {% if delivery.is_pickup %}
         <span class="florist-badge">Самовивіз</span>
+        <div class="mt-1 font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
+        {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
+        {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
       {% elif delivery.delivery_method == 'nova_poshta' %}
         <span class="florist-badge">Нова пошта</span>
+        <div class="mt-1 font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
+        {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
         {% if street %}<div class="mt-1 text-xs text-stone-500">{{ street }}{% if building %}, {{ building }}{% endif %}</div>{% endif %}
+        {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
       {% else %}
         {% if delivery.courier and delivery.courier.is_taxi %}
           <span class="florist-badge" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">
@@ -380,7 +386,7 @@
   </tr>
 {% endmacro %}
 
-{% macro delivery_table_head() %}
+{% macro delivery_table_head(show_time=True) %}
   <thead>
     <tr>
       <th class="w-10"></th>
@@ -390,7 +396,7 @@
       <th>Побажання</th>
       <th>Коментар</th>
       <th>Фото</th>
-      <th>Час</th>
+      {% if show_time %}<th>Час</th>{% endif %}
       <th>Адреса</th>
     </tr>
   </thead>
@@ -618,10 +624,10 @@
       </div>
       <div class="florist-table-wrap">
         <table class="florist-table">
-          {{ delivery_table_head() }}
+          {{ delivery_table_head(show_time=False) }}
           <tbody>
             {% for delivery in nova_poshta_deliveries %}
-              {{ delivery_row(delivery) }}
+              {{ delivery_row(delivery, show_time=False) }}
             {% endfor %}
           </tbody>
         </table>

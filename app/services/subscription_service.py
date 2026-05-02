@@ -457,8 +457,78 @@ def create_subscription_from_import(client, form, delivery_number):
     return subscription
 
 
+def stop_subscription(subscription):
+    subscription.is_stopped = True
+
+
+def build_resume_plan(subscription, new_first_date):
+    """
+    Returns list of {delivery_id, order_id, old_date_str, new_date_str, new_date_iso}
+    for ALL pending deliveries, starting from new_first_date.
+    """
+    pending_deliveries = sorted(
+        [d for order in subscription.orders
+           for d in order.deliveries
+           if d.status not in ('Доставлено', 'Скасовано')],
+        key=lambda d: (d.order.sequence_number or 0, d.delivery_date)
+    )
+    if not pending_deliveries:
+        return []
+
+    dates = build_delivery_dates_n(
+        new_first_date, subscription.type, subscription.delivery_day, len(pending_deliveries)
+    )
+    return [
+        {
+            'delivery_id': delivery.id,
+            'order_id': delivery.order_id,
+            'old_date_str': delivery.delivery_date.strftime('%d.%m'),
+            'new_date_str': new_date.strftime('%d.%m'),
+            'new_date_iso': new_date.strftime('%Y-%m-%d'),
+        }
+        for delivery, new_date in zip(pending_deliveries, dates)
+    ]
+
+
+def apply_resume_plan(subscription, plan):
+    from app.models.delivery_route import RouteDelivery
+    delivery_map = {
+        d.id: d
+        for order in subscription.orders
+        for d in order.deliveries
+    }
+    for item in plan:
+        d = delivery_map.get(item['delivery_id'])
+        if d:
+            d.delivery_date = datetime.datetime.strptime(item['new_date_iso'], '%Y-%m-%d').date()
+            if d.status == 'Розподілено':
+                RouteDelivery.query.filter_by(delivery_id=d.id).delete()
+                d.status = 'Очікує'
+    subscription.is_stopped = False
+
+
+def schedule_single_delivery(subscription, delivery_id, new_date):
+    from app.models.delivery_route import RouteDelivery
+    delivery_map = {
+        d.id: d
+        for order in subscription.orders
+        for d in order.deliveries
+    }
+    delivery = delivery_map.get(delivery_id)
+    if not delivery:
+        raise ValueError('Доставку не знайдено')
+    if delivery.status in ('Доставлено', 'Скасовано'):
+        raise ValueError('Доставка вже завершена або скасована')
+    delivery.delivery_date = new_date
+    if delivery.status == 'Розподілено':
+        RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
+        delivery.status = 'Очікує'
+
+
 def extend_subscription(subscription):
     """Add another cycle of 4 orders/deliveries to the subscription."""
+    if subscription.is_stopped:
+        raise ValueError('Неможливо продовжити зупинену підписку')
     last_order = (
         Order.query
         .filter_by(subscription_id=subscription.id)
