@@ -164,11 +164,37 @@ def add_packaging_type():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/expense_types', methods=['GET'])
+def get_expense_types():
+    items = Settings.query.filter_by(type='expense_type').order_by(Settings.value).all()
+    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+
+@bp.route('/settings/expense_types', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def add_expense_type():
+    data = request.get_json()
+    value = (data.get('value') or '').strip()
+    if not value:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    if Settings.query.filter_by(type='expense_type', value=value).first():
+        return jsonify({'success': False, 'error': 'Такий тип вже існує'}), 400
+    item = Settings(type='expense_type', value=value)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+
 @bp.route('/settings/<int:item_id>', methods=['DELETE'])
 @login_required
 @permission_required('edit_settings')
 def delete_setting(item_id):
+    from app.models.transaction import Transaction
     item = Settings.query.get_or_404(item_id)
+    if item.type == 'expense_type':
+        in_use = Transaction.query.filter_by(expense_type=item.value).first()
+        if in_use:
+            return jsonify({'success': False, 'error': 'Тип витрати використовується в транзакціях і не може бути видалений'}), 400
     db.session.delete(item)
     db.session.commit()
     return jsonify({'success': True})
