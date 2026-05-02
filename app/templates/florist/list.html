@@ -356,6 +356,8 @@
     <td class="addr-cell">
       {% if delivery.is_pickup %}
         <span class="florist-badge">Самовивіз</span>
+        <div class="mt-1 font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
+        {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
         {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
       {% elif delivery.delivery_method == 'nova_poshta' %}
         <span class="florist-badge">Нова пошта</span>
