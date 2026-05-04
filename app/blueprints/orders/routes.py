@@ -35,6 +35,7 @@ from app.services.route_optimizer_service import (
     RouteOptimizerInfeasibleError,
 )
 import csv
+import io
 from sqlalchemy.orm import joinedload
 
 orders_bp = Blueprint('orders', __name__)
@@ -1397,7 +1398,8 @@ def export_orders_csv():
     deliveries_query = (
         Delivery.query
         .options(
-            joinedload(Delivery.order).joinedload(Order.client),
+            joinedload(Delivery.order),
+            joinedload(Delivery.client),
             joinedload(Delivery.courier),
         )
         .order_by(Delivery.delivery_date.asc(), Delivery.time_from.asc(), Delivery.id.asc())
@@ -1426,38 +1428,37 @@ def export_orders_csv():
     elif date_from:
         filename_suffix = f'_{date_from}'
 
-    def generate():
-        header = [
-            'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
-            'Місто', 'Адреса', 'Коментар до адреси',
-            'Розмір', 'Дата доставки', 'Час з', 'Час до',
-            'Статус', 'Кур\'єр', 'Коментар', 'Побажання', 'Спосіб доставки'
-        ]
-        yield ','.join('"' + h.replace('"', '""') + '"' for h in header) + '\n'
-        for d in deliveries:
-            o = d.order
-            c = (o.client if o else None)
-            row = [
-                str(d.id),
-                c.instagram if c else '',
-                o.recipient_name or '' if o else '',
-                d.phone or (o.recipient_phone if o else '') or '',
-                o.city or '' if o else '',
-                d.street or (o.street if o else '') or '',
-                d.address_comment or '',
-                d.size or (o.size if o else '') or '',
-                d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
-                d.time_from or '',
-                d.time_to or '',
-                d.status or '',
-                d.courier.name if d.courier else '',
-                (d.comment or '').replace('\n', ' ').replace('\r', ' '),
-                (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
-                d.delivery_method or '',
-            ]
-            yield ','.join('"' + str(x).replace('"', '""') + '"' for x in row) + '\n'
+    output = io.StringIO()
+    writer = csv.writer(output, quoting=csv.QUOTE_ALL)
+    writer.writerow([
+        'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
+        'Місто', 'Адреса', 'Коментар до адреси',
+        'Розмір', 'Дата доставки', 'Час з', 'Час до',
+        'Статус', 'Кур\'єр', 'Коментар', 'Побажання', 'Спосіб доставки'
+    ])
+    for d in deliveries:
+        o = d.order
+        c = d.client
+        writer.writerow([
+            d.id,
+            c.instagram if c else '',
+            o.recipient_name or '' if o else '',
+            d.phone or (o.recipient_phone if o else '') or '',
+            o.city or '' if o else '',
+            d.street or (o.street if o else '') or '',
+            d.address_comment or '',
+            d.size or (o.size if o else '') or '',
+            d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
+            d.time_from or '',
+            d.time_to or '',
+            d.status or '',
+            d.courier.name if d.courier else '',
+            (d.comment or '').replace('\n', ' ').replace('\r', ' '),
+            (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
+            d.delivery_method or '',
+        ])
 
-    return Response(generate(), mimetype='text/csv', headers={
+    return Response(output.getvalue(), mimetype='text/csv', headers={
         'Content-Disposition': f'attachment; filename=orders_export{filename_suffix}.csv'
     })
 
