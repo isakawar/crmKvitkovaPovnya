@@ -111,7 +111,11 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
             Delivery.order_id == Order.id,
             Delivery.status == 'Доставлено',
         ).correlate(Order).exists()
-        query = query.filter(or_(not_stopped, has_delivered))
+        has_individually_resumed = _db.session.query(Delivery.id).filter(
+            Delivery.order_id == Order.id,
+            Delivery.individually_resumed.is_(True),
+        ).correlate(Order).exists()
+        query = query.filter(or_(not_stopped, has_delivered, has_individually_resumed))
     # When searching by client: include all orders (stopped subscriptions visible with СТОП badge)
     if q:
         like_q = f'%{q}%'

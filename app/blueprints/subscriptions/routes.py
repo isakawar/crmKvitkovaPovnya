@@ -292,6 +292,7 @@ def subscription_detail(subscription_id):
                 'preferences': d.preferences or subscription.preferences or '',
                 'delivery_method': d.delivery_method or subscription.delivery_method or 'courier',
                 'is_subscription': True,
+                'individually_resumed': bool(d.individually_resumed),
             }
             for d in all_deliveries
         ],

@@ -550,7 +550,7 @@
                     {% else %}border border-stone-200 bg-stone-100 text-stone-600{% endif %}">
                     {{ delivery.status }}
                   </span>
-                  {% if order and order.subscription and order.subscription.is_stopped %}
+                  {% if order and order.subscription and order.subscription.is_stopped and not delivery.individually_resumed %}
                   <span class="inline-flex items-center gap-1 rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
                     <i class="bi bi-pause-circle-fill text-[10px]"></i>
                     СТОП
