@@ -244,6 +244,79 @@ def create_transaction():
     return jsonify({'success': True, 'id': txn.id})
 
 
+@transactions_bp.route('/transactions/<int:txn_id>', methods=['GET'])
+@login_required
+def get_transaction(txn_id):
+    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+        abort(403)
+    txn = Transaction.query.get_or_404(txn_id)
+    return jsonify({
+        'id': txn.id,
+        'transaction_type': txn.transaction_type,
+        'amount': txn.amount,
+        'payment_type': txn.payment_type,
+        'expense_type': txn.expense_type,
+        'comment': txn.comment or '',
+        'date': txn.date.isoformat(),
+        'client_id': txn.client_id,
+        'client_name': txn.client.instagram if txn.client else None,
+    })
+
+
+@transactions_bp.route('/transactions/<int:txn_id>', methods=['PUT'])
+@login_required
+def update_transaction(txn_id):
+    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+        abort(403)
+
+    txn = Transaction.query.get_or_404(txn_id)
+    data = request.get_json()
+    errors = []
+
+    amount = data.get('amount')
+    date_str = data.get('date')
+
+    if not amount or int(amount) <= 0:
+        errors.append('Введіть суму більше 0')
+    if not date_str:
+        errors.append('Вкажіть дату')
+
+    if txn.transaction_type == 'credit':
+        payment_type = data.get('payment_type')
+        if payment_type not in ('monobank', 'cash'):
+            errors.append('Оберіть тип оплати')
+    else:
+        expense_type = data.get('expense_type', '').strip()
+        if not expense_type:
+            errors.append('Вкажіть тип витрати')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    try:
+        txn_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
+
+    new_amount = int(amount)
+
+    if txn.transaction_type == 'credit' and txn.client:
+        delta = new_amount - txn.amount
+        txn.client.credits = (txn.client.credits or 0) + delta
+
+    txn.amount = new_amount
+    txn.date = txn_date
+    txn.comment = data.get('comment', '').strip() or None
+
+    if txn.transaction_type == 'credit':
+        txn.payment_type = data.get('payment_type')
+    else:
+        txn.expense_type = data.get('expense_type', '').strip()
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @transactions_bp.route('/transactions/writeoff', methods=['POST'])
 @login_required
 def create_writeoff():

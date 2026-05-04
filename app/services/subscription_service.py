@@ -501,6 +501,7 @@ def apply_resume_plan(subscription, plan):
         d = delivery_map.get(item['delivery_id'])
         if d:
             d.delivery_date = datetime.datetime.strptime(item['new_date_iso'], '%Y-%m-%d').date()
+            d.individually_resumed = False
             if d.status == 'Розподілено':
                 RouteDelivery.query.filter_by(delivery_id=d.id).delete()
                 d.status = 'Очікує'
@@ -520,6 +521,7 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
     if delivery.status in ('Доставлено', 'Скасовано'):
         raise ValueError('Доставка вже завершена або скасована')
     delivery.delivery_date = new_date
+    delivery.individually_resumed = True
     if delivery.status == 'Розподілено':
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
         delivery.status = 'Очікує'

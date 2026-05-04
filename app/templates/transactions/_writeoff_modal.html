@@ -28,16 +28,42 @@
 
           <div class="txn-field">
             <label class="txn-label">Тип витрати</label>
-            <select id="writeoffExpenseType" name="expense_type" required class="txn-select">
-              <option value="">Оберіть тип</option>
-              <option value="Витрати на матеріали">Витрати на матеріали</option>
-              <option value="Комунальні послуги">Комунальні послуги</option>
-              <option value="Оренда">Оренда</option>
-              <option value="Зарплата">Зарплата</option>
-              <option value="Реклама">Реклама</option>
-              <option value="Інше">Інше</option>
-            </select>
+            <div class="expense-combobox" id="expenseCombobox">
+              <input type="text" id="expenseTypeSearch" class="txn-input" placeholder="Пошук типу витрати..." autocomplete="off">
+              <ul class="expense-combobox__dropdown" id="expenseTypeDropdown" hidden></ul>
+            </div>
+            <input type="hidden" id="writeoffExpenseType" name="expense_type">
           </div>
+          <style>
+            .expense-combobox { position: relative; }
+            .expense-combobox__dropdown {
+              position: absolute;
+              left: 0; right: 0;
+              z-index: 1050;
+              background: #fff;
+              border: 1px solid #e2e8f0;
+              border-radius: 0.5rem;
+              box-shadow: 0 4px 16px rgba(0,0,0,.1);
+              max-height: 220px;
+              overflow-y: auto;
+              margin: 0;
+              padding: 0.25rem 0;
+              list-style: none;
+            }
+            .expense-combobox__item {
+              padding: 0.5rem 1rem;
+              cursor: pointer;
+              font-size: 0.9375rem;
+              color: #1e293b;
+            }
+            .expense-combobox__item:hover,
+            .expense-combobox__item--active { background: #f1f5f9; }
+            .expense-combobox__empty {
+              padding: 0.5rem 1rem;
+              font-size: 0.875rem;
+              color: #94a3b8;
+            }
+          </style>
 
           <div class="txn-field">
             <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
@@ -72,10 +98,104 @@ document.addEventListener('DOMContentLoaded', function () {
   const saveBtnLabel = saveBtn ? saveBtn.querySelector('span') : null;
   const errorsEl = document.getElementById('writeoffErrors');
   const writeoffDate = document.getElementById('writeoffDate');
+  const searchInput = document.getElementById('expenseTypeSearch');
+  const hiddenInput = document.getElementById('writeoffExpenseType');
+  const dropdown = document.getElementById('expenseTypeDropdown');
 
   if (!openBtn || !modalEl || !form) return;
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  let expenseTypes = [];
+  let activeIndex = -1;
+
+  async function loadExpenseTypes() {
+    if (expenseTypes.length) return;
+    try {
+      const res = await fetch('/settings/expense_types');
+      expenseTypes = await res.json();
+    } catch (_) {}
+  }
+
+  function renderDropdown(filter) {
+    const q = (filter || '').toLowerCase();
+    const filtered = q
+      ? expenseTypes.filter(t => t.value.toLowerCase().includes(q))
+      : expenseTypes;
+    dropdown.innerHTML = '';
+    activeIndex = -1;
+    if (!filtered.length) {
+      const li = document.createElement('li');
+      li.className = 'expense-combobox__empty';
+      li.textContent = 'Нічого не знайдено';
+      dropdown.appendChild(li);
+    } else {
+      filtered.forEach((t, i) => {
+        const li = document.createElement('li');
+        li.className = 'expense-combobox__item';
+        li.textContent = t.value;
+        li.dataset.value = t.value;
+        li.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          selectType(t.value);
+        });
+        dropdown.appendChild(li);
+      });
+    }
+    dropdown.hidden = false;
+  }
+
+  function selectType(value) {
+    hiddenInput.value = value;
+    searchInput.value = value;
+    dropdown.hidden = true;
+    activeIndex = -1;
+  }
+
+  function clearSelection() {
+    hiddenInput.value = '';
+    searchInput.value = '';
+    dropdown.hidden = true;
+    activeIndex = -1;
+  }
+
+  searchInput.addEventListener('focus', async function () {
+    await loadExpenseTypes();
+    renderDropdown(searchInput.value);
+  });
+
+  searchInput.addEventListener('input', function () {
+    hiddenInput.value = '';
+    renderDropdown(searchInput.value);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    const items = dropdown.querySelectorAll('.expense-combobox__item');
+    if (!items.length) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      items.forEach((el, i) => el.classList.toggle('expense-combobox__item--active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      items.forEach((el, i) => el.classList.toggle('expense-combobox__item--active', i === activeIndex));
+      items[activeIndex]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeIndex >= 0 && items[activeIndex]) {
+        selectType(items[activeIndex].dataset.value);
+      }
+    } else if (e.key === 'Escape') {
+      dropdown.hidden = true;
+    }
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#expenseCombobox')) {
+      dropdown.hidden = true;
+    }
+  });
 
   function todayISO() {
     return new Date().toISOString().slice(0, 10);
@@ -97,27 +217,36 @@ document.addEventListener('DOMContentLoaded', function () {
     errorsEl.classList.add('hidden');
   }
 
-  openBtn.addEventListener('click', function () {
+  openBtn.addEventListener('click', async function () {
     form.reset();
+    clearSelection();
     clearErrors();
     setLoading(false);
     writeoffDate.value = todayISO();
+    await loadExpenseTypes();
     modal.show();
   });
 
   modalEl.addEventListener('hidden.bs.modal', function () {
     clearErrors();
     setLoading(false);
+    clearSelection();
   });
 
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearErrors();
+
+    if (!hiddenInput.value) {
+      showErrors('Оберіть тип витрати зі списку');
+      return;
+    }
+
     setLoading(true);
 
     const payload = {
       amount: document.getElementById('writeoffAmount').value,
-      expense_type: document.getElementById('writeoffExpenseType').value,
+      expense_type: hiddenInput.value,
       comment: document.getElementById('writeoffComment').value,
       date: writeoffDate.value,
     };

@@ -686,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
     };
   }
 
-  function getDeliveryStatusMeta(status) {
+  function getDeliveryStatusMeta(status, isStopped) {
     if (status === 'Доставлено') {
       return {
         icon: 'bi-check-circle',
@@ -706,6 +706,17 @@ document.addEventListener('DOMContentLoaded', function() {
         rowClass: 'border-red-200 bg-red-50/40',
         badgeClass: 'border-red-200 bg-red-50 text-red-700',
         label: 'Не оплачена',
+      };
+    }
+
+    if (isStopped && status !== 'Скасовано') {
+      return {
+        icon: 'bi-pause-circle',
+        iconWrapClass: 'border-orange-200 bg-orange-50',
+        iconClass: 'text-orange-400',
+        rowClass: 'border-orange-200 bg-orange-50/40',
+        badgeClass: 'border-orange-200 bg-orange-50 text-orange-700',
+        label: 'Стоп',
       };
     }
 
@@ -730,14 +741,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
-  function renderDeliveries(deliveries) {
+  function renderDeliveries(deliveries, isStopped) {
     if (!deliveries.length) {
       deliveriesList.innerHTML = '<div class="rounded-[16px] border border-stone-200 bg-white px-4 py-3 text-sm text-stone-500">Для цієї підписки ще немає доставок.</div>';
       return;
     }
 
     deliveriesList.innerHTML = deliveries.map(delivery => {
-      const meta = getDeliveryStatusMeta(delivery.status);
+      const effectivelyStopped = isStopped && !delivery.individually_resumed;
+      const meta = getDeliveryStatusMeta(delivery.status, effectivelyStopped);
       const timeText = delivery.time_from && delivery.time_to
         ? `${escapeHtml(delivery.time_from)} - ${escapeHtml(delivery.time_to)}`
         : '';
@@ -940,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       };
 
-      renderDeliveries(data.deliveries || []);
+      renderDeliveries(data.deliveries || [], isStopped);
       detailModal.show();
     } catch (error) {
       setDetailError(error.message || 'Не вдалося завантажити деталі підписки');

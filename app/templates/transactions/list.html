@@ -116,7 +116,8 @@
       </thead>
       <tbody class="divide-y divide-stone-100">
         {% for txn in transactions %}
-        <tr class="transition-colors hover:bg-stone-50/70">
+        <tr class="transition-colors hover:bg-stone-50/70 {% if current_user.has_role('admin') or current_user.has_role('manager') %}cursor-pointer{% endif %}"
+            {% if current_user.has_role('admin') or current_user.has_role('manager') %}onclick="openEditTxnModal({{ txn.id }})"{% endif %}>
           <td class="px-4 py-3 text-stone-700">{{ txn.date.strftime('%d.%m.%Y') }}</td>
           <td class="px-4 py-3">
             {% if txn.transaction_type == 'credit' %}
@@ -133,7 +134,7 @@
           </td>
           <td class="px-4 py-3">
             {% if txn.transaction_type == 'credit' and txn.client %}
-            <a href="/clients?open={{ txn.client_id }}" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2">{{ txn.client.instagram }}</a>
+            <a href="/clients?open={{ txn.client_id }}" onclick="event.stopPropagation()" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2">{{ txn.client.instagram }}</a>
             {% if txn.client.phone %}<span class="ml-1.5 text-xs text-stone-400">{{ txn.client.phone }}</span>{% endif %}
             {% elif txn.transaction_type == 'credit' and not txn.client_id %}
             <span class="text-stone-500 italic">Офлайн продаж</span>
@@ -234,6 +235,7 @@
 {% include 'transactions/_create_modal.html' %}
 {% include 'transactions/_writeoff_modal.html' %}
 {% if current_user.has_role('admin') or current_user.has_role('manager') %}
+{% include 'transactions/_edit_modal.html' %}
 {% include 'transactions/_export_modal.html' %}
 {% endif %}
 
