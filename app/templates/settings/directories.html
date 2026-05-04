@@ -288,6 +288,13 @@ document.addEventListener('click', function(e) {
                 const modalEl = btn.closest('.modal');
                 const modalId = modalEl.id;
                 loadSettings(modalId, endpoint);
+            } else {
+                const modalEl = btn.closest('.modal');
+                const error = modalEl.querySelector('.settings-error');
+                if (error) {
+                    error.textContent = data.error || 'Помилка видалення';
+                    error.hidden = false;
+                }
             }
         });
 });

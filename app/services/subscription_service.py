@@ -523,6 +523,7 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
     if delivery.status == 'Розподілено':
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
         delivery.status = 'Очікує'
+    subscription.is_stopped = False
 
 
 def extend_subscription(subscription):
