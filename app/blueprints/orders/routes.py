@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response, current_app, send_file
 from flask_login import login_required
 from app.extensions import db
 from app.models import Order, Client, Delivery
@@ -295,6 +295,7 @@ def order_create():
                 parent_sub = Subscription.query.get(parent_order.subscription_id)
                 if parent_sub:
                     parent_sub.is_extended = True
+                    parent_sub.followup_status = 'extended'
                     db.session.commit()
 
         Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
@@ -1461,6 +1462,83 @@ def export_orders_csv():
     return Response(output.getvalue(), mimetype='text/csv', headers={
         'Content-Disposition': f'attachment; filename=orders_export{filename_suffix}.csv'
     })
+
+
+@orders_bp.route('/orders/export/xlsx', methods=['GET'])
+@login_required
+def export_orders_xlsx():
+    from openpyxl import Workbook
+
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+
+    deliveries_query = (
+        Delivery.query
+        .options(
+            joinedload(Delivery.order),
+            joinedload(Delivery.client),
+            joinedload(Delivery.courier),
+        )
+        .order_by(Delivery.delivery_date.asc(), Delivery.time_from.asc(), Delivery.id.asc())
+    )
+
+    if date_from:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    deliveries = deliveries_query.all()
+
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet('Замовлення')
+    ws.append([
+        'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
+        'Місто', 'Адреса', 'Коментар до адреси',
+        'Розмір', 'Дата доставки', 'Час з', 'Час до',
+        'Статус', "Кур'єр", 'Коментар', 'Побажання', 'Спосіб доставки',
+    ])
+    for d in deliveries:
+        o = d.order
+        c = d.client
+        ws.append([
+            d.id,
+            c.instagram if c else '',
+            o.recipient_name or '' if o else '',
+            d.phone or (o.recipient_phone if o else '') or '',
+            o.city or '' if o else '',
+            d.street or (o.street if o else '') or '',
+            d.address_comment or '',
+            d.size or (o.size if o else '') or '',
+            d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
+            d.time_from or '',
+            d.time_to or '',
+            d.status or '',
+            d.courier.name if d.courier else '',
+            (d.comment or '').replace('\n', ' ').replace('\r', ' '),
+            (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
+            d.delivery_method or '',
+        ])
+
+    filename_suffix = f'_{date_from}_{date_to}' if date_from and date_to else (f'_{date_from}' if date_from else '')
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'orders_export{filename_suffix}.xlsx',
+    )
 
 
 @orders_bp.route('/orders/extend-form-from-delivery/<int:delivery_id>')

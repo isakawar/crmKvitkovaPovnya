@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy import func, case, literal
 
 from app.extensions import db
@@ -255,6 +255,220 @@ def get_reports_data(selected_month_raw=None):
         'delivery_type_chart': _items_to_chart(delivery_type_all),
         'size_chart': _items_to_chart(size_all),
         'monthly_orders_trend_chart': monthly_orders_trend_chart,
+    }
+
+
+def _parse_date(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s, '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
+def get_deliveries_analytics(date_from_str=None, date_to_str=None):
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    base = db.session.query(Delivery)
+    if d_from:
+        base = base.filter(Delivery.delivery_date >= d_from)
+    if d_to:
+        base = base.filter(Delivery.delivery_date <= d_to)
+
+    deliveries = base.all()
+
+    total = len(deliveries)
+    completed = sum(1 for d in deliveries if d.status == 'Доставлено')
+    cancelled = sum(1 for d in deliveries if d.status == 'Скасовано')
+    in_progress = total - completed - cancelled
+
+    completed_pct = round(completed / total * 100, 1) if total else 0.0
+    in_progress_pct = round(in_progress / total * 100, 1) if total else 0.0
+    cancelled_pct = round(cancelled / total * 100, 1) if total else 0.0
+
+    # % change vs previous period (only when date range is set)
+    total_change_pct = None
+    if d_from and d_to:
+        duration = (d_to - d_from).days + 1
+        prev_to = d_from - timedelta(days=1)
+        prev_from = prev_to - timedelta(days=duration - 1)
+        prev_total = db.session.query(func.count(Delivery.id)).filter(
+            Delivery.delivery_date >= prev_from,
+            Delivery.delivery_date <= prev_to,
+        ).scalar() or 0
+        if prev_total > 0:
+            total_change_pct = round((total - prev_total) / prev_total * 100, 1)
+
+    # Dynamics by month (fill gaps between first and last month)
+    monthly = {}
+    for d in deliveries:
+        m = _month_start(d.delivery_date)
+        monthly[m] = monthly.get(m, 0) + 1
+
+    if monthly:
+        cursor = min(monthly.keys())
+        last = max(monthly.keys())
+        dyn_labels, dyn_values = [], []
+        while cursor <= last:
+            dyn_labels.append(cursor.strftime('%m.%Y'))
+            dyn_values.append(monthly.get(cursor, 0))
+            cursor = _next_month(cursor)
+    else:
+        dyn_labels, dyn_values = [], []
+
+    # City distribution via Order.city join
+    city_q = (
+        db.session.query(Order.city, func.count(Delivery.id))
+        .join(Order, Order.id == Delivery.order_id)
+    )
+    if d_from:
+        city_q = city_q.filter(Delivery.delivery_date >= d_from)
+    if d_to:
+        city_q = city_q.filter(Delivery.delivery_date <= d_to)
+    city_rows = (
+        city_q.group_by(Order.city)
+        .order_by(func.count(Delivery.id).desc())
+        .limit(10)
+        .all()
+    )
+    city_items = _rows_to_items(city_rows)
+
+    return {
+        'deliveries_total': total,
+        'deliveries_completed': completed,
+        'deliveries_in_progress': in_progress,
+        'deliveries_cancelled': cancelled,
+        'deliveries_completed_pct': completed_pct,
+        'deliveries_in_progress_pct': in_progress_pct,
+        'deliveries_cancelled_pct': cancelled_pct,
+        'deliveries_total_change_pct': total_change_pct,
+        'deliveries_dynamics_chart': {'labels': dyn_labels, 'values': dyn_values},
+        'deliveries_city_chart': _items_to_chart(city_items),
+    }
+
+
+_DELIVERY_EXPENSE_TYPES = {'Доставка', 'Доставка квітів', 'Нова пошта'}
+_PL_TOP_N = 8
+
+
+def get_pl_data(date_from_str=None, date_to_str=None):
+    from app.models.transaction import Transaction
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    q = db.session.query(Transaction)
+    if d_from:
+        q = q.filter(Transaction.date >= d_from)
+    if d_to:
+        q = q.filter(Transaction.date <= d_to)
+    transactions = q.all()
+
+    revenue = sum(t.amount for t in transactions if t.transaction_type == 'credit')
+    total_expenses = sum(t.amount for t in transactions if t.transaction_type == 'debit')
+    profit = revenue - total_expenses
+    margin = round(profit / revenue * 100, 1) if revenue else 0.0
+
+    # Expense breakdown grouped by expense_type
+    buckets = {}
+    for t in transactions:
+        if t.transaction_type != 'debit':
+            continue
+        key = (t.expense_type or '').strip() or 'Не вказано'
+        buckets[key] = buckets.get(key, 0) + t.amount
+
+    sorted_exp = sorted(buckets.items(), key=lambda x: -x[1])
+    expense_breakdown = []
+    other_total = 0
+    for i, (label, amount) in enumerate(sorted_exp):
+        pct = round(amount / total_expenses * 100, 1) if total_expenses else 0.0
+        if i < _PL_TOP_N:
+            expense_breakdown.append({'label': label, 'amount': amount, 'pct': pct})
+        else:
+            other_total += amount
+    if other_total:
+        expense_breakdown.append({
+            'label': 'Інше',
+            'amount': other_total,
+            'pct': round(other_total / total_expenses * 100, 1) if total_expenses else 0.0,
+        })
+
+    # Delivery-related expenses for "Вартість доставки" KPI
+    delivery_expenses = sum(
+        t.amount for t in transactions
+        if t.transaction_type == 'debit' and (t.expense_type or '') in _DELIVERY_EXPENSE_TYPES
+    )
+
+    return {
+        'pl_revenue': revenue,
+        'pl_expenses': total_expenses,
+        'pl_profit': profit,
+        'pl_margin': margin,
+        'pl_expense_breakdown': expense_breakdown,
+        'pl_delivery_expenses': delivery_expenses,
+    }
+
+
+def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    # MAX(delivery_date) per subscription
+    last_delivery_subq = (
+        db.session.query(
+            Order.subscription_id,
+            func.max(Delivery.delivery_date).label('last_date'),
+        )
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id.isnot(None))
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
+    q = (
+        db.session.query(
+            func.count(Subscription.id).label('total'),
+            func.count(
+                case((Subscription.followup_status == 'extended', Subscription.id))
+            ).label('renewed'),
+            func.count(
+                case((Subscription.followup_status == 'declined', Subscription.id))
+            ).label('declined'),
+            func.count(
+                case((Subscription.followup_status == 'pending', Subscription.id))
+            ).label('pending'),
+        )
+        .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
+        .filter(Subscription.is_renewal_reminder == False)  # noqa: E712
+    )
+
+    if d_from:
+        q = q.filter(last_delivery_subq.c.last_date >= d_from)
+    if d_to:
+        q = q.filter(last_delivery_subq.c.last_date <= d_to)
+    else:
+        # only subscriptions whose last delivery is already in the past
+        q = q.filter(last_delivery_subq.c.last_date < date.today())
+
+    row = q.one()
+    total   = row.total   or 0
+    renewed = row.renewed or 0
+    declined = row.declined or 0
+    pending  = row.pending  or 0
+    renewal_rate = round(renewed / total * 100, 1) if total else 0.0
+
+    return {
+        'sub_renewal_rate':    renewal_rate,
+        'sub_renewed_count':   renewed,
+        'sub_expired_count':   total,
+        'sub_declined_count':  declined,
+        'sub_pending_count':   pending,
     }
 
 
