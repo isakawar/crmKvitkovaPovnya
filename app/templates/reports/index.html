@@ -551,7 +551,7 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-card__label">Margin</div>
+        <div class="kpi-card__label">Profit %</div>
         <div class="kpi-card__value kpi-card__value--blue">{{ pl.margin }}%</div>
         <div class="kpi-card__sub">Рентабельність</div>
       </div>
@@ -581,8 +581,9 @@
     </div>
     {% endif %}
 
-    <!-- Bottom KPI cards -->
+    <!-- Bottom stats -->
     <div class="kpi-grid">
+
       <div class="kpi-card">
         <div class="kpi-card__label">Кількість доставок</div>
         <div class="kpi-card__value">{{ deliveries.total }}</div>
@@ -590,37 +591,49 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-card__label">Revenue на доставку</div>
-        <div class="kpi-card__value kpi-card__value--orange">
-          ₴{{ (pl.revenue // deliveries.total) if deliveries.total else 0 }}
-        </div>
-        <div class="kpi-card__sub">Середній дохід</div>
+        <div class="kpi-card__label">Продовження підписок</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ subscriptions.renewal_rate }}%</div>
+        <div class="kpi-card__sub">{{ subscriptions.renewed_count }} / {{ subscriptions.expired_count }}{% if subscriptions.declined_count %} • {{ subscriptions.declined_count }} відмов{% endif %}</div>
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-card__label">Вартість доставки</div>
+        <div class="kpi-card__label">Revenue на 1 доставку</div>
+        <div class="kpi-card__value kpi-card__value--orange">
+          ₴{{ (pl.revenue // deliveries.total) if deliveries.total else 0 }}
+        </div>
+        <div class="kpi-card__sub">Середній дохід з доставки</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Вартість 1 доставки</div>
         <div class="kpi-card__value">
           ₴{{ (pl.delivery_expenses // deliveries.total) if deliveries.total else 0 }}
         </div>
-        <div class="kpi-card__sub">Середня вартість</div>
+        <div class="kpi-card__sub">Витрати на доставку / кількість</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Вартість квітів на 1 доставку</div>
+        <div class="kpi-card__value">
+          ₴{{ (pl.flowers_expenses // deliveries.total) if deliveries.total else 0 }}
+        </div>
+        <div class="kpi-card__sub">Квіти / кількість доставок</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Квіти % від доходу</div>
+        <div class="kpi-card__value">
+          {{ (pl.flowers_expenses / pl.revenue * 100) | round(1) if pl.revenue else 0 }}%
+        </div>
+        <div class="kpi-card__sub">₴{{ "{:,}".format(pl.flowers_expenses).replace(",", " ") }} витрат на квіти</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Витрати на ЗП</div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.salary_expenses).replace(",", " ") }}</div>
-        <div class="kpi-card__sub">{% if pl.expenses %}{{ (pl.salary_expenses / pl.expenses * 100) | round(1) }}% від витрат{% else %}—{% endif %}</div>
+        <div class="kpi-card__sub">{{ (pl.salary_expenses / pl.expenses * 100) | round(1) if pl.expenses else 0 }}% від загальних витрат</div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-card__label">Продовження підписок</div>
-        <div class="kpi-card__value kpi-card__value--blue">{{ subscriptions.renewal_rate }}%</div>
-        <div class="kpi-card__sub">{{ subscriptions.renewed_count }} / {{ subscriptions.expired_count }}</div>
-        {% if subscriptions.declined_count or subscriptions.pending_count %}
-        <div class="kpi-card__sub" style="margin-top:0.15rem; font-size:0.72rem; color:#a8a29e;">
-          {% if subscriptions.declined_count %}{{ subscriptions.declined_count }} відмов{% endif %}{% if subscriptions.declined_count and subscriptions.pending_count %} • {% endif %}{% if subscriptions.pending_count %}{{ subscriptions.pending_count }} очікують{% endif %}
-        </div>
-        {% endif %}
-      </div>
     </div>
 
   </div>{# /tab-pl #}

@@ -414,6 +414,17 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     delivery_expenses = _category_expenses('delivery')
     salary_expenses = _category_expenses('Salary')
 
+    flowers_expenses = (
+        db.session.query(func.sum(Transaction.amount))
+        .join(Settings, Settings.id == Transaction.expense_type_id)
+        .filter(
+            Transaction.transaction_type == 'debit',
+            Settings.value.in_(['Квіти', 'Залишки квітів']),
+            *_date_filters(Transaction.date),
+        )
+        .scalar() or 0
+    )
+
     return {
         'revenue': revenue,
         'expenses': total_expenses,
@@ -422,6 +433,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         'expense_breakdown': expense_breakdown,
         'delivery_expenses': delivery_expenses,
         'salary_expenses': salary_expenses,
+        'flowers_expenses': flowers_expenses,
     }
 
 
