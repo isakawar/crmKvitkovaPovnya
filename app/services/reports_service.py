@@ -108,24 +108,37 @@ def _fill_monthly_gaps(month_counts):
 # ── Private helpers ────────────────────────────────────────────────────────────
 
 def _monthly_orders_trend():
-    """Last-365-days order & subscription counts grouped by month."""
+    """Last-365-days trend: one-time orders and new subscriptions grouped by month."""
+    from app.models.subscription import Subscription
+
     cutoff = datetime.utcnow() - timedelta(days=365)
-    rows = (
-        db.session.query(Order.created_at, Order.subscription_id)
-        .filter(Order.created_at.isnot(None), Order.created_at >= cutoff)
-        .order_by(Order.created_at.asc())
+
+    # One-time orders only (subscription_id IS NULL)
+    order_rows = (
+        db.session.query(Order.created_at)
+        .filter(Order.subscription_id.is_(None), Order.created_at >= cutoff)
         .all()
     )
-    if not rows:
+    # New subscriptions created
+    sub_rows = (
+        db.session.query(Subscription.created_at)
+        .filter(Subscription.created_at.isnot(None), Subscription.created_at >= cutoff)
+        .all()
+    )
+
+    if not order_rows and not sub_rows:
         return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
 
     monthly = {}
-    for created_at, subscription_id in rows:
+    for (created_at,) in order_rows:
         month = _month_start(created_at.date())
-        bucket = monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})
-        bucket['orders'] += 1
-        if subscription_id is not None:
-            bucket['subscriptions'] += 1
+        monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})['orders'] += 1
+    for (created_at,) in sub_rows:
+        month = _month_start(created_at.date())
+        monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})['subscriptions'] += 1
+
+    if not monthly:
+        return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
 
     first_month = min(monthly.keys())
     last_month = _month_start(datetime.utcnow().date())
@@ -145,9 +158,6 @@ def _monthly_orders_trend():
 # Each function returns a flat dict scoped to its domain.
 # Routes namespace them: orders=get_orders_data(...), deliveries=get_deliveries_analytics(...)
 # Template accesses: {{ orders.marketing_all_total }}, {{ deliveries.total }}, etc.
-
-_PL_TOP_N = 8
-
 
 def get_orders_data(date_from_str=None, date_to_str=None):
     """Marketing, for-whom, delivery-type, size breakdowns + 365-day order trend."""
@@ -358,17 +368,66 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     profit = revenue - total_expenses
     margin = round(profit / revenue * 100, 1) if revenue else 0.0
 
-    # Expense breakdown by category
+    # Expense breakdown: categories (expandable) + uncategorized types (individual)
     cat_rows = (
-        db.session.query(ExpenseCategory.name, func.sum(Transaction.amount).label('total'))
+        db.session.query(ExpenseCategory.id, ExpenseCategory.name, func.sum(Transaction.amount).label('total'))
         .join(Settings, Settings.id == Transaction.expense_type_id)
         .join(ExpenseCategory, ExpenseCategory.id == Settings.category_id)
         .filter(Transaction.transaction_type == 'debit', *_date_filters(Transaction.date))
         .group_by(ExpenseCategory.id, ExpenseCategory.name)
-        .order_by(func.sum(Transaction.amount).desc())
         .all()
     )
-    uncategorized = (
+
+    expense_breakdown = []
+    for cat_id, cat_name, cat_total in cat_rows:
+        amount = int(cat_total)
+        pct = round(amount / total_expenses * 100, 1) if total_expenses else 0.0
+        children_rows = (
+            db.session.query(Settings.value, func.sum(Transaction.amount).label('total'))
+            .join(Transaction, Transaction.expense_type_id == Settings.id)
+            .filter(
+                Transaction.transaction_type == 'debit',
+                Settings.category_id == cat_id,
+                *_date_filters(Transaction.date),
+            )
+            .group_by(Settings.id, Settings.value)
+            .order_by(func.sum(Transaction.amount).desc())
+            .all()
+        )
+        children = [
+            {
+                'label': v or 'Без назви',
+                'amount': int(t),
+                'pct': round(int(t) / total_expenses * 100, 1) if total_expenses else 0.0,
+            }
+            for v, t in children_rows
+        ]
+        expense_breakdown.append({'label': cat_name, 'amount': amount, 'pct': pct, 'is_group': True, 'children': children})
+
+    # Uncategorized: individual expense types (Settings.category_id IS NULL)
+    uncat_type_rows = (
+        db.session.query(Settings.value, func.sum(Transaction.amount).label('total'))
+        .join(Transaction, Transaction.expense_type_id == Settings.id)
+        .filter(
+            Transaction.transaction_type == 'debit',
+            Settings.category_id.is_(None),
+            *_date_filters(Transaction.date),
+        )
+        .group_by(Settings.id, Settings.value)
+        .all()
+    )
+    for val, total in uncat_type_rows:
+        amount = int(total)
+        expense_breakdown.append({
+            'label': val or 'Без назви',
+            'amount': amount,
+            'pct': round(amount / total_expenses * 100, 1) if total_expenses else 0.0,
+            'is_group': False,
+            'children': [],
+        })
+
+    # Transactions with no expense_type_id
+    no_type = (
         db.session.query(func.sum(Transaction.amount))
         .filter(
             Transaction.transaction_type == 'debit',
@@ -377,26 +436,16 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         )
         .scalar() or 0
     )
-
-    all_exp = [(name, int(total)) for name, total in cat_rows]
-    if uncategorized:
-        all_exp.append(('Без категорії', int(uncategorized)))
-    all_exp.sort(key=lambda x: -x[1])
-
-    expense_breakdown = []
-    other_total = 0
-    for i, (label, amount) in enumerate(all_exp):
-        pct = round(amount / total_expenses * 100, 1) if total_expenses else 0.0
-        if i < _PL_TOP_N:
-            expense_breakdown.append({'label': label, 'amount': amount, 'pct': pct})
-        else:
-            other_total += amount
-    if other_total:
+    if no_type:
         expense_breakdown.append({
-            'label': 'Інше',
-            'amount': other_total,
-            'pct': round(other_total / total_expenses * 100, 1) if total_expenses else 0.0,
+            'label': 'Без категорії',
+            'amount': int(no_type),
+            'pct': round(int(no_type) / total_expenses * 100, 1) if total_expenses else 0.0,
+            'is_group': False,
+            'children': [],
         })
+
+    expense_breakdown.sort(key=lambda x: -x['amount'])
 
     def _category_expenses(slug):
         return (

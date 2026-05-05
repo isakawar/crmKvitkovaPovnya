@@ -422,7 +422,7 @@
           <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="report-kpi">Замовлень: {{ orders.monthly_orders_total }}</span>
+          <span class="report-kpi">Разових: {{ orders.monthly_orders_total }}</span>
           <span class="report-kpi">Підписок: {{ orders.monthly_subscriptions_total }}</span>
         </div>
       </div>
@@ -608,20 +608,48 @@
     <div id="expense-breakdown-body" class="report-card p-5 hidden">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-base font-semibold text-stone-900">Розбивка витрат</h2>
-        <span class="text-sm text-stone-400">{{ pl.expense_breakdown|length }} категорій</span>
+        <span class="text-sm text-stone-400">{{ pl.expense_breakdown|length }} рядків</span>
       </div>
       {% for item in pl.expense_breakdown %}
       <div class="expense-bar-row">
+        {% if item.is_group and item.children %}
+        <button type="button"
+          class="expense-bar-row__header w-full text-left group"
+          onclick="toggleExpenseGroup(this)">
+          <div class="flex items-center gap-1.5">
+            <i class="bi bi-chevron-right text-stone-400 text-xs transition-transform duration-200 expense-group-icon"></i>
+            <span class="text-sm font-semibold text-stone-800">{{ item.label }}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+            <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
+          </div>
+        </button>
+        {% else %}
         <div class="expense-bar-row__header">
-          <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
+          <span class="text-sm font-medium text-stone-600 pl-5">{{ item.label }}</span>
           <div class="flex items-center gap-3">
             <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
             <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
           </div>
         </div>
+        {% endif %}
         <div class="expense-bar-track">
           <div class="expense-bar-fill" style="width: {{ item.pct }}%"></div>
         </div>
+        {% if item.is_group and item.children %}
+        <div class="expense-group-children hidden pl-5 mt-1 space-y-1">
+          {% for child in item.children %}
+          <div class="flex items-center justify-between py-1 border-t border-stone-100">
+            <span class="text-sm text-stone-500">{{ child.label }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-stone-700">₴{{ "{:,}".format(child.amount).replace(",", " ") }}</span>
+              <span class="text-xs text-stone-400 w-10 text-right">{{ child.pct }}%</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -697,7 +725,7 @@
         <div>
           <div class="flex items-center gap-2 mb-1">
             <i class="bi bi-box-seam text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Замовлення / Доставки</h2>
+            <h2 class="text-base font-semibold text-stone-900">Замовлення</h2>
           </div>
           <p class="text-sm text-stone-500">ID, клієнт, адреса, розмір, дата, статус, кур'єр, коментарі</p>
         </div>
@@ -981,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', function () {
         labels: labels,
         datasets: [
           {
-            label: 'Нові замовлення',
+            label: 'Нові разові замовлення',
             data: ordersValues,
             borderColor: 'rgba(17, 24, 39, 0.88)',
             backgroundColor: 'rgba(17, 24, 39, 0.12)',
@@ -1162,6 +1190,16 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.setAttribute('aria-expanded', String(!open));
     });
   }());
+
+  window.toggleExpenseGroup = function (btn) {
+    const row = btn.closest('.expense-bar-row');
+    const children = row.querySelector('.expense-group-children');
+    const icon = btn.querySelector('.expense-group-icon');
+    if (!children) return;
+    const open = !children.classList.contains('hidden');
+    children.classList.toggle('hidden', open);
+    icon.style.transform = open ? '' : 'rotate(90deg)';
+  };
 });
 </script>
 {% endblock %}
