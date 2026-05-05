@@ -7,6 +7,7 @@ from app.services.reports_service import (
     get_pl_data,
     get_subscription_renewal_rate,
     get_florist_sales_data,
+    get_active_months,
 )
 from app.utils.decorators import permission_required
 
@@ -31,4 +32,5 @@ def reports_page():
         active_tab=active_tab,
         date_from=date_from or '',
         date_to=date_to or '',
+        active_months=get_active_months(),
     )

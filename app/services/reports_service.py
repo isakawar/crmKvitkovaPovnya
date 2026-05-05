@@ -413,17 +413,16 @@ def get_pl_data(date_from_str=None, date_to_str=None):
 
     delivery_expenses = _category_expenses('delivery')
     salary_expenses = _category_expenses('Salary')
+    flowers_expenses = _category_expenses('flowers')
 
-    flowers_expenses = (
-        db.session.query(func.sum(Transaction.amount))
-        .join(Settings, Settings.id == Transaction.expense_type_id)
-        .filter(
-            Transaction.transaction_type == 'debit',
-            Settings.value.in_(['Квіти', 'Залишки квітів']),
-            *_date_filters(Transaction.date),
-        )
-        .scalar() or 0
-    )
+    from app.models.delivery import Delivery
+    delivery_count = db.session.query(func.count(Delivery.id)).filter(
+        Delivery.status != 'Скасовано',
+        *_date_filters(Delivery.delivery_date),
+    ).scalar() or 0
+
+    revenue_per_delivery = round(revenue / delivery_count) if delivery_count else 0
+    flowers_per_delivery = round(flowers_expenses / delivery_count) if delivery_count else 0
 
     return {
         'revenue': revenue,
@@ -434,6 +433,9 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         'delivery_expenses': delivery_expenses,
         'salary_expenses': salary_expenses,
         'flowers_expenses': flowers_expenses,
+        'delivery_count': delivery_count,
+        'revenue_per_delivery': revenue_per_delivery,
+        'flowers_per_delivery': flowers_per_delivery,
     }
 
 
@@ -535,3 +537,22 @@ def get_florist_sales_data(date_from_str=None, date_to_str=None):
         'grand_bonus': grand_bonus,
         'grand_count': grand_count,
     }
+
+
+def get_active_months():
+    """Return sorted list of (year, month) that have at least one transaction or delivery."""
+    from app.models.transaction import Transaction
+    from app.models.delivery import Delivery
+
+    tx_months = db.session.query(
+        func.extract('year',  Transaction.date).label('y'),
+        func.extract('month', Transaction.date).label('m'),
+    ).group_by('y', 'm').all()
+
+    del_months = db.session.query(
+        func.extract('year',  Delivery.delivery_date).label('y'),
+        func.extract('month', Delivery.delivery_date).label('m'),
+    ).group_by('y', 'm').all()
+
+    months = {(int(r.y), int(r.m)) for r in tx_months} | {(int(r.y), int(r.m)) for r in del_months}
+    return sorted(months, reverse=True)  # newest first

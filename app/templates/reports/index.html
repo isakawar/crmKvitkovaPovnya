@@ -234,6 +234,34 @@
     transition: width 0.6s ease;
   }
 
+  /* Filter pills */
+  .reports-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 2.25rem;
+    padding: 0 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #78716c;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+
+  .reports-filter-pill:hover {
+    border-color: #a8a29e;
+    color: #1c1917;
+  }
+
+  .reports-filter-pill.is-active {
+    background: #1c1917;
+    border-color: #1c1917;
+    color: #fff;
+  }
+
   @media (max-width: 1100px) {
     .report-grid-two { grid-template-columns: 1fr; }
     .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -262,25 +290,43 @@
         <p class="mt-1 text-sm text-stone-500">Аналітика та звітність по всіх операціях</p>
       </div>
 
-      <!-- Date range filter -->
-      <form method="get" id="reports-filter-form" class="flex items-center gap-2 flex-wrap">
+      <!-- Date filter -->
+      <form method="get" id="reports-filter-form">
         <input type="hidden" name="tab" id="filter-tab-input" value="{{ active_tab }}">
         <input type="hidden" name="date_from" id="reports-date-from" value="{{ date_from }}">
         <input type="hidden" name="date_to"   id="reports-date-to"   value="{{ date_to }}">
-        <div class="relative">
-          <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
-          <input
-            type="text"
-            id="reports-date-picker"
-            placeholder="Весь період"
-            readonly
-            class="h-9 w-44 rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-          >
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- All time -->
+          <button type="button" id="filter-all-time"
+                  class="reports-filter-pill {% if not has_range %}is-active{% endif %}">
+            Весь час
+          </button>
+
+          <!-- Month select -->
+          <select id="filter-month-select" class="reports-filter-pill cursor-pointer">
+            <option value="">Місяць...</option>
+          </select>
+
+          <!-- Divider -->
+          <span class="text-stone-300 text-sm select-none">|</span>
+
+          <!-- Custom range picker -->
+          <div class="relative">
+            <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+            <input
+              type="text"
+              id="reports-date-picker"
+              placeholder="Свій діапазон"
+              readonly
+              class="h-9 w-40 rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+          </div>
+          <button type="submit" id="filter-submit"
+                  class="inline-flex h-9 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700 hidden">
+            Оновити
+          </button>
         </div>
-        <button type="submit"
-                class="inline-flex h-9 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700">
-          Оновити
-        </button>
       </form>
     </div>
   </section>
@@ -586,8 +632,8 @@
 
       <div class="kpi-card">
         <div class="kpi-card__label">Кількість доставок</div>
-        <div class="kpi-card__value">{{ deliveries.total }}</div>
-        <div class="kpi-card__sub">За вибраний період</div>
+        <div class="kpi-card__value">{{ pl.delivery_count }}</div>
+        <div class="kpi-card__sub">Без скасованих ({{ deliveries.cancelled }} скасовано)</div>
       </div>
 
       <div class="kpi-card">
@@ -599,15 +645,15 @@
       <div class="kpi-card">
         <div class="kpi-card__label">Revenue на 1 доставку</div>
         <div class="kpi-card__value kpi-card__value--orange">
-          ₴{{ (pl.revenue // deliveries.total) if deliveries.total else 0 }}
+          ₴{{ "{:,}".format(pl.revenue_per_delivery).replace(",", " ") }}
         </div>
-        <div class="kpi-card__sub">Середній дохід з доставки</div>
+        <div class="kpi-card__sub">Дохід / {{ pl.delivery_count }} доставок</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість 1 доставки</div>
         <div class="kpi-card__value">
-          ₴{{ (pl.delivery_expenses // deliveries.total) if deliveries.total else 0 }}
+          ₴{{ (pl.delivery_expenses // pl.delivery_count) if pl.delivery_count else 0 }}
         </div>
         <div class="kpi-card__sub">Витрати на доставку / кількість</div>
       </div>
@@ -615,9 +661,9 @@
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість квітів на 1 доставку</div>
         <div class="kpi-card__value">
-          ₴{{ (pl.flowers_expenses // deliveries.total) if deliveries.total else 0 }}
+          ₴{{ "{:,}".format(pl.flowers_per_delivery).replace(",", " ") }}
         </div>
-        <div class="kpi-card__sub">Квіти / кількість доставок</div>
+        <div class="kpi-card__sub">Квіти / {{ pl.delivery_count }} доставок</div>
       </div>
 
       <div class="kpi-card">
@@ -770,20 +816,20 @@ document.addEventListener('DOMContentLoaded', function () {
         if (defaultDate.length) {
           const [f, t] = instance.selectedDates;
           instance.element.value = t
-            ? instance.formatDate(f, 'd.m.Y') + ' — ' + instance.formatDate(t, 'd.m.Y')
-            : instance.formatDate(f, 'd.m.Y');
+            ? instance.formatDate(f, 'd.m') + ' — ' + instance.formatDate(t, 'd.m')
+            : instance.formatDate(f, 'd.m');
         }
       },
       onChange(dates, _, instance) {
         if (dates.length === 1) {
           fromEl.value = instance.formatDate(dates[0], 'Y-m-d');
           toEl.value   = instance.formatDate(dates[0], 'Y-m-d');
-          instance.element.value = instance.formatDate(dates[0], 'd.m.Y');
+          instance.element.value = instance.formatDate(dates[0], 'd.m');
         } else if (dates.length === 2) {
           fromEl.value = instance.formatDate(dates[0], 'Y-m-d');
           toEl.value   = instance.formatDate(dates[1], 'Y-m-d');
           instance.element.value =
-            instance.formatDate(dates[0], 'd.m.Y') + ' — ' + instance.formatDate(dates[1], 'd.m.Y');
+            instance.formatDate(dates[0], 'd.m') + ' — ' + instance.formatDate(dates[1], 'd.m');
         } else {
           fromEl.value = '';
           toEl.value   = '';
@@ -793,8 +839,77 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // ── Main filter picker ─────────────────────────────
-  makeDatePicker('reports-date-picker', 'reports-date-from', 'reports-date-to');
+  // ── Main filter ────────────────────────────────────
+  (function () {
+    const form      = document.getElementById('reports-filter-form');
+    const fromInput = document.getElementById('reports-date-from');
+    const toInput   = document.getElementById('reports-date-to');
+    const allBtn    = document.getElementById('filter-all-time');
+    const sel       = document.getElementById('filter-month-select');
+    const submitBtn = document.getElementById('filter-submit');
+
+    const UA_MONTHS = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
+
+    const curFrom = fromInput.value;
+    const curTo   = toInput.value;
+
+    // Detect if curFrom/curTo is exactly a full calendar month
+    function matchedMonth() {
+      if (!curFrom || !curTo) return null;
+      const [fy, fm, fd] = curFrom.split('-').map(Number);
+      const [ty, tm, td] = curTo.split('-').map(Number);
+      if (fy !== ty || fm !== tm) return null;
+      if (fd !== 1) return null;
+      if (td !== lastDay(fy, fm)) return null;
+      return { y: fy, m: fm };
+    }
+    const activeMon = matchedMonth();
+
+    // Populate select from server-provided list of months with actual data
+    const activeMonths = {{ active_months | tojson }};
+    activeMonths.forEach(function (pair) {
+      const y = pair[0], m = pair[1];
+      const label = UA_MONTHS[m - 1] + ' ' + String(y).slice(2);
+      const first = y + '-' + pad(m) + '-01';
+      const last  = y + '-' + pad(m) + '-' + pad(lastDay(y, m));
+      const opt = document.createElement('option');
+      opt.value = first + '|' + last;
+      opt.textContent = label;
+      if (activeMon && activeMon.y === y && activeMon.m === m) opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    // Style select as active pill when a month is selected
+    if (activeMon) sel.classList.add('is-active');
+
+    // Month select change → submit immediately
+    sel.addEventListener('change', function () {
+      if (!sel.value) return;
+      const [from, to] = sel.value.split('|');
+      fromInput.value = from;
+      toInput.value   = to;
+      form.submit();
+    });
+
+    // "Весь час" → clear and submit
+    allBtn.addEventListener('click', function () {
+      fromInput.value = '';
+      toInput.value   = '';
+      form.submit();
+    });
+
+    // Custom flatpickr — show submit button when user picks dates
+    const isCustomRange = curFrom && curTo && !activeMon;
+    if (isCustomRange) submitBtn.classList.remove('hidden');
+
+    makeDatePicker('reports-date-picker', 'reports-date-from', 'reports-date-to', function () {
+      submitBtn.classList.remove('hidden');
+      sel.classList.remove('is-active');
+      sel.value = '';
+    });
+  }());
 
   // ── Export URL builder ─────────────────────────────
   function buildExportUrl(base, fromId, toId, format) {
