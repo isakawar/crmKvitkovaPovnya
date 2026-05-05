@@ -523,11 +523,24 @@
         <div class="kpi-card__sub">Загальний дохід</div>
       </div>
 
+      {% if pl.expense_breakdown %}
+      <button type="button" id="expense-breakdown-toggle"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              aria-expanded="false">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Expenses</div>
+          <i id="expense-breakdown-icon" class="bi bi-chevron-down text-stone-400 text-sm mt-0.5 transition-transform duration-200 flex-shrink-0"></i>
+        </div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити розбивку</div>
+      </button>
+      {% else %}
       <div class="kpi-card">
         <div class="kpi-card__label">Expenses</div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
         <div class="kpi-card__sub">Всі витрати</div>
       </div>
+      {% endif %}
 
       <div class="kpi-card">
         <div class="kpi-card__label">Profit</div>
@@ -544,37 +557,28 @@
       </div>
     </div>
 
-    <!-- Expense breakdown -->
+    <!-- Expense breakdown (expandable, triggered from Expenses KPI card) -->
     {% if pl.expense_breakdown %}
-    <div class="report-card overflow-hidden">
-      <button type="button" id="expense-breakdown-toggle"
-              class="w-full flex items-center justify-between px-5 py-4 text-left"
-              aria-expanded="false">
-        <span class="text-lg font-semibold text-stone-900">Розбивка витрат</span>
-        <span class="flex items-center gap-2 text-sm text-stone-500">
-          <span id="expense-breakdown-hint">{{ pl.expense_breakdown|length }} категорій</span>
-          <i id="expense-breakdown-icon" class="bi bi-chevron-down transition-transform duration-200"></i>
-        </span>
-      </button>
-      <div id="expense-breakdown-body" class="hidden px-5 pb-5">
-        {% for item in pl.expense_breakdown %}
-        <div class="expense-bar-row">
-          <div class="expense-bar-row__header">
-            <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
-            <div class="flex items-center gap-3">
-              <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
-              <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
-            </div>
-          </div>
-          <div class="expense-bar-track">
-            <div class="expense-bar-fill" style="width: {{ item.pct }}%"></div>
+    <div id="expense-breakdown-body" class="report-card p-5 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-stone-900">Розбивка витрат</h2>
+        <span class="text-sm text-stone-400">{{ pl.expense_breakdown|length }} категорій</span>
+      </div>
+      {% for item in pl.expense_breakdown %}
+      <div class="expense-bar-row">
+        <div class="expense-bar-row__header">
+          <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+            <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
           </div>
         </div>
-        {% endfor %}
+        <div class="expense-bar-track">
+          <div class="expense-bar-fill" style="width: {{ item.pct }}%"></div>
+        </div>
       </div>
+      {% endfor %}
     </div>
-    {% else %}
-    <div class="report-empty">Немає даних про витрати за вибраний період</div>
     {% endif %}
 
     <!-- Bottom KPI cards -->
@@ -599,6 +603,12 @@
           ₴{{ (pl.delivery_expenses // deliveries.total) if deliveries.total else 0 }}
         </div>
         <div class="kpi-card__sub">Середня вартість</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Витрати на ЗП</div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.salary_expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{% if pl.expenses %}{{ (pl.salary_expenses / pl.expenses * 100) | round(1) }}% від витрат{% else %}—{% endif %}</div>
       </div>
 
       <div class="kpi-card">
@@ -1015,7 +1025,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const btn  = document.getElementById('expense-breakdown-toggle');
     const body = document.getElementById('expense-breakdown-body');
     const icon = document.getElementById('expense-breakdown-icon');
-    const hint = document.getElementById('expense-breakdown-hint');
     if (!btn || !body) return;
 
     btn.addEventListener('click', function () {
@@ -1023,11 +1032,7 @@ document.addEventListener('DOMContentLoaded', function () {
       body.classList.toggle('hidden', open);
       icon.style.transform = open ? '' : 'rotate(180deg)';
       btn.setAttribute('aria-expanded', String(!open));
-      if (open) hint.textContent = hint.dataset.count + ' категорій';
     });
-
-    // store count for collapse label
-    hint.dataset.count = hint.textContent.split(' ')[0];
   }());
 });
 </script>

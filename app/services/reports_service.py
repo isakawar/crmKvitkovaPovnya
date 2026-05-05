@@ -398,17 +398,21 @@ def get_pl_data(date_from_str=None, date_to_str=None):
             'pct': round(other_total / total_expenses * 100, 1) if total_expenses else 0.0,
         })
 
-    delivery_expenses = (
-        db.session.query(func.sum(Transaction.amount))
-        .join(Settings, Settings.id == Transaction.expense_type_id)
-        .join(ExpenseCategory, ExpenseCategory.id == Settings.category_id)
-        .filter(
-            Transaction.transaction_type == 'debit',
-            ExpenseCategory.slug == 'delivery',
-            *_date_filters(Transaction.date),
+    def _category_expenses(slug):
+        return (
+            db.session.query(func.sum(Transaction.amount))
+            .join(Settings, Settings.id == Transaction.expense_type_id)
+            .join(ExpenseCategory, ExpenseCategory.id == Settings.category_id)
+            .filter(
+                Transaction.transaction_type == 'debit',
+                ExpenseCategory.slug == slug,
+                *_date_filters(Transaction.date),
+            )
+            .scalar() or 0
         )
-        .scalar() or 0
-    )
+
+    delivery_expenses = _category_expenses('delivery')
+    salary_expenses = _category_expenses('Salary')
 
     return {
         'revenue': revenue,
@@ -417,6 +421,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         'margin': margin,
         'expense_breakdown': expense_breakdown,
         'delivery_expenses': delivery_expenses,
+        'salary_expenses': salary_expenses,
     }
 
 
