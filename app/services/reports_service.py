@@ -461,7 +461,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         )
 
     delivery_expenses = _category_expenses('delivery')
-    salary_expenses = _category_expenses('Salary')
+    salary_expenses = _category_expenses('salary')
     flowers_expenses = _category_expenses('flowers')
 
     from app.models.delivery import Delivery

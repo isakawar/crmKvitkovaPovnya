@@ -6,6 +6,10 @@ Transactions: monthly credits & debits across the same 6-month window.
 Run:
   docker compose exec web python3 scripts/seed_reports_data.py
 """
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import random
 from datetime import date, timedelta
 
