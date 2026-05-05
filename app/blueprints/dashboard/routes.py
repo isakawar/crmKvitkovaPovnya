@@ -9,7 +9,7 @@ from app.models import Delivery, Order, Client
 from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.models.delivery_route import DeliveryRoute
-from app.services.subscription_service import get_draft_subscriptions
+from app.services.subscription_service import get_draft_subscriptions, get_subscriptions_needing_renewal
 
 
 @dashboard_bp.route('/dashboard')
@@ -107,60 +107,20 @@ def dashboard_page():
     ).scalar() or 0
     routes_without_courier = max(routes_total - routes_with_courier, 0)
 
-    # Find subscriptions whose last delivery is past and not yet extended
-    last_delivery_subq = (
-        db.session.query(
-            Order.subscription_id.label('subscription_id'),
-            func.max(Delivery.delivery_date).label('last_delivery_date')
-        )
-        .join(Delivery, Delivery.order_id == Order.id)
-        .filter(
-            Order.subscription_id.isnot(None),
-            Delivery.status != 'Скасовано'
-        )
-        .group_by(Order.subscription_id)
-        .subquery()
-    )
-
-    last_order_subq = (
-        db.session.query(
-            Order.subscription_id.label('subscription_id'),
-            func.max(Order.id).label('last_order_id')
-        )
-        .filter(Order.subscription_id.isnot(None))
-        .group_by(Order.subscription_id)
-        .subquery()
-    )
-
-    ended_subs_rows = (
-        db.session.query(Subscription, Client, last_delivery_subq.c.last_delivery_date, last_order_subq.c.last_order_id)
-        .join(Client, Subscription.client_id == Client.id)
-        .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
-        .outerjoin(last_order_subq, last_order_subq.c.subscription_id == Subscription.id)
-        .filter(
-            last_delivery_subq.c.last_delivery_date <= today - timedelta(days=4),
-            Subscription.is_extended.is_(False),
-            or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
-            or_(Subscription.snooze_until.is_(None), Subscription.snooze_until <= today),
-        )
-        .order_by(last_delivery_subq.c.last_delivery_date.asc())
-        .limit(30)
-        .all()
-    )
-
     ended_subscriptions = []
-    for sub, client, last_date, last_order_id in ended_subs_rows:
-        days_overdue = (today - last_date).days if last_date else 0
+    for row in get_subscriptions_needing_renewal(today):
+        sub = row['subscription']
+        client = row['client']
         ended_subscriptions.append({
             'order_id': sub.id,
-            'last_order_id': last_order_id,
+            'last_order_id': row['last_order_id'],
             'client_instagram': client.instagram,
             'client_phone': client.phone,
             'recipient_name': sub.recipient_name,
             'delivery_type': sub.type,
             'size': sub.size,
-            'last_delivery_date': last_date,
-            'days_overdue': days_overdue,
+            'last_delivery_date': row['last_delivery_date'],
+            'days_overdue': row['days_overdue'],
             'is_renewal_reminder': False,
             'snooze_comment': sub.snooze_comment,
         })

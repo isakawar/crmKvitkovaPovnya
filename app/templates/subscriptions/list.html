@@ -257,6 +257,11 @@
         {{ sub.delivery_day }}
       </span>
       {% endif %}
+      {% if sub.current_cycle > 1 %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
+        Круг {{ sub.current_cycle }}
+      </span>
+      {% endif %}
       {% if sub.is_stopped %}
       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
         <i class="bi bi-pause-circle-fill" style="font-size:9px"></i> СТОП
@@ -477,6 +482,10 @@
           </div>
         </div>
 
+        <button type="button" id="subscription-extend-btn" class="hidden w-full min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-green-200 bg-green-50 px-4 py-3 text-[15px] font-semibold text-green-700 transition-colors hover:bg-green-100 mb-3">
+          <i class="bi bi-arrow-repeat text-[20px]"></i>
+          Продовжити підписку
+        </button>
         <div id="subscription-actions-row" class="flex gap-3">
           <button type="button" id="subscription-stop-btn" class="hidden flex-1 min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-orange-200 bg-orange-50 px-4 py-3 text-[15px] font-semibold text-orange-700 transition-colors hover:bg-orange-100">
             <i class="bi bi-pause-circle text-[20px]"></i>
@@ -605,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const deliveryProgressEl = document.getElementById('subscription-delivery-progress');
   const typeEl = document.getElementById('subscription-type');
   const sizeEl = document.getElementById('subscription-size');
+  const extendBtn = document.getElementById('subscription-extend-btn');
   const stopBtn = document.getElementById('subscription-stop-btn');
   const resumeSection = document.getElementById('subscription-resume-section');
   const resumeConfirm = document.getElementById('subscription-resume-confirm');
@@ -836,6 +846,23 @@ document.addEventListener('DOMContentLoaded', function() {
       resumeSection.classList.toggle('hidden', !isStopped);
       resumeSection.style.display = isStopped ? 'block' : 'none';
       resetResumeState();
+
+      const canExtend = !isStopped && data.stats.status !== 'draft';
+      extendBtn.classList.toggle('hidden', !canExtend);
+      extendBtn.classList.toggle('flex', canExtend);
+
+      extendBtn.onclick = async () => {
+        if (!confirm('Додати ще один цикл доставок до цієї підписки?')) return;
+        try {
+          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
+          const result = await resp.json();
+          if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при продовженні');
+          detailModal.hide();
+          softReloadWithToast('Підписку продовжено', 'success');
+        } catch (error) {
+          showToast(error.message || 'Помилка при продовженні підписки', 'error');
+        }
+      };
 
       stopBtn.onclick = async () => {
         if (!confirm('Поставити підписку на СТОП?\n\nДоставки не відображатимуться у списку замовлень до відновлення.')) return;

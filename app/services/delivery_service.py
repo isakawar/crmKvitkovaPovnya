@@ -173,6 +173,27 @@ def assign_deliveries(assignments):
 def get_all_deliveries_ordered():
     return Delivery.query.order_by(Delivery.delivery_date).all()
 
+def get_overdue_unclosed_deliveries(today):
+    """Return deliveries whose date has passed but status is not terminal.
+
+    Used by the dashboard and future Telegram florist reminders.
+    Terminal statuses: 'Доставлено', 'Скасовано'.
+    """
+    from app.models import Order
+    from app.models.client import Client
+    return (
+        Delivery.query
+        .join(Order, Order.id == Delivery.order_id)
+        .join(Client, Client.id == Order.client_id)
+        .filter(
+            Delivery.delivery_date < today,
+            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+        )
+        .order_by(Delivery.delivery_date.asc())
+        .all()
+    )
+
+
 def get_all_couriers():
     return Courier.query.all()
 

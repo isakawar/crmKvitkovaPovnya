@@ -8,8 +8,7 @@ from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
-# Kept for imports in other modules
-SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
+from app.services.subscription_service import SUBSCRIPTION_TYPES  # noqa: F401
 
 
 def get_or_create_client(instagram):

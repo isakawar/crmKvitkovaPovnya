@@ -7,7 +7,8 @@ class Order(db.Model):
 
     # Підписка (null для разових замовлень)
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id'), nullable=True, index=True)
-    sequence_number = db.Column(db.Integer, nullable=True)  # 1-4 для замовлень підписки
+    sequence_number = db.Column(db.Integer, nullable=True)  # порядковий номер в рамках підписки
+    cycle_number = db.Column(db.Integer, nullable=True)     # номер циклу: 1 = перший, 2 = перше продовження
 
     # Отримувач
     recipient_name = db.Column(db.String(128), nullable=False)

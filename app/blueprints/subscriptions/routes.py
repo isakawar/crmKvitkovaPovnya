@@ -304,8 +304,6 @@ def subscription_detail(subscription_id):
 @login_required
 def subscription_extend(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
-    if subscription.is_extended:
-        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
     try:
         extend_subscription(subscription)
         return jsonify({

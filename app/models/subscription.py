@@ -83,3 +83,9 @@ class Subscription(db.Model):
     # Зв'язки
     client = db.relationship('Client', backref='subscriptions')
     orders = db.relationship('Order', back_populates='subscription', lazy=True)
+
+    @property
+    def current_cycle(self):
+        """Return the highest cycle_number among this subscription's orders."""
+        cycles = [o.cycle_number for o in self.orders if o.cycle_number is not None]
+        return max(cycles) if cycles else 1

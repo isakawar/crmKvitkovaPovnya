@@ -10,7 +10,6 @@ import json
 import requests
 from datetime import date, datetime
 from app.services.order_service import (
-    SUBSCRIPTION_TYPES,
     create_order_and_deliveries,
     get_or_create_client,
     get_orders,
@@ -19,6 +18,7 @@ from app.services.order_service import (
     delete_order,
 )
 from app.services.subscription_service import (
+    SUBSCRIPTION_TYPES,
     create_subscription,
     extend_subscription as svc_extend_subscription,
     calculate_reschedule_plan,
@@ -284,20 +284,54 @@ def order_create():
             return redirect('/orders/new')
 
     if is_subscription:
-        entity = create_subscription(client, request.form)
-        entity_id = entity.orders[0].id if entity.orders else None
-        logging.info(f'Subscription created: {entity.id}')
-
         extend_from_order_id = (request.form.get('extend_from_order_id') or '').strip()
         if extend_from_order_id and extend_from_order_id.isdigit():
             parent_order = Order.query.get(int(extend_from_order_id))
             if parent_order and parent_order.subscription_id:
                 parent_sub = Subscription.query.get(parent_order.subscription_id)
                 if parent_sub:
-                    parent_sub.is_extended = True
-                    parent_sub.followup_status = 'extended'
+                    from datetime import date as _date
+                    raw_date = (request.form.get('first_delivery_date') or '').strip()
+                    try:
+                        first_date = _date.fromisoformat(raw_date) if raw_date else None
+                    except ValueError:
+                        first_date = None
+                    overrides = {
+                        'recipient_name': request.form.get('recipient_name') or None,
+                        'recipient_phone': request.form.get('recipient_phone') or None,
+                        'recipient_social': request.form.get('recipient_social') or None,
+                        'city': request.form.get('city') or None,
+                        'street': request.form.get('street') or None,
+                        'building_number': request.form.get('building_number') or None,
+                        'floor': request.form.get('floor') or None,
+                        'entrance': request.form.get('entrance') or None,
+                        'is_pickup': request.form.get('is_pickup') == 'on',
+                        'address_comment': request.form.get('address_comment') or None,
+                        'delivery_method': request.form.get('delivery_method') or None,
+                        'size': request.form.get('size') or None,
+                        'custom_amount': request.form.get('custom_amount') or None,
+                        'first_delivery_date': first_date,
+                        'delivery_day': request.form.get('delivery_day') or None,
+                        'time_from': request.form.get('time_from') or None,
+                        'time_to': request.form.get('time_to') or None,
+                        'bouquet_type': request.form.get('bouquet_type') or None,
+                        'composition_type': request.form.get('composition_type') or None,
+                        'for_whom': request.form.get('for_whom') or None,
+                        'comment': request.form.get('comment') or None,
+                        'preferences': request.form.get('preferences') or None,
+                    }
+                    svc_extend_subscription(parent_sub, overrides=overrides)
+                    Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
                     db.session.commit()
+                    logging.info(f'Subscription {parent_sub.id} extended via dashboard')
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({'success': True, 'order_id': None})
+                    flash('Підписку продовжено!', 'success')
+                    return redirect('/subscriptions')
 
+        entity = create_subscription(client, request.form)
+        entity_id = entity.orders[0].id if entity.orders else None
+        logging.info(f'Subscription created: {entity.id}')
         Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
         db.session.commit()
     else:
@@ -1375,9 +1409,6 @@ def extend_subscription(order_id):
         return jsonify({'success': False, 'error': 'Це не підписка'}), 400
 
     subscription = Subscription.query.get_or_404(order.subscription_id)
-    if subscription.is_extended:
-        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
-
     try:
         svc_extend_subscription(subscription)
         return jsonify({
