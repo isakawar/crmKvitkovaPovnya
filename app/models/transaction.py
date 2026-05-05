@@ -16,5 +16,8 @@ class Transaction(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
+    expense_type_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
+
     client = db.relationship('Client', backref='transactions', foreign_keys=[client_id])
     created_by = db.relationship('User', foreign_keys=[created_by_id])
+    expense_type_setting = db.relationship('Settings', foreign_keys=[expense_type_id])

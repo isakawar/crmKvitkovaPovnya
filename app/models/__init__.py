@@ -14,5 +14,6 @@ from .price import Price
 from .certificate import Certificate
 from .order_photo import OrderPhoto
 from .route_dispatch_log import RouteDispatchLog
+from .expense_category import ExpenseCategory
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory']

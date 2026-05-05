@@ -133,12 +133,25 @@
       </div>
     </button>
 
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#expenseCategoriesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-folder2"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Фінанси</p>
+        <h2 class="settings-grid-card__title">Категорії витрат</h2>
+        <p class="settings-grid-card__text">Групи для класифікації типів витрат у звітах.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування категоріями</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
     <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#expenseTypesModal">
       <span class="settings-grid-card__icon"><i class="bi bi-tag"></i></span>
       <div>
         <p class="settings-grid-card__eyebrow">Фінанси</p>
         <h2 class="settings-grid-card__title">Типи витрат</h2>
-        <p class="settings-grid-card__text">Категорії витрат для транзакцій списання.</p>
+        <p class="settings-grid-card__text">Конкретні назви витрат із прив'язкою до категорій.</p>
       </div>
       <div class="settings-grid-card__meta">
         <span>Керування списком</span>
@@ -168,7 +181,96 @@
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
 {{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
 {{ settings_modal('packagingTypesModal', 'Коробка / Букет', 'Тип пакування для доставок — відображається у плані флориста.', '/settings/packaging_types', 'Наприклад, Коробка') }}
-{{ settings_modal('expenseTypesModal', 'Типи витрат', 'Категорії витрат для транзакцій списання.', '/settings/expense_types', 'Наприклад, Зарплата') }}
+<!-- Expense Categories Modal -->
+<div class="modal fade settings-modal" id="expenseCategoriesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title">Категорії витрат</h2>
+          <p class="settings-modal__subtitle">Групи для звітності. Slug — незмінний ідентифікатор (наприклад, <code>delivery</code>).</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <div class="settings-modal__section">
+          <div class="settings-modal__section-head">
+            <span class="settings-modal__section-label">Категорії</span>
+            <span class="settings-modal__section-hint">Оновлюється при відкритті</span>
+          </div>
+          <ul class="settings-modal__list" id="expenseCategoriesModal-list">
+            <li class="settings-modal__placeholder">Завантаження...</li>
+          </ul>
+        </div>
+
+        <form id="addCategoryForm" class="settings-modal__form" novalidate>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Назва</span>
+            <input type="text" id="newCatName" class="settings-modal__input" placeholder="Наприклад, Доставка" maxlength="100" required>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Slug</span>
+            <input type="text" id="newCatSlug" class="settings-modal__input" placeholder="Наприклад, delivery" maxlength="50" required>
+          </label>
+          <button type="submit" class="settings-modal__submit">Додати</button>
+        </form>
+
+        <div class="settings-error" id="catError" role="alert" hidden></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Expense Types Modal (custom — with category dropdowns) -->
+<div class="modal fade settings-modal settings-modal--wide" id="expenseTypesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title">Типи витрат</h2>
+          <p class="settings-modal__subtitle">Конкретні назви витрат із прив'язкою до категорій.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body">
+        <style>
+          .expense-type-row { display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0; border-bottom:1px solid #f1f5f9; }
+          .expense-type-row:last-child { border-bottom:none; }
+          .expense-type-row__name { flex:1; font-size:0.9375rem; color:#1e293b; }
+          .expense-type-row__cat { flex:0 0 180px; }
+          .expense-type-row__cat select { width:100%; font-size:0.875rem; border:1px solid #e2e8f0; border-radius:0.4rem; padding:0.3rem 0.5rem; color:#334155; background:#fff; }
+          .expense-type-row__status { width:1.5rem; text-align:center; font-size:0.875rem; }
+          .expense-type-row__del { background:none; border:none; color:#cbd5e1; cursor:pointer; padding:0.25rem; font-size:0.9375rem; transition:color .15s; }
+          .expense-type-row__del:hover { color:#e11d48; }
+          .expense-types-header { display:flex; align-items:center; gap:0.5rem; padding:0 0 0.5rem; border-bottom:2px solid #e2e8f0; font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:#94a3b8; margin-bottom:0.25rem; }
+          .expense-types-header span:first-child { flex:1; }
+          .expense-types-header span:nth-child(2) { flex:0 0 180px; }
+          .expense-types-header span:nth-child(3) { width:1.5rem; }
+          .expense-types-header span:nth-child(4) { width:1.5rem; }
+        </style>
+        <div id="expenseTypesListWrap">
+          <p class="settings-modal__placeholder">Завантаження...</p>
+        </div>
+
+        <form id="addExpenseTypeForm" class="settings-modal__form" novalidate>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Нова назва витрати</span>
+            <input type="text" id="newExpenseTypeName" class="settings-modal__input" placeholder="Наприклад, Зарплата" maxlength="100" required>
+          </label>
+          <button type="submit" class="settings-modal__submit">Додати</button>
+        </form>
+
+        <div class="settings-error" id="expenseTypeError" role="alert" hidden></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade settings-modal settings-modal--wide" id="pricesModal" tabindex="-1" aria-labelledby="pricesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -300,13 +402,227 @@ document.addEventListener('click', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ── Expense Categories Modal ─────────────────────────────────────────────
+    const catModalEl = document.getElementById('expenseCategoriesModal');
+    const catList    = document.getElementById('expenseCategoriesModal-list');
+    const catForm    = document.getElementById('addCategoryForm');
+    const catNameIn  = document.getElementById('newCatName');
+    const catSlugIn  = document.getElementById('newCatSlug');
+    const catError   = document.getElementById('catError');
+
+    function slugify(str) {
+        return str.toLowerCase()
+            .replace(/\s+/g, '_')
+            .replace(/[^a-z0-9_-]/g, '')
+            .slice(0, 50);
+    }
+
+    catNameIn.addEventListener('input', function() {
+        if (!catSlugIn._dirty) catSlugIn.value = slugify(catNameIn.value);
+    });
+    catSlugIn.addEventListener('input', function() {
+        catSlugIn._dirty = true;
+    });
+
+    function loadCategories() {
+        catList.innerHTML = '<li class="settings-modal__placeholder">Завантаження...</li>';
+        fetch('/settings/expense_categories')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.length) {
+                    catList.innerHTML = '<li class="settings-modal__placeholder">Поки що тут порожньо.</li>';
+                    return;
+                }
+                catList.innerHTML = data.map(cat => `
+                    <li class="settings-modal__list-item">
+                        <span class="settings-modal__item-value">${escapeHtml(cat.name)}</span>
+                        <span style="font-size:.75rem;color:#64748b;background:#f1f5f9;border-radius:.3rem;padding:.1rem .4rem;font-family:monospace;">${escapeHtml(cat.slug)}</span>
+                        <button type="button" class="settings-modal__item-delete js-cat-delete"
+                                data-id="${cat.id}"
+                                data-in-use="${cat.expense_types_count > 0 ? '1' : ''}"
+                                title="${cat.expense_types_count > 0 ? 'Використовується' : 'Видалити'}">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </li>
+                `).join('');
+            });
+    }
+
+    catModalEl.addEventListener('show.bs.modal', function() {
+        catError.hidden = true;
+        loadCategories();
+    });
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.js-cat-delete');
+        if (!btn) return;
+        if (btn.dataset.inUse) {
+            showToast('Категорія використовується і не може бути видалена', 'error');
+            return;
+        }
+        if (!confirm('Видалити категорію?')) return;
+        fetch(`/settings/expense_categories/${btn.dataset.id}`, { method: 'DELETE' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) { loadCategories(); showToast('Категорію видалено', 'success'); }
+                else showToast(d.error || 'Помилка', 'error');
+            });
+    });
+
+    catForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        catError.hidden = true;
+        fetch('/settings/expense_categories', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name: catNameIn.value.trim(), slug: catSlugIn.value.trim() }),
+        })
+        .then(r => r.json())
+        .then(d => {
+            if (d.success) {
+                catNameIn.value = '';
+                catSlugIn.value = '';
+                catSlugIn._dirty = false;
+                loadCategories();
+            } else {
+                const msg = d.error || (d.errors || []).join(', ') || 'Помилка';
+                catError.textContent = msg;
+                catError.hidden = false;
+            }
+        });
+    });
+
+    // ── Expense Types Modal (custom with category dropdowns) ────────────────
+    const etModalEl   = document.getElementById('expenseTypesModal');
+    const etWrap      = document.getElementById('expenseTypesListWrap');
+    const etAddForm   = document.getElementById('addExpenseTypeForm');
+    const etNameInput = document.getElementById('newExpenseTypeName');
+    const etError     = document.getElementById('expenseTypeError');
+    let   allCategories = [];
+
+    async function loadAllCategories() {
+        const r = await fetch('/settings/expense_categories');
+        allCategories = await r.json();
+    }
+
+    function renderCategorySelect(itemId, selectedCategoryId) {
+        const opts = [`<option value="">— без категорії —</option>`]
+            .concat(allCategories.map(c =>
+                `<option value="${c.id}" ${c.id === selectedCategoryId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`
+            )).join('');
+        return `<select class="js-cat-select" data-id="${itemId}">${opts}</select>`;
+    }
+
+    function renderExpenseTypesList(items) {
+        if (!items.length) {
+            etWrap.innerHTML = '<p class="settings-modal__placeholder">Поки що тут порожньо.</p>';
+            return;
+        }
+        let html = `<div class="expense-types-header">
+            <span>Назва</span><span>Категорія</span><span></span><span></span>
+        </div>`;
+        html += items.map(item => `
+            <div class="expense-type-row" data-id="${item.id}">
+                <span class="expense-type-row__name">${escapeHtml(item.value)}</span>
+                <span class="expense-type-row__cat">${renderCategorySelect(item.id, item.category_id)}</span>
+                <span class="expense-type-row__status" id="et-status-${item.id}"></span>
+                <button type="button" class="expense-type-row__del js-et-delete" data-id="${item.id}" title="Видалити">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        `).join('');
+        etWrap.innerHTML = html;
+    }
+
+    async function loadExpenseTypes() {
+        etWrap.innerHTML = '<p class="settings-modal__placeholder">Завантаження...</p>';
+        await loadAllCategories();
+        const r = await fetch('/settings/expense_types');
+        const items = await r.json();
+        renderExpenseTypesList(items);
+    }
+
+    etModalEl.addEventListener('show.bs.modal', function() {
+        etError.hidden = true;
+        loadExpenseTypes();
+    });
+
+    etWrap.addEventListener('change', async function(e) {
+        const sel = e.target.closest('.js-cat-select');
+        if (!sel) return;
+        const itemId = sel.dataset.id;
+        const statusEl = document.getElementById(`et-status-${itemId}`);
+        const prevVal = sel._prevVal !== undefined ? sel._prevVal : sel.options[sel.selectedIndex]?.value;
+        sel._prevVal = sel.value;
+
+        statusEl.innerHTML = '<i class="bi bi-arrow-repeat" style="animation:spin .7s linear infinite;display:inline-block;color:#94a3b8;"></i>';
+        if (!document.querySelector('style[data-spin]')) {
+            const s = document.createElement('style');
+            s.dataset.spin = '1';
+            s.textContent = '@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+            document.head.appendChild(s);
+        }
+
+        try {
+            const r = await fetch(`/settings/${itemId}/category`, {
+                method: 'PATCH',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ category_id: sel.value || null }),
+            });
+            const d = await r.json();
+            if (d.success) {
+                statusEl.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i>';
+                sel._prevVal = sel.value;
+                setTimeout(() => { statusEl.innerHTML = ''; }, 1500);
+            } else {
+                sel.value = prevVal;
+                sel._prevVal = prevVal;
+                statusEl.innerHTML = '';
+                showToast(d.error || 'Помилка збереження', 'error');
+            }
+        } catch (_) {
+            sel.value = prevVal;
+            sel._prevVal = prevVal;
+            statusEl.innerHTML = '';
+            showToast('Помилка збереження', 'error');
+        }
+    });
+
+    document.addEventListener('click', async function(e) {
+        const btn = e.target.closest('.js-et-delete');
+        if (!btn) return;
+        if (!confirm('Видалити тип витрати?')) return;
+        const r = await fetch(`/settings/${btn.dataset.id}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { loadExpenseTypes(); showToast('Видалено', 'success'); }
+        else showToast(d.error || 'Помилка', 'error');
+    });
+
+    etAddForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        etError.hidden = true;
+        const r = await fetch('/settings/expense_types', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ value: etNameInput.value.trim() }),
+        });
+        const d = await r.json();
+        if (d.success) {
+            etNameInput.value = '';
+            loadExpenseTypes();
+        } else {
+            etError.textContent = d.error || 'Помилка';
+            etError.hidden = false;
+        }
+    });
+
+    // ── Generic settings modals ──────────────────────────────────────────────
     [
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
         {id: 'sizesModal', endpoint: '/settings/sizes'},
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},
         {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'},
         {id: 'packagingTypesModal', endpoint: '/settings/packaging_types'},
-        {id: 'expenseTypesModal', endpoint: '/settings/expense_types'}
     ].forEach(function(modal) {
         const modalEl = document.getElementById(modal.id);
         const form = modalEl.querySelector('.settings-add-form');

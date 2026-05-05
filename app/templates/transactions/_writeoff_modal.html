@@ -33,6 +33,7 @@
               <ul class="expense-combobox__dropdown" id="expenseTypeDropdown" hidden></ul>
             </div>
             <input type="hidden" id="writeoffExpenseType" name="expense_type">
+          <input type="hidden" id="writeoffExpenseTypeId" name="expense_type_id">
           </div>
           <style>
             .expense-combobox { position: relative; }
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const writeoffDate = document.getElementById('writeoffDate');
   const searchInput = document.getElementById('expenseTypeSearch');
   const hiddenInput = document.getElementById('writeoffExpenseType');
+  const hiddenIdInput = document.getElementById('writeoffExpenseTypeId');
   const dropdown = document.getElementById('expenseTypeDropdown');
 
   if (!openBtn || !modalEl || !form) return;
@@ -134,9 +136,10 @@ document.addEventListener('DOMContentLoaded', function () {
         li.className = 'expense-combobox__item';
         li.textContent = t.value;
         li.dataset.value = t.value;
+        li.dataset.id = t.id;
         li.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          selectType(t.value);
+          selectType(t.value, t.id);
         });
         dropdown.appendChild(li);
       });
@@ -144,8 +147,9 @@ document.addEventListener('DOMContentLoaded', function () {
     dropdown.hidden = false;
   }
 
-  function selectType(value) {
+  function selectType(value, id) {
     hiddenInput.value = value;
+    hiddenIdInput.value = id || '';
     searchInput.value = value;
     dropdown.hidden = true;
     activeIndex = -1;
@@ -153,6 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function clearSelection() {
     hiddenInput.value = '';
+    hiddenIdInput.value = '';
     searchInput.value = '';
     dropdown.hidden = true;
     activeIndex = -1;
@@ -184,7 +189,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (activeIndex >= 0 && items[activeIndex]) {
-        selectType(items[activeIndex].dataset.value);
+        selectType(items[activeIndex].dataset.value, items[activeIndex].dataset.id);
       }
     } else if (e.key === 'Escape') {
       dropdown.hidden = true;
@@ -247,6 +252,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const payload = {
       amount: document.getElementById('writeoffAmount').value,
       expense_type: hiddenInput.value,
+      expense_type_id: hiddenIdInput.value || null,
       comment: document.getElementById('writeoffComment').value,
       date: writeoffDate.value,
     };

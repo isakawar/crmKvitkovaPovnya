@@ -49,6 +49,7 @@
                 <ul class="expense-combobox__dropdown" id="editExpenseTypeDropdown" hidden></ul>
               </div>
               <input type="hidden" id="editTxnExpenseType" name="expense_type">
+              <input type="hidden" id="editTxnExpenseTypeId" name="expense_type_id">
             </div>
           </div>
 
@@ -93,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const debitFields = document.getElementById('editDebitFields');
   const expenseSearch = document.getElementById('editExpenseTypeSearch');
   const expenseHidden = document.getElementById('editTxnExpenseType');
+  const expenseHiddenId = document.getElementById('editTxnExpenseTypeId');
   const expenseDropdown = document.getElementById('editExpenseTypeDropdown');
   const iconEl = document.getElementById('editTxnIcon');
   const titleEl = document.getElementById('editTxnTitle');
@@ -126,9 +128,10 @@ document.addEventListener('DOMContentLoaded', function () {
         li.className = 'expense-combobox__item';
         li.textContent = t.value;
         li.dataset.value = t.value;
+        li.dataset.id = t.id;
         li.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          selectExpenseType(t.value);
+          selectExpenseType(t.value, t.id);
         });
         expenseDropdown.appendChild(li);
       });
@@ -136,8 +139,9 @@ document.addEventListener('DOMContentLoaded', function () {
     expenseDropdown.hidden = false;
   }
 
-  function selectExpenseType(value) {
+  function selectExpenseType(value, id) {
     expenseHidden.value = value;
+    expenseHiddenId.value = id || '';
     expenseSearch.value = value;
     expenseDropdown.hidden = true;
     activeIndex = -1;
@@ -168,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
       items[activeIndex]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (activeIndex >= 0 && items[activeIndex]) selectExpenseType(items[activeIndex].dataset.value);
+      if (activeIndex >= 0 && items[activeIndex]) selectExpenseType(items[activeIndex].dataset.value, items[activeIndex].dataset.id);
     } else if (e.key === 'Escape') {
       expenseDropdown.hidden = true;
     }
@@ -231,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
         paymentTypeSelect.value = txn.payment_type || 'monobank';
       } else {
         await loadExpenseTypes();
-        selectExpenseType(txn.expense_type || '');
+        selectExpenseType(txn.expense_type || '', txn.expense_type_id || '');
       }
 
       modal.show();
@@ -268,6 +272,7 @@ document.addEventListener('DOMContentLoaded', function () {
       payload.payment_type = paymentTypeSelect.value;
     } else {
       payload.expense_type = expenseHidden.value;
+      payload.expense_type_id = expenseHiddenId.value || null;
     }
 
     try {

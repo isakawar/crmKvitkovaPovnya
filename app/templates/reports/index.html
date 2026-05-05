@@ -246,6 +246,8 @@
 {% endblock %}
 
 {% block content %}
+{% set has_range = date_from or date_to %}
+{% set range_label = (date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to) %}
 <div class="flex flex-col gap-5">
 
   <!-- ── Header ── -->
@@ -308,12 +310,12 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-card__label">Всього доставок</div>
-        <div class="kpi-card__value">{{ deliveries_total }}</div>
-        {% if deliveries_total_change_pct is not none %}
-          {% if deliveries_total_change_pct >= 0 %}
-            <div class="kpi-card__sub" style="color:#16a34a">+{{ deliveries_total_change_pct }}% від попереднього періоду</div>
+        <div class="kpi-card__value">{{ deliveries.total }}</div>
+        {% if deliveries.total_change_pct is not none %}
+          {% if deliveries.total_change_pct >= 0 %}
+            <div class="kpi-card__sub" style="color:#16a34a">+{{ deliveries.total_change_pct }}% від попереднього періоду</div>
           {% else %}
-            <div class="kpi-card__sub" style="color:#dc2626">{{ deliveries_total_change_pct }}% від попереднього періоду</div>
+            <div class="kpi-card__sub" style="color:#dc2626">{{ deliveries.total_change_pct }}% від попереднього періоду</div>
           {% endif %}
         {% else %}
           <div class="kpi-card__sub">За весь час</div>
@@ -322,20 +324,20 @@
 
       <div class="kpi-card">
         <div class="kpi-card__label">Завершені</div>
-        <div class="kpi-card__value kpi-card__value--green">{{ deliveries_completed }}</div>
-        <div class="kpi-card__sub">{{ deliveries_completed_pct }}% успішність</div>
+        <div class="kpi-card__value kpi-card__value--green">{{ deliveries.completed }}</div>
+        <div class="kpi-card__sub">{{ deliveries.completed_pct }}% успішність</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">В процесі</div>
-        <div class="kpi-card__value kpi-card__value--blue">{{ deliveries_in_progress }}</div>
-        <div class="kpi-card__sub">{{ deliveries_in_progress_pct }}% від загальної</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ deliveries.in_progress }}</div>
+        <div class="kpi-card__sub">{{ deliveries.in_progress_pct }}% від загальної</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Скасовані</div>
-        <div class="kpi-card__value kpi-card__value--red">{{ deliveries_cancelled }}</div>
-        <div class="kpi-card__sub">{{ deliveries_cancelled_pct }}% від загальної</div>
+        <div class="kpi-card__value kpi-card__value--red">{{ deliveries.cancelled }}</div>
+        <div class="kpi-card__sub">{{ deliveries.cancelled_pct }}% від загальної</div>
       </div>
     </div>
 
@@ -346,7 +348,7 @@
           <h2 class="text-lg font-semibold text-stone-900">Динаміка доставок</h2>
           <p class="text-sm text-stone-500">Заплановані та виконані доставки</p>
         </div>
-        {% if deliveries_dynamics_chart['labels'] %}
+        {% if deliveries.dynamics_chart['labels'] %}
         <div class="report-line-wrap"><canvas id="deliveriesDynamicsChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних для графіка динаміки</div>
@@ -358,7 +360,7 @@
           <h2 class="text-lg font-semibold text-stone-900">Розподіл по містах</h2>
           <p class="text-sm text-stone-500">Кількість доставок по містах</p>
         </div>
-        {% if deliveries_city_chart['labels'] %}
+        {% if deliveries.city_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="deliveriesCityChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по містах</div>
@@ -366,7 +368,7 @@
       </article>
     </div>
 
-    <!-- existing content below -->
+    <!-- Order / subscription trend (always last 365 days) -->
     <section class="report-card p-4">
       <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -374,11 +376,11 @@
           <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
         </div>
         <div class="flex items-center gap-2">
-          <span class="report-kpi">Замовлень: {{ monthly_orders_total }}</span>
-          <span class="report-kpi">Підписок: {{ monthly_subscriptions_total }}</span>
+          <span class="report-kpi">Замовлень: {{ orders.monthly_orders_total }}</span>
+          <span class="report-kpi">Підписок: {{ orders.monthly_subscriptions_total }}</span>
         </div>
       </div>
-      {% if monthly_orders_trend_chart['labels'] %}
+      {% if orders.monthly_orders_trend_chart['labels'] %}
       <div class="report-line-wrap"><canvas id="monthlyOrdersTrendChart"></canvas></div>
       {% else %}
       <div class="report-empty">Поки немає даних для помісячної динаміки</div>
@@ -393,14 +395,16 @@
             <p id="marketing-period" class="text-sm text-stone-500">За весь час</p>
           </div>
           <div class="flex items-center gap-2">
+            {% if has_range %}
             <div class="report-switch" id="marketing-switch">
               <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-              <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
             </div>
-            <span id="marketing-total" class="report-kpi">Всього: {{ marketing_all_total }}</span>
+            {% endif %}
+            <span id="marketing-total" class="report-kpi">Всього: {{ orders.marketing_all_total }}</span>
           </div>
         </div>
-        {% if marketing_all_chart['labels'] or marketing_month_chart['labels'] %}
+        {% if orders.marketing_all_chart['labels'] or orders.marketing_range_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних для графіка</div>
@@ -414,14 +418,16 @@
             <p id="for-whom-period" class="text-sm text-stone-500">За весь час</p>
           </div>
           <div class="flex items-center gap-2">
+            {% if has_range %}
             <div class="report-switch" id="for-whom-switch">
               <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-              <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
             </div>
-            <span id="for-whom-total" class="report-kpi">Всього: {{ for_whom_all_total }}</span>
+            {% endif %}
+            <span id="for-whom-total" class="report-kpi">Всього: {{ orders.for_whom_all_total }}</span>
           </div>
         </div>
-        {% if for_whom_all_chart['labels'] or for_whom_month_chart['labels'] %}
+        {% if orders.for_whom_all_chart['labels'] or orders.for_whom_range_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="forWhomChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по полю "Для кого"</div>
@@ -436,9 +442,9 @@
             <h2 class="text-lg font-semibold text-stone-900">Співвідношення типів підписок</h2>
             <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші</p>
           </div>
-          <span class="report-kpi">Всього: {{ delivery_type_total }}</span>
+          <span class="report-kpi">Всього: {{ orders.delivery_type_total }}</span>
         </div>
-        {% if delivery_type_chart['labels'] %}
+        {% if orders.delivery_type_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="deliveryTypeChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по типах замовлень</div>
@@ -451,9 +457,9 @@
             <h2 class="text-lg font-semibold text-stone-900">Співвідношення розмірів</h2>
             <p class="text-sm text-stone-500">L, XL, XXL та інші</p>
           </div>
-          <span class="report-kpi">Всього: {{ size_total }}</span>
+          <span class="report-kpi">Всього: {{ orders.size_total }}</span>
         </div>
-        {% if size_chart['labels'] %}
+        {% if orders.size_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="sizeChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по розмірах</div>
@@ -466,15 +472,15 @@
       <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold text-stone-900">Продажі флориста</h2>
-          <p class="text-sm text-stone-500">Офлайн продажі за {{ selected_month_label }}. Бонус — 5% від суми.</p>
+          <p class="text-sm text-stone-500">Офлайн продажі{% if range_label %} за {{ range_label }}{% endif %}. Бонус — 5% від суми.</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <span class="report-kpi">Продажів: {{ florist_sales_grand_count }}</span>
-          <span class="report-kpi">Сума: {{ "%.2f"|format(florist_sales_grand_total) }} ₴</span>
-          <span class="report-kpi text-amber-700">Бонус: {{ "%.2f"|format(florist_sales_grand_bonus) }} ₴</span>
+          <span class="report-kpi">Продажів: {{ florist.grand_count }}</span>
+          <span class="report-kpi">Сума: {{ "%.2f"|format(florist.grand_total) }} ₴</span>
+          <span class="report-kpi text-amber-700">Бонус: {{ "%.2f"|format(florist.grand_bonus) }} ₴</span>
         </div>
       </div>
-      {% if florist_sales_rows %}
+      {% if florist.rows %}
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="border-b border-stone-200 bg-stone-50">
@@ -486,7 +492,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-stone-100">
-            {% for row in florist_sales_rows %}
+            {% for row in florist.rows %}
             <tr class="hover:bg-stone-50 transition-colors">
               <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
               <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
@@ -498,7 +504,7 @@
         </table>
       </div>
       {% else %}
-      <div class="report-empty">Немає продажів за {{ selected_month_label }}</div>
+      <div class="report-empty">Немає продажів{% if range_label %} за {{ range_label }}{% endif %}</div>
       {% endif %}
     </section>
 
@@ -513,37 +519,45 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-card__label">Revenue</div>
-        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl_revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</div>
         <div class="kpi-card__sub">Загальний дохід</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Expenses</div>
-        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl_expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
         <div class="kpi-card__sub">Всі витрати</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Profit</div>
-        <div class="kpi-card__value {% if pl_profit >= 0 %}kpi-card__value--orange{% else %}kpi-card__value--red{% endif %}">
-          ₴{{ "{:,}".format(pl_profit).replace(",", " ") }}
+        <div class="kpi-card__value {% if pl.profit >= 0 %}kpi-card__value--orange{% else %}kpi-card__value--red{% endif %}">
+          ₴{{ "{:,}".format(pl.profit).replace(",", " ") }}
         </div>
         <div class="kpi-card__sub">Чистий прибуток</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Margin</div>
-        <div class="kpi-card__value kpi-card__value--blue">{{ pl_margin }}%</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ pl.margin }}%</div>
         <div class="kpi-card__sub">Рентабельність</div>
       </div>
     </div>
 
     <!-- Expense breakdown -->
-    {% if pl_expense_breakdown %}
-    <div class="report-card p-5">
-      <h2 class="text-lg font-semibold text-stone-900 mb-4">Розбивка витрат</h2>
-      <div>
-        {% for item in pl_expense_breakdown %}
+    {% if pl.expense_breakdown %}
+    <div class="report-card overflow-hidden">
+      <button type="button" id="expense-breakdown-toggle"
+              class="w-full flex items-center justify-between px-5 py-4 text-left"
+              aria-expanded="false">
+        <span class="text-lg font-semibold text-stone-900">Розбивка витрат</span>
+        <span class="flex items-center gap-2 text-sm text-stone-500">
+          <span id="expense-breakdown-hint">{{ pl.expense_breakdown|length }} категорій</span>
+          <i id="expense-breakdown-icon" class="bi bi-chevron-down transition-transform duration-200"></i>
+        </span>
+      </button>
+      <div id="expense-breakdown-body" class="hidden px-5 pb-5">
+        {% for item in pl.expense_breakdown %}
         <div class="expense-bar-row">
           <div class="expense-bar-row__header">
             <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
@@ -567,14 +581,14 @@
     <div class="kpi-grid">
       <div class="kpi-card">
         <div class="kpi-card__label">Кількість доставок</div>
-        <div class="kpi-card__value">{{ deliveries_total }}</div>
+        <div class="kpi-card__value">{{ deliveries.total }}</div>
         <div class="kpi-card__sub">За вибраний період</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Revenue на доставку</div>
         <div class="kpi-card__value kpi-card__value--orange">
-          ₴{{ (pl_revenue // deliveries_total) if deliveries_total else 0 }}
+          ₴{{ (pl.revenue // deliveries.total) if deliveries.total else 0 }}
         </div>
         <div class="kpi-card__sub">Середній дохід</div>
       </div>
@@ -582,18 +596,18 @@
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість доставки</div>
         <div class="kpi-card__value">
-          ₴{{ (pl_delivery_expenses // deliveries_total) if deliveries_total else 0 }}
+          ₴{{ (pl.delivery_expenses // deliveries.total) if deliveries.total else 0 }}
         </div>
         <div class="kpi-card__sub">Середня вартість</div>
       </div>
 
       <div class="kpi-card">
         <div class="kpi-card__label">Продовження підписок</div>
-        <div class="kpi-card__value kpi-card__value--blue">{{ sub_renewal_rate }}%</div>
-        <div class="kpi-card__sub">{{ sub_renewed_count }} / {{ sub_expired_count }}</div>
-        {% if sub_declined_count or sub_pending_count %}
+        <div class="kpi-card__value kpi-card__value--blue">{{ subscriptions.renewal_rate }}%</div>
+        <div class="kpi-card__sub">{{ subscriptions.renewed_count }} / {{ subscriptions.expired_count }}</div>
+        {% if subscriptions.declined_count or subscriptions.pending_count %}
         <div class="kpi-card__sub" style="margin-top:0.15rem; font-size:0.72rem; color:#a8a29e;">
-          {% if sub_declined_count %}{{ sub_declined_count }} відмов{% endif %}{% if sub_declined_count and sub_pending_count %} • {% endif %}{% if sub_pending_count %}{{ sub_pending_count }} очікують{% endif %}
+          {% if subscriptions.declined_count %}{{ subscriptions.declined_count }} відмов{% endif %}{% if subscriptions.declined_count and subscriptions.pending_count %} • {% endif %}{% if subscriptions.pending_count %}{{ subscriptions.pending_count }} очікують{% endif %}
         </div>
         {% endif %}
       </div>
@@ -699,17 +713,12 @@ document.addEventListener('DOMContentLoaded', function () {
   tabBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = btn.dataset.tab;
-
       tabBtns.forEach(function (b) { b.classList.remove('is-active'); });
       tabPanes.forEach(function (p) { p.classList.remove('is-active'); });
-
       btn.classList.add('is-active');
       const pane = document.getElementById('tab-' + target);
       if (pane) pane.classList.add('is-active');
-
       if (filterTabInput) filterTabInput.value = target;
-
-      // Update URL without reload so refresh preserves tab
       const url = new URL(window.location.href);
       url.searchParams.set('tab', target);
       window.history.replaceState(null, '', url.toString());
@@ -798,8 +807,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function createBarChart(canvasId, labels, values, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
+    new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels: labels,
@@ -816,12 +824,7 @@ document.addEventListener('DOMContentLoaded', function () {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1c1917',
-            titleColor: '#fff',
-            bodyColor: '#fff',
-            displayColors: false
-          }
+          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
         },
         scales: {
           x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
@@ -834,8 +837,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
+    new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
         labels: labels,
@@ -870,11 +872,7 @@ document.addEventListener('DOMContentLoaded', function () {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: {
-            display: true,
-            position: 'top',
-            labels: { color: '#57534e', boxWidth: 12, usePointStyle: true }
-          },
+          legend: { display: true, position: 'top', labels: { color: '#57534e', boxWidth: 12, usePointStyle: true } },
           tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff' }
         },
         scales: {
@@ -888,9 +886,8 @@ document.addEventListener('DOMContentLoaded', function () {
   function createSwitchableChart(canvasId, datasets, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
-    const ctx = canvas.getContext('2d');
     const initial = datasets.all;
-    return new Chart(ctx, {
+    return new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
         labels: initial.labels,
@@ -917,21 +914,20 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets) {
+  function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets, rangeLabel) {
     const wrap = document.getElementById(buttonWrapId);
     if (!wrap || !chart) return;
     const period = document.getElementById(periodLabelId);
-    const total = document.getElementById(totalLabelId);
+    const total  = document.getElementById(totalLabelId);
     const buttons = Array.from(wrap.querySelectorAll('.report-switch-btn'));
-    const monthTitle = 'За {{ selected_month_label }}';
 
     function applyMode(mode) {
-      const data = mode === 'month' ? datasets.month : datasets.all;
+      const data = mode === 'range' ? datasets.range : datasets.all;
       chart.data.labels = data.labels;
       chart.data.datasets[0].data = data.values;
       chart.update();
-      if (period) period.textContent = mode === 'month' ? monthTitle : 'За весь час';
-      if (total) total.textContent = 'Всього: ' + data.total;
+      if (period) period.textContent = mode === 'range' ? 'За ' + rangeLabel : 'За весь час';
+      if (total)  total.textContent  = 'Всього: ' + data.total;
       buttons.forEach(function (btn) { btn.classList.toggle('is-active', btn.dataset.mode === mode); });
     }
 
@@ -939,38 +935,40 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ── Chart data ─────────────────────────────────────
+  const rangeLabel = {{ ((date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to or ''))|tojson }};
+
   const marketingDatasets = {
-    all:   { labels: {{ marketing_all_chart['labels']|tojson }},   values: {{ marketing_all_chart['values']|tojson }},   total: {{ marketing_all_total|tojson }} },
-    month: { labels: {{ marketing_month_chart['labels']|tojson }}, values: {{ marketing_month_chart['values']|tojson }}, total: {{ marketing_month_total|tojson }} }
+    all:   { labels: {{ orders.marketing_all_chart['labels']|tojson }},   values: {{ orders.marketing_all_chart['values']|tojson }},   total: {{ orders.marketing_all_total|tojson }} },
+    range: { labels: {{ orders.marketing_range_chart['labels']|tojson }}, values: {{ orders.marketing_range_chart['values']|tojson }}, total: {{ orders.marketing_range_total|tojson }} }
   };
 
   const forWhomDatasets = {
-    all:   { labels: {{ for_whom_all_chart['labels']|tojson }},   values: {{ for_whom_all_chart['values']|tojson }},   total: {{ for_whom_all_total|tojson }} },
-    month: { labels: {{ for_whom_month_chart['labels']|tojson }}, values: {{ for_whom_month_chart['values']|tojson }}, total: {{ for_whom_month_total|tojson }} }
+    all:   { labels: {{ orders.for_whom_all_chart['labels']|tojson }},   values: {{ orders.for_whom_all_chart['values']|tojson }},   total: {{ orders.for_whom_all_total|tojson }} },
+    range: { labels: {{ orders.for_whom_range_chart['labels']|tojson }}, values: {{ orders.for_whom_range_chart['values']|tojson }}, total: {{ orders.for_whom_range_total|tojson }} }
   };
 
   const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
   const forWhomChart   = createSwitchableChart('forWhomChart',   forWhomDatasets,   'rgba(59, 130, 246, 0.72)');
 
-  bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets);
-  bindSwitch('for-whom-switch',  'for-whom-period',  'for-whom-total',  forWhomChart,   forWhomDatasets);
+  bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets, rangeLabel);
+  bindSwitch('for-whom-switch',  'for-whom-period',  'for-whom-total',  forWhomChart,   forWhomDatasets,   rangeLabel);
 
   createLineTrendChart(
     'monthlyOrdersTrendChart',
-    {{ monthly_orders_trend_chart['labels']|tojson }},
-    {{ monthly_orders_trend_chart['orders_values']|tojson }},
-    {{ monthly_orders_trend_chart['subscriptions_values']|tojson }}
+    {{ orders.monthly_orders_trend_chart['labels']|tojson }},
+    {{ orders.monthly_orders_trend_chart['orders_values']|tojson }},
+    {{ orders.monthly_orders_trend_chart['subscriptions_values']|tojson }}
   );
 
-  createBarChart('deliveryTypeChart', {{ delivery_type_chart['labels']|tojson }}, {{ delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
-  createBarChart('sizeChart',         {{ size_chart['labels']|tojson }},          {{ size_chart['values']|tojson }},          'rgba(139, 92, 246, 0.72)');
+  createBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
+  createBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          'rgba(139, 92, 246, 0.72)');
 
   // ── Deliveries dynamics (area chart) ──────────────
   (function () {
     const canvas = document.getElementById('deliveriesDynamicsChart');
     if (!canvas) return;
-    const labels = {{ deliveries_dynamics_chart['labels']|tojson }};
-    const values = {{ deliveries_dynamics_chart['values']|tojson }};
+    const labels = {{ deliveries.dynamics_chart['labels']|tojson }};
+    const values = {{ deliveries.dynamics_chart['values']|tojson }};
     if (!labels.length) return;
     new Chart(canvas.getContext('2d'), {
       type: 'line',
@@ -1004,13 +1002,33 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }());
 
-  // ── Deliveries by city (bar chart) ────────────────
+  // ── Deliveries by city ────────────────────────────
   createBarChart(
     'deliveriesCityChart',
-    {{ deliveries_city_chart['labels']|tojson }},
-    {{ deliveries_city_chart['values']|tojson }},
+    {{ deliveries.city_chart['labels']|tojson }},
+    {{ deliveries.city_chart['values']|tojson }},
     'rgba(245, 158, 11, 0.8)'
   );
+
+  // ── Expense breakdown toggle ───────────────────────
+  (function () {
+    const btn  = document.getElementById('expense-breakdown-toggle');
+    const body = document.getElementById('expense-breakdown-body');
+    const icon = document.getElementById('expense-breakdown-icon');
+    const hint = document.getElementById('expense-breakdown-hint');
+    if (!btn || !body) return;
+
+    btn.addEventListener('click', function () {
+      const open = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', open);
+      icon.style.transform = open ? '' : 'rotate(180deg)';
+      btn.setAttribute('aria-expanded', String(!open));
+      if (open) hint.textContent = hint.dataset.count + ' категорій';
+    });
+
+    // store count for collapse label
+    hint.dataset.count = hint.textContent.split(' ')[0];
+  }());
 });
 </script>
 {% endblock %}

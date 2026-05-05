@@ -256,6 +256,7 @@ def get_transaction(txn_id):
         'amount': txn.amount,
         'payment_type': txn.payment_type,
         'expense_type': txn.expense_type,
+        'expense_type_id': txn.expense_type_id,
         'comment': txn.comment or '',
         'date': txn.date.isoformat(),
         'client_id': txn.client_id,
@@ -312,6 +313,8 @@ def update_transaction(txn_id):
         txn.payment_type = data.get('payment_type')
     else:
         txn.expense_type = data.get('expense_type', '').strip()
+        expense_type_id = data.get('expense_type_id')
+        txn.expense_type_id = int(expense_type_id) if expense_type_id else None
 
     db.session.commit()
     return jsonify({'success': True})
@@ -343,11 +346,13 @@ def create_writeoff():
     except ValueError:
         return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
 
+    expense_type_id = data.get('expense_type_id')
     txn = Transaction(
         transaction_type='debit',
         client_id=None,
         amount=int(amount),
         expense_type=expense_type,
+        expense_type_id=int(expense_type_id) if expense_type_id else None,
         comment=comment or None,
         date=txn_date,
         created_by_id=current_user.id,

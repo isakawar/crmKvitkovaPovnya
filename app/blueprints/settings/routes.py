@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from app.models import Settings, Price
 from app.models.courier import Courier
 from app.models.user import User, Role, ROLE_PERMISSIONS
+from app.models.expense_category import ExpenseCategory
 from app.extensions import db
 from app.utils.decorators import permission_required
 
@@ -164,10 +165,92 @@ def add_packaging_type():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/expense_categories', methods=['GET'])
+@login_required
+@permission_required('view_settings')
+def get_expense_categories():
+    from sqlalchemy import func
+    rows = (
+        db.session.query(
+            ExpenseCategory,
+            func.count(Settings.id).label('expense_types_count'),
+        )
+        .outerjoin(Settings, (Settings.category_id == ExpenseCategory.id) & (Settings.type == 'expense_type'))
+        .group_by(ExpenseCategory.id)
+        .order_by(ExpenseCategory.name)
+        .all()
+    )
+    return jsonify([{
+        'id': cat.id,
+        'name': cat.name,
+        'slug': cat.slug,
+        'expense_types_count': count,
+    } for cat, count in rows])
+
+
+@bp.route('/settings/expense_categories', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def add_expense_category():
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    slug = (data.get('slug') or '').strip()
+    errors = []
+    if not name:
+        errors.append('Назва не може бути порожньою')
+    if not slug:
+        errors.append('Slug не може бути порожнім')
+    if slug and not slug.replace('_', '').replace('-', '').isalnum():
+        errors.append('Slug може містити лише латинські літери, цифри, дефіс і підкреслення')
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+    if ExpenseCategory.query.filter_by(name=name).first():
+        return jsonify({'success': False, 'error': 'Категорія з такою назвою вже існує'}), 400
+    if ExpenseCategory.query.filter_by(slug=slug).first():
+        return jsonify({'success': False, 'error': 'Категорія з таким slug вже існує'}), 400
+    cat = ExpenseCategory(name=name, slug=slug)
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify({'success': True, 'category': {'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'expense_types_count': 0}})
+
+
+@bp.route('/settings/expense_categories/<int:cat_id>', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_expense_category(cat_id):
+    cat = ExpenseCategory.query.get_or_404(cat_id)
+    in_use = Settings.query.filter_by(type='expense_type', category_id=cat_id).first()
+    if in_use:
+        return jsonify({'success': False, 'error': 'Категорія використовується і не може бути видалена'}), 400
+    db.session.delete(cat)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/<int:item_id>/category', methods=['PATCH'])
+@login_required
+@permission_required('edit_settings')
+def update_expense_type_category(item_id):
+    item = Settings.query.get_or_404(item_id)
+    if item.type != 'expense_type':
+        return jsonify({'success': False, 'error': 'Not an expense type'}), 400
+    data = request.get_json()
+    category_id = data.get('category_id')
+    item.category_id = int(category_id) if category_id else None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @bp.route('/settings/expense_types', methods=['GET'])
 def get_expense_types():
     items = Settings.query.filter_by(type='expense_type').order_by(Settings.value).all()
-    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+    return jsonify([{
+        'id': i.id,
+        'value': i.value,
+        'category_id': i.category_id,
+        'category_slug': i.category.slug if i.category else None,
+        'category_name': i.category.name if i.category else None,
+    } for i in items])
 
 @bp.route('/settings/expense_types', methods=['POST'])
 @login_required
@@ -179,10 +262,16 @@ def add_expense_type():
         return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
     if Settings.query.filter_by(type='expense_type', value=value).first():
         return jsonify({'success': False, 'error': 'Такий тип вже існує'}), 400
-    item = Settings(type='expense_type', value=value)
+    category_id = data.get('category_id')
+    item = Settings(type='expense_type', value=value, category_id=int(category_id) if category_id else None)
     db.session.add(item)
     db.session.commit()
-    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+    return jsonify({'success': True, 'item': {
+        'id': item.id, 'value': item.value,
+        'category_id': item.category_id,
+        'category_slug': item.category.slug if item.category else None,
+        'category_name': item.category.name if item.category else None,
+    }})
 
 
 @bp.route('/settings/<int:item_id>', methods=['DELETE'])
