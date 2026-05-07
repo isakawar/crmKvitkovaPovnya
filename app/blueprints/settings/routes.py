@@ -185,6 +185,25 @@ def add_packaging_type():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/payment_accounts', methods=['GET'])
+def get_payment_accounts():
+    items = Settings.query.filter_by(type='payment_account').order_by(Settings.value).all()
+    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+
+@bp.route('/settings/payment_accounts', methods=['POST'])
+def add_payment_account():
+    data = request.get_json()
+    value = (data.get('value') or '').strip()
+    if not value:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    if Settings.query.filter_by(type='payment_account', value=value).first():
+        return jsonify({'success': False, 'error': 'Такий рахунок вже існує'}), 400
+    item = Settings(type='payment_account', value=value)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+
 @bp.route('/settings/expense_categories', methods=['GET'])
 @login_required
 @permission_required('view_settings')

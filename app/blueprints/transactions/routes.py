@@ -36,13 +36,18 @@ def transactions_list():
 
     client_q = request.args.get('client_q', '').strip().lstrip('@')
     created_by_filter = request.args.get('created_by', '').strip()
+    txn_type_filter = request.args.get('txn_type', '').strip()
     page = request.args.get('page', 1, type=int)
     per_page = 50
 
     filtered_query = Transaction.query.filter(
         Transaction.date >= date_from,
         Transaction.date <= date_to,
+        Transaction.transaction_type != 'delivery_charge',
     )
+
+    if txn_type_filter in ('debit', 'credit'):
+        filtered_query = filtered_query.filter(Transaction.transaction_type == txn_type_filter)
 
     if client_q:
         filtered_query = (filtered_query
@@ -66,7 +71,9 @@ def transactions_list():
                   .order_by(Transaction.date.desc(), Transaction.created_at.desc())
                   .paginate(page=page, per_page=per_page, error_out=False))
 
-    all_transactions = Transaction.query.all()
+    all_transactions = Transaction.query.filter(
+        Transaction.transaction_type != 'delivery_charge'
+    ).all()
     total_balance = sum(
         t.amount if t.transaction_type == 'credit' else -t.amount
         for t in all_transactions
@@ -85,6 +92,7 @@ def transactions_list():
         date_to=date_to_str,
         client_q=client_q,
         created_by_filter=created_by_filter,
+        txn_type_filter=txn_type_filter,
     )
 
 
@@ -113,25 +121,27 @@ def export_transactions():
 
     transactions = (
         Transaction.query
-        .options(joinedload(Transaction.client), joinedload(Transaction.created_by))
-        .filter(Transaction.date >= date_from, Transaction.date <= date_to)
+        .options(
+            joinedload(Transaction.client),
+            joinedload(Transaction.created_by),
+            joinedload(Transaction.payment_account_setting),
+        )
+        .filter(
+            Transaction.date >= date_from,
+            Transaction.date <= date_to,
+            Transaction.transaction_type != 'delivery_charge',
+        )
         .order_by(Transaction.date.asc(), Transaction.created_at.asc())
         .all()
     )
 
     headers_row = ['Дата', 'Тип', 'Клієнт', 'Телефон', 'Сума (грн)',
-                   'Спосіб оплати', 'Тип витрати', 'Коментар', 'Записано', 'Хто вніс']
+                   'Спосіб оплати', 'Рахунок оплати', 'Тип витрати', 'Коментар', 'Хто вніс']
 
     def make_row(t):
-        kyiv_offset = 3
-        created = (t.created_at.replace(tzinfo=None) if t.created_at else None)
-        if created:
-            from datetime import timedelta
-            created_str = (created + timedelta(hours=kyiv_offset)).strftime('%d.%m.%Y %H:%M')
-        else:
-            created_str = ''
         creator = t.created_by.display_name if t.created_by and t.created_by.display_name else (
             t.created_by.username if t.created_by else '')
+        payment_account = t.payment_account_setting.value if t.payment_account_setting else ''
         return [
             t.date.strftime('%d.%m.%Y'),
             'Поповнення' if t.transaction_type == 'credit' else 'Списання',
@@ -139,9 +149,9 @@ def export_transactions():
             t.client.phone if t.client and t.client.phone else '',
             t.amount,
             t.payment_type or '',
+            payment_account,
             t.expense_type or '',
             t.comment or '',
-            created_str,
             creator,
         ]
 
@@ -206,6 +216,7 @@ def create_transaction():
     amount = data.get('amount')
     payment_type = data.get('payment_type')
     date_str = data.get('date')
+    payment_account_id = data.get('payment_account_id')
 
     if not client_id:
         errors.append('Оберіть клієнта')
@@ -215,6 +226,8 @@ def create_transaction():
         errors.append('Оберіть тип оплати')
     if not date_str:
         errors.append('Вкажіть дату')
+    if not payment_account_id:
+        errors.append('Оберіть рахунок оплати')
 
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
@@ -233,6 +246,7 @@ def create_transaction():
         client_id=client.id,
         amount=int(amount),
         payment_type=payment_type,
+        payment_account_id=int(payment_account_id),
         date=txn_date,
         created_by_id=current_user.id,
     )
@@ -257,6 +271,7 @@ def get_transaction(txn_id):
         'payment_type': txn.payment_type,
         'expense_type': txn.expense_type,
         'expense_type_id': txn.expense_type_id,
+        'payment_account_id': txn.payment_account_id,
         'comment': txn.comment or '',
         'date': txn.date.isoformat(),
         'client_id': txn.client_id,
@@ -281,6 +296,10 @@ def update_transaction(txn_id):
         errors.append('Введіть суму більше 0')
     if not date_str:
         errors.append('Вкажіть дату')
+
+    payment_account_id = data.get('payment_account_id')
+    if not payment_account_id:
+        errors.append('Оберіть рахунок оплати')
 
     if txn.transaction_type == 'credit':
         payment_type = data.get('payment_type')
@@ -308,6 +327,7 @@ def update_transaction(txn_id):
     txn.amount = new_amount
     txn.date = txn_date
     txn.comment = data.get('comment', '').strip() or None
+    txn.payment_account_id = int(payment_account_id)
 
     if txn.transaction_type == 'credit':
         txn.payment_type = data.get('payment_type')
@@ -330,6 +350,7 @@ def create_writeoff():
     expense_type = data.get('expense_type', '').strip()
     comment = data.get('comment', '').strip()
     date_str = data.get('date')
+    payment_account_id = data.get('payment_account_id')
 
     if not amount or int(amount) <= 0:
         errors.append('Введіть суму більше 0')
@@ -337,6 +358,8 @@ def create_writeoff():
         errors.append('Вкажіть тип витрати')
     if not date_str:
         errors.append('Вкажіть дату')
+    if not payment_account_id:
+        errors.append('Оберіть рахунок оплати')
 
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
@@ -353,6 +376,7 @@ def create_writeoff():
         amount=int(amount),
         expense_type=expense_type,
         expense_type_id=int(expense_type_id) if expense_type_id else None,
+        payment_account_id=int(payment_account_id),
         comment=comment or None,
         date=txn_date,
         created_by_id=current_user.id,

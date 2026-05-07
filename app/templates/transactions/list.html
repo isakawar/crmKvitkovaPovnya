@@ -61,7 +61,6 @@
   <form id="filterForm" method="get" action="/transactions" class="flex flex-wrap items-center gap-2">
     <input type="hidden" name="date_from" id="date_from" value="{{ date_from }}">
     <input type="hidden" name="date_to" id="date_to" value="{{ date_to }}">
-    <input type="hidden" name="created_by" value="{{ created_by_filter }}">
 
     <div class="relative flex-shrink-0">
       <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
@@ -81,15 +80,46 @@
         class="w-40 rounded-xl border border-stone-200 bg-stone-50 py-2 pl-9 pr-3 text-sm text-stone-700 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
     </div>
 
-    <div class="flex items-center gap-1">
-      <a href="?date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}"
-         class="rounded-xl border px-3 py-2 text-xs font-medium transition-colors {% if not created_by_filter %}bg-stone-900 text-white border-stone-900{% else %}border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100{% endif %}">
-        Всі
-      </a>
-      <a href="?date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by=florist"
-         class="rounded-xl border px-3 py-2 text-xs font-medium transition-colors {% if created_by_filter == 'florist' %}bg-stone-900 text-white border-stone-900{% else %}border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100{% endif %}">
-        Флорист
-      </a>
+    <div class="relative" id="txn-filter-dropdown-wrapper">
+      {% set active_filter_count = (1 if created_by_filter else 0) + (1 if txn_type_filter else 0) %}
+      <button
+        type="button"
+        id="txn-filter-toggle-btn"
+        class="inline-flex items-center gap-2 rounded-xl border {% if active_filter_count > 0 %}border-stone-900 bg-stone-900 text-white hover:bg-stone-700{% else %}border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100{% endif %} px-3 py-2 text-xs font-medium transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M11.5 1a.5.5 0 0 1 .5.5v2h2.5a.5.5 0 0 1 0 1H12v2a.5.5 0 0 1-1 0V4H.5a.5.5 0 0 1 0-1H11V1.5a.5.5 0 0 1 .5-.5M4 7a.5.5 0 0 1 .5.5v2h10a.5.5 0 0 1 0 1H4.5v2a.5.5 0 0 1-1 0V10H.5a.5.5 0 0 1 0-1H3.5V7.5A.5.5 0 0 1 4 7m6 4a.5.5 0 0 1 .5.5v2h2.5a.5.5 0 0 1 0 1H10.5v.5a.5.5 0 0 1-1 0V16H.5a.5.5 0 0 1 0-1H9.5v-3.5a.5.5 0 0 1 .5-.5"/>
+        </svg>
+        <span>Фільтри</span>
+        {% if active_filter_count > 0 %}
+        <span class="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-stone-900 text-[10px] font-bold leading-none">{{ active_filter_count }}</span>
+        {% endif %}
+      </button>
+
+      <div id="txn-filter-dropdown-panel"
+           class="absolute left-0 top-full z-50 mt-2 hidden rounded-2xl border border-stone-200 bg-white p-4 shadow-xl"
+           style="width: 18rem;">
+        <p class="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400">Фільтри</p>
+        <div class="space-y-3">
+          <div>
+            <label class="mb-1 block text-xs font-medium text-stone-500">Хто вніс</label>
+            <select name="created_by" id="filter-created-by"
+              class="w-full rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="" {% if not created_by_filter %}selected{% endif %}>Всі</option>
+              <option value="florist" {% if created_by_filter == 'florist' %}selected{% endif %}>Флорист</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-medium text-stone-500">Тип транзакції</label>
+            <select name="txn_type" id="filter-txn-type"
+              class="w-full rounded-lg border border-stone-200 bg-stone-50 px-2 py-1.5 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+              <option value="" {% if not txn_type_filter %}selected{% endif %}>Всі</option>
+              <option value="credit" {% if txn_type_filter == 'credit' %}selected{% endif %}>Поповнення</option>
+              <option value="debit" {% if txn_type_filter == 'debit' %}selected{% endif %}>Списання</option>
+            </select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <button type="submit" class="rounded-xl bg-stone-900 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-stone-700">Застосувати</button>
@@ -103,71 +133,77 @@
   {% if transactions %}
   <div class="w-full overflow-x-auto">
     <table class="w-full table-fixed text-sm">
+      <colgroup>
+        <col style="width:100px">
+        <col style="width:110px">
+        <col style="width:150px">
+        <col style="width:100px">
+        <col style="width:200px">
+        <col style="width:90px">
+        <col style="width:110px">
+      </colgroup>
       <thead>
         <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
-          <th class="w-[120px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Дата</th>
-          <th class="w-[120px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Тип</th>
-          <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Клієнт / Витрата</th>
-          <th class="w-[140px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Сума</th>
-          <th class="w-[150px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Деталі</th>
-          <th class="w-[150px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Записано</th>
-          <th class="w-[140px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Хто вніс</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Дата</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Тип</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Клієнт / Витрата</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Сума</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Деталі</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Хто вніс</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap text-center">Дія</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-stone-100">
         {% for txn in transactions %}
         <tr class="transition-colors hover:bg-stone-50/70 {% if current_user.has_role('admin') or current_user.has_role('manager') %}cursor-pointer{% endif %}"
             {% if current_user.has_role('admin') or current_user.has_role('manager') %}onclick="openEditTxnModal({{ txn.id }})"{% endif %}>
-          <td class="px-4 py-3 text-stone-700">{{ txn.date.strftime('%d.%m.%Y') }}</td>
-          <td class="px-4 py-3">
+          <td class="px-3 py-3 text-stone-700 whitespace-nowrap">{{ txn.date.strftime('%d.%m.%Y') }}</td>
+          <td class="px-3 py-3">
             {% if txn.transaction_type == 'credit' %}
-            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 whitespace-nowrap">
               <i class="bi bi-plus-circle"></i>
               Поповнення
             </span>
             {% else %}
-            <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700">
+            <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 whitespace-nowrap">
               <i class="bi bi-dash-circle"></i>
               Списання
             </span>
             {% endif %}
           </td>
-          <td class="px-4 py-3">
+          <td class="px-3 py-3">
             {% if txn.transaction_type == 'credit' and txn.client %}
-            <a href="/clients?open={{ txn.client_id }}" onclick="event.stopPropagation()" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2">{{ txn.client.instagram }}</a>
-            {% if txn.client.phone %}<span class="ml-1.5 text-xs text-stone-400">{{ txn.client.phone }}</span>{% endif %}
+            {% set client_label = txn.client.instagram or txn.client.telegram or txn.client.phone or '—' %}
+            <a href="/clients?open={{ txn.client_id }}" onclick="event.stopPropagation()" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2 truncate block">{{ client_label }}</a>
             {% elif txn.transaction_type == 'credit' and not txn.client_id %}
-            <span class="text-stone-500 italic">Офлайн продаж</span>
+            <span class="text-stone-500 italic text-xs">Офлайн продаж</span>
             {% elif txn.expense_type %}
-            <span class="text-stone-700">{{ txn.expense_type }}</span>
+            <span class="text-stone-700 truncate block text-xs">{{ txn.expense_type }}</span>
             {% else %}
             <span class="text-stone-300">—</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 font-semibold {% if txn.transaction_type == 'debit' %}text-rose-600{% else %}text-stone-900{% endif %}">
+          <td class="px-3 py-3 font-semibold whitespace-nowrap {% if txn.transaction_type == 'debit' %}text-rose-600{% else %}text-stone-900{% endif %}">
             {% if txn.transaction_type == 'debit' %}−{% endif %}{{ txn.amount }} грн
           </td>
-          <td class="px-4 py-3">
+          <td class="px-3 py-3">
             {% if txn.transaction_type == 'credit' %}
               {% if txn.payment_type == 'monobank' %}
-              <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+              <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap">
                 <i class="bi bi-credit-card"></i> Monobank
               </span>
               {% elif txn.payment_type == 'cash' %}
-              <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+              <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700 whitespace-nowrap">
                 <i class="bi bi-cash"></i> Готівка
               </span>
               {% endif %}
             {% elif txn.comment %}
-            <span class="text-xs text-stone-500 truncate block max-w-full">{{ txn.comment }}</span>
+            <span class="text-xs text-stone-500">{{ txn.comment }}</span>
             {% else %}
             <span class="text-stone-300">—</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-xs text-stone-400">
-            {% if txn.created_at %}{{ txn.created_at | kyiv_time }}{% else %}—{% endif %}
-          </td>
-          <td class="px-4 py-3 text-xs text-stone-600">
+          <td class="px-3 py-3 text-xs text-stone-600 truncate">
             {% if txn.created_by %}
               {% set creator_name = txn.created_by.display_name or txn.created_by.username %}
               {% if txn.created_by.has_role('florist') %}
@@ -180,6 +216,20 @@
               {% endif %}
             {% else %}
             <span class="text-stone-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-2 py-3 text-center">
+            {% if txn.transaction_type == 'debit' %}
+            <button type="button"
+              class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1 text-xs font-medium text-stone-600 whitespace-nowrap transition-colors hover:border-stone-300 hover:bg-stone-100"
+              data-expense-type="{{ txn.expense_type or '' }}"
+              data-expense-type-id="{{ txn.expense_type_id or '' }}"
+              data-payment-account-id="{{ txn.payment_account_id or '' }}"
+              data-comment="{{ txn.comment or '' }}"
+              onclick="event.stopPropagation(); repeatWriteoff(this)">
+              <i class="bi bi-arrow-repeat"></i>
+              Повторити
+            </button>
             {% endif %}
           </td>
         </tr>
@@ -203,7 +253,7 @@
   </p>
   <div class="flex items-center gap-1">
     {% if pagination.has_prev %}
-    <a href="?page={{ pagination.prev_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}"
+    <a href="?page={{ pagination.prev_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}"
        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
       <i class="bi bi-chevron-left text-xs"></i>
     </a>
@@ -214,7 +264,7 @@
         {% if p == pagination.page %}
         <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-stone-900 text-xs font-medium text-white">{{ p }}</span>
         {% else %}
-        <a href="?page={{ p }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}"
+        <a href="?page={{ p }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}"
            class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50">{{ p }}</a>
         {% endif %}
       {% else %}
@@ -223,7 +273,7 @@
     {% endfor %}
 
     {% if pagination.has_next %}
-    <a href="?page={{ pagination.next_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}"
+    <a href="?page={{ pagination.next_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}"
        class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
       <i class="bi bi-chevron-right text-xs"></i>
     </a>
@@ -282,6 +332,21 @@
       }
     },
   });
+
+  (function () {
+    const toggleBtn = document.getElementById('txn-filter-toggle-btn');
+    const panel = document.getElementById('txn-filter-dropdown-panel');
+    if (!toggleBtn || !panel) return;
+    toggleBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      panel.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function (e) {
+      if (!panel.classList.contains('hidden') && !panel.contains(e.target) && e.target !== toggleBtn) {
+        panel.classList.add('hidden');
+      }
+    });
+  })();
 
   document.querySelectorAll('.preset-btn').forEach(btn => {
     btn.addEventListener('click', () => {

@@ -74,6 +74,12 @@ with app.app_context():
         ('expense_type', 'Таргетолог'),
         ('expense_type', 'Еквайрінг'),
         ('expense_type', 'Податок'),
+        # Рахунки оплати
+        ('payment_account', 'ФО-П Чубикіна'),
+        ('payment_account', 'Готівка'),
+        ('payment_account', 'картка Даша'),
+        ('payment_account', 'картка Влад'),
+        ('payment_account', 'картка Паша'),
     ]
     added_count = 0
     for t, v in data:

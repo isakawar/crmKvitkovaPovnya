@@ -17,9 +17,11 @@ class Transaction(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     expense_type_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
+    payment_account_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
     delivery_id = db.Column(db.Integer, db.ForeignKey('delivery.id', ondelete='SET NULL'), nullable=True)
 
     client = db.relationship('Client', backref='transactions', foreign_keys=[client_id])
     created_by = db.relationship('User', foreign_keys=[created_by_id])
     expense_type_setting = db.relationship('Settings', foreign_keys=[expense_type_id])
+    payment_account_setting = db.relationship('Settings', foreign_keys=[payment_account_id])
     delivery = db.relationship('Delivery', foreign_keys=[delivery_id])

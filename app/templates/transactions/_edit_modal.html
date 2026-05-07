@@ -54,6 +54,13 @@
           </div>
 
           <div class="txn-field">
+            <label class="txn-label">Рахунок оплати</label>
+            <select id="editTxnPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
+            </select>
+          </div>
+
+          <div class="txn-field">
             <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
             <input type="text" id="editTxnComment" name="comment" placeholder="Опис" class="txn-input">
           </div>
@@ -101,8 +108,25 @@ document.addEventListener('DOMContentLoaded', function () {
   const subtitleEl = document.getElementById('editTxnSubtitle');
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const paymentAccountSelect = document.getElementById('editTxnPaymentAccountId');
   let expenseTypes = [];
   let activeIndex = -1;
+  let paymentAccountsLoaded = false;
+
+  async function loadPaymentAccounts() {
+    if (paymentAccountsLoaded) return;
+    try {
+      const res = await fetch('/settings/payment_accounts');
+      const accounts = await res.json();
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.value;
+        paymentAccountSelect.appendChild(opt);
+      });
+      paymentAccountsLoaded = true;
+    } catch (_) {}
+  }
 
   async function loadExpenseTypes() {
     if (expenseTypes.length) return;
@@ -231,6 +255,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
       applyType(txn.transaction_type);
 
+      await loadPaymentAccounts();
+      paymentAccountSelect.value = txn.payment_account_id || '';
+
       if (txn.transaction_type === 'credit') {
         paymentTypeSelect.value = txn.payment_type || 'monobank';
       } else {
@@ -259,6 +286,10 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть тип витрати зі списку');
       return;
     }
+    if (!paymentAccountSelect.value) {
+      showErrors('Оберіть рахунок оплати');
+      return;
+    }
 
     setLoading(true);
 
@@ -266,6 +297,7 @@ document.addEventListener('DOMContentLoaded', function () {
       amount: amountInput.value,
       date: dateInput.value,
       comment: commentInput.value,
+      payment_account_id: paymentAccountSelect.value,
     };
 
     if (type === 'credit') {

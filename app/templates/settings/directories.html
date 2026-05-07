@@ -146,6 +146,19 @@
       </div>
     </button>
 
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#paymentAccountsModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-credit-card-2-front"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Фінанси</p>
+        <h2 class="settings-grid-card__title">Рахунки оплати</h2>
+        <p class="settings-grid-card__text">Картки, готівка та ФОП — джерела оплати витрат при списаннях.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування списком</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
     <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#pricesModal">
       <span class="settings-grid-card__icon"><i class="bi bi-cash-stack"></i></span>
       <div>
@@ -168,6 +181,7 @@
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
 {{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
 {{ settings_modal('packagingTypesModal', 'Коробка / Букет', 'Тип пакування для доставок — відображається у плані флориста.', '/settings/packaging_types', 'Наприклад, Коробка') }}
+{{ settings_modal('paymentAccountsModal', 'Рахунки оплати', 'Картки, готівка та ФОП — джерела оплати при списаннях.', '/settings/payment_accounts', 'Наприклад, картка Іра') }}
 <!-- Combined Expenses Modal (two-column + drag-and-drop) -->
 <div class="modal fade settings-modal settings-modal--wide" id="expensesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width:780px;">
@@ -725,6 +739,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},
         {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'},
         {id: 'packagingTypesModal', endpoint: '/settings/packaging_types'},
+        {id: 'paymentAccountsModal', endpoint: '/settings/payment_accounts'},
     ].forEach(function(modal) {
         const modalEl = document.getElementById(modal.id);
         const form = modalEl.querySelector('.settings-add-form');

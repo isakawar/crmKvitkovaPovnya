@@ -67,6 +67,13 @@
           </style>
 
           <div class="txn-field">
+            <label class="txn-label">Рахунок оплати</label>
+            <select id="writeoffPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
+            </select>
+          </div>
+
+          <div class="txn-field">
             <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
             <input type="text" id="writeoffComment" name="comment" placeholder="Опис витрати" class="txn-input">
           </div>
@@ -107,8 +114,25 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!openBtn || !modalEl || !form) return;
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const paymentAccountSelect = document.getElementById('writeoffPaymentAccountId');
   let expenseTypes = [];
   let activeIndex = -1;
+  let paymentAccountsLoaded = false;
+
+  async function loadPaymentAccounts() {
+    if (paymentAccountsLoaded) return;
+    try {
+      const res = await fetch('/settings/payment_accounts');
+      const accounts = await res.json();
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.value;
+        paymentAccountSelect.appendChild(opt);
+      });
+      paymentAccountsLoaded = true;
+    } catch (_) {}
+  }
 
   async function loadExpenseTypes() {
     if (expenseTypes.length) return;
@@ -228,9 +252,31 @@ document.addEventListener('DOMContentLoaded', function () {
     clearErrors();
     setLoading(false);
     writeoffDate.value = todayISO();
-    await loadExpenseTypes();
+    await Promise.all([loadExpenseTypes(), loadPaymentAccounts()]);
     modal.show();
   });
+
+  window.repeatWriteoff = async function (btn) {
+    form.reset();
+    clearSelection();
+    clearErrors();
+    setLoading(false);
+
+    await Promise.all([loadExpenseTypes(), loadPaymentAccounts()]);
+
+    const expenseType   = btn.dataset.expenseType || '';
+    const expenseTypeId = btn.dataset.expenseTypeId || '';
+    const paymentAccId  = btn.dataset.paymentAccountId || '';
+    const comment       = btn.dataset.comment || '';
+
+    selectType(expenseType, expenseTypeId);
+    paymentAccountSelect.value = paymentAccId;
+    document.getElementById('writeoffComment').value = comment;
+    document.getElementById('writeoffAmount').value = '';
+    writeoffDate.value = todayISO();
+
+    modal.show();
+  };
 
   modalEl.addEventListener('hidden.bs.modal', function () {
     clearErrors();
@@ -246,6 +292,10 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть тип витрати зі списку');
       return;
     }
+    if (!paymentAccountSelect.value) {
+      showErrors('Оберіть рахунок оплати');
+      return;
+    }
 
     setLoading(true);
 
@@ -253,6 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
       amount: document.getElementById('writeoffAmount').value,
       expense_type: hiddenInput.value,
       expense_type_id: hiddenIdInput.value || null,
+      payment_account_id: paymentAccountSelect.value,
       comment: document.getElementById('writeoffComment').value,
       date: writeoffDate.value,
     };
