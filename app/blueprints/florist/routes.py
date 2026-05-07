@@ -99,10 +99,8 @@ def florist_bulk_update_status():
             delivery.status_changed_at = now_utc
 
         if status_key == 'delivered':
-            delivery.status = 'Доставлено'
-            delivery.status_changed_at = now_utc
-            if not delivery.delivered_at:
-                delivery.delivered_at = now_utc
+            from app.services.delivery_service import set_delivery_status
+            set_delivery_status(delivery, 'Доставлено')
 
     try:
         db.session.commit()

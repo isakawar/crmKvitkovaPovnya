@@ -780,17 +780,16 @@ class CourierHandlers:
             return
         
         try:
-            # Оновлюємо статус доставки
-            delivery.status = 'Доставлено'
-            delivery.delivered_at = datetime.utcnow()
-            delivery.status_changed_at = datetime.utcnow()
-            
+            # Оновлюємо статус доставки (charge_delivery викликається всередині)
+            from app.services.delivery_service import set_delivery_status
+            set_delivery_status(delivery, 'Доставлено')
+
             # Оновлюємо статистику кур'єра
             courier.deliveries_count = Delivery.query.filter_by(
-                courier_id=courier.id, 
+                courier_id=courier.id,
                 status='Доставлено'
             ).count()
-            
+
             db.session.commit()
             
             # Повідомлення про успіх
@@ -1004,9 +1003,10 @@ class CourierHandlers:
             return
         route.status = 'completed'
         stops = RouteDelivery.query.filter_by(route_id=route_id).all()
+        from app.services.delivery_service import set_delivery_status
         for stop in stops:
             if stop.delivery:
-                stop.delivery.status = 'Доставлено'
+                set_delivery_status(stop.delivery, 'Доставлено')
         db.session.commit()
         await query.edit_message_text(
             f"✅ <b>Маршрут завершено!</b>\n\n"

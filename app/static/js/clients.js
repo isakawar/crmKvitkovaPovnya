@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const phone = phoneInput.value.trim();
     const contacts = [instagram, telegram, phone].filter(Boolean).length;
     const identity = getPreviewIdentity();
-    const credits = creditsInput.value.trim() || '0';
+    const credits = creditsInput.value.trim() || '0 ₴';
     const discount = personalDiscountInput.value.trim() || '0';
 
     previewAvatar.textContent = getPreviewAvatarLetter(identity);
@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', function () {
     previewTitle.textContent = identity;
     previewSubtitle.textContent = getPreviewSubtitle(contacts);
     previewContacts.textContent = pluralizeContacts(contacts);
-    previewCredits.textContent = `${credits} ₴`;
+    previewCredits.textContent = credits;
     previewDiscount.textContent = `${discount}%`;
   }
 
@@ -238,18 +238,76 @@ document.addEventListener('DOMContentLoaded', function () {
     phoneWhatsappCheck.checked = Boolean(client.phone_whatsapp);
     nameInput.value = client.name || '';
     if (emailInput) emailInput.value = client.email || '';
-    creditsInput.value = client.credits ?? 0;
+    creditsInput.value = `${client.credits ?? 0} ₴`;
     marketingSourceInput.value = client.marketing_source || '';
     personalDiscountInput.value = client.personal_discount || '';
 
     const createdAtDisplay = document.getElementById('client-created-at-display');
     if (createdAtDisplay) createdAtDisplay.value = client.created_at || '—';
 
+    renderTransactions(client.transactions || []);
     clearAllErrors();
     toggleClearPhoneButton();
     updateMessengerState();
     updatePreviewCard();
   }
+
+  function renderTransactions(transactions) {
+    const list = document.getElementById('client-transactions-list');
+    const countEl = document.getElementById('client-transactions-count');
+    const body = document.getElementById('client-transactions-body');
+    if (!list) return;
+
+    // Collapse by default when new client data loads
+    if (body) body.classList.add('hidden');
+    const chevron = document.getElementById('client-transactions-chevron');
+    if (chevron) chevron.style.transform = '';
+
+    if (countEl) {
+      countEl.textContent = transactions.length ? `· ${transactions.length}` : '';
+    }
+
+    const typeLabels = {
+      credit: 'Поповнення',
+      debit: 'Списання',
+      delivery_charge: 'Списання (доставка)',
+    };
+
+    if (transactions.length === 0) {
+      list.innerHTML = '<p class="text-sm text-stone-400 px-4 py-3">Немає транзакцій</p>';
+    } else {
+      const rows = transactions.map(t => {
+        const isCredit = t.type === 'credit';
+        const amountClass = isCredit ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold';
+        const amountSign = isCredit ? '+' : '−';
+        const label = typeLabels[t.type] || t.type;
+        const paymentBadge = t.payment_type
+          ? `<span class="text-xs text-stone-400 ml-1">(${t.payment_type})</span>`
+          : '';
+        const comment = t.comment
+          ? `<span class="text-stone-400">${t.comment}</span>`
+          : '';
+        return `<div class="flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 transition-colors">
+          <span class="text-xs text-stone-400 w-20 shrink-0">${t.date}</span>
+          <span class="text-sm text-stone-700 flex-1 min-w-0">${label}${paymentBadge}${comment ? `<br><span class="text-xs text-stone-400">${t.comment}</span>` : ''}</span>
+          <span class="text-sm ${amountClass} whitespace-nowrap">${amountSign}${t.amount}₴</span>
+        </div>`;
+      }).join('');
+      list.innerHTML = rows;
+    }
+  }
+
+  (function initTransactionsToggle() {
+    const toggle = document.getElementById('client-transactions-toggle');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+      const body = document.getElementById('client-transactions-body');
+      const chevron = document.getElementById('client-transactions-chevron');
+      if (!body) return;
+      const isHidden = body.classList.toggle('hidden');
+      if (chevron) chevron.style.transform = isHidden ? '' : 'rotate(180deg)';
+    });
+  })();
 
   modal.addEventListener('show.bs.modal', function () {
     document.body.classList.add('client-modal-open');
@@ -284,6 +342,8 @@ document.addEventListener('DOMContentLoaded', function () {
     updateSubscriptionButtonState();
     const createdAtRow = document.getElementById('client-created-at-row');
     if (createdAtRow) createdAtRow.classList.toggle('hidden', !isEditMode);
+    const txSection = document.getElementById('client-transactions-section');
+    if (txSection) txSection.classList.toggle('hidden', !isEditMode);
     if (deleteClientBtn) {
       deleteClientBtn.classList.toggle('hidden', !isEditMode);
       deleteClientBtn.classList.toggle('inline-flex', isEditMode);
@@ -349,11 +409,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const phoneValue = phoneInput.value.trim();
     const phoneHasValue = phoneValue && phoneValue !== '+380';
     const phoneValid = !phoneHasValue || phonePattern.test(phoneValue);
-    const creditsValue = creditsInput.value.trim();
-    const creditsValid = !creditsValue || Number(creditsValue) >= 0;
     const discountValue = personalDiscountInput.value.trim();
     const discountValid = !discountValue || (!Number.isNaN(Number(discountValue)) && Number(discountValue) >= 0 && Number(discountValue) <= 100);
-    return phoneValid && creditsValid && discountValid;
+    return phoneValid && discountValid;
   }
 
   function updateSubscriptionButtonState() {
@@ -405,7 +463,7 @@ document.addEventListener('DOMContentLoaded', function () {
     errorDiv.classList.remove('is-visible');
     clearNickError(1);
     clearNickError(2);
-    [phoneInput, creditsInput, marketingSourceInput, personalDiscountInput, nameInput].forEach(clearFieldError);
+    [phoneInput, marketingSourceInput, personalDiscountInput, nameInput].forEach(clearFieldError);
   }
 
   function showFormError(message) {
@@ -541,12 +599,6 @@ document.addEventListener('DOMContentLoaded', function () {
       isValid = false;
     }
 
-    const creditsValue = creditsInput.value.trim();
-    if (creditsValue && Number(creditsValue) < 0) {
-      setFieldError(creditsInput, 'Баланс не може бути меншими за 0');
-      isValid = false;
-    }
-
     const discountValue = personalDiscountInput.value.trim();
     if (discountValue) {
       const discount = Number(discountValue);
@@ -597,7 +649,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  [creditsInput, personalDiscountInput, nameInput].forEach(input => {
+  [personalDiscountInput, nameInput].forEach(input => {
     input.addEventListener('input', function () {
       clearFieldError(input);
       updateSubscriptionButtonState();

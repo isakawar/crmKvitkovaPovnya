@@ -42,11 +42,6 @@ def clients_list():
                          sub_filter=sub_filter)
 
 def _parse_client_form(form):
-    credits_raw = form.get('credits', 0)
-    try:
-        credits = int(credits_raw) if str(credits_raw).strip() else 0
-    except ValueError:
-        credits = 0
     personal_discount_raw = form.get('personal_discount', '').strip()
     personal_discount = int(personal_discount_raw) if personal_discount_raw.isdigit() else None
     return {
@@ -57,7 +52,6 @@ def _parse_client_form(form):
         'phone_viber': form.get('phone_viber') == 'on',
         'phone_telegram': form.get('phone_telegram') == 'on',
         'phone_whatsapp': form.get('phone_whatsapp') == 'on',
-        'credits': credits,
         'marketing_source': form.get('marketing_source', '').strip() or None,
         'personal_discount': personal_discount,
         'email': form.get('email', '').strip() or None,
@@ -79,6 +73,7 @@ def client_create():
 @clients_bp.route('/clients/<int:client_id>', methods=['GET'])
 def get_client(client_id):
     client = get_client_by_id(client_id)
+    transactions = sorted(client.transactions, key=lambda t: t.date, reverse=True)
     return jsonify({
         'id': client.id,
         'name': client.name or '',
@@ -93,6 +88,17 @@ def get_client(client_id):
         'personal_discount': client.personal_discount or '',
         'email': client.email or '',
         'created_at': client.created_at.strftime('%d.%m.%Y') if client.created_at else None,
+        'transactions': [
+            {
+                'id': t.id,
+                'date': t.date.strftime('%d.%m.%Y'),
+                'type': t.transaction_type,
+                'amount': t.amount,
+                'payment_type': t.payment_type or '',
+                'comment': t.comment or '',
+            }
+            for t in transactions
+        ],
     })
 
 @clients_bp.route('/clients/<int:client_id>', methods=['POST'])

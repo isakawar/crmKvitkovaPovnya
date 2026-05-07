@@ -519,9 +519,10 @@ def change_route_status(route_id):
     if courier_id:
         route.courier_id = courier_id
     if new_status == 'completed':
+        from app.services.delivery_service import set_delivery_status
         for stop in route.stops:
             if stop.delivery:
-                stop.delivery.status = 'Доставлено'
+                set_delivery_status(stop.delivery, 'Доставлено')
     db.session.commit()
     return jsonify({'ok': True})
 
