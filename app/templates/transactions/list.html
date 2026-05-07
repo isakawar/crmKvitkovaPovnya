@@ -123,9 +123,9 @@
     </div>
 
     <button type="submit" class="rounded-xl bg-stone-900 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-stone-700">Застосувати</button>
-    <a href="/transactions" title="Скинути фільтр" class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-stone-50 text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-100 hover:text-stone-600">
+    <button type="button" id="resetFiltersBtn" title="Скинути фільтр" class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 bg-stone-50 text-stone-400 transition-colors hover:border-stone-300 hover:bg-stone-100 hover:text-stone-600">
       <i class="bi bi-x text-base leading-none"></i>
-    </a>
+    </button>
   </form>
 </section>
 
@@ -366,8 +366,69 @@
         dateFromEl.value = fp.formatDate(first, 'Y-m-d');
         dateToEl.value   = fp.formatDate(last,  'Y-m-d');
       }
+      saveFiltersToCache();
       form.submit();
     });
   });
+
+  // ── Filter cache (localStorage, TTL 12h) ──────────────────────────────────
+  const CACHE_KEY = 'txn_filters';
+  const CACHE_TTL = 12 * 60 * 60 * 1000;
+
+  function saveFiltersToCache() {
+    const filters = {
+      date_from:   dateFromEl.value,
+      date_to:     dateToEl.value,
+      client_q:    document.getElementById('client_q').value,
+      created_by:  document.getElementById('filter-created-by').value,
+      txn_type:    document.getElementById('filter-txn-type').value,
+      saved_at:    Date.now(),
+    };
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(filters)); } catch (_) {}
+  }
+
+  function clearFiltersCache() {
+    try { localStorage.removeItem(CACHE_KEY); } catch (_) {}
+  }
+
+  function loadFiltersFromCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (Date.now() - data.saved_at > CACHE_TTL) { clearFiltersCache(); return null; }
+      return data;
+    } catch (_) { return null; }
+  }
+
+  // Save on form submit
+  form.addEventListener('submit', saveFiltersToCache);
+
+  // Clear cache and reset on × button
+  document.getElementById('resetFiltersBtn').addEventListener('click', function () {
+    clearFiltersCache();
+    window.location.href = '/transactions';
+  });
+
+  // On fresh load (no URL params) — restore from cache
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    const hasParams = params.has('date_from') || params.has('client_q') ||
+                      params.has('created_by') || params.has('txn_type');
+    if (hasParams) {
+      // URL already has filters — save them to cache
+      saveFiltersToCache();
+      return;
+    }
+    const cached = loadFiltersFromCache();
+    if (!cached) return;
+    const p = new URLSearchParams();
+    if (cached.date_from)  p.set('date_from',  cached.date_from);
+    if (cached.date_to)    p.set('date_to',    cached.date_to);
+    if (cached.client_q)   p.set('client_q',   cached.client_q);
+    if (cached.created_by) p.set('created_by', cached.created_by);
+    if (cached.txn_type)   p.set('txn_type',   cached.txn_type);
+    window.location.replace('/transactions?' + p.toString());
+  })();
 </script>
 {% endblock %}
