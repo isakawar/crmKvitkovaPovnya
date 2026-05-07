@@ -84,7 +84,7 @@ def orders_list():
     subscription_extensions_count = Subscription.query.filter(Subscription.is_extended.is_(True)).count()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     packaging_types = Settings.query.filter_by(type='packaging_type').order_by(Settings.value).all()
     deliveries = []
@@ -165,7 +165,7 @@ def order_form():
     clients = Client.query.all()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
         'orders/form.html',
@@ -1451,7 +1451,7 @@ def extend_form_from_delivery(delivery_id):
     client = delivery.client
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
         'orders/extend_modal.html',

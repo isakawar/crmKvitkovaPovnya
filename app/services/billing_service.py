@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models import Order, Delivery
 from app.models.client import Client
 from app.models.price import Price
+from app.models.price_preset import PricePreset
 from app.models.settings import Settings
 from app.models.transaction import Transaction
 
@@ -12,33 +13,29 @@ logger = logging.getLogger(__name__)
 
 
 def get_order_price(order: Order) -> int | None:
-    """Return the charged amount for an order: price from Price table after discount.
+    """Return the charged amount for an order: price from active PricePreset after discount.
 
     For 'Власний' size: returns order.custom_amount (no price table lookup).
-    For subscription orders: looks up Price(subscription_type × size).
-    For one-time orders: looks up Price(NULL × size).
-    Returns None if no price entry found.
+    For subscription orders: looks up Price(preset, 'subscription', size).
+    For one-time orders: looks up Price(preset, 'one_time', size).
+    Returns None if no active preset or no price entry found.
     """
     if order.size == 'Власний':
         base = order.custom_amount or 0
     else:
+        preset = PricePreset.query.filter_by(is_active=True).first()
+        if not preset:
+            return None
+
         size_setting = Settings.query.filter_by(type='size', value=order.size).first()
         if not size_setting:
             return None
 
-        if order.subscription_id:
-            from app.models.subscription import Subscription
-            sub = Subscription.query.get(order.subscription_id)
-            sub_type_value = sub.type if sub else None
-            sub_type_setting = Settings.query.filter_by(
-                type='delivery_type', value=sub_type_value
-            ).first() if sub_type_value else None
-            sub_type_id = sub_type_setting.id if sub_type_setting else None
-        else:
-            sub_type_id = None
+        order_type = 'subscription' if order.subscription_id else 'one_time'
 
         price_entry = Price.query.filter_by(
-            subscription_type_id=sub_type_id,
+            preset_id=preset.id,
+            order_type=order_type,
             size_id=size_setting.id,
         ).first()
         if not price_entry:

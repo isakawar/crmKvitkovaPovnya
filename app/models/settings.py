@@ -5,6 +5,7 @@ class Settings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     type = db.Column(db.String(50), nullable=False, index=True)
     value = db.Column(db.String(100), nullable=False, index=True)
+    sort_order = db.Column(db.Integer, nullable=True)
     category_id = db.Column(db.Integer, db.ForeignKey('expense_category.id'), nullable=True)
 
     category = db.relationship('ExpenseCategory', backref='expense_types')

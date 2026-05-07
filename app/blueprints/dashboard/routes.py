@@ -156,7 +156,7 @@ def dashboard_page():
 
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
 
     return render_template(

@@ -228,7 +228,7 @@ def get_orders_data(date_from_str=None, date_to_str=None):
         s.value for s in Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     ]
     size_settings = [
-        s.value for s in Settings.query.filter_by(type='size').order_by(Settings.value).all()
+        s.value for s in Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     ]
 
     marketing_all = _rows_to_items(marketing_all_rows)
