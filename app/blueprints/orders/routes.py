@@ -388,9 +388,24 @@ def order_edit(order_id):
     delivery_bouquet_type = next((d.bouquet_type for d in order.deliveries if d.bouquet_type), None)
     delivery_composition_type = next((d.composition_type for d in order.deliveries if d.composition_type), None)
 
+    def _client_display(c):
+        parts = []
+        if c.instagram:
+            parts.append(c.instagram)
+        if c.telegram:
+            tg = c.telegram if c.telegram.startswith('@') else f'@{c.telegram}'
+            parts.append(tg)
+        if c.phone:
+            parts.append(c.phone)
+        if c.name:
+            parts.append(c.name)
+        return ' · '.join(parts) if parts else f'#{c.id}'
+
     return jsonify({
         'id': order.id,
+        'client_id': order.client_id,
         'client_instagram': order.client.instagram,
+        'client_display': _client_display(order.client),
         'recipient_name': order.recipient_name,
         'recipient_phone': order.recipient_phone,
         'recipient_social': order.recipient_social,
@@ -1271,6 +1286,12 @@ def extend_subscription(order_id):
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
 
 
+def _client_label(c):
+    if not c:
+        return ''
+    return c.instagram or c.telegram or c.phone or c.name or f'#{c.id}'
+
+
 @orders_bp.route('/orders/export/csv', methods=['GET'])
 @login_required
 def export_orders_csv():
@@ -1323,7 +1344,7 @@ def export_orders_csv():
         c = d.client
         writer.writerow([
             d.id,
-            c.instagram if c else '',
+            _client_label(c),
             o.recipient_name or '' if o else '',
             d.phone or (o.recipient_phone if o else '') or '',
             o.city or '' if o else '',
@@ -1393,7 +1414,7 @@ def export_orders_xlsx():
         c = d.client
         ws.append([
             d.id,
-            c.instagram if c else '',
+            _client_label(c),
             o.recipient_name or '' if o else '',
             d.phone or (o.recipient_phone if o else '') or '',
             o.city or '' if o else '',

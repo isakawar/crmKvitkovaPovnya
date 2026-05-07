@@ -347,7 +347,8 @@ document.addEventListener('DOMContentLoaded', function () {
   function isSubscriptionActionAvailable() {
     if (!hasAnyContact()) return false;
     const phoneValue = phoneInput.value.trim();
-    const phoneValid = !phoneValue || phonePattern.test(phoneValue);
+    const phoneHasValue = phoneValue && phoneValue !== '+380';
+    const phoneValid = !phoneHasValue || phonePattern.test(phoneValue);
     const creditsValue = creditsInput.value.trim();
     const creditsValid = !creditsValue || Number(creditsValue) >= 0;
     const discountValue = personalDiscountInput.value.trim();
