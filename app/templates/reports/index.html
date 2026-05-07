@@ -345,6 +345,10 @@
       <i class="bi bi-download"></i>
       Експорт
     </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
+      <i class="bi bi-cash-stack"></i>
+      Cash Flow
+    </button>
   </div>
 
   <!-- ════════════════════════════════════════════
@@ -799,6 +803,68 @@
 
   </div>{# /tab-export #}
 
+  <!-- ════════════════════════════════════════════
+       TAB: CASH FLOW
+  ════════════════════════════════════════════ -->
+  <div id="tab-cash_flow" class="reports-tab-content {% if active_tab == 'cash_flow' %}is-active{% endif %}">
+
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Надходження</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(cash_flow.total).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ cash_flow.period_label }}</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Порівняння</div>
+        <div class="kpi-card__value">₴{{ "{:,}".format(cash_flow.prev_total).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ cash_flow.comparison_label }}</div>
+      </div>
+
+      {% if cash_flow.comparison_pct is not none %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Динаміка</div>
+        <div class="kpi-card__value {% if cash_flow.comparison_pct >= 100 %}kpi-card__value--green{% else %}kpi-card__value--red{% endif %}">
+          {% if cash_flow.comparison_pct >= 100 %}+{% endif %}{{ "%.1f"|format(cash_flow.comparison_pct - 100) }}%
+        </div>
+        <div class="kpi-card__sub">{{ cash_flow.comparison_label }}</div>
+        <!-- Comparison bar -->
+        <div class="mt-3">
+          <div class="h-2 bg-stone-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full"
+                 style="width: {{ cash_flow.comparison_pct if cash_flow.comparison_pct <= 100 else 100 }}%; background: {% if cash_flow.comparison_pct >= 100 %}#10b981{% else %}#f87171{% endif %};"></div>
+          </div>
+          <div class="flex justify-between text-xs text-stone-400 mt-1">
+            <span>0</span>
+            <span>{{ cash_flow.comparison_pct }}% від попереднього</span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Динаміка</div>
+        <div class="kpi-card__value text-stone-400">—</div>
+        <div class="kpi-card__sub">Немає даних для порівняння</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Chart -->
+    <div class="report-card p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:#d4c97a"></span>
+        <span class="text-sm font-medium text-stone-700">
+          {% if cash_flow.mode == 'monthly' %}Місячні надходження — Весь час{% else %}Щоденні надходження — {{ cash_flow.period_label }}{% endif %}
+        </span>
+      </div>
+      <div class="relative" style="height: 300px;">
+        <canvas id="cashFlowChart"></canvas>
+      </div>
+    </div>
+
+  </div>{# /tab-cash_flow #}
+
 </div>{# /flex #}
 {% endblock %}
 
@@ -903,18 +969,28 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     const activeMon = matchedMonth();
 
-    // Populate select from server-provided list of months with actual data
+    // Populate select grouped by year
     const activeMonths = {{ active_months | tojson }};
+    const groups = {};
     activeMonths.forEach(function (pair) {
-      const y = pair[0], m = pair[1];
-      const label = UA_MONTHS[m - 1] + ' ' + String(y).slice(2);
-      const first = y + '-' + pad(m) + '-01';
-      const last  = y + '-' + pad(m) + '-' + pad(lastDay(y, m));
-      const opt = document.createElement('option');
-      opt.value = first + '|' + last;
-      opt.textContent = label;
-      if (activeMon && activeMon.y === y && activeMon.m === m) opt.selected = true;
-      sel.appendChild(opt);
+      const y = pair[0];
+      if (!groups[y]) groups[y] = [];
+      groups[y].push(pair[1]);
+    });
+    Object.keys(groups).sort(function (a, b) { return b - a; }).forEach(function (y) {
+      const grp = document.createElement('optgroup');
+      grp.label = y;
+      groups[y].forEach(function (m) {
+        const label = UA_MONTHS[m - 1];
+        const first = y + '-' + pad(m) + '-01';
+        const last  = y + '-' + pad(m) + '-' + pad(lastDay(Number(y), m));
+        const opt = document.createElement('option');
+        opt.value = first + '|' + last;
+        opt.textContent = label;
+        if (activeMon && activeMon.y === Number(y) && activeMon.m === m) opt.selected = true;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
     });
 
     // Style select as active pill when a month is selected
@@ -1197,6 +1273,12 @@ document.addEventListener('DOMContentLoaded', function () {
       icon.style.transform = open ? '' : 'rotate(180deg)';
       btn.setAttribute('aria-expanded', String(!open));
     });
+  }());
+
+  // ── Cash Flow daily chart ─────────────────────────
+  (function () {
+    const data = {{ cash_flow.chart | tojson }};
+    createBarChart('cashFlowChart', data.labels, data.values, '#e8e0a0');
   }());
 
   window.toggleExpenseGroup = function (btn) {

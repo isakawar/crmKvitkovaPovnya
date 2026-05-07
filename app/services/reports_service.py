@@ -600,6 +600,128 @@ def get_florist_sales_data(date_from_str=None, date_to_str=None):
     }
 
 
+def get_cash_flow_data(date_from_str=None, date_to_str=None):
+    """Cash flow data. No filter → all-time monthly chart. Filter → daily chart for period."""
+    import calendar
+    from app.models.transaction import Transaction
+
+    today = date.today()
+    UA_MONTHS = [
+        'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень',
+        'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень',
+    ]
+
+    # ── All-time mode: monthly aggregation ────────────────────────────────────
+    if not date_from_str and not date_to_str:
+        rows = (
+            db.session.query(
+                func.extract('year',  Transaction.date).label('y'),
+                func.extract('month', Transaction.date).label('m'),
+                func.sum(Transaction.amount).label('s'),
+            )
+            .filter(Transaction.transaction_type == 'credit')
+            .group_by('y', 'm')
+            .order_by('y', 'm')
+            .all()
+        )
+
+        monthly = {date(int(r.y), int(r.m), 1): int(r.s) for r in rows}
+        labels, values = _fill_monthly_gaps(monthly)
+
+        total = sum(values)
+
+        # Comparison: last complete month vs month before it
+        last_month_start = _month_start(today) - timedelta(days=1)
+        last_month_start = _month_start(last_month_start)
+        prev_month_start = _month_start(last_month_start - timedelta(days=1))
+        last_total = monthly.get(last_month_start, 0)
+        prev_total = monthly.get(prev_month_start, 0)
+        comparison_pct = round(last_total / prev_total * 100, 1) if prev_total > 0 else None
+
+        return {
+            'mode': 'monthly',
+            'chart': {'labels': labels, 'values': values},
+            'total': total,
+            'prev_total': prev_total,
+            'period_label': 'Весь час',
+            'comparison_label': f'{UA_MONTHS[last_month_start.month - 1]} vs {UA_MONTHS[prev_month_start.month - 1]}',
+            'comparison_pct': comparison_pct,
+        }
+
+    # ── Period mode: daily aggregation ────────────────────────────────────────
+    d_from   = _parse_date(date_from_str) or date(today.year, today.month, 1)
+    d_to_raw = _parse_date(date_to_str)   or date(today.year, today.month,
+                                                   calendar.monthrange(today.year, today.month)[1])
+
+    # Build period label from the original (un-capped) dates
+    if (d_from.day == 1
+            and d_from.month == d_to_raw.month
+            and d_from.year == d_to_raw.year
+            and d_to_raw.day == calendar.monthrange(d_from.year, d_from.month)[1]):
+        period_label = f'{UA_MONTHS[d_from.month - 1]} {d_from.year}'
+    else:
+        period_label = f'{d_from.strftime("%d.%m.%Y")} — {d_to_raw.strftime("%d.%m.%Y")}'
+
+    # If the entire period is in the future — return empty
+    if d_from > today:
+        return {
+            'mode': 'daily',
+            'chart': {'labels': [], 'values': []},
+            'total': 0,
+            'prev_total': 0,
+            'period_label': period_label,
+            'comparison_label': '—',
+            'comparison_pct': None,
+        }
+
+    d_to = min(d_to_raw, today)
+
+    rows = (
+        db.session.query(Transaction.date, func.sum(Transaction.amount))
+        .filter(
+            Transaction.transaction_type == 'credit',
+            Transaction.date >= d_from,
+            Transaction.date <= d_to,
+        )
+        .group_by(Transaction.date)
+        .all()
+    )
+
+    daily = {row[0]: int(row[1]) for row in rows}
+    labels, values = [], []
+    cursor = d_from
+    while cursor <= d_to:
+        labels.append(cursor.strftime('%d.%m'))
+        values.append(daily.get(cursor, 0))
+        cursor += timedelta(days=1)
+
+    total = sum(values)
+
+    duration = (d_to - d_from).days + 1
+    prev_d_from = d_from - timedelta(days=duration)
+    prev_d_to   = d_from - timedelta(days=1)
+    prev_total = int(
+        db.session.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.transaction_type == 'credit',
+            Transaction.date >= prev_d_from,
+            Transaction.date <= prev_d_to,
+        )
+        .scalar() or 0
+    )
+    comparison_pct = round(total / prev_total * 100, 1) if prev_total > 0 else None
+
+    return {
+        'mode': 'daily',
+        'chart': {'labels': labels, 'values': values},
+        'total': total,
+        'prev_total': prev_total,
+        'period_label': period_label,
+        'comparison_label': 'Аналогічний попередній період',
+        'comparison_pct': comparison_pct,
+    }
+
+
 def get_active_months():
     """Return sorted list of (year, month) that have at least one transaction or delivery."""
     from app.models.transaction import Transaction
@@ -615,5 +737,8 @@ def get_active_months():
         func.extract('month', Delivery.delivery_date).label('m'),
     ).group_by('y', 'm').all()
 
+    today = date.today()
     months = {(int(r.y), int(r.m)) for r in tx_months} | {(int(r.y), int(r.m)) for r in del_months}
+    # Exclude future months — they have no historical data worth filtering by
+    months = {(y, m) for y, m in months if (y, m) <= (today.year, today.month)}
     return sorted(months, reverse=True)  # newest first
