@@ -56,6 +56,24 @@ def directories_page():
 def features_page():
     return render_template('settings/features.html')
 
+
+@bp.route('/settings/charges')
+@login_required
+@permission_required('view_settings')
+def charges_page():
+    from app.services.billing_service import get_charges_data
+    date_from = request.args.get('date_from', '').strip() or None
+    date_to = request.args.get('date_to', '').strip() or None
+    data = get_charges_data(date_from, date_to)
+    return render_template(
+        'settings/charges.html',
+        rows=data['rows'],
+        total_amount=data['total_amount'],
+        count=data['count'],
+        date_from=date_from or '',
+        date_to=date_to or '',
+    )
+
 @bp.route('/settings/update', methods=['POST'])
 @login_required
 @permission_required('edit_settings')

@@ -1,0 +1,257 @@
+{% extends 'layout.html' %}
+{% from "macros.html" import render_toast, toast_script %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+<style>
+  .charges-filter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+  }
+  .charges-filter__group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .charges-filter__label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #78716c;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .charges-filter__input {
+    height: 38px;
+    border: 1.5px solid #e7e5e4;
+    border-radius: 10px;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    color: #1c1917;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .charges-filter__input:focus { border-color: #a8a29e; }
+
+  .charges-kpi-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .charges-kpi {
+    background: #fff;
+    border: 1px solid #e7e5e4;
+    border-radius: 1rem;
+    padding: 0.85rem 1.25rem;
+    box-shadow: 0 2px 8px rgba(28,25,23,0.04);
+    min-width: 160px;
+  }
+  .charges-kpi__label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #a8a29e;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 0.25rem;
+  }
+  .charges-kpi__value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1c1917;
+    line-height: 1.1;
+  }
+  .charges-kpi__value span {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #78716c;
+    margin-left: 2px;
+  }
+
+  .charges-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #e7e5e4;
+    border-radius: 1.25rem;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(28,25,23,0.04);
+  }
+  .charges-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .charges-table thead th {
+    padding: 0.7rem 1rem;
+    text-align: left;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #a8a29e;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid #f1f0ef;
+    white-space: nowrap;
+  }
+  .charges-table tbody tr {
+    border-bottom: 1px solid #f7f6f5;
+    transition: background 0.1s;
+  }
+  .charges-table tbody tr:last-child { border-bottom: none; }
+  .charges-table tbody tr:hover { background: #fafaf9; }
+  .charges-table td {
+    padding: 0.7rem 1rem;
+    color: #1c1917;
+    vertical-align: middle;
+  }
+  .charges-table td.muted { color: #a8a29e; }
+
+  .discount-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #dcfce7;
+    color: #15803d;
+    border-radius: 999px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .discount-badge--none {
+    background: #f5f5f4;
+    color: #a8a29e;
+  }
+
+  .link-subtle {
+    color: #1d4ed8;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .link-subtle:hover { text-decoration: underline; }
+
+  .charges-empty {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #a8a29e;
+    font-size: 0.9rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+
+  <section class="settings-hero">
+    <div>
+      <span class="settings-hero__label">
+        <i class="bi bi-credit-card-2-front"></i>
+        Фінанси
+      </span>
+      <h1 class="settings-hero__title">Списання з клієнтів</h1>
+      <p class="settings-hero__text">
+        Історія автоматичних списань за виконані доставки. Фільтруйте по даті щоб бачити списання за потрібний період.
+      </p>
+    </div>
+    <div style="margin-top:1rem;">
+      <a href="{{ url_for('settings.settings_page') }}" class="settings-hero__action">
+        <i class="bi bi-arrow-left"></i> Назад до налаштувань
+      </a>
+    </div>
+  </section>
+
+  <form method="get" action="{{ url_for('settings.charges_page') }}">
+    <div class="charges-filter">
+      <div class="charges-filter__group">
+        <label class="charges-filter__label">Дата від</label>
+        <input type="date" name="date_from" value="{{ date_from }}" class="charges-filter__input">
+      </div>
+      <div class="charges-filter__group">
+        <label class="charges-filter__label">Дата до</label>
+        <input type="date" name="date_to" value="{{ date_to }}" class="charges-filter__input">
+      </div>
+      <button type="submit" class="settings-hero__action" style="height:38px; margin-bottom:0;">
+        <i class="bi bi-funnel"></i> Застосувати
+      </button>
+      {% if date_from or date_to %}
+      <a href="{{ url_for('settings.charges_page') }}" class="settings-hero__action" style="height:38px; margin-bottom:0; background:#f5f5f4; color:#57534e; border-color:#e7e5e4;">
+        <i class="bi bi-x"></i> Скинути
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <div class="charges-kpi-row">
+    <div class="charges-kpi">
+      <div class="charges-kpi__label">Списань</div>
+      <div class="charges-kpi__value">{{ count }}</div>
+    </div>
+    <div class="charges-kpi">
+      <div class="charges-kpi__label">Загальна сума</div>
+      <div class="charges-kpi__value">{{ total_amount }}<span>грн</span></div>
+    </div>
+  </div>
+
+  <div class="charges-table-wrap">
+    {% if rows %}
+    <table class="charges-table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Клієнт</th>
+          <th>Замовлення</th>
+          <th>Доставка</th>
+          <th>Сума</th>
+          <th>Знижка</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td class="muted">{{ row.date.strftime('%d.%m.%Y') }}</td>
+          <td>
+            {% if row.client_id %}
+            <a href="{{ url_for('clients.get_client', client_id=row.client_id) }}" class="link-subtle">
+              {{ row.client_name }}
+            </a>
+            {% else %}
+            <span class="muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{{ url_for('orders.order_edit', order_id=row.order_id) }}" class="link-subtle">
+              #{{ row.order_id }}
+            </a>
+          </td>
+          <td class="muted">#{{ row.delivery_id }}</td>
+          <td><strong>{{ row.amount }} грн</strong></td>
+          <td>
+            {% if row.discount %}
+            <span class="discount-badge">{{ row.discount }}%</span>
+            {% else %}
+            <span class="discount-badge discount-badge--none">0%</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="charges-empty">
+      <i class="bi bi-inbox" style="font-size:2rem; display:block; margin-bottom:0.5rem;"></i>
+      {% if date_from or date_to %}
+        Немає списань за обраний період
+      {% else %}
+        Ще немає жодного списання
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+{{ render_toast() }}
+{% endblock %}
+
+{% block scripts %}
+{{ toast_script() }}
+{% endblock %}

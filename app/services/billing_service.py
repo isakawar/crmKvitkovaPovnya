@@ -153,3 +153,61 @@ def reconcile_historical_charges(dry_run: bool = True) -> dict:
         'skipped_no_price': skipped_no_price,
         'total_amount': total_amount,
     }
+
+
+def get_charges_data(date_from_str: str | None, date_to_str: str | None) -> dict:
+    """Return delivery_charge transactions with client, order and discount info.
+
+    Returns:
+        rows: list of dicts with keys: id, date, client_id, client_name,
+              order_id, amount, discount
+        total_amount: sum of all amounts in the filtered period
+        date_from, date_to: parsed date objects or None
+    """
+    date_from = None
+    date_to = None
+    try:
+        if date_from_str:
+            date_from = datetime.date.fromisoformat(date_from_str)
+        if date_to_str:
+            date_to = datetime.date.fromisoformat(date_to_str)
+    except ValueError:
+        pass
+
+    query = (
+        db.session.query(Transaction, Delivery, Order, Client)
+        .join(Delivery, Transaction.delivery_id == Delivery.id)
+        .join(Order, Delivery.order_id == Order.id)
+        .outerjoin(Client, Transaction.client_id == Client.id)
+        .filter(Transaction.transaction_type == 'delivery_charge')
+    )
+    if date_from:
+        query = query.filter(Transaction.date >= date_from)
+    if date_to:
+        query = query.filter(Transaction.date <= date_to)
+
+    query = query.order_by(Transaction.date.desc(), Transaction.id.desc())
+
+    rows = []
+    total_amount = 0
+    for txn, delivery, order, client in query.all():
+        client_name = client.display_name if client else '—'
+        rows.append({
+            'id': txn.id,
+            'date': txn.date,
+            'client_id': txn.client_id,
+            'client_name': client_name,
+            'order_id': order.id,
+            'delivery_id': delivery.id,
+            'amount': txn.amount,
+            'discount': order.discount or 0,
+        })
+        total_amount += txn.amount
+
+    return {
+        'rows': rows,
+        'total_amount': total_amount,
+        'count': len(rows),
+        'date_from': date_from,
+        'date_to': date_to,
+    }
