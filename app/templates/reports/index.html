@@ -31,6 +31,9 @@
     position: relative;
     height: 240px;
   }
+  .report-chart-wrap--pie {
+    height: 260px;
+  }
 
   .report-empty {
     display: flex;
@@ -478,7 +481,7 @@
           </div>
         </div>
         {% if orders.for_whom_all_chart['labels'] or orders.for_whom_range_chart['labels'] %}
-        <div class="report-chart-wrap"><canvas id="forWhomChart"></canvas></div>
+        <div class="report-chart-wrap report-chart-wrap--pie"><canvas id="forWhomChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по полю "Для кого"</div>
         {% endif %}
@@ -1173,6 +1176,84 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  const PIE_COLORS = [
+    'rgba(59, 130, 246, 0.82)',
+    'rgba(245, 158, 11, 0.82)',
+    'rgba(16, 185, 129, 0.82)',
+    'rgba(239, 68, 68, 0.82)',
+    'rgba(139, 92, 246, 0.82)',
+    'rgba(236, 72, 153, 0.82)',
+    'rgba(20, 184, 166, 0.82)',
+    'rgba(249, 115, 22, 0.82)',
+    'rgba(99, 102, 241, 0.82)',
+    'rgba(161, 161, 170, 0.82)'
+  ];
+
+  function createSwitchablePieChart(canvasId, datasets) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const initial = datasets.all;
+    const total = initial.values.reduce(function(s, v) { return s + v; }, 0);
+    return new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: initial.labels,
+        datasets: [{
+          data: initial.values,
+          backgroundColor: PIE_COLORS,
+          borderColor: '#fff',
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              color: '#57534e',
+              font: { size: 12 },
+              padding: 14,
+              boxWidth: 14,
+              boxHeight: 14,
+              generateLabels: function(chart) {
+                const data = chart.data;
+                const sum = data.datasets[0].data.reduce(function(s, v) { return s + v; }, 0);
+                return data.labels.map(function(label, i) {
+                  const val = data.datasets[0].data[i] || 0;
+                  const pct = sum > 0 ? Math.round(val / sum * 100) : 0;
+                  return {
+                    text: label + ' — ' + pct + '%',
+                    fillStyle: PIE_COLORS[i % PIE_COLORS.length],
+                    strokeStyle: '#fff',
+                    lineWidth: 2,
+                    index: i
+                  };
+                });
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1c1917',
+            titleColor: '#fff',
+            bodyColor: '#d6d3d1',
+            callbacks: {
+              label: function(ctx) {
+                const sum = ctx.dataset.data.reduce(function(s, v) { return s + v; }, 0);
+                const pct = sum > 0 ? Math.round(ctx.parsed / sum * 100) : 0;
+                return ' ' + ctx.parsed + ' замовлень (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
   function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets, rangeLabel) {
     const wrap = document.getElementById(buttonWrapId);
     if (!wrap || !chart) return;
@@ -1207,7 +1288,7 @@ document.addEventListener('DOMContentLoaded', function () {
   };
 
   const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
-  const forWhomChart   = createSwitchableChart('forWhomChart',   forWhomDatasets,   'rgba(59, 130, 246, 0.72)');
+  const forWhomChart   = createSwitchablePieChart('forWhomChart', forWhomDatasets);
 
   bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets, rangeLabel);
   bindSwitch('for-whom-switch',  'for-whom-period',  'for-whom-total',  forWhomChart,   forWhomDatasets,   rangeLabel);
