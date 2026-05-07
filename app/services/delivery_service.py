@@ -132,9 +132,11 @@ def set_delivery_status(d, new_status):
         courier = Courier.query.get(d.courier_id)
         if courier:
             courier.deliveries_count = (courier.deliveries_count or 0) + 1
-    # Якщо статус стає 'Доставлено', фіксуємо час доставки
+    # Якщо статус стає 'Доставлено', фіксуємо час доставки і списуємо з балансу клієнта
     if new_status == 'Доставлено' and not d.delivered_at:
         d.delivered_at = datetime.utcnow()
+        from app.services.billing_service import charge_delivery
+        charge_delivery(d)
     db.session.commit()
     return d
 

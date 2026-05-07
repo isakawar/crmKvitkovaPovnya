@@ -601,6 +601,14 @@
         <div class="kpi-card__value kpi-card__value--blue">{{ pl.margin }}%</div>
         <div class="kpi-card__sub">Рентабельність</div>
       </div>
+
+      {% if pl.client_debited %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Списано з балансів</div>
+        <div class="kpi-card__value kpi-card__value--orange">₴{{ "{:,}".format(pl.client_debited).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">За доставки (не входить у Revenue)</div>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Expense breakdown (expandable, triggered from Expenses KPI card) -->

@@ -442,6 +442,9 @@ def create_subscription_from_import(client, form, delivery_number):
         db.session.add(order)
         db.session.flush()
 
+        from app.services.billing_service import get_order_price
+        order.charged_amount = get_order_price(order)
+
         if i == 0:
             additional_phones = form.get('additional_phones', [])
             if isinstance(additional_phones, str):
@@ -609,6 +612,9 @@ def extend_subscription(subscription, overrides=None):
         )
         db.session.add(order)
         db.session.flush()
+
+        from app.services.billing_service import get_order_price
+        order.charged_amount = get_order_price(order)
 
         delivery = _create_delivery_for_order(order, subscription.client_id, is_first=(i == 0))
         db.session.add(delivery)

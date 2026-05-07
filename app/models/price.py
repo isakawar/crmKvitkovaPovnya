@@ -4,7 +4,7 @@ from app.extensions import db
 class Price(db.Model):
     __tablename__ = 'prices'
     id = db.Column(db.Integer, primary_key=True)
-    subscription_type_id = db.Column(db.Integer, db.ForeignKey('settings.id', ondelete='CASCADE'), nullable=False)
+    subscription_type_id = db.Column(db.Integer, db.ForeignKey('settings.id', ondelete='CASCADE'), nullable=True)  # NULL = razove order
     size_id = db.Column(db.Integer, db.ForeignKey('settings.id', ondelete='CASCADE'), nullable=False)
     price = db.Column(db.Integer, nullable=False, default=0)
 

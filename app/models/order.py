@@ -30,6 +30,7 @@ class Order(db.Model):
     # Розмір
     size = db.Column(db.String(32), nullable=False)
     custom_amount = db.Column(db.Integer)
+    charged_amount = db.Column(db.Integer, nullable=True)  # ціна зафіксована при створенні (після знижки)
 
     # Дата та час
     delivery_date = db.Column(db.Date, nullable=False)

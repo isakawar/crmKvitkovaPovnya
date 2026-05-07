@@ -59,6 +59,9 @@ def create_order_and_deliveries(client, form):
     db.session.add(order)
     db.session.flush()
 
+    from app.services.billing_service import get_order_price
+    order.charged_amount = get_order_price(order)
+
     for i, ph in enumerate(
         form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []),
         start=1

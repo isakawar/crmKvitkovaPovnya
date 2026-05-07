@@ -6,7 +6,7 @@ class Transaction(db.Model):
     __tablename__ = 'transaction'
 
     id = db.Column(db.Integer, primary_key=True)
-    transaction_type = db.Column(db.String(16), nullable=False, default='credit')  # 'credit' | 'debit'
+    transaction_type = db.Column(db.String(16), nullable=False, default='credit')  # 'credit' | 'debit' | 'delivery_charge'
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
     amount = db.Column(db.Integer, nullable=False)
     payment_type = db.Column(db.String(32), nullable=True)   # 'monobank' | 'cash' (credits only)
@@ -17,7 +17,9 @@ class Transaction(db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     expense_type_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
+    delivery_id = db.Column(db.Integer, db.ForeignKey('delivery.id', ondelete='SET NULL'), nullable=True)
 
     client = db.relationship('Client', backref='transactions', foreign_keys=[client_id])
     created_by = db.relationship('User', foreign_keys=[created_by_id])
     expense_type_setting = db.relationship('Settings', foreign_keys=[expense_type_id])
+    delivery = db.relationship('Delivery', foreign_keys=[delivery_id])

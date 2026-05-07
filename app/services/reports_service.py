@@ -70,6 +70,15 @@ def _total(items):
     return sum(item['count'] for item in items)
 
 
+def _build_date_filters(col, d_from, d_to):
+    f = []
+    if d_from:
+        f.append(col >= d_from)
+    if d_to:
+        f.append(col <= d_to)
+    return f
+
+
 # ── Date helpers ───────────────────────────────────────────────────────────────
 
 def _parse_date(s):
@@ -109,20 +118,26 @@ def _fill_monthly_gaps(month_counts):
 
 def _monthly_orders_trend():
     """Last-365-days trend: one-time orders and new subscriptions grouped by month."""
-    from app.models.subscription import Subscription
-
     cutoff = datetime.utcnow() - timedelta(days=365)
 
-    # One-time orders only (subscription_id IS NULL)
     order_rows = (
-        db.session.query(Order.created_at)
+        db.session.query(
+            func.extract('year', Order.created_at).label('y'),
+            func.extract('month', Order.created_at).label('m'),
+            func.count(Order.id).label('cnt'),
+        )
         .filter(Order.subscription_id.is_(None), Order.created_at >= cutoff)
+        .group_by('y', 'm')
         .all()
     )
-    # New subscriptions created
     sub_rows = (
-        db.session.query(Subscription.created_at)
+        db.session.query(
+            func.extract('year', Subscription.created_at).label('y'),
+            func.extract('month', Subscription.created_at).label('m'),
+            func.count(Subscription.id).label('cnt'),
+        )
         .filter(Subscription.created_at.isnot(None), Subscription.created_at >= cutoff)
+        .group_by('y', 'm')
         .all()
     )
 
@@ -130,12 +145,10 @@ def _monthly_orders_trend():
         return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
 
     monthly = {}
-    for (created_at,) in order_rows:
-        month = _month_start(created_at.date())
-        monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})['orders'] += 1
-    for (created_at,) in sub_rows:
-        month = _month_start(created_at.date())
-        monthly.setdefault(month, {'orders': 0, 'subscriptions': 0})['subscriptions'] += 1
+    for r in order_rows:
+        monthly.setdefault(date(int(r.y), int(r.m), 1), {'orders': 0, 'subscriptions': 0})['orders'] = int(r.cnt)
+    for r in sub_rows:
+        monthly.setdefault(date(int(r.y), int(r.m), 1), {'orders': 0, 'subscriptions': 0})['subscriptions'] = int(r.cnt)
 
     if not monthly:
         return {'labels': [], 'orders_values': [], 'subscriptions_values': []}
@@ -164,14 +177,7 @@ def get_orders_data(date_from_str=None, date_to_str=None):
     d_from = _parse_date(date_from_str)
     d_to = _parse_date(date_to_str)
     has_range = bool(d_from or d_to)
-
-    def _range_filters(col):
-        f = []
-        if d_from:
-            f.append(col >= d_from)
-        if d_to:
-            f.append(col <= d_to)
-        return f
+    range_filters = _build_date_filters(Order.created_at, d_from, d_to)
 
     # Marketing source — all-time + selected range
     marketing_all_rows = (
@@ -183,7 +189,7 @@ def get_orders_data(date_from_str=None, date_to_str=None):
     marketing_range_rows = (
         db.session.query(Client.marketing_source, func.count(Order.id))
         .join(Order, Order.client_id == Client.id)
-        .filter(*_range_filters(Order.created_at))
+        .filter(*range_filters)
         .group_by(Client.marketing_source)
         .all()
     ) if has_range else []
@@ -196,7 +202,7 @@ def get_orders_data(date_from_str=None, date_to_str=None):
     )
     for_whom_range_rows = (
         db.session.query(Order.for_whom, func.count(Order.id))
-        .filter(*_range_filters(Order.created_at))
+        .filter(*range_filters)
         .group_by(Order.for_whom)
         .all()
     ) if has_range else []
@@ -301,12 +307,17 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
         if prev_total > 0:
             total_change_pct = round((total - prev_total) / prev_total * 100, 1)
 
-    # Dynamics: fetch only delivery_date column, group in Python
-    date_rows = base.with_entities(Delivery.delivery_date).all()
-    monthly = {}
-    for (d,) in date_rows:
-        m = _month_start(d)
-        monthly[m] = monthly.get(m, 0) + 1
+    # Dynamics: aggregate monthly counts in SQL
+    monthly_rows = (
+        base.with_entities(
+            func.extract('year', Delivery.delivery_date).label('y'),
+            func.extract('month', Delivery.delivery_date).label('m'),
+            func.count(Delivery.id).label('cnt'),
+        )
+        .group_by('y', 'm')
+        .all()
+    )
+    monthly = {date(int(r.y), int(r.m), 1): int(r.cnt) for r in monthly_rows}
     dyn_labels, dyn_values = _fill_monthly_gaps(monthly)
 
     # City distribution
@@ -339,86 +350,63 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     }
 
 
-def get_pl_data(date_from_str=None, date_to_str=None):
-    """P&L: revenue, expenses, profit, margin, expense breakdown by category."""
+def _build_expense_breakdown(d_from, d_to, total_expenses):
+    """Expense breakdown by category → subcategory. Uses 2 queries instead of N+1."""
     from app.models.transaction import Transaction
     from app.models.expense_category import ExpenseCategory
 
-    d_from = _parse_date(date_from_str)
-    d_to = _parse_date(date_to_str)
+    date_filters = _build_date_filters(Transaction.date, d_from, d_to)
 
-    def _date_filters(col):
-        f = []
-        if d_from:
-            f.append(col >= d_from)
-        if d_to:
-            f.append(col <= d_to)
-        return f
-
-    revenue = (
-        db.session.query(func.sum(Transaction.amount))
-        .filter(Transaction.transaction_type == 'credit', *_date_filters(Transaction.date))
-        .scalar() or 0
-    )
-    total_expenses = (
-        db.session.query(func.sum(Transaction.amount))
-        .filter(Transaction.transaction_type == 'debit', *_date_filters(Transaction.date))
-        .scalar() or 0
-    )
-    profit = revenue - total_expenses
-    margin = round(profit / revenue * 100, 1) if revenue else 0.0
-
-    # Expense breakdown: categories (expandable) + uncategorized types (individual)
-    cat_rows = (
-        db.session.query(ExpenseCategory.id, ExpenseCategory.name, func.sum(Transaction.amount).label('total'))
+    # Single query: all categories with their child types and amounts
+    type_rows = (
+        db.session.query(
+            ExpenseCategory.id.label('cat_id'),
+            ExpenseCategory.name.label('cat_name'),
+            Settings.value.label('type_name'),
+            func.sum(Transaction.amount).label('type_total'),
+        )
         .join(Settings, Settings.id == Transaction.expense_type_id)
         .join(ExpenseCategory, ExpenseCategory.id == Settings.category_id)
-        .filter(Transaction.transaction_type == 'debit', *_date_filters(Transaction.date))
-        .group_by(ExpenseCategory.id, ExpenseCategory.name)
+        .filter(Transaction.transaction_type == 'debit', *date_filters)
+        .group_by(ExpenseCategory.id, ExpenseCategory.name, Settings.id, Settings.value)
+        .order_by(ExpenseCategory.id, func.sum(Transaction.amount).desc())
         .all()
     )
 
-    expense_breakdown = []
-    for cat_id, cat_name, cat_total in cat_rows:
-        amount = int(cat_total)
-        pct = round(amount / total_expenses * 100, 1) if total_expenses else 0.0
-        children_rows = (
-            db.session.query(Settings.value, func.sum(Transaction.amount).label('total'))
-            .join(Transaction, Transaction.expense_type_id == Settings.id)
-            .filter(
-                Transaction.transaction_type == 'debit',
-                Settings.category_id == cat_id,
-                *_date_filters(Transaction.date),
-            )
-            .group_by(Settings.id, Settings.value)
-            .order_by(func.sum(Transaction.amount).desc())
-            .all()
-        )
-        children = [
-            {
-                'label': v or 'Без назви',
-                'amount': int(t),
-                'pct': round(int(t) / total_expenses * 100, 1) if total_expenses else 0.0,
-            }
-            for v, t in children_rows
-        ]
-        expense_breakdown.append({'label': cat_name, 'amount': amount, 'pct': pct, 'is_group': True, 'children': children})
+    cats = {}
+    for row in type_rows:
+        if row.cat_id not in cats:
+            cats[row.cat_id] = {'label': row.cat_name, 'total': 0, 'children': []}
+        child_amount = int(row.type_total)
+        cats[row.cat_id]['total'] += child_amount
+        cats[row.cat_id]['children'].append({
+            'label': row.type_name or 'Без назви',
+            'amount': child_amount,
+            'pct': round(child_amount / total_expenses * 100, 1) if total_expenses else 0.0,
+        })
 
-    # Uncategorized: individual expense types (Settings.category_id IS NULL)
-    uncat_type_rows = (
+    breakdown = []
+    for cat in cats.values():
+        amount = cat['total']
+        breakdown.append({
+            'label': cat['label'],
+            'amount': amount,
+            'pct': round(amount / total_expenses * 100, 1) if total_expenses else 0.0,
+            'is_group': True,
+            'children': cat['children'],
+        })
+
+    # Uncategorized: types with no category
+    uncat_rows = (
         db.session.query(Settings.value, func.sum(Transaction.amount).label('total'))
         .join(Transaction, Transaction.expense_type_id == Settings.id)
-        .filter(
-            Transaction.transaction_type == 'debit',
-            Settings.category_id.is_(None),
-            *_date_filters(Transaction.date),
-        )
+        .filter(Transaction.transaction_type == 'debit', Settings.category_id.is_(None), *date_filters)
         .group_by(Settings.id, Settings.value)
         .all()
     )
-    for val, total in uncat_type_rows:
+    for val, total in uncat_rows:
         amount = int(total)
-        expense_breakdown.append({
+        breakdown.append({
             'label': val or 'Без назви',
             'amount': amount,
             'pct': round(amount / total_expenses * 100, 1) if total_expenses else 0.0,
@@ -426,37 +414,63 @@ def get_pl_data(date_from_str=None, date_to_str=None):
             'children': [],
         })
 
-    # Transactions with no expense_type_id
+    # Transactions with no expense_type_id at all
     no_type = (
         db.session.query(func.sum(Transaction.amount))
-        .filter(
-            Transaction.transaction_type == 'debit',
-            Transaction.expense_type_id.is_(None),
-            *_date_filters(Transaction.date),
-        )
+        .filter(Transaction.transaction_type == 'debit', Transaction.expense_type_id.is_(None), *date_filters)
         .scalar() or 0
     )
     if no_type:
-        expense_breakdown.append({
+        amount = int(no_type)
+        breakdown.append({
             'label': 'Без категорії',
-            'amount': int(no_type),
-            'pct': round(int(no_type) / total_expenses * 100, 1) if total_expenses else 0.0,
+            'amount': amount,
+            'pct': round(amount / total_expenses * 100, 1) if total_expenses else 0.0,
             'is_group': False,
             'children': [],
         })
 
-    expense_breakdown.sort(key=lambda x: -x['amount'])
+    breakdown.sort(key=lambda x: -x['amount'])
+    return breakdown
+
+
+def get_pl_data(date_from_str=None, date_to_str=None):
+    """P&L: revenue, expenses, profit, margin, expense breakdown by category."""
+    from app.models.transaction import Transaction
+    from app.models.expense_category import ExpenseCategory
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+    tx_filters = _build_date_filters(Transaction.date, d_from, d_to)
+
+    revenue = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'credit', *tx_filters)
+        .scalar() or 0
+    )
+    total_expenses = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'debit', *tx_filters)
+        .scalar() or 0
+    )
+    client_debited = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'delivery_charge', *tx_filters)
+        .scalar() or 0
+    )
+
+    profit = revenue - total_expenses
+    margin = round(profit / revenue * 100, 1) if revenue else 0.0
+
+    expense_breakdown = _build_expense_breakdown(d_from, d_to, total_expenses)
 
     def _category_expenses(slug):
         return (
             db.session.query(func.sum(Transaction.amount))
             .join(Settings, Settings.id == Transaction.expense_type_id)
             .join(ExpenseCategory, ExpenseCategory.id == Settings.category_id)
-            .filter(
-                Transaction.transaction_type == 'debit',
-                ExpenseCategory.slug == slug,
-                *_date_filters(Transaction.date),
-            )
+            .filter(Transaction.transaction_type == 'debit', ExpenseCategory.slug == slug, *tx_filters)
             .scalar() or 0
         )
 
@@ -464,11 +478,11 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     salary_expenses = _category_expenses('salary')
     flowers_expenses = _category_expenses('flowers')
 
-    from app.models.delivery import Delivery
-    delivery_count = db.session.query(func.count(Delivery.id)).filter(
-        Delivery.status != 'Скасовано',
-        *_date_filters(Delivery.delivery_date),
-    ).scalar() or 0
+    delivery_count = (
+        db.session.query(func.count(Delivery.id))
+        .filter(Delivery.status != 'Скасовано', *_build_date_filters(Delivery.delivery_date, d_from, d_to))
+        .scalar() or 0
+    )
 
     revenue_per_delivery = round(revenue / delivery_count) if delivery_count else 0
     flowers_per_delivery = round(flowers_expenses / delivery_count) if delivery_count else 0
@@ -476,6 +490,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     return {
         'revenue': revenue,
         'expenses': total_expenses,
+        'client_debited': int(client_debited),
         'profit': profit,
         'margin': margin,
         'expense_breakdown': expense_breakdown,
@@ -560,11 +575,8 @@ def get_florist_sales_data(date_from_str=None, date_to_str=None):
             func.sum(FloristSale.bonus_amount),
         )
         .join(User, User.id == FloristSale.florist_id)
+        .filter(*_build_date_filters(func.date(FloristSale.created_at), d_from, d_to))
     )
-    if d_from:
-        q = q.filter(func.date(FloristSale.created_at) >= d_from)
-    if d_to:
-        q = q.filter(func.date(FloristSale.created_at) <= d_to)
 
     rows = q.group_by(User.id, User.username).order_by(func.sum(FloristSale.amount).desc()).all()
 

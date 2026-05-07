@@ -333,9 +333,22 @@ function loadPrices() {
             }
 
             let html = '<table class="settings-price-table">';
-            html += '<thead><tr><th>Тип підписки</th>';
+            html += '<thead><tr><th>Тип / Розмір</th>';
             sizes.forEach(size => { html += `<th>${size.value}</th>`; });
             html += '</tr></thead><tbody>';
+
+            // One-time orders row (subscription_type_id = NULL, sentinel key = 0)
+            html += `<tr><td><span class="settings-price-label" style="font-weight:600;">Разові замовлення</span></td>`;
+            sizes.forEach(size => {
+                const key = `0_${size.id}`;
+                const value = prices[key] !== undefined ? prices[key] : '';
+                html += `<td><input type="number" min="0" class="settings-price-input" data-key="${key}" value="${value}" placeholder="0"></td>`;
+            });
+            html += '</tr>';
+
+            if (subs.length) {
+                html += `<tr><td colspan="${sizes.length + 1}" style="padding:4px 8px;"><span style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;">Підписки</span></td></tr>`;
+            }
 
             subs.forEach(sub => {
                 html += `<tr><td><span class="settings-price-label">${sub.value}</span></td>`;

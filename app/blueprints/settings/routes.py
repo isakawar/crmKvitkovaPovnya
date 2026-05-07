@@ -294,7 +294,8 @@ def get_prices():
     sub_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
     prices = Price.query.all()
-    price_map = {(p.subscription_type_id, p.size_id): p.price for p in prices}
+    # Use sentinel 0 for NULL subscription_type_id (one-time orders)
+    price_map = {(p.subscription_type_id if p.subscription_type_id is not None else 0, p.size_id): p.price for p in prices}
     return jsonify({
         'subscription_types': [{'id': s.id, 'value': s.value} for s in sub_types],
         'sizes': [{'id': s.id, 'value': s.value} for s in sizes],
@@ -338,6 +339,7 @@ def toggle_distribute_banner():
 def save_prices():
     data = request.get_json()
     # data: { "sub_id_size_id": price_value, ... }
+    # sub_id == 0 is sentinel for NULL (one-time order prices)
     for key, value in data.items():
         parts = key.split('_')
         if len(parts) != 2:
@@ -348,11 +350,12 @@ def save_prices():
             price_val = int(value)
         except (ValueError, TypeError):
             continue
-        existing = Price.query.filter_by(subscription_type_id=sub_id, size_id=size_id).first()
+        actual_sub_id = None if sub_id == 0 else sub_id
+        existing = Price.query.filter_by(subscription_type_id=actual_sub_id, size_id=size_id).first()
         if existing:
             existing.price = price_val
         else:
-            db.session.add(Price(subscription_type_id=sub_id, size_id=size_id, price=price_val))
+            db.session.add(Price(subscription_type_id=actual_sub_id, size_id=size_id, price=price_val))
     db.session.commit()
     return jsonify({'success': True})
 
