@@ -10,10 +10,7 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
-        Активних: {{ active_count }} / Всього: {{ total_count }}
-      </div>
-      <button
+<button
         type="button"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
         id="add-draft-btn"
@@ -36,7 +33,7 @@
 </section>
 
 <!-- Stat cards -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
   <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -67,6 +64,17 @@
       <div>
         <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Завершені</p>
         <p class="text-2xl font-semibold text-stone-900">{{ completed_count }}</p>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white border border-amber-200 rounded-2xl px-4 py-3 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="bi bi-pause-circle text-amber-500 text-sm"></i>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">На стопі</p>
+        <p class="text-2xl font-semibold text-amber-600">{{ stopped_count }}</p>
       </div>
     </div>
   </div>
