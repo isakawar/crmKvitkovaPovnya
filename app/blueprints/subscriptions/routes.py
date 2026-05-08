@@ -65,9 +65,9 @@ def subscriptions_list():
         data.append({'subscription': sub, 'total': total, 'completed': completed})
 
     active_count = sum(1 for s in data if s['completed'] < s['total'])
-    completed_count = sum(1 for s in data if s['total'] > 0 and s['completed'] >= s['total'])
     total_count = len(data)
     stopped_count = Subscription.query.filter_by(is_stopped=True).count()
+    draft_count = Subscription.query.filter_by(status='draft').count()
 
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
@@ -84,7 +84,7 @@ def subscriptions_list():
         drafts=drafts,
         today=dt.date.today(),
         active_count=active_count,
-        completed_count=completed_count,
+        draft_count=draft_count,
         total_count=total_count,
         stopped_count=stopped_count,
         per_page=per_page,

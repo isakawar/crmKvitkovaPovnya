@@ -755,12 +755,18 @@ def get_subscriptions_needing_renewal(today):
 def get_subscriptions(q=None, city=None, sub_type=None):
     query = Subscription.query.join(Client).filter(Subscription.status != 'draft')
     if q:
+        q_stripped = q.lstrip('@')
         like_q = f'%{q}%'
+        like_q_stripped = f'%{q_stripped}%'
         query = query.filter(or_(
             Client.instagram.ilike(like_q),
             Client.phone.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.telegram.ilike(like_q_stripped),
             Subscription.recipient_name.ilike(like_q),
             Subscription.recipient_phone.ilike(like_q),
+            Subscription.recipient_social.ilike(like_q),
+            Subscription.recipient_social.ilike(like_q_stripped),
             Subscription.city.ilike(like_q),
         ))
     if city:

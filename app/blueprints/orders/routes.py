@@ -65,6 +65,19 @@ def orders_list():
     end_idx = start_idx + per_page
 
     all_orders_count = Order.query.count()
+
+    _today = date.today()
+    _month_start = _today.replace(day=1)
+    orders_this_month_count = Order.query.filter(
+        Order.created_at >= datetime.combine(_month_start, datetime.min.time())
+    ).count()
+    delivered_this_month_count = Delivery.query.filter(
+        Delivery.status == 'Доставлено',
+        Delivery.delivery_date >= _month_start,
+        Delivery.delivery_date <= _today,
+    ).count()
+    stopped_subscriptions_count = Subscription.query.filter_by(is_stopped=True).count()
+
     orders = get_orders(
         q=search_query or None,
         phone=phone or None,
@@ -140,6 +153,9 @@ def orders_list():
         next_page=next_page,
         has_next=has_next,
         orders_count=all_orders_count,
+        orders_this_month_count=orders_this_month_count,
+        delivered_this_month_count=delivered_this_month_count,
+        stopped_subscriptions_count=stopped_subscriptions_count,
         clients_count=clients_count,
         per_page=per_page,
         cities=cities,

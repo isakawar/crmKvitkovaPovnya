@@ -244,7 +244,7 @@
     </div>
   </section>
 
-  <section class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+  <section class="grid grid-cols-2 gap-3 xl:grid-cols-4">
     <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
       <div class="flex items-center gap-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white">
@@ -260,11 +260,11 @@
     <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
       <div class="flex items-center gap-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-          <i class="bi bi-arrow-repeat text-sm"></i>
+          <i class="bi bi-calendar-month text-sm"></i>
         </div>
         <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Підписки</p>
-          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_orders_count }}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Цього місяця</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ orders_this_month_count }}</p>
         </div>
       </div>
     </article>
@@ -272,23 +272,23 @@
     <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
       <div class="flex items-center gap-3">
         <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-          <i class="bi bi-people text-sm"></i>
+          <i class="bi bi-check2-circle text-sm"></i>
         </div>
         <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Клієнти</p>
-          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ clients_count }}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Доставлено · місяць</p>
+          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ delivered_this_month_count }}</p>
         </div>
       </div>
     </article>
 
-    <article class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
+    <article class="rounded-2xl border border-amber-200 bg-white px-4 py-3 shadow-sm">
       <div class="flex items-center gap-3">
-        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-100 text-stone-600">
-          <i class="bi bi-stars text-sm"></i>
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+          <i class="bi bi-pause-circle text-sm"></i>
         </div>
         <div>
-          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Продовження</p>
-          <p class="text-2xl font-semibold tracking-tight text-stone-900">{{ subscription_extensions_count }}</p>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">На стопі</p>
+          <p class="text-2xl font-semibold tracking-tight text-amber-600">{{ stopped_subscriptions_count }}</p>
         </div>
       </div>
     </article>
