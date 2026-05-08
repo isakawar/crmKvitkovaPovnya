@@ -59,16 +59,21 @@ def _build_subscription_delivery_index(order_ids):
     return {delivery_id: seq for delivery_id, seq in rows}
 
 
+_SPECIAL_STATUS_KEYS = {'reset', 'cancel'}
+
+
 @florist_bp.route('/florist/deliveries/status', methods=['POST'])
 @login_required
 def florist_bulk_update_status():
     payload = request.get_json(silent=True) or {}
     delivery_ids_raw = payload.get('delivery_ids') or []
     status_key = (payload.get('status_key') or '').strip()
-    florist_status = FLORIST_STATUS_OPTIONS.get(status_key)
 
-    if not florist_status:
-        return jsonify({'success': False, 'error': 'Некоректний статус'}), 400
+    florist_status = None
+    if status_key not in _SPECIAL_STATUS_KEYS:
+        florist_status = FLORIST_STATUS_OPTIONS.get(status_key)
+        if not florist_status:
+            return jsonify({'success': False, 'error': 'Некоректний статус'}), 400
 
     normalized_ids = []
     for value in delivery_ids_raw:
@@ -88,7 +93,27 @@ def florist_bulk_update_status():
     now_utc = datetime.utcnow()
     updated_count = 0
     for delivery in deliveries:
+        if status_key == 'cancel':
+            from app.services.delivery_service import set_delivery_status
+            set_delivery_status(delivery, 'Скасовано')
+            updated_count += 1
+            continue
+
+        if status_key == 'delivered':
+            from app.services.delivery_service import set_delivery_status
+            set_delivery_status(delivery, 'Доставлено')
+            delivery.florist_status = FLORIST_STATUS_DELIVERED
+            updated_count += 1
+            continue
+
         if delivery.status == 'Скасовано':
+            continue
+
+        if status_key == 'reset':
+            delivery.florist_status = None
+            delivery.status = 'Очікує'
+            delivery.status_changed_at = now_utc
+            updated_count += 1
             continue
 
         delivery.florist_status = florist_status
@@ -97,10 +122,6 @@ def florist_bulk_update_status():
         if status_key == 'handoff' and delivery.status != 'Доставлено':
             delivery.status = 'Розподілено'
             delivery.status_changed_at = now_utc
-
-        if status_key == 'delivered':
-            from app.services.delivery_service import set_delivery_status
-            set_delivery_status(delivery, 'Доставлено')
 
     try:
         db.session.commit()
