@@ -570,10 +570,29 @@
 
     <!-- Main KPI cards -->
     <div class="kpi-grid">
+      {% if pl.revenue_breakdown %}
+      <button type="button" id="revenue-breakdown-toggle"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              aria-expanded="false">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Revenue</div>
+          <i id="revenue-breakdown-icon" class="bi bi-chevron-down text-stone-400 text-sm mt-0.5 transition-transform duration-200 flex-shrink-0"></i>
+        </div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити розбивку</div>
+      </button>
+      {% else %}
       <div class="kpi-card">
         <div class="kpi-card__label">Revenue</div>
         <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</div>
-        <div class="kpi-card__sub">Загальний дохід</div>
+        <div class="kpi-card__sub">Списання з клієнтів за доставки</div>
+      </div>
+      {% endif %}
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Загальний прихід</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.total_income).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Всі кредитні транзакції</div>
       </div>
 
       {% if pl.expense_breakdown %}
@@ -581,7 +600,7 @@
               class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
               aria-expanded="false">
         <div class="flex items-start justify-between gap-2">
-          <div class="kpi-card__label">Expenses</div>
+          <div class="kpi-card__label">Витрати</div>
           <i id="expense-breakdown-icon" class="bi bi-chevron-down text-stone-400 text-sm mt-0.5 transition-transform duration-200 flex-shrink-0"></i>
         </div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
@@ -589,7 +608,7 @@
       </button>
       {% else %}
       <div class="kpi-card">
-        <div class="kpi-card__label">Expenses</div>
+        <div class="kpi-card__label">Витрати</div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
         <div class="kpi-card__sub">Всі витрати</div>
       </div>
@@ -600,7 +619,7 @@
         <div class="kpi-card__value {% if pl.profit >= 0 %}kpi-card__value--orange{% else %}kpi-card__value--red{% endif %}">
           ₴{{ "{:,}".format(pl.profit).replace(",", " ") }}
         </div>
-        <div class="kpi-card__sub">Чистий прибуток</div>
+        <div class="kpi-card__sub">Revenue − Витрати</div>
       </div>
 
       <div class="kpi-card">
@@ -608,15 +627,38 @@
         <div class="kpi-card__value kpi-card__value--blue">{{ pl.margin }}%</div>
         <div class="kpi-card__sub">Рентабельність</div>
       </div>
-
-      {% if pl.client_debited %}
-      <div class="kpi-card">
-        <div class="kpi-card__label">Списано з балансів</div>
-        <div class="kpi-card__value kpi-card__value--orange">₴{{ "{:,}".format(pl.client_debited).replace(",", " ") }}</div>
-        <div class="kpi-card__sub">За доставки (не входить у Revenue)</div>
-      </div>
-      {% endif %}
     </div>
+
+    <!-- Revenue breakdown (expandable, triggered from Revenue KPI card) -->
+    {% if pl.revenue_breakdown %}
+    <div id="revenue-breakdown-body" class="report-card p-5 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-stone-900">Розбивка Revenue</h2>
+        <span class="text-sm text-stone-400">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</span>
+      </div>
+      {% for item in pl.revenue_breakdown %}
+        {% if item.is_separator %}
+        <div class="flex items-center gap-2 mt-4 mb-2">
+          <span class="text-xs font-semibold text-stone-400 uppercase tracking-wide">{{ item.label }}</span>
+          <div class="flex-1 border-t border-stone-100"></div>
+        </div>
+        {% else %}
+        <div class="expense-bar-row">
+          <div class="expense-bar-row__header">
+            <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+              <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
+            </div>
+          </div>
+          <div class="expense-bar-track">
+            <div class="expense-bar-fill bg-emerald-200" style="width: {{ item.pct }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <!-- Expense breakdown (expandable, triggered from Expenses KPI card) -->
     {% if pl.expense_breakdown %}
@@ -1349,6 +1391,21 @@ document.addEventListener('DOMContentLoaded', function () {
     {{ deliveries.city_chart['values']|tojson }},
     'rgba(245, 158, 11, 0.8)'
   );
+
+  // ── Revenue breakdown toggle ───────────────────────
+  (function () {
+    const btn  = document.getElementById('revenue-breakdown-toggle');
+    const body = document.getElementById('revenue-breakdown-body');
+    const icon = document.getElementById('revenue-breakdown-icon');
+    if (!btn || !body) return;
+
+    btn.addEventListener('click', function () {
+      const open = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', open);
+      icon.style.transform = open ? '' : 'rotate(180deg)';
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+  }());
 
   // ── Expense breakdown toggle ───────────────────────
   (function () {

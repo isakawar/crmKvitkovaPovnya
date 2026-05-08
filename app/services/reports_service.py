@@ -434,6 +434,82 @@ def _build_expense_breakdown(d_from, d_to, total_expenses):
     return breakdown
 
 
+SUBSCRIPTION_TYPES = ('Weekly', 'Monthly', 'Bi-weekly')
+
+
+def _build_revenue_breakdown(d_from, d_to, total_revenue):
+    from app.models.transaction import Transaction
+    from app.models.delivery import Delivery
+
+    if not total_revenue:
+        return []
+
+    tx_filters = _build_date_filters(Transaction.date, d_from, d_to)
+
+    # By subscription type
+    sub_rows = (
+        db.session.query(Subscription.type, func.sum(Transaction.amount))
+        .join(Delivery, Transaction.delivery_id == Delivery.id)
+        .join(Order, Delivery.order_id == Order.id)
+        .outerjoin(Subscription, Order.subscription_id == Subscription.id)
+        .filter(Transaction.transaction_type == 'delivery_charge', *tx_filters)
+        .group_by(Subscription.type)
+        .all()
+    )
+
+    sub_totals = {}
+    one_time_total = 0
+    for sub_type, amount in sub_rows:
+        if sub_type in SUBSCRIPTION_TYPES:
+            sub_totals[sub_type] = (amount or 0)
+        else:
+            one_time_total += (amount or 0)
+
+    items = []
+    for t in SUBSCRIPTION_TYPES:
+        if t in sub_totals:
+            items.append({
+                'label': t,
+                'amount': sub_totals[t],
+                'pct': round(sub_totals[t] / total_revenue * 100, 1),
+                'is_separator': False,
+            })
+    if one_time_total:
+        items.append({
+            'label': 'Разові замовлення',
+            'amount': one_time_total,
+            'pct': round(one_time_total / total_revenue * 100, 1),
+            'is_separator': False,
+        })
+
+    # By size
+    size_rows = (
+        db.session.query(Order.size, func.sum(Transaction.amount))
+        .join(Delivery, Transaction.delivery_id == Delivery.id)
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Transaction.transaction_type == 'delivery_charge', *tx_filters)
+        .group_by(Order.size)
+        .order_by(func.sum(Transaction.amount).desc())
+        .all()
+    )
+
+    size_items = [
+        {
+            'label': size or '—',
+            'amount': (amount or 0),
+            'pct': round((amount or 0) / total_revenue * 100, 1),
+            'is_separator': False,
+        }
+        for size, amount in size_rows if amount
+    ]
+
+    if items and size_items:
+        items.append({'label': 'Розміри', 'amount': None, 'pct': None, 'is_separator': True})
+    items.extend(size_items)
+
+    return items
+
+
 def get_pl_data(date_from_str=None, date_to_str=None):
     """P&L: revenue, expenses, profit, margin, expense breakdown by category."""
     from app.models.transaction import Transaction
@@ -444,7 +520,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     d_to = _parse_date(date_to_str)
     tx_filters = _build_date_filters(Transaction.date, d_from, d_to)
 
-    revenue = (
+    total_income = (
         db.session.query(func.sum(Transaction.amount))
         .filter(Transaction.transaction_type == 'credit', *tx_filters)
         .scalar() or 0
@@ -454,7 +530,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         .filter(Transaction.transaction_type == 'debit', *tx_filters)
         .scalar() or 0
     )
-    client_debited = (
+    revenue = (
         db.session.query(func.sum(Transaction.amount))
         .filter(Transaction.transaction_type == 'delivery_charge', *tx_filters)
         .scalar() or 0
@@ -486,14 +562,16 @@ def get_pl_data(date_from_str=None, date_to_str=None):
 
     revenue_per_delivery = round(revenue / delivery_count) if delivery_count else 0
     flowers_per_delivery = round(flowers_expenses / delivery_count) if delivery_count else 0
+    revenue_breakdown = _build_revenue_breakdown(d_from, d_to, revenue)
 
     return {
-        'revenue': revenue,
+        'total_income': int(total_income),
+        'revenue': int(revenue),
         'expenses': total_expenses,
-        'client_debited': int(client_debited),
         'profit': profit,
         'margin': margin,
         'expense_breakdown': expense_breakdown,
+        'revenue_breakdown': revenue_breakdown,
         'delivery_expenses': delivery_expenses,
         'salary_expenses': salary_expenses,
         'flowers_expenses': flowers_expenses,
