@@ -275,18 +275,48 @@
   }
 
   /* Revenue table */
-  .revenue-table { font-size: 0.8rem; }
+  .revenue-table { font-size: 0.8rem; border-collapse: collapse; }
   .revenue-table__th,
   .revenue-table__subth,
   .revenue-table__td {
-    padding: 0.35rem 0.6rem;
+    padding: 0.32rem 0.6rem;
     white-space: nowrap;
     border-bottom: 1px solid #e7e5e4;
+    border-right: 1px dashed #e2e0de;
   }
-  .revenue-table__th { background: #fafaf9; font-weight: 600; color: #57534e; font-size: 0.75rem; border-bottom: 2px solid #e7e5e4; }
-  .revenue-table__subth { background: #f5f5f4; font-weight: 500; color: #78716c; font-size: 0.72rem; border-bottom: 1px solid #e7e5e4; }
-  .revenue-table__totals-row td { background: #fef3c7; border-bottom: 2px solid #e7e5e4; }
+  /* Header */
+  .revenue-table__th { background: #fafaf9; font-weight: 600; color: #57534e; font-size: 0.73rem; border-bottom: 2px solid #d6d3d1; text-transform: uppercase; letter-spacing: 0.04em; }
+  .revenue-table__th--month { text-align: center; }
+  .revenue-table__subth { background: #f5f5f4; font-weight: 500; color: #a8a29e; font-size: 0.7rem; border-bottom: 2px solid #d6d3d1; }
+  /* Month alternating band */
+  .revenue-table__th--band    { background: #fef3c7; }
+  .revenue-table__subth--band { background: #fde68a44; }
+  .revenue-table__td--band    { background: rgba(254,243,199,0.3); }
+  /* Totals row */
+  .revenue-table__totals-row td { background: #fef3c7; border-bottom: 3px solid #d6d3d1; }
+  .revenue-table__totals-row .revenue-table__td--band { background: #fde68a66; }
+  /* Main client row */
+  .revenue-table__row td { background: #fff; }
   .revenue-table__row:hover td { background: #fafaf9; }
+  .revenue-table__row:hover .revenue-table__td--band { background: rgba(254,243,199,0.5); }
+  /* Continuation sub-subscription rows */
+  .revenue-table__row--cont td {
+    background: #fff;
+    border-top: none;
+    border-bottom: 1px solid #f0efee;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    color: #a8a29e;
+    font-size: 0.75rem;
+  }
+  .revenue-table__row--cont .revenue-table__td--band { background: rgba(254,243,199,0.15); }
+  .revenue-table__row--cont:hover td { background: #fafaf9; }
+  .revenue-table__row--cont .revenue-table__fixed { background: #fff; }
+  .revenue-table__row--cont:hover .revenue-table__fixed { background: #fafaf9; }
+  .revenue-table__td--indent {}
+  /* Client group separator */
+  .revenue-table__row--last td { border-bottom: 3px solid #d6d3d1 !important; }
+  /* Sticky columns */
   .revenue-table__fixed {
     position: sticky;
     left: 0;
@@ -295,10 +325,14 @@
   }
   .revenue-table__fixed:first-child { left: 0; min-width: 160px; max-width: 160px; }
   .revenue-table__fixed:nth-child(2) { left: 160px; min-width: 70px; }
-  .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 4px rgba(0,0,0,0.04); }
+  .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 6px rgba(0,0,0,0.07); border-right: 2px solid #d6d3d1; }
   .revenue-table__totals-row .revenue-table__fixed { background: #fef3c7; }
   .revenue-table__row:hover .revenue-table__fixed { background: #fafaf9; }
-  .revenue-table__sep { border-right: 2px solid #e7e5e4; }
+  /* Month separator (solid, stronger than dotted sub-col dividers) */
+  .revenue-table__sep { border-right: 2px solid #c9c5c1 !important; }
+  /* Edit mode */
+  .rv-input { width: 70px; text-align: right; border: 1px solid #d6d3d1; border-radius: 4px; padding: 1px 4px; font-size: 0.8rem; background: #fff; }
+  .rv-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
 </style>
 {% endblock %}
 
@@ -957,64 +991,178 @@
   <div id="tab-revenue" class="reports-tab-content {% if active_tab == 'revenue' %}is-active{% endif %}">
 
     <div class="report-card p-4">
-      <div class="mb-3 flex items-center justify-between gap-2 flex-wrap">
+      <!-- Header + controls -->
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
           <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець</p>
         </div>
+        {% if revenue.rows %}
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Search -->
+          <div class="relative">
+            <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
+            <input
+              id="revenue-search"
+              type="text"
+              placeholder="Пошук клієнта…"
+              autocomplete="off"
+              class="h-8 w-48 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+          </div>
+          <!-- Active-only toggle -->
+          <button id="revenue-active-toggle"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
+                  data-active="0">
+            <i class="bi bi-funnel text-xs"></i>
+            Тільки активні
+          </button>
+          <!-- Visible count -->
+          <span id="revenue-count" class="text-xs text-stone-400"></span>
+          <!-- Edit mode buttons -->
+          <button id="revenue-edit-btn"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-700 transition-colors hover:border-amber-400 hover:text-stone-900">
+            <i class="bi bi-pencil text-xs"></i> Редагувати
+          </button>
+          <button id="revenue-save-btn"
+                  class="hidden inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-900 bg-stone-900 px-3 text-sm text-white transition-colors hover:bg-stone-700">
+            <i class="bi bi-check-lg text-xs"></i> Зберегти
+          </button>
+          <button id="revenue-cancel-btn"
+                  class="hidden inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-stone-400">
+            Скасувати
+          </button>
+        </div>
+        {% endif %}
       </div>
 
       {% if revenue.rows %}
       <div class="overflow-x-auto">
         <table class="revenue-table w-full text-sm border-collapse">
           <thead>
+            {# Month header row #}
             <tr class="revenue-table__head-row">
               <th class="revenue-table__fixed revenue-table__th text-left">Клієнт</th>
               <th class="revenue-table__fixed revenue-table__th text-center" style="left:160px">Тип</th>
               <th class="revenue-table__fixed revenue-table__th text-center" style="left:230px">Розмір</th>
               {% for mo in revenue.months %}
-              <th class="revenue-table__th text-center" colspan="4">{{ mo.strftime('%m.%Y') }}</th>
+              {% set bnd = 'revenue-table__th--band' if loop.index0 % 2 == 1 else '' %}
+              <th class="revenue-table__th revenue-table__th--month {{ bnd }}" colspan="4">{{ mo.strftime('%m.%Y') }}</th>
               {% endfor %}
             </tr>
+            {# Sub-column labels #}
             <tr class="revenue-table__subhead-row">
               <th class="revenue-table__fixed revenue-table__subth" colspan="3"></th>
               {% for mo in revenue.months %}
-              <th class="revenue-table__subth text-right">Поч.</th>
-              <th class="revenue-table__subth text-right">Нар.</th>
-              <th class="revenue-table__subth text-right">Опл.</th>
-              <th class="revenue-table__subth text-right revenue-table__sep">Кін.</th>
+              {% set bnd = 'revenue-table__subth--band' if loop.index0 % 2 == 1 else '' %}
+              <th class="revenue-table__subth text-right {{ bnd }}">Поч.</th>
+              <th class="revenue-table__subth text-right {{ bnd }}">Нар.</th>
+              <th class="revenue-table__subth text-right {{ bnd }}">Опл.</th>
+              <th class="revenue-table__subth revenue-table__sep text-right {{ bnd }}">Кін.</th>
               {% endfor %}
             </tr>
-            <!-- Totals row -->
+            {# Totals row #}
             <tr class="revenue-table__totals-row">
-              <td class="revenue-table__fixed revenue-table__td font-semibold" colspan="3">Разом</td>
+              <td class="revenue-table__fixed revenue-table__td font-semibold text-stone-700" colspan="3">Разом</td>
               {% for mo in revenue.months %}
               {% set t = revenue.totals[mo] %}
-              <td class="revenue-table__td text-right text-stone-400">—</td>
-              <td class="revenue-table__td text-right font-semibold text-stone-700">{{ t.charged }}</td>
-              <td class="revenue-table__td text-right font-semibold text-stone-700">{{ t.paid }}</td>
-              <td class="revenue-table__td text-right revenue-table__sep text-stone-400">—</td>
+              {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
+              <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
+              <td class="revenue-table__td {{ bnd }} text-right font-bold text-stone-800">{% if t.charged %}{{ t.charged }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td {{ bnd }} text-right font-semibold text-stone-700">{% if t.paid %}{{ t.paid }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
               {% endfor %}
             </tr>
           </thead>
           <tbody>
             {% for row in revenue.rows %}
-            <tr class="revenue-table__row">
-              <td class="revenue-table__fixed revenue-table__td font-medium text-stone-800 truncate max-w-[158px]">{{ row.client.display_name }}</td>
+            <tr class="revenue-table__row {% if not row.is_first_for_client %}revenue-table__row--cont{% endif %} {% if row.is_last_for_client %}revenue-table__row--last{% endif %}"
+                data-client="{{ row.client.display_name | lower }}"
+                data-any-activity="{{ '1' if row.any_activity else '0' }}">
+
+              {# ── Fixed left columns ── #}
+              {% if row.is_first_for_client %}
+              <td class="revenue-table__fixed revenue-table__td font-medium text-stone-800 truncate" title="{{ row.client.display_name }}">{{ row.client.display_name }}</td>
               <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:160px">{{ row.subscription_type or '—' }}</td>
-              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:230px">{{ row.size or '—' }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:230px">{{ row.size }}</td>
+              {% else %}
+              <td class="revenue-table__fixed revenue-table__td"></td>
+              <td class="revenue-table__fixed revenue-table__td text-center" style="left:160px">{{ row.subscription_type }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center" style="left:230px">{{ row.size }}</td>
+              {% endif %}
+
+              {# ── Month columns ── #}
               {% for mo in revenue.months %}
               {% set md = row.months[mo] %}
-              <td class="revenue-table__td text-right {% if md.balance_start > 0 %}text-emerald-600{% elif md.balance_start < 0 %}text-red-500{% else %}text-stone-400{% endif %}">{{ md.balance_start }}</td>
-              <td class="revenue-table__td text-right text-stone-700">{% if md.charged %}{{ md.charged }}{% else %}<span class="text-stone-300">0</span>{% endif %}</td>
-              <td class="revenue-table__td text-right text-stone-700">{% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}</td>
-              <td class="revenue-table__td text-right revenue-table__sep {% if md.balance_end > 0 %}text-emerald-600 font-semibold{% elif md.balance_end < 0 %}text-red-500 font-semibold{% else %}text-stone-400{% endif %}">{{ md.balance_end }}</td>
+              {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
+
+              {# Поч — client balance at start of month, only on first row #}
+              {% if md.balance_start is not none %}
+                {% if md.balance_start > 0 %}
+                <td class="revenue-table__td {{ bnd }} text-right text-emerald-600 text-xs">{{ md.balance_start }}</td>
+                {% elif md.balance_start < 0 %}
+                <td class="revenue-table__td {{ bnd }} text-right text-red-400 text-xs">{{ md.balance_start }}</td>
+                {% else %}
+                <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
+                {% endif %}
+              {% else %}
+              <td class="revenue-table__td {{ bnd }}"></td>
+              {% endif %}
+
+              {# Нар — per subscription charge #}
+              <td class="revenue-table__td {{ bnd }} text-right rv-editable"
+                  data-type="charged"
+                  data-val="{{ md.charged or 0 }}"
+                  data-client="{{ row.client.id }}"
+                  data-sub="{{ row.subscription_id if row.subscription_id else '' }}"
+                  data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                <span class="rv-display">
+                  {% if md.charged %}
+                    <span class="font-semibold text-stone-800">{{ md.charged }}</span>
+                  {% else %}
+                    <span class="text-stone-300">0</span>
+                  {% endif %}
+                </span>
+                <input class="rv-input hidden" type="number" min="0" value="{{ md.charged or 0 }}">
+              </td>
+
+              {# Опл — client-level, only on first row #}
+              {% if md.paid is not none %}
+                <td class="revenue-table__td {{ bnd }} text-right text-stone-600 rv-editable"
+                    data-type="paid"
+                    data-val="{{ md.paid or 0 }}"
+                    data-client="{{ row.client.id }}"
+                    data-sub=""
+                    data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                  <span class="rv-display">
+                    {% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}
+                  </span>
+                  <input class="rv-input hidden" type="number" min="0" value="{{ md.paid or 0 }}">
+                </td>
+              {% else %}
+              <td class="revenue-table__td {{ bnd }}"></td>
+              {% endif %}
+
+              {# Кін — client balance at end of month, only on first row #}
+              {% if md.balance_end is not none %}
+                {% if md.balance_end > 0 %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
+                {% elif md.balance_end < 0 %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
+                {% else %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+                {% endif %}
+              {% else %}
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep"></td>
+              {% endif %}
+
               {% endfor %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      <p id="revenue-no-results" class="hidden mt-4 text-center text-sm text-stone-400">Нічого не знайдено</p>
       {% else %}
       <div class="report-empty">Немає клієнтів з підписками</div>
       {% endif %}
@@ -1625,6 +1773,143 @@ document.addEventListener('DOMContentLoaded', function () {
     children.classList.toggle('hidden', open);
     icon.style.transform = open ? '' : 'rotate(90deg)';
   };
+
+  // ── Revenue tab: search + active filter ───────────────────────────────────
+  (function () {
+    const searchInput   = document.getElementById('revenue-search');
+    const activeToggle  = document.getElementById('revenue-active-toggle');
+    const noResults     = document.getElementById('revenue-no-results');
+    const countEl       = document.getElementById('revenue-count');
+    if (!searchInput) return;
+
+    const allRows = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+
+    function applyFilters() {
+      const query      = searchInput.value.trim().toLowerCase();
+      const activeOnly = activeToggle.dataset.active === '1';
+      let visible = 0;
+
+      allRows.forEach(function (tr) {
+        const nameMatch   = !query || tr.dataset.client.includes(query);
+        const activityOk  = !activeOnly || tr.dataset.anyActivity === '1';
+        const show        = nameMatch && activityOk;
+        tr.style.display  = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      if (noResults) noResults.classList.toggle('hidden', visible > 0);
+      if (countEl)   countEl.textContent = visible + ' / ' + allRows.length;
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+    activeToggle.addEventListener('click', function () {
+      const on = activeToggle.dataset.active === '1';
+      activeToggle.dataset.active = on ? '0' : '1';
+      activeToggle.classList.toggle('bg-stone-900',  !on);
+      activeToggle.classList.toggle('border-stone-900', !on);
+      activeToggle.classList.toggle('text-white',    !on);
+      activeToggle.classList.toggle('bg-white',       on);
+      activeToggle.classList.toggle('border-stone-200', on);
+      activeToggle.classList.toggle('text-stone-600', on);
+      applyFilters();
+    });
+
+    // Auto-enable active filter when a date range is selected
+    const _urlParams = new URLSearchParams(window.location.search);
+    if (_urlParams.get('date_from') || _urlParams.get('date_to')) {
+      activeToggle.dataset.active = '1';
+      activeToggle.classList.add('bg-stone-900', 'border-stone-900', 'text-white');
+      activeToggle.classList.remove('bg-white', 'border-stone-200', 'text-stone-600');
+    }
+
+    // Show count on load
+    applyFilters();
+  }());
+
+  // ── Revenue edit mode ──────────────────────────────
+  (function () {
+    const editBtn   = document.getElementById('revenue-edit-btn');
+    const saveBtn   = document.getElementById('revenue-save-btn');
+    const cancelBtn = document.getElementById('revenue-cancel-btn');
+    const table     = document.querySelector('.revenue-table');
+    if (!editBtn) return;
+
+    function enterEditMode() {
+      table.classList.add('revenue-table--editing');
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        td.querySelector('.rv-display').classList.add('hidden');
+        const inp = td.querySelector('.rv-input');
+        inp.classList.remove('hidden');
+        inp.value = td.dataset.val;
+      });
+      editBtn.classList.add('hidden');
+      saveBtn.classList.remove('hidden');
+      cancelBtn.classList.remove('hidden');
+    }
+
+    function exitEditMode() {
+      table.classList.remove('revenue-table--editing');
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        td.querySelector('.rv-display').classList.remove('hidden');
+        td.querySelector('.rv-input').classList.add('hidden');
+      });
+      editBtn.classList.remove('hidden');
+      saveBtn.classList.add('hidden');
+      cancelBtn.classList.add('hidden');
+    }
+
+    editBtn.addEventListener('click', enterEditMode);
+    cancelBtn.addEventListener('click', exitEditMode);
+
+    saveBtn.addEventListener('click', function () {
+      const adjustments = [];
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        const orig  = parseInt(td.dataset.val, 10) || 0;
+        const newVal = parseInt(td.querySelector('.rv-input').value, 10) || 0;
+        const delta = newVal - orig;
+        if (delta === 0) return;
+
+        const type     = td.dataset.type;
+        const clientId = parseInt(td.dataset.client, 10);
+        const subId    = td.dataset.sub ? parseInt(td.dataset.sub, 10) : null;
+        const month    = td.dataset.month;
+
+        adjustments.push({
+          client_id:       clientId,
+          subscription_id: subId,
+          month:           month,
+          delta_charged:   type === 'charged' ? delta : 0,
+          delta_paid:      type === 'paid'    ? delta : 0,
+        });
+      });
+
+      if (adjustments.length === 0) {
+        exitEditMode();
+        return;
+      }
+
+      saveBtn.disabled = true;
+      fetch('/reports/revenue/adjust', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ adjustments: adjustments }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            window.location.reload();
+          } else {
+            alert('Помилка збереження: ' + (data.error || 'unknown'));
+            saveBtn.disabled = false;
+          }
+        })
+        .catch(function () {
+          alert('Мережева помилка, спробуйте ще раз.');
+          saveBtn.disabled = false;
+        });
+    });
+  }());
 });
 </script>
 {% endblock %}
