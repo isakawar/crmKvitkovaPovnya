@@ -876,13 +876,15 @@
         <div class="kpi-card__sub">{{ cash_flow.comparison_label }}</div>
         <!-- Comparison bar -->
         <div class="mt-3">
-          <div class="h-2 bg-stone-100 rounded-full overflow-hidden">
-            <div class="h-full rounded-full"
-                 style="width: {{ cash_flow.comparison_pct if cash_flow.comparison_pct <= 100 else 100 }}%; background: {% if cash_flow.comparison_pct >= 100 %}#10b981{% else %}#f87171{% endif %};"></div>
-          </div>
-          <div class="flex justify-between text-xs text-stone-400 mt-1">
-            <span>0</span>
-            <span>{{ cash_flow.comparison_pct }}% від попереднього</span>
+          {% set bar_pct = [cash_flow.comparison_pct, 100] | min %}
+          {% set bar_color = '#10b981' if cash_flow.comparison_pct >= 100 else '#f87171' %}
+          <div class="relative h-7 rounded-lg overflow-hidden bg-stone-100">
+            <div class="absolute top-0 left-0 bottom-0"
+                 style="width: {{ bar_pct }}%; background: {{ bar_color }};"></div>
+            <span class="absolute top-0 left-0 right-0 bottom-0 flex items-center px-3 text-xs font-bold"
+                  style="color: {% if bar_pct >= 40 %}#fff{% else %}#57534e{% endif %};">
+              {{ "%.1f"|format(cash_flow.comparison_pct) }}% від попереднього
+            </span>
           </div>
         </div>
       </div>
@@ -935,9 +937,39 @@ document.addEventListener('DOMContentLoaded', function () {
   const tabPanes = document.querySelectorAll('.reports-tab-content');
   const filterTabInput = document.getElementById('filter-tab-input');
 
+  // Auto-navigate to current month when cash_flow tab opens without dates
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'cash_flow' && !params.get('date_from') && !params.get('date_to') && !params.get('all')) {
+      const today = new Date();
+      const yyyy  = today.getFullYear();
+      const mm    = String(today.getMonth() + 1).padStart(2, '0');
+      const dd    = String(today.getDate()).padStart(2, '0');
+      params.set('date_from', yyyy + '-' + mm + '-01');
+      params.set('date_to',   yyyy + '-' + mm + '-' + dd);
+      window.location.replace('/reports?' + params.toString());
+    }
+  })();
+
   tabBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = btn.dataset.tab;
+      const fromEl = document.getElementById('reports-date-from');
+      const toEl   = document.getElementById('reports-date-to');
+
+      if (target === 'cash_flow' && (!fromEl || !fromEl.value) && (!toEl || !toEl.value)) {
+        const today = new Date();
+        const yyyy  = today.getFullYear();
+        const mm    = String(today.getMonth() + 1).padStart(2, '0');
+        const dd    = String(today.getDate()).padStart(2, '0');
+        const url   = new URL(window.location.href);
+        url.searchParams.set('tab', 'cash_flow');
+        url.searchParams.set('date_from', yyyy + '-' + mm + '-01');
+        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + dd);
+        window.location.href = url.toString();
+        return;
+      }
+
       tabBtns.forEach(function (b) { b.classList.remove('is-active'); });
       tabPanes.forEach(function (p) { p.classList.remove('is-active'); });
       btn.classList.add('is-active');
@@ -1063,7 +1095,17 @@ document.addEventListener('DOMContentLoaded', function () {
     allBtn.addEventListener('click', function () {
       fromInput.value = '';
       toInput.value   = '';
-      form.submit();
+      const tabVal = filterTabInput ? filterTabInput.value : '';
+      if (tabVal === 'cash_flow') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'cash_flow');
+        url.searchParams.delete('date_from');
+        url.searchParams.delete('date_to');
+        url.searchParams.set('all', '1');
+        window.location.href = url.toString();
+      } else {
+        form.submit();
+      }
     });
 
     // Custom flatpickr — show submit button when user picks dates

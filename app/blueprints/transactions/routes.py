@@ -9,6 +9,7 @@ from app.blueprints.transactions import transactions_bp
 from app.extensions import db
 from app.models.transaction import Transaction
 from app.models.client import Client
+from app.models.settings import Settings
 from app.models.user import User, Role, user_roles
 
 
@@ -37,8 +38,11 @@ def transactions_list():
     client_q = request.args.get('client_q', '').strip().lstrip('@')
     created_by_filter = request.args.get('created_by', '').strip()
     txn_type_filter = request.args.get('txn_type', '').strip()
+    account_filter = request.args.get('account', '').strip()
     page = request.args.get('page', 1, type=int)
     per_page = 50
+
+    payment_accounts = Settings.query.filter_by(type='payment_account').order_by(Settings.value).all()
 
     filtered_query = Transaction.query.filter(
         Transaction.date >= date_from,
@@ -48,6 +52,9 @@ def transactions_list():
 
     if txn_type_filter in ('debit', 'credit'):
         filtered_query = filtered_query.filter(Transaction.transaction_type == txn_type_filter)
+
+    if account_filter and account_filter.isdigit():
+        filtered_query = filtered_query.filter(Transaction.payment_account_id == int(account_filter))
 
     if client_q:
         filtered_query = (filtered_query
@@ -93,6 +100,8 @@ def transactions_list():
         client_q=client_q,
         created_by_filter=created_by_filter,
         txn_type_filter=txn_type_filter,
+        account_filter=account_filter,
+        payment_accounts=payment_accounts,
     )
 
 

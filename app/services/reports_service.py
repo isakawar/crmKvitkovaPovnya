@@ -775,9 +775,27 @@ def get_cash_flow_data(date_from_str=None, date_to_str=None):
 
     total = sum(values)
 
-    duration = (d_to - d_from).days + 1
-    prev_d_from = d_from - timedelta(days=duration)
-    prev_d_to   = d_from - timedelta(days=1)
+    # When a full calendar month is selected but it hasn't ended yet (d_to was capped
+    # to today), compare the same elapsed days in the previous calendar month.
+    # Otherwise fall back to the immediately preceding same-duration window.
+    is_full_month = (
+        d_from.day == 1
+        and d_to_raw.day == calendar.monthrange(d_from.year, d_from.month)[1]
+        and d_from.month == d_to_raw.month
+        and d_from.year == d_to_raw.year
+    )
+    if is_full_month and d_to < d_to_raw:
+        prev_month_last = d_from - timedelta(days=1)
+        prev_d_from = prev_month_last.replace(day=1)
+        prev_last_day = calendar.monthrange(prev_d_from.year, prev_d_from.month)[1]
+        prev_d_to = prev_d_from.replace(day=min(d_to.day, prev_last_day))
+        comparison_label = 'Аналогічний період минулого місяця'
+    else:
+        duration = (d_to - d_from).days + 1
+        prev_d_from = d_from - timedelta(days=duration)
+        prev_d_to   = d_from - timedelta(days=1)
+        comparison_label = 'Аналогічний попередній період'
+
     prev_total = int(
         db.session.query(func.sum(Transaction.amount))
         .filter(
@@ -795,7 +813,7 @@ def get_cash_flow_data(date_from_str=None, date_to_str=None):
         'total': total,
         'prev_total': prev_total,
         'period_label': period_label,
-        'comparison_label': 'Аналогічний попередній період',
+        'comparison_label': comparison_label,
         'comparison_pct': comparison_pct,
     }
 
