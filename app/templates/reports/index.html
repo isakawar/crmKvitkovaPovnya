@@ -273,6 +273,32 @@
   @media (max-width: 640px) {
     .kpi-grid { grid-template-columns: 1fr; }
   }
+
+  /* Revenue table */
+  .revenue-table { font-size: 0.8rem; }
+  .revenue-table__th,
+  .revenue-table__subth,
+  .revenue-table__td {
+    padding: 0.35rem 0.6rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #e7e5e4;
+  }
+  .revenue-table__th { background: #fafaf9; font-weight: 600; color: #57534e; font-size: 0.75rem; border-bottom: 2px solid #e7e5e4; }
+  .revenue-table__subth { background: #f5f5f4; font-weight: 500; color: #78716c; font-size: 0.72rem; border-bottom: 1px solid #e7e5e4; }
+  .revenue-table__totals-row td { background: #fef3c7; border-bottom: 2px solid #e7e5e4; }
+  .revenue-table__row:hover td { background: #fafaf9; }
+  .revenue-table__fixed {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+  }
+  .revenue-table__fixed:first-child { left: 0; min-width: 160px; max-width: 160px; }
+  .revenue-table__fixed:nth-child(2) { left: 160px; min-width: 70px; }
+  .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 4px rgba(0,0,0,0.04); }
+  .revenue-table__totals-row .revenue-table__fixed { background: #fef3c7; }
+  .revenue-table__row:hover .revenue-table__fixed { background: #fafaf9; }
+  .revenue-table__sep { border-right: 2px solid #e7e5e4; }
 </style>
 {% endblock %}
 
@@ -351,6 +377,10 @@
     <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
       <i class="bi bi-cash-stack"></i>
       Cash Flow
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'revenue' %}is-active{% endif %}" data-tab="revenue">
+      <i class="bi bi-people"></i>
+      Баланс клієнтів
     </button>
   </div>
 
@@ -920,6 +950,77 @@
     </div>
 
   </div>{# /tab-cash_flow #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: REVENUE — per-client monthly balance
+  ════════════════════════════════════════════ -->
+  <div id="tab-revenue" class="reports-tab-content {% if active_tab == 'revenue' %}is-active{% endif %}">
+
+    <div class="report-card p-4">
+      <div class="mb-3 flex items-center justify-between gap-2 flex-wrap">
+        <div>
+          <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
+          <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець</p>
+        </div>
+      </div>
+
+      {% if revenue.rows %}
+      <div class="overflow-x-auto">
+        <table class="revenue-table w-full text-sm border-collapse">
+          <thead>
+            <tr class="revenue-table__head-row">
+              <th class="revenue-table__fixed revenue-table__th text-left">Клієнт</th>
+              <th class="revenue-table__fixed revenue-table__th text-center" style="left:160px">Тип</th>
+              <th class="revenue-table__fixed revenue-table__th text-center" style="left:230px">Розмір</th>
+              {% for mo in revenue.months %}
+              <th class="revenue-table__th text-center" colspan="4">{{ mo.strftime('%m.%Y') }}</th>
+              {% endfor %}
+            </tr>
+            <tr class="revenue-table__subhead-row">
+              <th class="revenue-table__fixed revenue-table__subth" colspan="3"></th>
+              {% for mo in revenue.months %}
+              <th class="revenue-table__subth text-right">Поч.</th>
+              <th class="revenue-table__subth text-right">Нар.</th>
+              <th class="revenue-table__subth text-right">Опл.</th>
+              <th class="revenue-table__subth text-right revenue-table__sep">Кін.</th>
+              {% endfor %}
+            </tr>
+            <!-- Totals row -->
+            <tr class="revenue-table__totals-row">
+              <td class="revenue-table__fixed revenue-table__td font-semibold" colspan="3">Разом</td>
+              {% for mo in revenue.months %}
+              {% set t = revenue.totals[mo] %}
+              <td class="revenue-table__td text-right text-stone-400">—</td>
+              <td class="revenue-table__td text-right font-semibold text-stone-700">{{ t.charged }}</td>
+              <td class="revenue-table__td text-right font-semibold text-stone-700">{{ t.paid }}</td>
+              <td class="revenue-table__td text-right revenue-table__sep text-stone-400">—</td>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in revenue.rows %}
+            <tr class="revenue-table__row">
+              <td class="revenue-table__fixed revenue-table__td font-medium text-stone-800 truncate max-w-[158px]">{{ row.client.display_name }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:160px">{{ row.subscription_type or '—' }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:230px">{{ row.size or '—' }}</td>
+              {% for mo in revenue.months %}
+              {% set md = row.months[mo] %}
+              <td class="revenue-table__td text-right {% if md.balance_start > 0 %}text-emerald-600{% elif md.balance_start < 0 %}text-red-500{% else %}text-stone-400{% endif %}">{{ md.balance_start }}</td>
+              <td class="revenue-table__td text-right text-stone-700">{% if md.charged %}{{ md.charged }}{% else %}<span class="text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td text-right text-stone-700">{% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td text-right revenue-table__sep {% if md.balance_end > 0 %}text-emerald-600 font-semibold{% elif md.balance_end < 0 %}text-red-500 font-semibold{% else %}text-stone-400{% endif %}">{{ md.balance_end }}</td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="report-empty">Немає клієнтів з підписками</div>
+      {% endif %}
+    </div>
+
+  </div>{# /tab-revenue #}
 
 </div>{# /flex #}
 {% endblock %}

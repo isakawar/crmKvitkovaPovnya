@@ -9,6 +9,7 @@ from app.services.reports_service import (
     get_florist_sales_data,
     get_cash_flow_data,
     get_active_months,
+    get_client_revenue_breakdown,
 )
 from app.utils.decorators import permission_required
 
@@ -31,6 +32,7 @@ def reports_page():
         subscriptions=get_subscription_renewal_rate(date_from, date_to),
         florist=get_florist_sales_data(date_from, date_to),
         cash_flow=get_cash_flow_data(date_from, date_to),
+        revenue=get_client_revenue_breakdown(date_from, date_to),
         active_tab=active_tab,
         date_from=date_from or '',
         date_to=date_to or '',

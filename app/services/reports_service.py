@@ -818,6 +818,172 @@ def get_cash_flow_data(date_from_str=None, date_to_str=None):
     }
 
 
+def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
+    """Per-client monthly balance: start balance, charged, paid, end balance."""
+    from app.models.transaction import Transaction
+
+    today = date.today()
+    d_to = _parse_date(date_to_str) or today
+    if date_from_str:
+        d_from = _parse_date(date_from_str)
+    else:
+        # Default: first day of 3 months ago
+        m = today.month - 2
+        y = today.year
+        if m <= 0:
+            m += 12
+            y -= 1
+        d_from = date(y, m, 1)
+
+    # Build ordered list of month start dates in range
+    months = []
+    cursor = _month_start(d_from)
+    last_month = _month_start(d_to)
+    while cursor <= last_month:
+        months.append(cursor)
+        cursor = _next_month(cursor)
+
+    if not months:
+        return {'months': [], 'rows': [], 'totals': {}, 'date_from': d_from, 'date_to': d_to}
+
+    # All subscription clients (clients with at least one Subscription)
+    sub_clients = (
+        db.session.query(Client)
+        .join(Subscription, Subscription.client_id == Client.id)
+        .distinct()
+        .order_by(Client.name)
+        .all()
+    )
+    if not sub_clients:
+        return {'months': months, 'rows': [], 'totals': {}, 'date_from': d_from, 'date_to': d_to}
+
+    client_ids = [c.id for c in sub_clients]
+
+    # Most recent subscription type + size per client
+    # Use a subquery to get the latest subscription id per client
+    latest_sub_sq = (
+        db.session.query(
+            Subscription.client_id,
+            func.max(Subscription.id).label('max_id'),
+        )
+        .filter(Subscription.client_id.in_(client_ids))
+        .group_by(Subscription.client_id)
+        .subquery()
+    )
+    latest_subs = (
+        db.session.query(Subscription)
+        .join(latest_sub_sq, Subscription.id == latest_sub_sq.c.max_id)
+        .all()
+    )
+    sub_info = {s.client_id: s for s in latest_subs}
+
+    # Transactions in range grouped by (client_id, year, month)
+    in_range_rows = (
+        db.session.query(
+            Transaction.client_id,
+            func.extract('year',  Transaction.date).label('y'),
+            func.extract('month', Transaction.date).label('m'),
+            func.sum(case(
+                (Transaction.transaction_type == 'credit', Transaction.amount),
+                else_=0,
+            )).label('paid'),
+            func.sum(case(
+                (Transaction.transaction_type == 'delivery_charge', Transaction.amount),
+                else_=0,
+            )).label('charged'),
+        )
+        .filter(
+            Transaction.client_id.in_(client_ids),
+            Transaction.date >= d_from,
+            Transaction.date <= d_to,
+        )
+        .group_by(Transaction.client_id, 'y', 'm')
+        .all()
+    )
+
+    # Build lookup: client_id → month_date → {paid, charged}
+    tx_by_client_month = {}
+    for r in in_range_rows:
+        m_date = date(int(r.y), int(r.m), 1)
+        tx_by_client_month.setdefault(r.client_id, {})[m_date] = {
+            'paid': int(r.paid or 0),
+            'charged': int(r.charged or 0),
+        }
+
+    # Also need total paid/charged from d_from onwards to compute balance_start_of_range
+    # balance_start_of_range = client.credits - sum(credits >= d_from) + sum(charges >= d_from)
+    post_rows = (
+        db.session.query(
+            Transaction.client_id,
+            func.sum(case(
+                (Transaction.transaction_type == 'credit', Transaction.amount),
+                else_=0,
+            )).label('paid'),
+            func.sum(case(
+                (Transaction.transaction_type == 'delivery_charge', Transaction.amount),
+                else_=0,
+            )).label('charged'),
+        )
+        .filter(
+            Transaction.client_id.in_(client_ids),
+            Transaction.date >= d_from,
+        )
+        .group_by(Transaction.client_id)
+        .all()
+    )
+    post_paid = {r.client_id: int(r.paid or 0) for r in post_rows}
+    post_charged = {r.client_id: int(r.charged or 0) for r in post_rows}
+
+    rows = []
+    totals = {m: {'charged': 0, 'paid': 0} for m in months}
+
+    for client in sub_clients:
+        cid = client.id
+        sub = sub_info.get(cid)
+        sub_type = sub.type if sub else ''
+        # Get size from first non-null order of this subscription
+        size = ''
+        if sub and sub.orders:
+            for o in sorted(sub.orders, key=lambda x: x.id):
+                if o.size:
+                    size = o.size
+                    break
+
+        # balance at start of range
+        balance = (client.credits or 0) - post_paid.get(cid, 0) + post_charged.get(cid, 0)
+
+        month_data = {}
+        for mo in months:
+            tx = tx_by_client_month.get(cid, {}).get(mo, {'paid': 0, 'charged': 0})
+            charged = tx['charged']
+            paid = tx['paid']
+            balance_end = balance + paid - charged
+            month_data[mo] = {
+                'balance_start': balance,
+                'charged': charged,
+                'paid': paid,
+                'balance_end': balance_end,
+            }
+            totals[mo]['charged'] += charged
+            totals[mo]['paid'] += paid
+            balance = balance_end
+
+        rows.append({
+            'client': client,
+            'subscription_type': sub_type,
+            'size': size,
+            'months': month_data,
+        })
+
+    return {
+        'months': months,
+        'rows': rows,
+        'totals': totals,
+        'date_from': d_from,
+        'date_to': d_to,
+    }
+
+
 def get_active_months():
     """Return sorted list of (year, month) that have at least one transaction or delivery."""
     from app.models.transaction import Transaction

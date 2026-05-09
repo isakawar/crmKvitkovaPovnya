@@ -43,7 +43,7 @@ After implementation always: describe how to test, expected behavior, edge cases
 
 ## Reports & Statistics Architecture
 
-Page: `/reports` (blueprint: `app/blueprints/reports/`). Three tabs: Deliveries, P&L, Export.
+Page: `/reports` (blueprint: `app/blueprints/reports/`). Tabs: Deliveries, P&L, Export, Cash Flow, Баланс клієнтів.
 
 ### Public API — one function per domain
 
@@ -54,6 +54,7 @@ Page: `/reports` (blueprint: `app/blueprints/reports/`). Three tabs: Deliveries,
 | `get_pl_data(date_from_str, date_to_str)` | `pl` | Revenue, expenses, profit, margin, expense breakdown by category |
 | `get_subscription_renewal_rate(date_from_str, date_to_str)` | `subscriptions` | Renewal rate, renewed/declined/pending counts |
 | `get_florist_sales_data(date_from_str, date_to_str)` | `florist` | Offline florist sales with 5% bonus; defaults to current month when no range given |
+| `get_client_revenue_breakdown(date_from_str, date_to_str)` | `revenue` | Per-client monthly balance: start balance, Нараховано (delivery_charge), Оплачено (credit), end balance; defaults to last 3 months |
 
 ### How the route passes data to the template
 
