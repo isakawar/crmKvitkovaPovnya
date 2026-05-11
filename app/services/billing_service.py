@@ -41,6 +41,8 @@ def get_order_price(order: Order) -> int | None:
         if not price_entry:
             return None
         base = price_entry.price
+        if order.subscription_id:
+            base = base / 4
 
     discount = order.discount or 0
     return int(base * (1 - discount / 100))
@@ -66,9 +68,12 @@ def charge_delivery(delivery: Delivery) -> Transaction | None:
         logger.warning('charge_delivery: no order for delivery %d', delivery.id)
         return None
 
-    amount = order.charged_amount
-    if amount is None:
+    if order.subscription_id:
         amount = get_order_price(order)
+    else:
+        amount = order.charged_amount
+        if amount is None:
+            amount = get_order_price(order)
     if amount is None:
         logger.warning('charge_delivery: no price found for order %d (delivery %d)', order.id, delivery.id)
         return None
@@ -128,9 +133,12 @@ def reconcile_historical_charges(dry_run: bool = True) -> dict:
         if not order:
             continue
 
-        amount = order.charged_amount
-        if amount is None:
+        if order.subscription_id:
             amount = get_order_price(order)
+        else:
+            amount = order.charged_amount
+            if amount is None:
+                amount = get_order_price(order)
         if amount is None or amount <= 0:
             skipped_no_price += 1
             continue
