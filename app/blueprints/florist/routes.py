@@ -361,7 +361,7 @@ def florist_sales_add():
     txn = Transaction(
         transaction_type='credit',
         client_id=None,
-        amount=int(amount),
+        amount=float(amount),
         payment_type=payment_type,
         comment='Офлайн продаж',
         date=date.today(),
@@ -415,7 +415,7 @@ def florist_sales_edit(sale_id):
     if sale.transaction_id:
         txn = Transaction.query.get(sale.transaction_id)
         if txn:
-            txn.amount = int(amount)
+            txn.amount = float(amount)
             txn.payment_type = payment_type
 
     try:

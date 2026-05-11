@@ -8,7 +8,7 @@ class Transaction(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     transaction_type = db.Column(db.String(16), nullable=False, default='credit')  # 'credit' | 'debit' | 'delivery_charge'
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
-    amount = db.Column(db.Integer, nullable=False)
+    amount = db.Column(db.Numeric(10, 2), nullable=False)
     payment_type = db.Column(db.String(32), nullable=True)   # 'monobank' | 'cash' (credits only)
     expense_type = db.Column(db.String(64), nullable=True)   # for debits (future parameters)
     comment = db.Column(db.Text, nullable=True)

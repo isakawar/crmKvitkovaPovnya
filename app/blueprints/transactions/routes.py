@@ -229,7 +229,11 @@ def create_transaction():
 
     if not client_id:
         errors.append('Оберіть клієнта')
-    if not amount or int(amount) <= 0:
+    try:
+        amount_val = round(float(str(amount).replace(',', '.')), 2) if amount else 0
+    except (ValueError, TypeError):
+        amount_val = 0
+    if amount_val <= 0:
         errors.append('Введіть суму більше 0')
     if payment_type not in ('monobank', 'cash'):
         errors.append('Оберіть тип оплати')
@@ -253,13 +257,13 @@ def create_transaction():
     txn = Transaction(
         transaction_type='credit',
         client_id=client.id,
-        amount=int(amount),
+        amount=amount_val,
         payment_type=payment_type,
         payment_account_id=int(payment_account_id),
         date=txn_date,
         created_by_id=current_user.id,
     )
-    client.credits = (client.credits or 0) + int(amount)
+    client.credits = (client.credits or 0) + amount_val
 
     db.session.add(txn)
     db.session.commit()
@@ -301,7 +305,11 @@ def update_transaction(txn_id):
     amount = data.get('amount')
     date_str = data.get('date')
 
-    if not amount or int(amount) <= 0:
+    try:
+        amount_val = round(float(str(amount).replace(',', '.')), 2) if amount else 0
+    except (ValueError, TypeError):
+        amount_val = 0
+    if amount_val <= 0:
         errors.append('Введіть суму більше 0')
     if not date_str:
         errors.append('Вкажіть дату')
@@ -327,13 +335,11 @@ def update_transaction(txn_id):
     except ValueError:
         return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
 
-    new_amount = int(amount)
-
     if txn.transaction_type == 'credit' and txn.client:
-        delta = new_amount - txn.amount
+        delta = amount_val - float(txn.amount or 0)
         txn.client.credits = (txn.client.credits or 0) + delta
 
-    txn.amount = new_amount
+    txn.amount = amount_val
     txn.date = txn_date
     txn.comment = data.get('comment', '').strip() or None
     txn.payment_account_id = int(payment_account_id)
@@ -361,7 +367,11 @@ def create_writeoff():
     date_str = data.get('date')
     payment_account_id = data.get('payment_account_id')
 
-    if not amount or int(amount) <= 0:
+    try:
+        amount_val = round(float(str(amount).replace(',', '.')), 2) if amount else 0
+    except (ValueError, TypeError):
+        amount_val = 0
+    if amount_val <= 0:
         errors.append('Введіть суму більше 0')
     if not expense_type:
         errors.append('Вкажіть тип витрати')
@@ -382,7 +392,7 @@ def create_writeoff():
     txn = Transaction(
         transaction_type='debit',
         client_id=None,
-        amount=int(amount),
+        amount=amount_val,
         expense_type=expense_type,
         expense_type_id=int(expense_type_id) if expense_type_id else None,
         payment_account_id=int(payment_account_id),
