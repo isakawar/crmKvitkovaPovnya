@@ -237,16 +237,15 @@ def test_extend_subscription_adds_4_more_deliveries(session):
     assert total_deliveries == 8
 
 
-def test_extend_subscription_sets_extended_flags(session):
+def test_extend_subscription_new_orders_have_cycle_number_2(session):
     client = _make_client(session, 'extend_flags')
     form = _base_subscription_form()
     sub = create_subscription(client, form)
 
     extend_subscription(sub)
 
-    assert sub.is_extended is True
-    assert sub.followup_status == 'extended'
-    assert sub.planned_contact_date is not None
+    new_orders = Order.query.filter_by(subscription_id=sub.id, cycle_number=2).all()
+    assert len(new_orders) == 4
 
 
 def test_extend_subscription_new_orders_have_correct_sequence(session):

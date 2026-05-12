@@ -76,10 +76,15 @@ def dashboard_page():
     new_subscriptions_today = db.session.query(func.count(Subscription.id)).filter(
         func.date(Subscription.created_at) == today
     ).scalar() or 0
-    extended_today = db.session.query(func.count(Subscription.id)).filter(
-        Subscription.followup_status == 'extended',
-        func.date(Subscription.planned_contact_date) == today
-    ).scalar() or 0
+    extended_today = (
+        db.session.query(func.count(func.distinct(Order.subscription_id)))
+        .filter(
+            Order.subscription_id.isnot(None),
+            Order.cycle_number > 1,
+            func.date(Order.created_at) == today,
+        )
+        .scalar() or 0
+    )
     one_time_today = new_orders_today
 
     trend_start = today - timedelta(days=6)
