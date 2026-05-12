@@ -1,8 +1,10 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
 from app.models import Settings, Price
+from app.models.price_preset import PricePreset
 from app.models.courier import Courier
 from app.models.user import User, Role, ROLE_PERMISSIONS
+from app.models.expense_category import ExpenseCategory
 from app.extensions import db
 from app.utils.decorators import permission_required
 
@@ -54,6 +56,24 @@ def directories_page():
 def features_page():
     return render_template('settings/features.html')
 
+
+@bp.route('/settings/charges')
+@login_required
+@permission_required('view_settings')
+def charges_page():
+    from app.services.billing_service import get_charges_data
+    date_from = request.args.get('date_from', '').strip() or None
+    date_to = request.args.get('date_to', '').strip() or None
+    data = get_charges_data(date_from, date_to)
+    return render_template(
+        'settings/charges.html',
+        rows=data['rows'],
+        total_amount=data['total_amount'],
+        count=data['count'],
+        date_from=date_from or '',
+        date_to=date_to or '',
+    )
+
 @bp.route('/settings/update', methods=['POST'])
 @login_required
 @permission_required('edit_settings')
@@ -92,7 +112,7 @@ def add_delivery_type():
 
 @bp.route('/settings/sizes', methods=['GET'])
 def get_sizes():
-    items = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    items = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     return jsonify([{'id': i.id, 'value': i.value} for i in items])
 
 @bp.route('/settings/sizes', methods=['POST'])
@@ -103,7 +123,8 @@ def add_size():
         return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
     if Settings.query.filter_by(type='size', value=value).first():
         return jsonify({'success': False, 'error': 'Такий розмір вже існує'}), 400
-    item = Settings(type='size', value=value)
+    max_order = db.session.query(db.func.max(Settings.sort_order)).filter_by(type='size').scalar() or 0
+    item = Settings(type='size', value=value, sort_order=max_order + 1)
     db.session.add(item)
     db.session.commit()
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
@@ -164,10 +185,111 @@ def add_packaging_type():
     return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
 
 
+@bp.route('/settings/payment_accounts', methods=['GET'])
+def get_payment_accounts():
+    items = Settings.query.filter_by(type='payment_account').order_by(Settings.value).all()
+    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+
+@bp.route('/settings/payment_accounts', methods=['POST'])
+def add_payment_account():
+    data = request.get_json()
+    value = (data.get('value') or '').strip()
+    if not value:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    if Settings.query.filter_by(type='payment_account', value=value).first():
+        return jsonify({'success': False, 'error': 'Такий рахунок вже існує'}), 400
+    item = Settings(type='payment_account', value=value)
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+
+
+@bp.route('/settings/expense_categories', methods=['GET'])
+@login_required
+@permission_required('view_settings')
+def get_expense_categories():
+    from sqlalchemy import func
+    rows = (
+        db.session.query(
+            ExpenseCategory,
+            func.count(Settings.id).label('expense_types_count'),
+        )
+        .outerjoin(Settings, (Settings.category_id == ExpenseCategory.id) & (Settings.type == 'expense_type'))
+        .group_by(ExpenseCategory.id)
+        .order_by(ExpenseCategory.name)
+        .all()
+    )
+    return jsonify([{
+        'id': cat.id,
+        'name': cat.name,
+        'slug': cat.slug,
+        'expense_types_count': count,
+    } for cat, count in rows])
+
+
+@bp.route('/settings/expense_categories', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def add_expense_category():
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    slug = (data.get('slug') or '').strip()
+    errors = []
+    if not name:
+        errors.append('Назва не може бути порожньою')
+    if not slug:
+        errors.append('Slug не може бути порожнім')
+    if slug and not slug.replace('_', '').replace('-', '').isalnum():
+        errors.append('Slug може містити лише латинські літери, цифри, дефіс і підкреслення')
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+    if ExpenseCategory.query.filter_by(name=name).first():
+        return jsonify({'success': False, 'error': 'Категорія з такою назвою вже існує'}), 400
+    if ExpenseCategory.query.filter_by(slug=slug).first():
+        return jsonify({'success': False, 'error': 'Категорія з таким slug вже існує'}), 400
+    cat = ExpenseCategory(name=name, slug=slug)
+    db.session.add(cat)
+    db.session.commit()
+    return jsonify({'success': True, 'category': {'id': cat.id, 'name': cat.name, 'slug': cat.slug, 'expense_types_count': 0}})
+
+
+@bp.route('/settings/expense_categories/<int:cat_id>', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_expense_category(cat_id):
+    cat = ExpenseCategory.query.get_or_404(cat_id)
+    in_use = Settings.query.filter_by(type='expense_type', category_id=cat_id).first()
+    if in_use:
+        return jsonify({'success': False, 'error': 'Категорія використовується і не може бути видалена'}), 400
+    db.session.delete(cat)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/<int:item_id>/category', methods=['PATCH'])
+@login_required
+@permission_required('edit_settings')
+def update_expense_type_category(item_id):
+    item = Settings.query.get_or_404(item_id)
+    if item.type != 'expense_type':
+        return jsonify({'success': False, 'error': 'Not an expense type'}), 400
+    data = request.get_json()
+    category_id = data.get('category_id')
+    item.category_id = int(category_id) if category_id else None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
 @bp.route('/settings/expense_types', methods=['GET'])
 def get_expense_types():
     items = Settings.query.filter_by(type='expense_type').order_by(Settings.value).all()
-    return jsonify([{'id': i.id, 'value': i.value} for i in items])
+    return jsonify([{
+        'id': i.id,
+        'value': i.value,
+        'category_id': i.category_id,
+        'category_slug': i.category.slug if i.category else None,
+        'category_name': i.category.name if i.category else None,
+    } for i in items])
 
 @bp.route('/settings/expense_types', methods=['POST'])
 @login_required
@@ -179,10 +301,16 @@ def add_expense_type():
         return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
     if Settings.query.filter_by(type='expense_type', value=value).first():
         return jsonify({'success': False, 'error': 'Такий тип вже існує'}), 400
-    item = Settings(type='expense_type', value=value)
+    category_id = data.get('category_id')
+    item = Settings(type='expense_type', value=value, category_id=int(category_id) if category_id else None)
     db.session.add(item)
     db.session.commit()
-    return jsonify({'success': True, 'item': {'id': item.id, 'value': item.value}})
+    return jsonify({'success': True, 'item': {
+        'id': item.id, 'value': item.value,
+        'category_id': item.category_id,
+        'category_slug': item.category.slug if item.category else None,
+        'category_name': item.category.name if item.category else None,
+    }})
 
 
 @bp.route('/settings/<int:item_id>', methods=['DELETE'])
@@ -202,14 +330,25 @@ def delete_setting(item_id):
 
 @bp.route('/settings/prices', methods=['GET'])
 def get_prices():
-    sub_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
-    prices = Price.query.all()
-    price_map = {(p.subscription_type_id, p.size_id): p.price for p in prices}
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
+    presets = PricePreset.query.order_by(PricePreset.id).all()
+
+    # Determine which preset's prices to return
+    preset_id_param = request.args.get('preset_id', type=int)
+    if preset_id_param:
+        target_preset = PricePreset.query.get(preset_id_param)
+    else:
+        target_preset = next((p for p in presets if p.is_active), presets[0] if presets else None)
+
+    price_map = {}
+    if target_preset:
+        for p in Price.query.filter_by(preset_id=target_preset.id).all():
+            price_map[f'{p.order_type}_{p.size_id}'] = p.price
+
     return jsonify({
-        'subscription_types': [{'id': s.id, 'value': s.value} for s in sub_types],
-        'sizes': [{'id': s.id, 'value': s.value} for s in sizes],
-        'prices': {f'{k[0]}_{k[1]}': v for k, v in price_map.items()},
+        'presets': [{'id': p.id, 'name': p.name, 'is_active': p.is_active} for p in presets],
+        'sizes': [{'id': s.id, 'value': s.value} for s in sizes if s.value.lower() != 'власний'],
+        'prices': price_map,
     })
 
 
@@ -248,22 +387,88 @@ def toggle_distribute_banner():
 @bp.route('/settings/prices', methods=['POST'])
 def save_prices():
     data = request.get_json()
-    # data: { "sub_id_size_id": price_value, ... }
-    for key, value in data.items():
-        parts = key.split('_')
-        if len(parts) != 2:
+    # data: { "preset_id": int, "prices": { "one_time_<size_id>": price, "subscription_<size_id>": price } }
+    preset_id = data.get('preset_id')
+    prices_data = data.get('prices', {})
+
+    preset = PricePreset.query.get(preset_id)
+    if not preset:
+        return jsonify({'success': False, 'error': 'Пресет не знайдено'}), 404
+
+    for key, value in prices_data.items():
+        # key format: "one_time_<size_id>" or "subscription_<size_id>"
+        if key.startswith('one_time_'):
+            order_type = 'one_time'
+            try:
+                size_id = int(key[len('one_time_'):])
+            except ValueError:
+                continue
+        elif key.startswith('subscription_'):
+            order_type = 'subscription'
+            try:
+                size_id = int(key[len('subscription_'):])
+            except ValueError:
+                continue
+        else:
             continue
+
         try:
-            sub_id = int(parts[0])
-            size_id = int(parts[1])
             price_val = int(value)
         except (ValueError, TypeError):
-            continue
-        existing = Price.query.filter_by(subscription_type_id=sub_id, size_id=size_id).first()
+            price_val = 0
+
+        existing = Price.query.filter_by(preset_id=preset_id, order_type=order_type, size_id=size_id).first()
         if existing:
             existing.price = price_val
         else:
-            db.session.add(Price(subscription_type_id=sub_id, size_id=size_id, price=price_val))
+            db.session.add(Price(preset_id=preset_id, order_type=order_type, size_id=size_id, price=price_val))
+
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/prices/presets', methods=['POST'])
+def create_price_preset():
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    copy_from_id = data.get('copy_from_id')
+
+    preset = PricePreset(name=name, is_active=False)
+    db.session.add(preset)
+    db.session.flush()  # get preset.id
+
+    if copy_from_id:
+        source_prices = Price.query.filter_by(preset_id=copy_from_id).all()
+        for p in source_prices:
+            db.session.add(Price(preset_id=preset.id, order_type=p.order_type, size_id=p.size_id, price=p.price))
+
+    db.session.commit()
+    return jsonify({'success': True, 'preset': {'id': preset.id, 'name': preset.name, 'is_active': preset.is_active}})
+
+
+@bp.route('/settings/prices/presets/<int:preset_id>/activate', methods=['POST'])
+def activate_price_preset(preset_id):
+    preset = PricePreset.query.get(preset_id)
+    if not preset:
+        return jsonify({'success': False, 'error': 'Пресет не знайдено'}), 404
+
+    PricePreset.query.update({'is_active': False})
+    preset.is_active = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/prices/presets/<int:preset_id>', methods=['DELETE'])
+def delete_price_preset(preset_id):
+    preset = PricePreset.query.get(preset_id)
+    if not preset:
+        return jsonify({'success': False, 'error': 'Пресет не знайдено'}), 404
+    if preset.is_active:
+        return jsonify({'success': False, 'error': 'Не можна видалити активний пресет'}), 400
+
+    db.session.delete(preset)
     db.session.commit()
     return jsonify({'success': True})
 

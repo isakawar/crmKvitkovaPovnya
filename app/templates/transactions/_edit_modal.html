@@ -26,7 +26,7 @@
 
           <div class="txn-field">
             <label class="txn-label">Сума (грн)</label>
-            <input type="number" id="editTxnAmount" name="amount" min="1" step="1" required class="txn-input">
+            <input type="number" id="editTxnAmount" name="amount" min="0.01" step="0.01" required class="txn-input">
           </div>
 
           <!-- credit fields -->
@@ -49,7 +49,15 @@
                 <ul class="expense-combobox__dropdown" id="editExpenseTypeDropdown" hidden></ul>
               </div>
               <input type="hidden" id="editTxnExpenseType" name="expense_type">
+              <input type="hidden" id="editTxnExpenseTypeId" name="expense_type_id">
             </div>
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Рахунок оплати</label>
+            <select id="editTxnPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
+            </select>
           </div>
 
           <div class="txn-field">
@@ -93,14 +101,32 @@ document.addEventListener('DOMContentLoaded', function () {
   const debitFields = document.getElementById('editDebitFields');
   const expenseSearch = document.getElementById('editExpenseTypeSearch');
   const expenseHidden = document.getElementById('editTxnExpenseType');
+  const expenseHiddenId = document.getElementById('editTxnExpenseTypeId');
   const expenseDropdown = document.getElementById('editExpenseTypeDropdown');
   const iconEl = document.getElementById('editTxnIcon');
   const titleEl = document.getElementById('editTxnTitle');
   const subtitleEl = document.getElementById('editTxnSubtitle');
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const paymentAccountSelect = document.getElementById('editTxnPaymentAccountId');
   let expenseTypes = [];
   let activeIndex = -1;
+  let paymentAccountsLoaded = false;
+
+  async function loadPaymentAccounts() {
+    if (paymentAccountsLoaded) return;
+    try {
+      const res = await fetch('/settings/payment_accounts');
+      const accounts = await res.json();
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.value;
+        paymentAccountSelect.appendChild(opt);
+      });
+      paymentAccountsLoaded = true;
+    } catch (_) {}
+  }
 
   async function loadExpenseTypes() {
     if (expenseTypes.length) return;
@@ -126,9 +152,10 @@ document.addEventListener('DOMContentLoaded', function () {
         li.className = 'expense-combobox__item';
         li.textContent = t.value;
         li.dataset.value = t.value;
+        li.dataset.id = t.id;
         li.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          selectExpenseType(t.value);
+          selectExpenseType(t.value, t.id);
         });
         expenseDropdown.appendChild(li);
       });
@@ -136,8 +163,9 @@ document.addEventListener('DOMContentLoaded', function () {
     expenseDropdown.hidden = false;
   }
 
-  function selectExpenseType(value) {
+  function selectExpenseType(value, id) {
     expenseHidden.value = value;
+    expenseHiddenId.value = id || '';
     expenseSearch.value = value;
     expenseDropdown.hidden = true;
     activeIndex = -1;
@@ -168,7 +196,7 @@ document.addEventListener('DOMContentLoaded', function () {
       items[activeIndex]?.scrollIntoView({ block: 'nearest' });
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (activeIndex >= 0 && items[activeIndex]) selectExpenseType(items[activeIndex].dataset.value);
+      if (activeIndex >= 0 && items[activeIndex]) selectExpenseType(items[activeIndex].dataset.value, items[activeIndex].dataset.id);
     } else if (e.key === 'Escape') {
       expenseDropdown.hidden = true;
     }
@@ -227,11 +255,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
       applyType(txn.transaction_type);
 
+      await loadPaymentAccounts();
+      paymentAccountSelect.value = txn.payment_account_id || '';
+
       if (txn.transaction_type === 'credit') {
         paymentTypeSelect.value = txn.payment_type || 'monobank';
       } else {
         await loadExpenseTypes();
-        selectExpenseType(txn.expense_type || '');
+        selectExpenseType(txn.expense_type || '', txn.expense_type_id || '');
       }
 
       modal.show();
@@ -255,6 +286,10 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть тип витрати зі списку');
       return;
     }
+    if (!paymentAccountSelect.value) {
+      showErrors('Оберіть рахунок оплати');
+      return;
+    }
 
     setLoading(true);
 
@@ -262,12 +297,14 @@ document.addEventListener('DOMContentLoaded', function () {
       amount: amountInput.value,
       date: dateInput.value,
       comment: commentInput.value,
+      payment_account_id: paymentAccountSelect.value,
     };
 
     if (type === 'credit') {
       payload.payment_type = paymentTypeSelect.value;
     } else {
       payload.expense_type = expenseHidden.value;
+      payload.expense_type_id = expenseHiddenId.value || null;
     }
 
     try {

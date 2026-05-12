@@ -133,12 +133,25 @@
       </div>
     </button>
 
-    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#expenseTypesModal">
-      <span class="settings-grid-card__icon"><i class="bi bi-tag"></i></span>
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#expensesModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-folder2-open"></i></span>
       <div>
         <p class="settings-grid-card__eyebrow">Фінанси</p>
-        <h2 class="settings-grid-card__title">Типи витрат</h2>
-        <p class="settings-grid-card__text">Категорії витрат для транзакцій списання.</p>
+        <h2 class="settings-grid-card__title">Витрати (категорії)</h2>
+        <p class="settings-grid-card__text">Категорії та типи витрат в одному місці.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування витратами</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#paymentAccountsModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-credit-card-2-front"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Фінанси</p>
+        <h2 class="settings-grid-card__title">Рахунки оплати</h2>
+        <p class="settings-grid-card__text">Картки, готівка та ФОП — джерела оплати витрат при списаннях.</p>
       </div>
       <div class="settings-grid-card__meta">
         <span>Керування списком</span>
@@ -168,7 +181,101 @@
 {{ settings_modal('forWhomModal', 'Для кого', 'Допоміжний список для менеджера, щоб швидше описувати контекст замовлення.', '/settings/for_whom', 'Наприклад, Для мами') }}
 {{ settings_modal('marketingSourcesModal', 'Звідки дізнались', 'Джерела залучення, які зручно тримати в одному стандартизованому списку.', '/settings/marketing_sources', 'Наприклад, Instagram') }}
 {{ settings_modal('packagingTypesModal', 'Коробка / Букет', 'Тип пакування для доставок — відображається у плані флориста.', '/settings/packaging_types', 'Наприклад, Коробка') }}
-{{ settings_modal('expenseTypesModal', 'Типи витрат', 'Категорії витрат для транзакцій списання.', '/settings/expense_types', 'Наприклад, Зарплата') }}
+{{ settings_modal('paymentAccountsModal', 'Рахунки оплати', 'Картки, готівка та ФОП — джерела оплати при списаннях.', '/settings/payment_accounts', 'Наприклад, картка Іра') }}
+<!-- Combined Expenses Modal (two-column + drag-and-drop) -->
+<div class="modal fade settings-modal settings-modal--wide" id="expensesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:780px;">
+    <div class="modal-content">
+      <div class="settings-modal__header">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title">Витрати (категорії)</h2>
+          <p class="settings-modal__subtitle">Типи без категорії не потрапляють у P&amp;L. Перетягуйте типи між категоріями.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body" style="padding:0;">
+        <style>
+          .exp-layout { display:flex; height:480px; }
+          /* LEFT: categories */
+          .exp-cats { width:210px; min-width:190px; border-right:1px solid #e5e7eb; display:flex; flex-direction:column; background:#f8fafc; }
+          .exp-cats__list { flex:1; overflow-y:auto; padding:8px 0; }
+          .exp-cat-item { display:flex; align-items:center; gap:6px; padding:8px 12px; cursor:pointer; border-left:3px solid transparent; transition:background .12s; user-select:none; }
+          .exp-cat-item:hover { background:#f1f5f9; }
+          .exp-cat-item.active { background:#fff; border-left-color:#111; }
+          .exp-cat-item.drag-over { background:#eff6ff; border-left-color:#3b82f6; }
+          .exp-cat-item__name { flex:1; font-size:13px; font-weight:500; color:#374151; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+          .exp-cat-item.active .exp-cat-item__name { color:#111; font-weight:600; }
+          .exp-cat-item__badge { font-size:11px; background:#e5e7eb; color:#6b7280; border-radius:10px; padding:1px 6px; min-width:18px; text-align:center; }
+          .exp-cat-item.active .exp-cat-item__badge { background:#111; color:#fff; }
+          .exp-cat-item__del { display:none; background:none; border:none; color:#d1d5db; cursor:pointer; padding:1px 3px; font-size:12px; border-radius:3px; }
+          .exp-cat-item:hover .exp-cat-item__del { display:block; }
+          .exp-cat-item__del:hover { color:#ef4444; }
+          .exp-cat-uncat { border-top:1px solid #e5e7eb; margin-top:4px; }
+          /* new cat form */
+          .exp-cats__add { padding:8px; border-top:1px solid #e5e7eb; }
+          .exp-cats__add input { width:100%; padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; margin-bottom:4px; background:#fff; outline:none; }
+          .exp-cats__add input:focus { border-color:#94a3b8; }
+          .exp-cats__add-row { display:flex; gap:4px; }
+          .exp-cats__add-slug { flex:1; padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; background:#fff; outline:none; }
+          .exp-cats__add-slug:focus { border-color:#94a3b8; }
+          .exp-cats__add-btn { padding:5px 10px; background:#111; color:#fff; border:none; border-radius:6px; font-size:12px; cursor:pointer; white-space:nowrap; }
+          /* RIGHT: types */
+          .exp-types { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+          .exp-types__header { padding:10px 16px; border-bottom:1px solid #f1f5f9; background:#fff; }
+          .exp-types__title { font-size:13px; font-weight:600; color:#111; }
+          .exp-types__hint { font-size:11px; color:#9ca3af; margin-top:1px; }
+          .exp-types__list { flex:1; overflow-y:auto; padding:4px 0; }
+          .exp-type-row { display:flex; align-items:center; gap:6px; padding:7px 16px; border-bottom:1px solid #f8fafc; cursor:grab; transition:background .1s; }
+          .exp-type-row:hover { background:#f9fafb; }
+          .exp-type-row.dragging { opacity:.4; }
+          .exp-type-row__grip { color:#d1d5db; font-size:12px; cursor:grab; }
+          .exp-type-row__name { flex:1; font-size:13.5px; color:#374151; }
+          .exp-type-row__del { background:none; border:none; color:#d1d5db; cursor:pointer; padding:2px 4px; font-size:13px; border-radius:4px; transition:color .12s; }
+          .exp-type-row__del:hover { color:#ef4444; }
+          .exp-types__empty { padding:24px 16px; font-size:13px; color:#9ca3af; text-align:center; }
+          /* add type form */
+          .exp-types__add { display:flex; gap:6px; padding:8px 12px; border-top:1px solid #e5e7eb; background:#fafafa; }
+          .exp-types__add-input { flex:1; padding:5px 10px; border:1px solid #e5e7eb; border-radius:7px; font-size:13px; background:#fff; outline:none; transition:border-color .15s; }
+          .exp-types__add-input:focus { border-color:#94a3b8; }
+          .exp-types__add-btn { padding:5px 14px; background:transparent; color:#374151; border:1px solid #d1d5db; border-radius:7px; font-size:12px; font-weight:500; cursor:pointer; white-space:nowrap; transition:border-color .15s,background .15s; }
+          .exp-types__add-btn:hover { background:#f3f4f6; border-color:#6b7280; }
+          .exp-error { padding:6px 12px; font-size:12px; color:#ef4444; }
+        </style>
+        <div class="exp-layout">
+          <!-- LEFT -->
+          <div class="exp-cats">
+            <div class="exp-cats__list" id="expCatList">
+              <div style="padding:16px;font-size:13px;color:#9ca3af;">Завантаження...</div>
+            </div>
+            <div class="exp-cats__add">
+              <input type="text" id="newCatName" placeholder="Нова категорія" maxlength="100">
+              <div class="exp-cats__add-row">
+                <input type="text" class="exp-cats__add-slug" id="newCatSlug" placeholder="slug" maxlength="50">
+                <button type="button" class="exp-cats__add-btn" id="addCatBtn">+ Додати</button>
+              </div>
+            </div>
+          </div>
+          <!-- RIGHT -->
+          <div class="exp-types">
+            <div class="exp-types__header">
+              <div class="exp-types__title" id="expTypesPanelTitle">—</div>
+              <div class="exp-types__hint" id="expTypesPanelHint"></div>
+            </div>
+            <div class="exp-types__list" id="expTypesList"></div>
+            <div class="exp-types__add">
+              <input type="text" class="exp-types__add-input" id="newTypeName" placeholder="Новий тип витрати..." maxlength="100">
+              <button type="button" class="exp-types__add-btn" id="addTypeBtn">Додати</button>
+            </div>
+            <div class="exp-error" id="expensesError" hidden></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade settings-modal settings-modal--wide" id="pricesModal" tabindex="-1" aria-labelledby="pricesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -177,13 +284,29 @@
         <div>
           <span class="settings-modal__eyebrow">Цінова матриця</span>
           <h2 class="settings-modal__title" id="pricesModalLabel">Ціни</h2>
-          <p class="settings-modal__subtitle">Оновлюйте вартість комбінацій типу підписки та розміру без переходу в окремий модуль.</p>
+          <p class="settings-modal__subtitle">Оновлюйте вартість комбінацій типу замовлення та розміру без переходу в окремий модуль.</p>
         </div>
         <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
           <i class="bi bi-x-lg"></i>
         </button>
       </div>
       <div class="settings-modal__body">
+        <div id="presetsBar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 0 12px 0;border-bottom:1px solid #e5e7eb;margin-bottom:12px;">
+          <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">Пресет:</span>
+          <select id="presetsSelect" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;background:#fff;cursor:pointer;min-width:160px;max-width:220px;"></select>
+          <button type="button" id="activatePresetBtn" title="Активувати обраний пресет" style="display:none;padding:5px 10px;border:1px solid #16a34a;border-radius:8px;background:transparent;cursor:pointer;color:#16a34a;font-size:13px;">Активувати</button>
+          <button type="button" id="deletePresetBtn" title="Видалити обраний пресет" style="padding:5px 8px;border:1px solid #fecaca;border-radius:8px;background:transparent;cursor:pointer;color:#ef4444;font-size:13px;"><i class="bi bi-trash"></i></button>
+          <button type="button" id="addPresetBtn" style="margin-left:auto;font-size:12px;padding:5px 10px;border:1px dashed #d1d5db;border-radius:8px;background:transparent;cursor:pointer;color:#6b7280;">+ Новий пресет</button>
+        </div>
+        <div id="addPresetForm" style="display:none;padding:8px 0 12px;border-bottom:1px solid #e5e7eb;margin-bottom:12px;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="newPresetName" placeholder="Назва пресету (напр. 8 Березня)" style="flex:1;min-width:160px;padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;">
+            <label style="font-size:12px;color:#6b7280;">Скопіювати з:</label>
+            <select id="copyFromSelect" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;"></select>
+            <button type="button" id="saveNewPresetBtn" style="padding:6px 14px;background:#111;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;">Створити</button>
+            <button type="button" id="cancelAddPresetBtn" style="padding:6px 10px;border:1px solid #d1d5db;border-radius:6px;background:transparent;font-size:13px;cursor:pointer;">Скасувати</button>
+          </div>
+        </div>
         <div class="settings-modal__table-wrap">
           <div id="pricesTableWrap" class="settings-modal__table-scroll">
             <div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>
@@ -214,6 +337,81 @@ function renderSettingsPlaceholder(message) {
     return `<li class="settings-modal__placeholder">${escapeHtml(message)}</li>`;
 }
 
+let _pricesData = null;
+let _selectedPresetId = null;
+
+function renderPresetPrices(presetId) {
+    _selectedPresetId = presetId;
+    const wrap = document.getElementById('pricesTableWrap');
+    if (!_pricesData) return;
+
+    const { sizes, presets } = _pricesData;
+    const preset = presets.find(p => p.id === presetId);
+    if (!sizes.length) {
+        wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Спочатку додайте розміри в довіднику.</div>';
+        return;
+    }
+
+    // Load prices for this preset
+    fetch(`/settings/prices?preset_id=${presetId}`)
+        .then(r => r.json())
+        .then(data => {
+            const prices = data.prices;
+            const rows = [
+                { label: 'Разові замовлення', key: 'one_time', bold: true },
+                { label: 'Підписка', key: 'subscription', bold: false },
+            ];
+
+            let html = '<table class="settings-price-table"><thead><tr><th>Тип / Розмір</th>';
+            sizes.forEach(size => { html += `<th>${escapeHtml(size.value)}</th>`; });
+            html += '</tr></thead><tbody>';
+
+            rows.forEach(row => {
+                html += `<tr><td><span class="settings-price-label"${row.bold ? ' style="font-weight:600;"' : ''}>${row.label}</span></td>`;
+                sizes.forEach(size => {
+                    const key = `${row.key}_${size.id}`;
+                    const val = prices[key] !== undefined ? prices[key] : '';
+                    html += `<td><input type="number" min="0" class="settings-price-input" data-key="${key}" value="${escapeHtml(String(val))}" placeholder="0"></td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        });
+}
+
+function renderPresetsBar(presets, selectedId) {
+    const select = document.getElementById('presetsSelect');
+    const copySelect = document.getElementById('copyFromSelect');
+    const activateBtn = document.getElementById('activatePresetBtn');
+    const deleteBtn = document.getElementById('deletePresetBtn');
+
+    select.innerHTML = '';
+    copySelect.innerHTML = '';
+
+    presets.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.is_active ? `${p.name} ✓` : p.name;
+        if (p.id === selectedId) opt.selected = true;
+        select.appendChild(opt);
+
+        const copyOpt = document.createElement('option');
+        copyOpt.value = p.id;
+        copyOpt.textContent = p.name + (p.is_active ? ' (активний)' : '');
+        copySelect.appendChild(copyOpt);
+    });
+
+    const selected = presets.find(p => p.id === selectedId);
+    if (selected && !selected.is_active) {
+        activateBtn.style.display = '';
+    } else {
+        activateBtn.style.display = 'none';
+    }
+    deleteBtn.style.display = (selected && !selected.is_active) ? '' : 'none';
+}
+
 function loadPrices() {
     const wrap = document.getElementById('pricesTableWrap');
     wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Завантаження...</div>';
@@ -221,32 +419,39 @@ function loadPrices() {
     fetch('/settings/prices')
         .then(r => r.json())
         .then(data => {
-            const subs = data.subscription_types;
-            const sizes = data.sizes.filter(s => s.value.toLowerCase() !== 'власний');
-            const prices = data.prices;
-
-            if (!subs.length || !sizes.length) {
-                wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Спочатку додайте типи підписки та розміри.</div>';
+            _pricesData = data;
+            const activePreset = data.presets.find(p => p.is_active) || data.presets[0];
+            if (!activePreset) {
+                wrap.innerHTML = '<div class="settings-modal__placeholder" style="margin: 1rem;">Немає пресетів. Натисніть "+ Новий пресет".</div>';
                 return;
             }
+            renderPresetsBar(data.presets, activePreset.id);
+            renderPresetPrices(activePreset.id);
+        });
+}
 
-            let html = '<table class="settings-price-table">';
-            html += '<thead><tr><th>Тип підписки</th>';
-            sizes.forEach(size => { html += `<th>${size.value}</th>`; });
-            html += '</tr></thead><tbody>';
+function activatePreset(presetId) {
+    fetch(`/settings/prices/presets/${presetId}/activate`, { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Пресет активовано', 'success');
+                loadPrices();
+            }
+        });
+}
 
-            subs.forEach(sub => {
-                html += `<tr><td><span class="settings-price-label">${sub.value}</span></td>`;
-                sizes.forEach(size => {
-                    const key = `${sub.id}_${size.id}`;
-                    const value = prices[key] !== undefined ? prices[key] : '';
-                    html += `<td><input type="number" min="0" class="settings-price-input" data-key="${key}" value="${value}" placeholder="0"></td>`;
-                });
-                html += '</tr>';
-            });
-
-            html += '</tbody></table>';
-            wrap.innerHTML = html;
+function deletePreset(presetId, name) {
+    if (!confirm(`Видалити пресет "${name}"?`)) return;
+    fetch(`/settings/prices/presets/${presetId}`, { method: 'DELETE' })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Пресет видалено', 'success');
+                loadPrices();
+            } else {
+                showToast(data.error || 'Помилка', 'error');
+            }
         });
 }
 
@@ -300,13 +505,241 @@ document.addEventListener('click', function(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ── Combined Expenses Modal (two-column + drag-and-drop) ─────────────────
+    const expensesModalEl = document.getElementById('expensesModal');
+    const expCatList      = document.getElementById('expCatList');
+    const expTypesList    = document.getElementById('expTypesList');
+    const expTypeTitle    = document.getElementById('expTypesPanelTitle');
+    const expTypeHint     = document.getElementById('expTypesPanelHint');
+    const expensesError   = document.getElementById('expensesError');
+    const newCatNameIn    = document.getElementById('newCatName');
+    const newCatSlugIn    = document.getElementById('newCatSlug');
+    const addCatBtn       = document.getElementById('addCatBtn');
+    const newTypeNameIn   = document.getElementById('newTypeName');
+    const addTypeBtn      = document.getElementById('addTypeBtn');
+
+    let _expCats  = [];
+    let _expTypes = [];
+    let _selCatId = null; // null = uncategorized
+
+    function slugify(str) {
+        return str.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '').slice(0, 50);
+    }
+    newCatNameIn.addEventListener('input', function() {
+        if (!newCatSlugIn._dirty) newCatSlugIn.value = slugify(newCatNameIn.value);
+    });
+    newCatSlugIn.addEventListener('input', function() { newCatSlugIn._dirty = true; });
+
+    function countFor(catId) {
+        if (catId === null) return _expTypes.filter(t => !t.category_id).length;
+        return _expTypes.filter(t => t.category_id === catId).length;
+    }
+
+    function renderCatList() {
+        let html = '';
+        _expCats.forEach(c => {
+            const active = _selCatId === c.id;
+            const cnt = countFor(c.id);
+            html += `<div class="exp-cat-item${active ? ' active' : ''}" data-cat-id="${c.id}" draggable="false">
+                <span class="exp-cat-item__name" title="${escapeHtml(c.name)}">${escapeHtml(c.name)}</span>
+                <span class="exp-cat-item__badge">${cnt}</span>
+                <button type="button" class="exp-cat-item__del js-del-cat" data-id="${c.id}" data-count="${cnt}" title="Видалити"><i class="bi bi-trash"></i></button>
+            </div>`;
+        });
+        // Uncategorized
+        const uncnt = countFor(null);
+        const uncActive = _selCatId === null;
+        html += `<div class="exp-cat-item exp-cat-uncat${uncActive ? ' active' : ''}" data-cat-id="__none__">
+            <span class="exp-cat-item__name" style="color:${uncActive ? '' : '#92400e'};">Без категорії</span>
+            <span class="exp-cat-item__badge" style="${!uncActive && uncnt > 0 ? 'background:#fef3c7;color:#92400e;' : ''}">${uncnt}</span>
+        </div>`;
+        expCatList.innerHTML = html;
+        attachCatDragListeners();
+    }
+
+    function renderTypesList() {
+        const types = _selCatId === null
+            ? _expTypes.filter(t => !t.category_id)
+            : _expTypes.filter(t => t.category_id === _selCatId);
+        const cat = _selCatId !== null ? _expCats.find(c => c.id === _selCatId) : null;
+
+        expTypeTitle.textContent = cat ? cat.name : 'Без категорії';
+        expTypeHint.textContent  = cat
+            ? `slug: ${cat.slug} · ${types.length} тип${types.length === 1 ? '' : 'и'}`
+            : 'Типи не потрапляють у звіти P&L';
+
+        if (!types.length) {
+            expTypesList.innerHTML = `<div class="exp-types__empty">Тут поки немає типів.<br>Додайте або перетягніть з іншої категорії.</div>`;
+            return;
+        }
+        expTypesList.innerHTML = types.map(t =>
+            `<div class="exp-type-row" draggable="true" data-id="${t.id}">
+                <span class="exp-type-row__grip"><i class="bi bi-grip-vertical"></i></span>
+                <span class="exp-type-row__name">${escapeHtml(t.value)}</span>
+                <button type="button" class="exp-type-row__del js-del-type" data-id="${t.id}" title="Видалити"><i class="bi bi-trash"></i></button>
+            </div>`
+        ).join('');
+        attachTypeDragListeners();
+    }
+
+    function render() { renderCatList(); renderTypesList(); }
+
+    async function loadExpenses() {
+        expCatList.innerHTML = '<div style="padding:16px;font-size:13px;color:#9ca3af;">Завантаження...</div>';
+        expTypesList.innerHTML = '';
+        const [catsR, typesR] = await Promise.all([
+            fetch('/settings/expense_categories'),
+            fetch('/settings/expense_types'),
+        ]);
+        _expCats  = await catsR.json();
+        _expTypes = await typesR.json();
+        // Select first cat by default, or keep current selection
+        if (_selCatId === null) { /* keep uncategorized */ }
+        else if (!_expCats.find(c => c.id === _selCatId)) {
+            _selCatId = _expCats.length ? _expCats[0].id : null;
+        }
+        render();
+    }
+
+    // Category click → select
+    expCatList.addEventListener('click', function(e) {
+        if (e.target.closest('.js-del-cat')) return;
+        const item = e.target.closest('.exp-cat-item');
+        if (!item) return;
+        const rawId = item.dataset.catId;
+        _selCatId = rawId === '__none__' ? null : parseInt(rawId);
+        render();
+    });
+
+    // ── Drag-and-drop ────────────────────────────────────────────────────────
+    let _dragTypeId = null;
+
+    function attachTypeDragListeners() {
+        expTypesList.querySelectorAll('.exp-type-row').forEach(row => {
+            row.addEventListener('dragstart', function(e) {
+                _dragTypeId = parseInt(row.dataset.id);
+                row.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            row.addEventListener('dragend', function() {
+                row.classList.remove('dragging');
+            });
+        });
+    }
+
+    function attachCatDragListeners() {
+        expCatList.querySelectorAll('.exp-cat-item').forEach(item => {
+            item.addEventListener('dragover', function(e) {
+                if (_dragTypeId === null) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                item.classList.add('drag-over');
+            });
+            item.addEventListener('dragleave', function() { item.classList.remove('drag-over'); });
+            item.addEventListener('drop', async function(e) {
+                e.preventDefault();
+                item.classList.remove('drag-over');
+                if (_dragTypeId === null) return;
+                const rawId = item.dataset.catId;
+                const newCatId = rawId === '__none__' ? null : parseInt(rawId);
+                const typeEntry = _expTypes.find(t => t.id === _dragTypeId);
+                if (!typeEntry) return;
+                const oldCatId = typeEntry.category_id;
+                if (oldCatId === newCatId) return;
+                // Optimistic update
+                typeEntry.category_id = newCatId;
+                _selCatId = newCatId;
+                render();
+                const r = await fetch(`/settings/${_dragTypeId}/category`, {
+                    method: 'PATCH', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({ category_id: newCatId }),
+                });
+                const d = await r.json();
+                if (!d.success) {
+                    typeEntry.category_id = oldCatId;
+                    render();
+                    showToast(d.error || 'Помилка переміщення', 'error');
+                } else {
+                    showToast('Переміщено', 'success');
+                }
+                _dragTypeId = null;
+            });
+        });
+    }
+
+    expensesModalEl.addEventListener('show.bs.modal', function() { loadExpenses(); });
+
+    // Add category
+    addCatBtn.addEventListener('click', async function() {
+        expensesError.hidden = true;
+        const name = newCatNameIn.value.trim();
+        const slug = newCatSlugIn.value.trim();
+        if (!name || !slug) { expensesError.textContent = 'Вкажіть назву та slug'; expensesError.hidden = false; return; }
+        const r = await fetch('/settings/expense_categories', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ name, slug }),
+        });
+        const d = await r.json();
+        if (d.success) {
+            newCatNameIn.value = ''; newCatSlugIn.value = ''; newCatSlugIn._dirty = false;
+            _selCatId = d.category.id;
+            await loadExpenses();
+            showToast('Категорію додано', 'success');
+        } else {
+            expensesError.textContent = d.error || (d.errors || []).join(', ') || 'Помилка';
+            expensesError.hidden = false;
+        }
+    });
+
+    // Delete category
+    expCatList.addEventListener('click', async function(e) {
+        const btn = e.target.closest('.js-del-cat');
+        if (!btn) return;
+        if (parseInt(btn.dataset.count) > 0) { showToast('Спочатку перемістіть або видаліть усі типи', 'error'); return; }
+        if (!confirm('Видалити категорію?')) return;
+        const r = await fetch(`/settings/expense_categories/${btn.dataset.id}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) {
+            if (_selCatId === parseInt(btn.dataset.id)) _selCatId = null;
+            await loadExpenses(); showToast('Категорію видалено', 'success');
+        } else showToast(d.error || 'Помилка', 'error');
+    });
+
+    // Delete type
+    expTypesList.addEventListener('click', async function(e) {
+        const btn = e.target.closest('.js-del-type');
+        if (!btn) return;
+        if (!confirm('Видалити тип витрати?')) return;
+        const r = await fetch(`/settings/${btn.dataset.id}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { await loadExpenses(); showToast('Видалено', 'success'); }
+        else showToast(d.error || 'Помилка', 'error');
+    });
+
+    // Add type
+    async function doAddType() {
+        expensesError.hidden = true;
+        const value = newTypeNameIn.value.trim();
+        if (!value) { newTypeNameIn.focus(); return; }
+        const r = await fetch('/settings/expense_types', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ value, category_id: _selCatId }),
+        });
+        const d = await r.json();
+        if (d.success) { newTypeNameIn.value = ''; await loadExpenses(); showToast('Тип додано', 'success'); }
+        else { expensesError.textContent = d.error || 'Помилка'; expensesError.hidden = false; }
+    }
+    addTypeBtn.addEventListener('click', doAddType);
+    newTypeNameIn.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); doAddType(); } });
+
+    // ── Generic settings modals ──────────────────────────────────────────────
     [
         {id: 'deliveryTypesModal', endpoint: '/settings/delivery_types'},
         {id: 'sizesModal', endpoint: '/settings/sizes'},
         {id: 'forWhomModal', endpoint: '/settings/for_whom'},
         {id: 'marketingSourcesModal', endpoint: '/settings/marketing_sources'},
         {id: 'packagingTypesModal', endpoint: '/settings/packaging_types'},
-        {id: 'expenseTypesModal', endpoint: '/settings/expense_types'}
+        {id: 'paymentAccountsModal', endpoint: '/settings/payment_accounts'},
     ].forEach(function(modal) {
         const modalEl = document.getElementById(modal.id);
         const form = modalEl.querySelector('.settings-add-form');
@@ -345,24 +778,76 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPrices();
     });
 
-    document.getElementById('savePricesBtn').addEventListener('click', function() {
-        const inputs = document.querySelectorAll('#pricesTableWrap input[data-key]');
-        const payload = {};
+    document.getElementById('presetsSelect').addEventListener('change', function() {
+        const presetId = parseInt(this.value);
+        const presets = _pricesData ? _pricesData.presets : [];
+        renderPresetsBar(presets, presetId);
+        renderPresetPrices(presetId);
+    });
 
+    document.getElementById('activatePresetBtn').addEventListener('click', function() {
+        if (_selectedPresetId) activatePreset(_selectedPresetId);
+    });
+
+    document.getElementById('deletePresetBtn').addEventListener('click', function() {
+        if (!_selectedPresetId || !_pricesData) return;
+        const preset = _pricesData.presets.find(p => p.id === _selectedPresetId);
+        if (preset) deletePreset(preset.id, preset.name);
+    });
+
+    document.getElementById('savePricesBtn').addEventListener('click', function() {
+        if (!_selectedPresetId) return;
+        const inputs = document.querySelectorAll('#pricesTableWrap input[data-key]');
+        const prices = {};
         inputs.forEach(input => {
-            payload[input.dataset.key] = input.value === '' ? 0 : parseInt(input.value, 10);
+            prices[input.dataset.key] = input.value === '' ? 0 : parseInt(input.value, 10);
         });
 
         fetch('/settings/prices', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ preset_id: _selectedPresetId, prices })
         })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                loadPrices();
                 showToast('Ціни збережено', 'success');
+            }
+        });
+    });
+
+    document.getElementById('addPresetBtn').addEventListener('click', function() {
+        document.getElementById('addPresetForm').style.display = '';
+        document.getElementById('newPresetName').focus();
+    });
+
+    document.getElementById('cancelAddPresetBtn').addEventListener('click', function() {
+        document.getElementById('addPresetForm').style.display = 'none';
+        document.getElementById('newPresetName').value = '';
+    });
+
+    document.getElementById('saveNewPresetBtn').addEventListener('click', function() {
+        const name = document.getElementById('newPresetName').value.trim();
+        const copyFromId = parseInt(document.getElementById('copyFromSelect').value) || null;
+        if (!name) {
+            document.getElementById('newPresetName').focus();
+            return;
+        }
+
+        fetch('/settings/prices/presets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, copy_from_id: copyFromId })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('addPresetForm').style.display = 'none';
+                document.getElementById('newPresetName').value = '';
+                showToast('Пресет створено', 'success');
+                loadPrices();
+            } else {
+                showToast(data.error || 'Помилка', 'error');
             }
         });
     });

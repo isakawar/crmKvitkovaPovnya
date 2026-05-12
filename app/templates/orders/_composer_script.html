@@ -858,7 +858,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         lockScenarioSwitch(true);
         addOrderForm.setAttribute('data-edit-id', orderId);
-        clientSearch.value = orderData.client_instagram || '';
+        clientSearch.value = orderData.client_display || orderData.client_instagram || '';
+        if (orderClientIdInput && orderData.client_id) orderClientIdInput.value = orderData.client_id;
         addOrderForm.querySelector('[name="recipient_name"]').value = orderData.recipient_name || '';
         recipientPhoneInput.value = orderData.recipient_phone || '+380';
         renderExtraPhones(orderData.additional_phones || []);

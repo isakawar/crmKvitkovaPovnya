@@ -11,7 +11,7 @@ class Client(db.Model):
     phone_telegram = db.Column(db.Boolean, nullable=False, default=False)
     phone_whatsapp = db.Column(db.Boolean, nullable=False, default=False)
     email = db.Column(db.String(256), nullable=True)
-    credits = db.Column(db.Integer, default=0)
+    credits = db.Column(db.Numeric(10, 2), default=0)
     marketing_source = db.Column(db.String(64), nullable=True)
     personal_discount = db.Column(db.String(16), nullable=True)
     created_at = db.Column(db.Date, nullable=True, default=datetime.date.today)

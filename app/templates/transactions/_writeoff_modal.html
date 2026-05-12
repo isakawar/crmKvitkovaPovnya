@@ -23,7 +23,7 @@
 
           <div class="txn-field">
             <label class="txn-label">Сума (грн)</label>
-            <input type="number" id="writeoffAmount" name="amount" min="1" step="1" required placeholder="Наприклад: 200" class="txn-input">
+            <input type="number" id="writeoffAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 200.50" class="txn-input">
           </div>
 
           <div class="txn-field">
@@ -33,6 +33,7 @@
               <ul class="expense-combobox__dropdown" id="expenseTypeDropdown" hidden></ul>
             </div>
             <input type="hidden" id="writeoffExpenseType" name="expense_type">
+          <input type="hidden" id="writeoffExpenseTypeId" name="expense_type_id">
           </div>
           <style>
             .expense-combobox { position: relative; }
@@ -64,6 +65,13 @@
               color: #94a3b8;
             }
           </style>
+
+          <div class="txn-field">
+            <label class="txn-label">Рахунок оплати</label>
+            <select id="writeoffPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
+            </select>
+          </div>
 
           <div class="txn-field">
             <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
@@ -100,13 +108,31 @@ document.addEventListener('DOMContentLoaded', function () {
   const writeoffDate = document.getElementById('writeoffDate');
   const searchInput = document.getElementById('expenseTypeSearch');
   const hiddenInput = document.getElementById('writeoffExpenseType');
+  const hiddenIdInput = document.getElementById('writeoffExpenseTypeId');
   const dropdown = document.getElementById('expenseTypeDropdown');
 
   if (!openBtn || !modalEl || !form) return;
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const paymentAccountSelect = document.getElementById('writeoffPaymentAccountId');
   let expenseTypes = [];
   let activeIndex = -1;
+  let paymentAccountsLoaded = false;
+
+  async function loadPaymentAccounts() {
+    if (paymentAccountsLoaded) return;
+    try {
+      const res = await fetch('/settings/payment_accounts');
+      const accounts = await res.json();
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.value;
+        paymentAccountSelect.appendChild(opt);
+      });
+      paymentAccountsLoaded = true;
+    } catch (_) {}
+  }
 
   async function loadExpenseTypes() {
     if (expenseTypes.length) return;
@@ -134,9 +160,10 @@ document.addEventListener('DOMContentLoaded', function () {
         li.className = 'expense-combobox__item';
         li.textContent = t.value;
         li.dataset.value = t.value;
+        li.dataset.id = t.id;
         li.addEventListener('mousedown', function (e) {
           e.preventDefault();
-          selectType(t.value);
+          selectType(t.value, t.id);
         });
         dropdown.appendChild(li);
       });
@@ -144,8 +171,9 @@ document.addEventListener('DOMContentLoaded', function () {
     dropdown.hidden = false;
   }
 
-  function selectType(value) {
+  function selectType(value, id) {
     hiddenInput.value = value;
+    hiddenIdInput.value = id || '';
     searchInput.value = value;
     dropdown.hidden = true;
     activeIndex = -1;
@@ -153,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function clearSelection() {
     hiddenInput.value = '';
+    hiddenIdInput.value = '';
     searchInput.value = '';
     dropdown.hidden = true;
     activeIndex = -1;
@@ -184,7 +213,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (activeIndex >= 0 && items[activeIndex]) {
-        selectType(items[activeIndex].dataset.value);
+        selectType(items[activeIndex].dataset.value, items[activeIndex].dataset.id);
       }
     } else if (e.key === 'Escape') {
       dropdown.hidden = true;
@@ -223,9 +252,31 @@ document.addEventListener('DOMContentLoaded', function () {
     clearErrors();
     setLoading(false);
     writeoffDate.value = todayISO();
-    await loadExpenseTypes();
+    await Promise.all([loadExpenseTypes(), loadPaymentAccounts()]);
     modal.show();
   });
+
+  window.repeatWriteoff = async function (btn) {
+    form.reset();
+    clearSelection();
+    clearErrors();
+    setLoading(false);
+
+    await Promise.all([loadExpenseTypes(), loadPaymentAccounts()]);
+
+    const expenseType   = btn.dataset.expenseType || '';
+    const expenseTypeId = btn.dataset.expenseTypeId || '';
+    const paymentAccId  = btn.dataset.paymentAccountId || '';
+    const comment       = btn.dataset.comment || '';
+
+    selectType(expenseType, expenseTypeId);
+    paymentAccountSelect.value = paymentAccId;
+    document.getElementById('writeoffComment').value = comment;
+    document.getElementById('writeoffAmount').value = '';
+    writeoffDate.value = todayISO();
+
+    modal.show();
+  };
 
   modalEl.addEventListener('hidden.bs.modal', function () {
     clearErrors();
@@ -241,12 +292,18 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть тип витрати зі списку');
       return;
     }
+    if (!paymentAccountSelect.value) {
+      showErrors('Оберіть рахунок оплати');
+      return;
+    }
 
     setLoading(true);
 
     const payload = {
       amount: document.getElementById('writeoffAmount').value,
       expense_type: hiddenInput.value,
+      expense_type_id: hiddenIdInput.value || null,
+      payment_account_id: paymentAccountSelect.value,
       comment: document.getElementById('writeoffComment').value,
       date: writeoffDate.value,
     };

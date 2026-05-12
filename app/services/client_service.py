@@ -141,7 +141,7 @@ def create_client(instagram=None, telegram=None, phone=None, name=None,
 
 def update_client(client_id, instagram=None, telegram=None, phone=None, name=None,
                   phone_viber=False, phone_telegram=False, phone_whatsapp=False,
-                  credits=0, marketing_source=None, personal_discount=None, email=None):
+                  marketing_source=None, personal_discount=None, email=None):
     client = get_client_by_id(client_id)
 
     instagram = instagram.strip().lstrip('@') if instagram and instagram.strip() else None
@@ -168,7 +168,6 @@ def update_client(client_id, instagram=None, telegram=None, phone=None, name=Non
     client.phone_viber = bool(phone_viber)
     client.phone_telegram = bool(phone_telegram)
     client.phone_whatsapp = bool(phone_whatsapp)
-    client.credits = credits
     client.marketing_source = marketing_source
     client.personal_discount = personal_discount
     client.email = email

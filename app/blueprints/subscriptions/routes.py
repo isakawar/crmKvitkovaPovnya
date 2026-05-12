@@ -65,8 +65,9 @@ def subscriptions_list():
         data.append({'subscription': sub, 'total': total, 'completed': completed})
 
     active_count = sum(1 for s in data if s['completed'] < s['total'])
-    completed_count = sum(1 for s in data if s['total'] > 0 and s['completed'] >= s['total'])
     total_count = len(data)
+    stopped_count = Subscription.query.filter_by(is_stopped=True).count()
+    draft_count = Subscription.query.filter_by(status='draft').count()
 
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
@@ -74,7 +75,7 @@ def subscriptions_list():
 
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
 
     return render_template(
@@ -83,8 +84,9 @@ def subscriptions_list():
         drafts=drafts,
         today=dt.date.today(),
         active_count=active_count,
-        completed_count=completed_count,
+        draft_count=draft_count,
         total_count=total_count,
+        stopped_count=stopped_count,
         per_page=per_page,
         page=page,
         cities=cities,
@@ -304,8 +306,6 @@ def subscription_detail(subscription_id):
 @login_required
 def subscription_extend(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
-    if subscription.is_extended:
-        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
     try:
         extend_subscription(subscription)
         return jsonify({

@@ -8,8 +8,7 @@ from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
 
-# Kept for imports in other modules
-SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
+from app.services.subscription_service import SUBSCRIPTION_TYPES  # noqa: F401
 
 
 def get_or_create_client(instagram):
@@ -59,6 +58,9 @@ def create_order_and_deliveries(client, form):
     )
     db.session.add(order)
     db.session.flush()
+
+    from app.services.billing_service import get_order_price
+    order.charged_amount = get_order_price(order)
 
     for i, ph in enumerate(
         form.getlist('additional_phones') if hasattr(form, 'getlist') else form.get('additional_phones', []),
@@ -118,13 +120,18 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
         query = query.filter(or_(not_stopped, has_delivered, has_individually_resumed))
     # When searching by client: include all orders (stopped subscriptions visible with СТОП badge)
     if q:
+        q_stripped = q.lstrip('@')
         like_q = f'%{q}%'
+        like_q_stripped = f'%{q_stripped}%'
         query = query.filter(or_(
             Client.instagram.ilike(like_q),
             Client.phone.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.telegram.ilike(like_q_stripped),
             Order.recipient_name.ilike(like_q),
             Order.recipient_phone.ilike(like_q),
             Order.recipient_social.ilike(like_q),
+            Order.recipient_social.ilike(like_q_stripped),
             Order.city.ilike(like_q),
             Order.street.ilike(like_q),
         ))

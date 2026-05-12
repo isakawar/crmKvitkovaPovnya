@@ -3,7 +3,7 @@ from app.models import Client, Order, Delivery
 from app.models.subscription import Subscription
 import datetime
 import logging
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 
 logger = logging.getLogger(__name__)
@@ -416,6 +416,7 @@ def create_subscription_from_import(client, form, delivery_number):
             client_id=client.id,
             subscription_id=subscription.id,
             sequence_number=seq,
+            cycle_number=1,
             recipient_name=subscription.recipient_name,
             recipient_phone=subscription.recipient_phone,
             recipient_social=subscription.recipient_social,
@@ -440,6 +441,9 @@ def create_subscription_from_import(client, form, delivery_number):
         )
         db.session.add(order)
         db.session.flush()
+
+        from app.services.billing_service import get_order_price
+        order.charged_amount = get_order_price(order)
 
         if i == 0:
             additional_phones = form.get('additional_phones', [])
@@ -527,10 +531,18 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
         delivery.status = 'Очікує'
 
 
-def extend_subscription(subscription):
-    """Add another cycle of 4 orders/deliveries to the subscription."""
+def extend_subscription(subscription, overrides=None):
+    """Add another cycle of 4 orders/deliveries to the subscription.
+
+    overrides: optional dict with fields to apply to the new cycle's orders
+    (e.g. city, street, comment, first_delivery_date). Fields not present in
+    overrides are copied from the subscription as usual.
+    """
     if subscription.is_stopped:
         raise ValueError('Неможливо продовжити зупинену підписку')
+
+    overrides = overrides or {}
+
     last_order = (
         Order.query
         .filter_by(subscription_id=subscription.id)
@@ -548,9 +560,14 @@ def extend_subscription(subscription):
     )
     last_date = last_delivery.delivery_date if last_delivery else last_order.delivery_date
 
-    desired_weekday = WEEKDAY_MAP.get(subscription.delivery_day, last_date.weekday())
-    first_next = calculate_next_delivery_date(last_date, subscription.type, desired_weekday)
-    dates = build_delivery_dates(first_next, subscription.type, subscription.delivery_day)
+    if 'first_delivery_date' in overrides and overrides['first_delivery_date']:
+        first_next = overrides['first_delivery_date']
+    else:
+        desired_weekday = WEEKDAY_MAP.get(subscription.delivery_day, last_date.weekday())
+        first_next = calculate_next_delivery_date(last_date, subscription.type, desired_weekday)
+
+    delivery_day = overrides.get('delivery_day') or subscription.delivery_day
+    dates = build_delivery_dates(first_next, subscription.type, delivery_day)
 
     max_seq = (
         db.session.query(db.func.max(Order.sequence_number))
@@ -558,42 +575,50 @@ def extend_subscription(subscription):
         .scalar()
     ) or 0
 
+    max_cycle = (
+        db.session.query(db.func.max(Order.cycle_number))
+        .filter_by(subscription_id=subscription.id)
+        .scalar()
+    ) or 1
+    next_cycle = max_cycle + 1
+
     for i, d_date in enumerate(dates):
         order = Order(
             client_id=subscription.client_id,
             subscription_id=subscription.id,
             sequence_number=max_seq + i + 1,
-            recipient_name=subscription.recipient_name,
-            recipient_phone=subscription.recipient_phone,
-            recipient_social=subscription.recipient_social,
-            city=subscription.city,
-            street=subscription.street,
-            building_number=subscription.building_number,
-            floor=subscription.floor,
-            entrance=subscription.entrance,
-            is_pickup=subscription.is_pickup,
-            address_comment=subscription.address_comment,
-            delivery_method=subscription.delivery_method,
-            size=subscription.size,
-            custom_amount=subscription.custom_amount,
+            cycle_number=next_cycle,
+            recipient_name=overrides.get('recipient_name') or subscription.recipient_name,
+            recipient_phone=overrides.get('recipient_phone') or subscription.recipient_phone,
+            recipient_social=overrides.get('recipient_social') or subscription.recipient_social,
+            city=overrides.get('city') or subscription.city,
+            street=overrides.get('street') or subscription.street,
+            building_number=overrides.get('building_number') or subscription.building_number,
+            floor=overrides.get('floor') or subscription.floor,
+            entrance=overrides.get('entrance') or subscription.entrance,
+            is_pickup=overrides.get('is_pickup', subscription.is_pickup),
+            address_comment=overrides.get('address_comment') or subscription.address_comment,
+            delivery_method=overrides.get('delivery_method') or subscription.delivery_method,
+            size=overrides.get('size') or subscription.size,
+            custom_amount=overrides.get('custom_amount') or subscription.custom_amount,
             delivery_date=d_date,
-            time_from=subscription.time_from if i == 0 else None,
-            time_to=subscription.time_to if i == 0 else None,
-            bouquet_type=subscription.bouquet_type,
-            composition_type=subscription.composition_type,
-            for_whom=subscription.for_whom,
-            comment=subscription.comment if i == 0 else None,
-            preferences=subscription.preferences,
+            time_from=overrides.get('time_from') or (subscription.time_from if i == 0 else None),
+            time_to=overrides.get('time_to') or (subscription.time_to if i == 0 else None),
+            bouquet_type=overrides.get('bouquet_type') or subscription.bouquet_type,
+            composition_type=overrides.get('composition_type') or subscription.composition_type,
+            for_whom=overrides.get('for_whom') or subscription.for_whom,
+            comment=overrides.get('comment') or (subscription.comment if i == 0 else None),
+            preferences=overrides.get('preferences') or subscription.preferences,
         )
         db.session.add(order)
         db.session.flush()
 
+        from app.services.billing_service import get_order_price
+        order.charged_amount = get_order_price(order)
+
         delivery = _create_delivery_for_order(order, subscription.client_id, is_first=(i == 0))
         db.session.add(delivery)
 
-    subscription.is_extended = True
-    subscription.followup_status = 'extended'
-    subscription.planned_contact_date = datetime.datetime.utcnow()
     db.session.commit()
     return subscription
 
@@ -664,15 +689,84 @@ def update_draft_subscription(subscription, contact_date, draft_comment=None, dr
     return subscription
 
 
+def get_subscriptions_needing_renewal(today):
+    """Return subscriptions whose last delivery passed 4+ days ago and have no upcoming orders.
+
+    Used by the dashboard renewal queue and future Telegram reminders.
+    Returns list of dicts with subscription, client, last_delivery_date, last_order_id, days_overdue.
+    """
+    last_delivery_subq = (
+        db.session.query(
+            Order.subscription_id.label('subscription_id'),
+            func.max(Delivery.delivery_date).label('last_delivery_date'),
+        )
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(
+            Order.subscription_id.isnot(None),
+            Delivery.status != 'Скасовано',
+        )
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
+    last_order_subq = (
+        db.session.query(
+            Order.subscription_id.label('subscription_id'),
+            func.max(Order.id).label('last_order_id'),
+        )
+        .filter(Order.subscription_id.isnot(None))
+        .group_by(Order.subscription_id)
+        .subquery()
+    )
+
+    rows = (
+        db.session.query(
+            Subscription,
+            Client,
+            last_delivery_subq.c.last_delivery_date,
+            last_order_subq.c.last_order_id,
+        )
+        .join(Client, Subscription.client_id == Client.id)
+        .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
+        .outerjoin(last_order_subq, last_order_subq.c.subscription_id == Subscription.id)
+        .filter(
+            last_delivery_subq.c.last_delivery_date <= today - datetime.timedelta(days=4),
+            or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
+            or_(Subscription.snooze_until.is_(None), Subscription.snooze_until <= today),
+            Subscription.status != 'draft',
+        )
+        .order_by(last_delivery_subq.c.last_delivery_date.asc())
+        .limit(30)
+        .all()
+    )
+
+    result = []
+    for sub, client, last_date, last_order_id in rows:
+        result.append({
+            'subscription': sub,
+            'client': client,
+            'last_delivery_date': last_date,
+            'last_order_id': last_order_id,
+            'days_overdue': (today - last_date).days if last_date else 0,
+        })
+    return result
+
+
 def get_subscriptions(q=None, city=None, sub_type=None):
     query = Subscription.query.join(Client).filter(Subscription.status != 'draft')
     if q:
+        q_stripped = q.lstrip('@')
         like_q = f'%{q}%'
+        like_q_stripped = f'%{q_stripped}%'
         query = query.filter(or_(
             Client.instagram.ilike(like_q),
             Client.phone.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.telegram.ilike(like_q_stripped),
             Subscription.recipient_name.ilike(like_q),
             Subscription.recipient_phone.ilike(like_q),
+            Subscription.recipient_social.ilike(like_q),
+            Subscription.recipient_social.ilike(like_q_stripped),
             Subscription.city.ilike(like_q),
         ))
     if city:

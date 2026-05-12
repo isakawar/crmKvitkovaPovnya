@@ -2,6 +2,13 @@
 
 {% block head %}
 {{ super() }}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+  .flatpickr-input { cursor: pointer; }
+  .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
+  .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
+  .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+</style>
 <style>
   .report-card {
     border: 1px solid #e7e5e4;
@@ -23,6 +30,9 @@
   .report-chart-wrap {
     position: relative;
     height: 240px;
+  }
+  .report-chart-wrap--pie {
+    height: 260px;
   }
 
   .report-empty {
@@ -74,16 +84,264 @@
     color: #fff;
   }
 
-  @media (max-width: 1100px) {
-    .report-grid-two {
-      grid-template-columns: 1fr;
-    }
+  /* Tabs */
+  .reports-tab-nav {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid #e7e5e4;
   }
+
+  .reports-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #78716c;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .reports-tab-btn:hover {
+    color: #1c1917;
+  }
+
+  .reports-tab-btn.is-active {
+    color: #d97706;
+    border-bottom-color: #d97706;
+    font-weight: 600;
+  }
+
+  .reports-tab-content {
+    display: none;
+  }
+
+  .reports-tab-content.is-active {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  /* KPI cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .kpi-card {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.2rem;
+    background: #fff;
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
+  }
+
+  .kpi-card__label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a8a29e;
+    margin-bottom: 0.4rem;
+  }
+
+  .kpi-card__value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1c1917;
+  }
+
+  .kpi-card__value--green  { color: #16a34a; }
+  .kpi-card__value--blue   { color: #2563eb; }
+  .kpi-card__value--red    { color: #dc2626; }
+  .kpi-card__value--orange { color: #d97706; }
+
+  .kpi-card__sub {
+    margin-top: 0.35rem;
+    font-size: 0.78rem;
+    color: #78716c;
+  }
+
+  /* Export blocks */
+  .export-block {
+    border: 1px solid #e7e5e4;
+    border-radius: 1.2rem;
+    background: #fff;
+    padding: 1.5rem;
+    box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
+  }
+
+  .export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 1.1rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    color: #1c1917;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    text-decoration: none;
+  }
+
+  .export-btn:hover {
+    background: #fafaf9;
+    border-color: #d6d3d1;
+  }
+
+  .export-btn--primary {
+    background: #1c1917;
+    color: #fff;
+    border-color: #1c1917;
+  }
+
+  .export-btn--primary:hover {
+    background: #292524;
+    border-color: #292524;
+  }
+
+  /* P&L expense bar */
+  .expense-bar-row {
+    margin-bottom: 1rem;
+  }
+
+  .expense-bar-row__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.35rem;
+  }
+
+  .expense-bar-track {
+    height: 6px;
+    border-radius: 9999px;
+    background: #f5f5f4;
+    overflow: hidden;
+  }
+
+  .expense-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: #d97706;
+    transition: width 0.6s ease;
+  }
+
+  /* Filter pills */
+  .reports-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    height: 2.25rem;
+    padding: 0 0.85rem;
+    border-radius: 0.75rem;
+    border: 1px solid #e7e5e4;
+    background: #fff;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #78716c;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+  }
+
+  .reports-filter-pill:hover {
+    border-color: #a8a29e;
+    color: #1c1917;
+  }
+
+  .reports-filter-pill.is-active {
+    background: #1c1917;
+    border-color: #1c1917;
+    color: #fff;
+  }
+
+  @media (max-width: 1100px) {
+    .report-grid-two { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 640px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Revenue table */
+  .revenue-table { font-size: 0.8rem; border-collapse: collapse; }
+  .revenue-table__th,
+  .revenue-table__subth,
+  .revenue-table__td {
+    padding: 0.32rem 0.6rem;
+    white-space: nowrap;
+    border-bottom: 1px solid #e7e5e4;
+    border-right: 1px dashed #e2e0de;
+  }
+  /* Header */
+  .revenue-table__th { background: #fafaf9; font-weight: 600; color: #57534e; font-size: 0.73rem; border-bottom: 2px solid #d6d3d1; text-transform: uppercase; letter-spacing: 0.04em; }
+  .revenue-table__th--month { text-align: center; }
+  .revenue-table__subth { background: #f5f5f4; font-weight: 500; color: #a8a29e; font-size: 0.7rem; border-bottom: 2px solid #d6d3d1; }
+  /* Month alternating band */
+  .revenue-table__th--band    { background: #fef3c7; }
+  .revenue-table__subth--band { background: #fde68a44; }
+  .revenue-table__td--band    { background: rgba(254,243,199,0.3); }
+  /* Totals row */
+  .revenue-table__totals-row td { background: #fef3c7; border-bottom: 3px solid #d6d3d1; }
+  .revenue-table__totals-row .revenue-table__td--band { background: #fde68a66; }
+  /* Main client row */
+  .revenue-table__row td { background: #fff; }
+  .revenue-table__row:hover td { background: #fafaf9; }
+  .revenue-table__row:hover .revenue-table__td--band { background: rgba(254,243,199,0.5); }
+  /* Continuation sub-subscription rows */
+  .revenue-table__row--cont td {
+    background: #fff;
+    border-top: none;
+    border-bottom: 1px solid #f0efee;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    color: #a8a29e;
+    font-size: 0.75rem;
+  }
+  .revenue-table__row--cont .revenue-table__td--band { background: rgba(254,243,199,0.15); }
+  .revenue-table__row--cont:hover td { background: #fafaf9; }
+  .revenue-table__row--cont .revenue-table__fixed { background: #fff; }
+  .revenue-table__row--cont:hover .revenue-table__fixed { background: #fafaf9; }
+  .revenue-table__td--indent {}
+  /* Client group separator */
+  .revenue-table__row--last td { border-bottom: 3px solid #d6d3d1 !important; }
+  /* Sticky columns */
+  .revenue-table__fixed {
+    position: sticky;
+    left: 0;
+    background: #fff;
+    z-index: 1;
+  }
+  .revenue-table__fixed:first-child { left: 0; min-width: 160px; max-width: 160px; }
+  .revenue-table__fixed:nth-child(2) { left: 160px; min-width: 70px; }
+  .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 6px rgba(0,0,0,0.07); border-right: 2px solid #d6d3d1; }
+  .revenue-table__totals-row .revenue-table__fixed { background: #fef3c7; }
+  .revenue-table__row:hover .revenue-table__fixed { background: #fafaf9; }
+  /* Month separator (solid, stronger than dotted sub-col dividers) */
+  .revenue-table__sep { border-right: 2px solid #c9c5c1 !important; }
+  /* Edit mode */
+  .rv-input { width: 70px; text-align: right; border: 1px solid #d6d3d1; border-radius: 4px; padding: 1px 4px; font-size: 0.8rem; background: #fff; }
+  .rv-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="flex flex-col gap-6">
+{% set has_range = date_from or date_to %}
+{% set range_label = (date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to) %}
+<div class="flex flex-col gap-5">
+
+  <!-- ── Header ── -->
   <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
@@ -92,422 +350,1566 @@
           Reports
         </p>
         <h1 class="mt-2 text-3xl font-semibold tracking-tight text-stone-900">Звіти</h1>
-        <p class="mt-1 text-sm text-stone-500">Актуальна аналітика джерел, сценаріїв оформлення та популярних параметрів замовлень.</p>
+        <p class="mt-1 text-sm text-stone-500">Аналітика та звітність по всіх операціях</p>
       </div>
 
-      <form method="get" class="flex items-center gap-2">
-        <label for="reports-month" class="text-sm font-medium text-stone-600">Місяць</label>
-        <input
-          id="reports-month"
-          type="month"
-          name="month"
-          value="{{ selected_month }}"
-          class="h-10 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
-        <button type="submit"
-                class="inline-flex h-10 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700">
-          Оновити
-        </button>
+      <!-- Date filter -->
+      <form method="get" id="reports-filter-form">
+        <input type="hidden" name="tab" id="filter-tab-input" value="{{ active_tab }}">
+        <input type="hidden" name="date_from" id="reports-date-from" value="{{ date_from }}">
+        <input type="hidden" name="date_to"   id="reports-date-to"   value="{{ date_to }}">
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- All time -->
+          <button type="button" id="filter-all-time"
+                  class="reports-filter-pill {% if not has_range %}is-active{% endif %}">
+            Весь час
+          </button>
+
+          <!-- Month select -->
+          <select id="filter-month-select" class="reports-filter-pill cursor-pointer">
+            <option value="">Місяць...</option>
+          </select>
+
+          <!-- Divider -->
+          <span class="text-stone-300 text-sm select-none">|</span>
+
+          <!-- Custom range picker -->
+          <div class="relative">
+            <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+            <input
+              type="text"
+              id="reports-date-picker"
+              placeholder="Свій діапазон"
+              readonly
+              class="h-9 w-40 rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+          </div>
+          <button type="submit" id="filter-submit"
+                  class="inline-flex h-9 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700 hidden">
+            Оновити
+          </button>
+        </div>
       </form>
     </div>
   </section>
 
-  <section class="report-card p-4">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <div>
-        <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
-        <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
+  <!-- ── Tab navigation ── -->
+  <div class="reports-tab-nav">
+    <button type="button" class="reports-tab-btn {% if active_tab == 'deliveries' %}is-active{% endif %}" data-tab="deliveries">
+      <i class="bi bi-bar-chart-line"></i>
+      Доставки
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'pl' %}is-active{% endif %}" data-tab="pl">
+      <i class="bi bi-graph-up-arrow"></i>
+      P&L
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'export' %}is-active{% endif %}" data-tab="export">
+      <i class="bi bi-download"></i>
+      Експорт
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
+      <i class="bi bi-cash-stack"></i>
+      Cash Flow
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'revenue' %}is-active{% endif %}" data-tab="revenue">
+      <i class="bi bi-people"></i>
+      Баланс клієнтів
+    </button>
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       TAB: DELIVERIES
+  ════════════════════════════════════════════ -->
+  <div id="tab-deliveries" class="reports-tab-content {% if active_tab == 'deliveries' %}is-active{% endif %}">
+
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Всього доставок</div>
+        <div class="kpi-card__value">{{ deliveries.total }}</div>
+        {% if deliveries.total_change_pct is not none %}
+          {% if deliveries.total_change_pct >= 0 %}
+            <div class="kpi-card__sub" style="color:#16a34a">+{{ deliveries.total_change_pct }}% від попереднього періоду</div>
+          {% else %}
+            <div class="kpi-card__sub" style="color:#dc2626">{{ deliveries.total_change_pct }}% від попереднього періоду</div>
+          {% endif %}
+        {% else %}
+          <div class="kpi-card__sub">За весь час</div>
+        {% endif %}
       </div>
-      <div class="flex items-center gap-2">
-        <span class="report-kpi">Замовлень: {{ monthly_orders_total }}</span>
-        <span class="report-kpi">Підписок: {{ monthly_subscriptions_total }}</span>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Завершені</div>
+        <div class="kpi-card__value kpi-card__value--green">{{ deliveries.completed }}</div>
+        <div class="kpi-card__sub">{{ deliveries.completed_pct }}% успішність</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">В процесі</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ deliveries.in_progress }}</div>
+        <div class="kpi-card__sub">{{ deliveries.in_progress_pct }}% від загальної</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Скасовані</div>
+        <div class="kpi-card__value kpi-card__value--red">{{ deliveries.cancelled }}</div>
+        <div class="kpi-card__sub">{{ deliveries.cancelled_pct }}% від загальної</div>
       </div>
     </div>
-    {% if monthly_orders_trend_chart['labels'] %}
-    <div class="report-line-wrap"><canvas id="monthlyOrdersTrendChart"></canvas></div>
-    {% else %}
-    <div class="report-empty">Поки немає даних для помісячної динаміки</div>
+
+    <!-- Dynamics + City charts -->
+    <div class="report-grid-two">
+      <article class="report-card p-4">
+        <div class="mb-3">
+          <h2 class="text-lg font-semibold text-stone-900">Динаміка доставок</h2>
+          <p class="text-sm text-stone-500">Заплановані та виконані доставки</p>
+        </div>
+        {% if deliveries.dynamics_chart['labels'] %}
+        <div class="report-line-wrap"><canvas id="deliveriesDynamicsChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних для графіка динаміки</div>
+        {% endif %}
+      </article>
+
+      <article class="report-card p-4">
+        <div class="mb-3">
+          <h2 class="text-lg font-semibold text-stone-900">Розподіл по містах</h2>
+          <p class="text-sm text-stone-500">Кількість доставок по містах</p>
+        </div>
+        {% if deliveries.city_chart['labels'] %}
+        <div class="report-chart-wrap"><canvas id="deliveriesCityChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних по містах</div>
+        {% endif %}
+      </article>
+    </div>
+
+    <!-- Order / subscription trend (always last 365 days) -->
+    <section class="report-card p-4">
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
+          <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="report-kpi">Разових: {{ orders.monthly_orders_total }}</span>
+          <span class="report-kpi">Підписок: {{ orders.monthly_subscriptions_total }}</span>
+        </div>
+      </div>
+      {% if orders.monthly_orders_trend_chart['labels'] %}
+      <div class="report-line-wrap"><canvas id="monthlyOrdersTrendChart"></canvas></div>
+      {% else %}
+      <div class="report-empty">Поки немає даних для помісячної динаміки</div>
+      {% endif %}
+    </section>
+
+    <section class="report-grid-two">
+      <article class="report-card p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-900">Звідки дізнались</h2>
+            <p id="marketing-period" class="text-sm text-stone-500">За весь час</p>
+          </div>
+          <div class="flex items-center gap-2">
+            {% if has_range %}
+            <div class="report-switch" id="marketing-switch">
+              <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
+              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
+            </div>
+            {% endif %}
+            <span id="marketing-total" class="report-kpi">Всього: {{ orders.marketing_all_total }}</span>
+          </div>
+        </div>
+        {% if orders.marketing_all_chart['labels'] or orders.marketing_range_chart['labels'] %}
+        <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних для графіка</div>
+        {% endif %}
+      </article>
+
+      <article class="report-card p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-900">Хто кому купує</h2>
+            <p id="for-whom-period" class="text-sm text-stone-500">За весь час</p>
+          </div>
+          <div class="flex items-center gap-2">
+            {% if has_range %}
+            <div class="report-switch" id="for-whom-switch">
+              <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
+              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
+            </div>
+            {% endif %}
+            <span id="for-whom-total" class="report-kpi">Всього: {{ orders.for_whom_all_total }}</span>
+          </div>
+        </div>
+        {% if orders.for_whom_all_chart['labels'] or orders.for_whom_range_chart['labels'] %}
+        <div class="report-chart-wrap report-chart-wrap--pie"><canvas id="forWhomChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних по полю "Для кого"</div>
+        {% endif %}
+      </article>
+    </section>
+
+    <section class="report-grid-two">
+      <article class="report-card p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-900">Співвідношення типів підписок</h2>
+            <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші</p>
+          </div>
+          <span class="report-kpi">Всього: {{ orders.delivery_type_total }}</span>
+        </div>
+        {% if orders.delivery_type_chart['labels'] %}
+        <div class="report-chart-wrap"><canvas id="deliveryTypeChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних по типах замовлень</div>
+        {% endif %}
+      </article>
+
+      <article class="report-card p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-semibold text-stone-900">Співвідношення розмірів</h2>
+            <p class="text-sm text-stone-500">L, XL, XXL та інші</p>
+          </div>
+          <span class="report-kpi">Всього: {{ orders.size_total }}</span>
+        </div>
+        {% if orders.size_chart['labels'] %}
+        <div class="report-chart-wrap"><canvas id="sizeChart"></canvas></div>
+        {% else %}
+        <div class="report-empty">Немає даних по розмірах</div>
+        {% endif %}
+      </article>
+    </section>
+
+    <!-- Florist sales -->
+    <section class="report-card p-4">
+      <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-stone-900">Продажі флориста</h2>
+          <p class="text-sm text-stone-500">Офлайн продажі{% if range_label %} за {{ range_label }}{% endif %}. Бонус — 5% від суми.</p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="report-kpi">Продажів: {{ florist.grand_count }}</span>
+          <span class="report-kpi">Сума: {{ "%.2f"|format(florist.grand_total) }} ₴</span>
+          <span class="report-kpi text-amber-700">Бонус: {{ "%.2f"|format(florist.grand_bonus) }} ₴</span>
+        </div>
+      </div>
+      {% if florist.rows %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="border-b border-stone-200 bg-stone-50">
+            <tr>
+              <th class="px-3 py-2 text-left font-semibold text-stone-600">Флорист</th>
+              <th class="px-3 py-2 text-right font-semibold text-stone-600">Кількість</th>
+              <th class="px-3 py-2 text-right font-semibold text-stone-600">Загальна сума</th>
+              <th class="px-3 py-2 text-right font-semibold text-stone-600">Бонус (5%)</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-stone-100">
+            {% for row in florist.rows %}
+            <tr class="hover:bg-stone-50 transition-colors">
+              <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
+              <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
+              <td class="px-3 py-2 text-right font-semibold text-stone-900">{{ "%.2f"|format(row.total_amount) }} ₴</td>
+              <td class="px-3 py-2 text-right font-semibold text-amber-700">{{ "%.2f"|format(row.total_bonus) }} ₴</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="report-empty">Немає продажів{% if range_label %} за {{ range_label }}{% endif %}</div>
+      {% endif %}
+    </section>
+
+  </div>{# /tab-deliveries #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: P&L
+  ════════════════════════════════════════════ -->
+  <div id="tab-pl" class="reports-tab-content {% if active_tab == 'pl' %}is-active{% endif %}">
+
+    <!-- Main KPI cards -->
+    <div class="kpi-grid">
+      {% if pl.revenue_breakdown %}
+      <button type="button" id="revenue-breakdown-toggle"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              aria-expanded="false">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Revenue</div>
+          <i id="revenue-breakdown-icon" class="bi bi-chevron-down text-stone-400 text-sm mt-0.5 transition-transform duration-200 flex-shrink-0"></i>
+        </div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити розбивку</div>
+      </button>
+      {% else %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Revenue</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Списання з клієнтів за доставки</div>
+      </div>
+      {% endif %}
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Загальний прихід</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(pl.total_income).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Всі кредитні транзакції</div>
+      </div>
+
+      {% if pl.expense_breakdown %}
+      <button type="button" id="expense-breakdown-toggle"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              aria-expanded="false">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Витрати</div>
+          <i id="expense-breakdown-icon" class="bi bi-chevron-down text-stone-400 text-sm mt-0.5 transition-transform duration-200 flex-shrink-0"></i>
+        </div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити розбивку</div>
+      </button>
+      {% else %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Витрати</div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Всі витрати</div>
+      </div>
+      {% endif %}
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Profit</div>
+        <div class="kpi-card__value {% if pl.profit >= 0 %}kpi-card__value--orange{% else %}kpi-card__value--red{% endif %}">
+          ₴{{ "{:,}".format(pl.profit).replace(",", " ") }}
+        </div>
+        <div class="kpi-card__sub">Revenue − Витрати</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Profit %</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ pl.margin }}%</div>
+        <div class="kpi-card__sub">Рентабельність</div>
+      </div>
+    </div>
+
+    <!-- Revenue breakdown (expandable, triggered from Revenue KPI card) -->
+    {% if pl.revenue_breakdown %}
+    <div id="revenue-breakdown-body" class="report-card p-5 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-stone-900">Розбивка Revenue</h2>
+        <span class="text-sm text-stone-400">₴{{ "{:,}".format(pl.revenue).replace(",", " ") }}</span>
+      </div>
+      {% for item in pl.revenue_breakdown %}
+        {% if item.is_separator %}
+        <div class="flex items-center gap-2 mt-4 mb-2">
+          <span class="text-xs font-semibold text-stone-400 uppercase tracking-wide">{{ item.label }}</span>
+          <div class="flex-1 border-t border-stone-100"></div>
+        </div>
+        {% else %}
+        <div class="expense-bar-row">
+          <div class="expense-bar-row__header">
+            <span class="text-sm font-medium text-stone-700">{{ item.label }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+              <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
+            </div>
+          </div>
+          <div class="expense-bar-track">
+            <div class="expense-bar-fill bg-emerald-200" style="width: {{ item.pct }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
     {% endif %}
-  </section>
 
-  <section class="report-grid-two">
-    <article class="report-card p-4">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 class="text-lg font-semibold text-stone-900">Звідки дізнались</h2>
-          <p id="marketing-period" class="text-sm text-stone-500">За весь час</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="report-switch" id="marketing-switch">
-            <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-            <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+    <!-- Expense breakdown (expandable, triggered from Expenses KPI card) -->
+    {% if pl.expense_breakdown %}
+    <div id="expense-breakdown-body" class="report-card p-5 hidden">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-stone-900">Розбивка витрат</h2>
+        <span class="text-sm text-stone-400">{{ pl.expense_breakdown|length }} рядків</span>
+      </div>
+      {% for item in pl.expense_breakdown %}
+      <div class="expense-bar-row">
+        {% if item.is_group and item.children %}
+        <button type="button"
+          class="expense-bar-row__header w-full text-left group"
+          onclick="toggleExpenseGroup(this)">
+          <div class="flex items-center gap-1.5">
+            <i class="bi bi-chevron-right text-stone-400 text-xs transition-transform duration-200 expense-group-icon"></i>
+            <span class="text-sm font-semibold text-stone-800">{{ item.label }}</span>
           </div>
-          <span id="marketing-total" class="report-kpi">Всього: {{ marketing_all_total }}</span>
-        </div>
-      </div>
-
-      {% if marketing_all_chart['labels'] or marketing_month_chart['labels'] %}
-      <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
-      {% else %}
-      <div class="report-empty">Немає даних для графіка</div>
-      {% endif %}
-    </article>
-
-    <article class="report-card p-4">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 class="text-lg font-semibold text-stone-900">Хто кому купує</h2>
-          <p id="for-whom-period" class="text-sm text-stone-500">За весь час</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="report-switch" id="for-whom-switch">
-            <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-            <button type="button" class="report-switch-btn" data-mode="month">Місяць</button>
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+            <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
           </div>
-          <span id="for-whom-total" class="report-kpi">Всього: {{ for_whom_all_total }}</span>
+        </button>
+        {% else %}
+        <div class="expense-bar-row__header">
+          <span class="text-sm font-medium text-stone-600 pl-5">{{ item.label }}</span>
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold text-stone-900">₴{{ "{:,}".format(item.amount).replace(",", " ") }}</span>
+            <span class="text-sm text-stone-400 w-10 text-right">{{ item.pct }}%</span>
+          </div>
         </div>
-      </div>
-
-      {% if for_whom_all_chart['labels'] or for_whom_month_chart['labels'] %}
-      <div class="report-chart-wrap"><canvas id="forWhomChart"></canvas></div>
-      {% else %}
-      <div class="report-empty">Немає даних по полю “Для кого”</div>
-      {% endif %}
-    </article>
-  </section>
-
-  <section class="report-grid-two">
-    <article class="report-card p-4">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 class="text-lg font-semibold text-stone-900">Співвідношення типів підписок</h2>
-          <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші</p>
+        {% endif %}
+        <div class="expense-bar-track">
+          <div class="expense-bar-fill" style="width: {{ item.pct }}%"></div>
         </div>
-        <span class="report-kpi">Всього: {{ delivery_type_total }}</span>
-      </div>
-
-      {% if delivery_type_chart['labels'] %}
-      <div class="report-chart-wrap"><canvas id="deliveryTypeChart"></canvas></div>
-      {% else %}
-      <div class="report-empty">Немає даних по типах замовлень</div>
-      {% endif %}
-    </article>
-
-    <article class="report-card p-4">
-      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 class="text-lg font-semibold text-stone-900">Співвідношення розмірів</h2>
-          <p class="text-sm text-stone-500">L, XL, XXL та інші</p>
-        </div>
-        <span class="report-kpi">Всього: {{ size_total }}</span>
-      </div>
-
-      {% if size_chart['labels'] %}
-      <div class="report-chart-wrap"><canvas id="sizeChart"></canvas></div>
-      {% else %}
-      <div class="report-empty">Немає даних по розмірах</div>
-      {% endif %}
-    </article>
-  </section>
-
-  <!-- Florist sales section -->
-  <section class="report-card p-4">
-    <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h2 class="text-lg font-semibold text-stone-900">Продажі флориста</h2>
-        <p class="text-sm text-stone-500">Офлайн продажі за {{ selected_month_label }}. Бонус — 5% від суми.</p>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <span class="report-kpi">Продажів: {{ florist_sales_grand_count }}</span>
-        <span class="report-kpi">Сума: {{ "%.2f"|format(florist_sales_grand_total) }} ₴</span>
-        <span class="report-kpi text-amber-700">Бонус: {{ "%.2f"|format(florist_sales_grand_bonus) }} ₴</span>
-      </div>
-    </div>
-
-    {% if florist_sales_rows %}
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="border-b border-stone-200 bg-stone-50">
-          <tr>
-            <th class="px-3 py-2 text-left font-semibold text-stone-600">Флорист</th>
-            <th class="px-3 py-2 text-right font-semibold text-stone-600">Кількість</th>
-            <th class="px-3 py-2 text-right font-semibold text-stone-600">Загальна сума</th>
-            <th class="px-3 py-2 text-right font-semibold text-stone-600">Бонус (5%)</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-stone-100">
-          {% for row in florist_sales_rows %}
-          <tr class="hover:bg-stone-50 transition-colors">
-            <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
-            <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
-            <td class="px-3 py-2 text-right font-semibold text-stone-900">{{ "%.2f"|format(row.total_amount) }} ₴</td>
-            <td class="px-3 py-2 text-right font-semibold text-amber-700">{{ "%.2f"|format(row.total_bonus) }} ₴</td>
-          </tr>
+        {% if item.is_group and item.children %}
+        <div class="expense-group-children hidden pl-5 mt-1 space-y-1">
+          {% for child in item.children %}
+          <div class="flex items-center justify-between py-1 border-t border-stone-100">
+            <span class="text-sm text-stone-500">{{ child.label }}</span>
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-stone-700">₴{{ "{:,}".format(child.amount).replace(",", " ") }}</span>
+              <span class="text-xs text-stone-400 w-10 text-right">{{ child.pct }}%</span>
+            </div>
+          </div>
           {% endfor %}
-        </tbody>
-      </table>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
     </div>
-    {% else %}
-    <div class="report-empty">Немає продажів за {{ selected_month_label }}</div>
     {% endif %}
-  </section>
 
-</div>
+    <!-- Bottom stats -->
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Кількість доставок</div>
+        <div class="kpi-card__value">{{ pl.delivery_count }}</div>
+        <div class="kpi-card__sub">Без скасованих ({{ deliveries.cancelled }} скасовано)</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Продовження підписок</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ subscriptions.renewal_rate }}%</div>
+        <div class="kpi-card__sub">{{ subscriptions.renewed_count }} / {{ subscriptions.expired_count }}{% if subscriptions.declined_count %} • {{ subscriptions.declined_count }} відмов{% endif %}</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Revenue на 1 доставку</div>
+        <div class="kpi-card__value kpi-card__value--orange">
+          ₴{{ "{:,}".format(pl.revenue_per_delivery).replace(",", " ") }}
+        </div>
+        <div class="kpi-card__sub">Дохід / {{ pl.delivery_count }} доставок</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Вартість 1 доставки</div>
+        <div class="kpi-card__value">
+          ₴{{ (pl.delivery_expenses // pl.delivery_count) if pl.delivery_count else 0 }}
+        </div>
+        <div class="kpi-card__sub">Витрати на доставку / кількість</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Вартість квітів на 1 доставку</div>
+        <div class="kpi-card__value">
+          ₴{{ "{:,}".format(pl.flowers_per_delivery).replace(",", " ") }}
+        </div>
+        <div class="kpi-card__sub">Квіти / {{ pl.delivery_count }} доставок</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Квіти % від доходу</div>
+        <div class="kpi-card__value">
+          {{ (pl.flowers_expenses / pl.revenue * 100) | round(1) if pl.revenue else 0 }}%
+        </div>
+        <div class="kpi-card__sub">₴{{ "{:,}".format(pl.flowers_expenses).replace(",", " ") }} витрат на квіти</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Витрати на ЗП</div>
+        <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.salary_expenses).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ (pl.salary_expenses / pl.expenses * 100) | round(1) if pl.expenses else 0 }}% від загальних витрат</div>
+      </div>
+
+    </div>
+
+  </div>{# /tab-pl #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: EXPORT
+  ════════════════════════════════════════════ -->
+  <div id="tab-export" class="reports-tab-content {% if active_tab == 'export' %}is-active{% endif %}">
+
+    <p class="text-sm text-stone-500">Оберіть діапазон дат та завантажте дані у потрібному форматі. Якщо дати не вказані — експортується весь доступний архів.</p>
+
+    <!-- Orders export -->
+    <div class="export-block">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <i class="bi bi-box-seam text-amber-600"></i>
+            <h2 class="text-base font-semibold text-stone-900">Замовлення</h2>
+          </div>
+          <p class="text-sm text-stone-500">ID, клієнт, адреса, розмір, дата, статус, кур'єр, коментарі</p>
+        </div>
+
+        <div class="flex flex-col gap-3 w-full sm:w-auto">
+          <div class="flex items-center gap-2 flex-wrap">
+            <input type="hidden" id="export-orders-from" value="{{ date_from }}">
+            <input type="hidden" id="export-orders-to"   value="{{ date_to }}">
+            <div class="relative">
+              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
+              <input type="text" id="export-orders-picker" placeholder="Весь період" readonly
+                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a id="export-orders-csv" href="#" class="export-btn export-btn--primary">
+              <i class="bi bi-filetype-csv"></i>
+              CSV
+            </a>
+            <a id="export-orders-xlsx" href="#" class="export-btn">
+              <i class="bi bi-file-earmark-spreadsheet"></i>
+              Excel
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions export -->
+    <div class="export-block">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <div class="flex items-center gap-2 mb-1">
+            <i class="bi bi-arrow-left-right text-amber-600"></i>
+            <h2 class="text-base font-semibold text-stone-900">Транзакції</h2>
+          </div>
+          <p class="text-sm text-stone-500">Дата, тип, клієнт, сума, спосіб оплати, тип витрати, коментар</p>
+        </div>
+
+        <div class="flex flex-col gap-3 w-full sm:w-auto">
+          <div class="flex items-center gap-2 flex-wrap">
+            <input type="hidden" id="export-tx-from" value="{{ date_from }}">
+            <input type="hidden" id="export-tx-to"   value="{{ date_to }}">
+            <div class="relative">
+              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
+              <input type="text" id="export-tx-picker" placeholder="Весь період" readonly
+                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <a id="export-tx-csv" href="#" class="export-btn export-btn--primary">
+              <i class="bi bi-filetype-csv"></i>
+              CSV
+            </a>
+            <a id="export-tx-xlsx" href="#" class="export-btn">
+              <i class="bi bi-file-earmark-spreadsheet"></i>
+              Excel
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>{# /tab-export #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: CASH FLOW
+  ════════════════════════════════════════════ -->
+  <div id="tab-cash_flow" class="reports-tab-content {% if active_tab == 'cash_flow' %}is-active{% endif %}">
+
+    <!-- KPI cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Надходження</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(cash_flow.total).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ cash_flow.period_label }}</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Порівняння</div>
+        <div class="kpi-card__value">₴{{ "{:,}".format(cash_flow.prev_total).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ cash_flow.comparison_label }}</div>
+      </div>
+
+      {% if cash_flow.comparison_pct is not none %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Динаміка</div>
+        <div class="kpi-card__value {% if cash_flow.comparison_pct >= 100 %}kpi-card__value--green{% else %}kpi-card__value--red{% endif %}">
+          {% if cash_flow.comparison_pct >= 100 %}+{% endif %}{{ "%.1f"|format(cash_flow.comparison_pct - 100) }}%
+        </div>
+        <div class="kpi-card__sub">{{ cash_flow.comparison_label }}</div>
+        <!-- Comparison bar -->
+        <div class="mt-3">
+          {% set bar_pct = [cash_flow.comparison_pct, 100] | min %}
+          {% set bar_color = '#10b981' if cash_flow.comparison_pct >= 100 else '#f87171' %}
+          <div class="relative h-7 rounded-lg overflow-hidden bg-stone-100">
+            <div class="absolute top-0 left-0 bottom-0"
+                 style="width: {{ bar_pct }}%; background: {{ bar_color }};"></div>
+            <span class="absolute top-0 left-0 right-0 bottom-0 flex items-center px-3 text-xs font-bold"
+                  style="color: {% if bar_pct >= 40 %}#fff{% else %}#57534e{% endif %};">
+              {{ "%.1f"|format(cash_flow.comparison_pct) }}% від попереднього
+            </span>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Динаміка</div>
+        <div class="kpi-card__value text-stone-400">—</div>
+        <div class="kpi-card__sub">Немає даних для порівняння</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Chart -->
+    <div class="report-card p-5">
+      <div class="flex items-center justify-between gap-2 mb-4">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:#d4c97a"></span>
+          <span class="text-sm font-medium text-stone-700">
+            {% if cash_flow.mode == 'monthly' %}Місячні надходження — Весь час{% else %}Щоденні надходження — {{ cash_flow.period_label }}{% endif %}
+          </span>
+        </div>
+        {% if cash_flow.mode == 'daily' %}
+        <a href="?tab=cash_flow"
+           class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900">
+          <i class="bi bi-arrow-left text-xs"></i>
+          Весь час
+        </a>
+        {% endif %}
+      </div>
+      <div class="relative" style="height: 300px;">
+        <canvas id="cashFlowChart"></canvas>
+      </div>
+    </div>
+
+  </div>{# /tab-cash_flow #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: REVENUE — per-client monthly balance
+  ════════════════════════════════════════════ -->
+  <div id="tab-revenue" class="reports-tab-content {% if active_tab == 'revenue' %}is-active{% endif %}">
+
+    <div class="report-card p-4">
+      <!-- Header + controls -->
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
+          <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець</p>
+        </div>
+        {% if revenue.rows %}
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Search -->
+          <div class="relative">
+            <i class="bi bi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
+            <input
+              id="revenue-search"
+              type="text"
+              placeholder="Пошук клієнта…"
+              autocomplete="off"
+              class="h-8 w-48 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+          </div>
+          <!-- Active-only toggle -->
+          <button id="revenue-active-toggle"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
+                  data-active="0">
+            <i class="bi bi-funnel text-xs"></i>
+            Тільки активні
+          </button>
+          <!-- Visible count -->
+          <span id="revenue-count" class="text-xs text-stone-400"></span>
+          <!-- Edit mode buttons -->
+          <button id="revenue-edit-btn"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-700 transition-colors hover:border-amber-400 hover:text-stone-900">
+            <i class="bi bi-pencil text-xs"></i> Редагувати
+          </button>
+          <button id="revenue-save-btn"
+                  class="hidden inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-900 bg-stone-900 px-3 text-sm text-white transition-colors hover:bg-stone-700">
+            <i class="bi bi-check-lg text-xs"></i> Зберегти
+          </button>
+          <button id="revenue-cancel-btn"
+                  class="hidden inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-stone-400">
+            Скасувати
+          </button>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if revenue.rows %}
+      <div class="overflow-x-auto">
+        <table class="revenue-table w-full text-sm border-collapse">
+          <thead>
+            {# Month header row #}
+            <tr class="revenue-table__head-row">
+              <th class="revenue-table__fixed revenue-table__th text-left">Клієнт</th>
+              <th class="revenue-table__fixed revenue-table__th text-center" style="left:160px">Тип</th>
+              <th class="revenue-table__fixed revenue-table__th text-center" style="left:230px">Розмір</th>
+              {% for mo in revenue.months %}
+              {% set bnd = 'revenue-table__th--band' if loop.index0 % 2 == 1 else '' %}
+              <th class="revenue-table__th revenue-table__th--month {{ bnd }}" colspan="4">{{ mo.strftime('%m.%Y') }}</th>
+              {% endfor %}
+            </tr>
+            {# Sub-column labels #}
+            <tr class="revenue-table__subhead-row">
+              <th class="revenue-table__fixed revenue-table__subth" colspan="3"></th>
+              {% for mo in revenue.months %}
+              {% set bnd = 'revenue-table__subth--band' if loop.index0 % 2 == 1 else '' %}
+              <th class="revenue-table__subth text-right {{ bnd }}">Поч.</th>
+              <th class="revenue-table__subth text-right {{ bnd }}">Нар.</th>
+              <th class="revenue-table__subth text-right {{ bnd }}">Опл.</th>
+              <th class="revenue-table__subth revenue-table__sep text-right {{ bnd }}">Кін.</th>
+              {% endfor %}
+            </tr>
+            {# Totals row #}
+            <tr class="revenue-table__totals-row">
+              <td class="revenue-table__fixed revenue-table__td font-semibold text-stone-700" colspan="3">Разом</td>
+              {% for mo in revenue.months %}
+              {% set t = revenue.totals[mo] %}
+              {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
+              <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
+              <td class="revenue-table__td {{ bnd }} text-right font-bold text-stone-800">{% if t.charged %}{{ t.charged }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td {{ bnd }} text-right font-semibold text-stone-700">{% if t.paid %}{{ t.paid }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in revenue.rows %}
+            <tr class="revenue-table__row {% if not row.is_first_for_client %}revenue-table__row--cont{% endif %} {% if row.is_last_for_client %}revenue-table__row--last{% endif %}"
+                data-client="{{ row.client.display_name | lower }}"
+                data-any-activity="{{ '1' if row.any_activity else '0' }}">
+
+              {# ── Fixed left columns ── #}
+              {% if row.is_first_for_client %}
+              <td class="revenue-table__fixed revenue-table__td font-medium text-stone-800 truncate" title="{{ row.client.display_name }}">{{ row.client.display_name }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:160px">{{ row.subscription_type or '—' }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:230px">{{ row.size }}</td>
+              {% else %}
+              <td class="revenue-table__fixed revenue-table__td"></td>
+              <td class="revenue-table__fixed revenue-table__td text-center" style="left:160px">{{ row.subscription_type }}</td>
+              <td class="revenue-table__fixed revenue-table__td text-center" style="left:230px">{{ row.size }}</td>
+              {% endif %}
+
+              {# ── Month columns ── #}
+              {% for mo in revenue.months %}
+              {% set md = row.months[mo] %}
+              {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
+
+              {# Поч — client balance at start of month, only on first row #}
+              {% if md.balance_start is not none %}
+                {% if md.balance_start > 0 %}
+                <td class="revenue-table__td {{ bnd }} text-right text-emerald-600 text-xs">{{ md.balance_start }}</td>
+                {% elif md.balance_start < 0 %}
+                <td class="revenue-table__td {{ bnd }} text-right text-red-400 text-xs">{{ md.balance_start }}</td>
+                {% else %}
+                <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
+                {% endif %}
+              {% else %}
+              <td class="revenue-table__td {{ bnd }}"></td>
+              {% endif %}
+
+              {# Нар — per subscription charge #}
+              <td class="revenue-table__td {{ bnd }} text-right rv-editable"
+                  data-type="charged"
+                  data-val="{{ md.charged or 0 }}"
+                  data-client="{{ row.client.id }}"
+                  data-sub="{{ row.subscription_id if row.subscription_id else '' }}"
+                  data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                <span class="rv-display">
+                  {% if md.charged %}
+                    <span class="font-semibold text-stone-800">{{ md.charged }}</span>
+                  {% else %}
+                    <span class="text-stone-300">0</span>
+                  {% endif %}
+                </span>
+                <input class="rv-input hidden" type="number" min="0" value="{{ md.charged or 0 }}">
+              </td>
+
+              {# Опл — client-level, only on first row #}
+              {% if md.paid is not none %}
+                <td class="revenue-table__td {{ bnd }} text-right text-stone-600 rv-editable"
+                    data-type="paid"
+                    data-val="{{ md.paid or 0 }}"
+                    data-client="{{ row.client.id }}"
+                    data-sub=""
+                    data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                  <span class="rv-display">
+                    {% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}
+                  </span>
+                  <input class="rv-input hidden" type="number" min="0" value="{{ md.paid or 0 }}">
+                </td>
+              {% else %}
+              <td class="revenue-table__td {{ bnd }}"></td>
+              {% endif %}
+
+              {# Кін — client balance at end of month, only on first row #}
+              {% if md.balance_end is not none %}
+                {% if md.balance_end > 0 %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
+                {% elif md.balance_end < 0 %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
+                {% else %}
+                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+                {% endif %}
+              {% else %}
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep"></td>
+              {% endif %}
+
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p id="revenue-no-results" class="hidden mt-4 text-center text-sm text-stone-400">Нічого не знайдено</p>
+      {% else %}
+      <div class="report-empty">Немає клієнтів з підписками</div>
+      {% endif %}
+    </div>
+
+  </div>{# /tab-revenue #}
+
+</div>{# /flex #}
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/uk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    function createBarChart(canvasId, labels, values, color) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas || !labels || !labels.length) return;
+document.addEventListener('DOMContentLoaded', function () {
 
-      const ctx = canvas.getContext('2d');
-      new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            data: values,
-            backgroundColor: color,
-            borderRadius: 8,
-            borderSkipped: false,
-            maxBarThickness: 46
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#1c1917',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              displayColors: false
-            }
-          },
-          scales: {
-            x: {
-              ticks: {
-                color: '#78716c',
-                font: { size: 11 }
-              },
-              grid: { display: false }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                color: '#a8a29e',
-                font: { size: 11 }
-              },
-              grid: {
-                color: '#f1f5f9'
-              }
-            }
-          }
-        }
-      });
+  // ── Tab switching ──────────────────────────────────
+  const tabBtns = document.querySelectorAll('.reports-tab-btn');
+  const tabPanes = document.querySelectorAll('.reports-tab-content');
+  const filterTabInput = document.getElementById('filter-tab-input');
+
+  // Auto-navigate to current month when cash_flow tab opens without dates
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tab') === 'cash_flow' && !params.get('date_from') && !params.get('date_to') && !params.get('all')) {
+      const today = new Date();
+      const yyyy  = today.getFullYear();
+      const mm    = String(today.getMonth() + 1).padStart(2, '0');
+      const dd    = String(today.getDate()).padStart(2, '0');
+      params.set('date_from', yyyy + '-' + mm + '-01');
+      params.set('date_to',   yyyy + '-' + mm + '-' + dd);
+      window.location.replace('/reports?' + params.toString());
     }
+  })();
 
-    function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas || !labels || !labels.length) return;
+  tabBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const target = btn.dataset.tab;
+      const fromEl = document.getElementById('reports-date-from');
+      const toEl   = document.getElementById('reports-date-to');
 
-      const ctx = canvas.getContext('2d');
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Нові замовлення',
-              data: ordersValues,
-              borderColor: 'rgba(17, 24, 39, 0.88)',
-              backgroundColor: 'rgba(17, 24, 39, 0.12)',
-              pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              borderWidth: 2,
-              tension: 0.28,
-              fill: false,
-            },
-            {
-              label: 'Нові підписки',
-              data: subscriptionsValues,
-              borderColor: 'rgba(16, 185, 129, 0.9)',
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
-              pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
-              pointRadius: 3,
-              pointHoverRadius: 5,
-              borderWidth: 2,
-              tension: 0.28,
-              fill: false,
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-              labels: {
-                color: '#57534e',
-                boxWidth: 12,
-                usePointStyle: true,
-              }
-            },
-            tooltip: {
-              backgroundColor: '#1c1917',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-            }
-          },
-          scales: {
-            x: {
-              ticks: {
-                color: '#78716c',
-                maxRotation: 40,
-                minRotation: 0,
-                font: { size: 11 }
-              },
-              grid: { display: false }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                color: '#a8a29e',
-                font: { size: 11 }
-              },
-              grid: { color: '#f1f5f9' }
-            }
-          }
-        }
-      });
-    }
-
-    function createSwitchableChart(canvasId, datasets, color) {
-      const canvas = document.getElementById(canvasId);
-      if (!canvas) return null;
-      const ctx = canvas.getContext('2d');
-      const initial = datasets.all;
-      return new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: initial.labels,
-          datasets: [{
-            data: initial.values,
-            backgroundColor: color,
-            borderRadius: 8,
-            borderSkipped: false,
-            maxBarThickness: 46
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#1c1917',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              displayColors: false
-            }
-          },
-          scales: {
-            x: {
-              ticks: {
-                color: '#78716c',
-                font: { size: 11 }
-              },
-              grid: { display: false }
-            },
-            y: {
-              beginAtZero: true,
-              ticks: {
-                precision: 0,
-                color: '#a8a29e',
-                font: { size: 11 }
-              },
-              grid: { color: '#f1f5f9' }
-            }
-          }
-        }
-      });
-    }
-
-    function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets) {
-      const wrap = document.getElementById(buttonWrapId);
-      if (!wrap || !chart) return;
-      const period = document.getElementById(periodLabelId);
-      const total = document.getElementById(totalLabelId);
-      const buttons = Array.from(wrap.querySelectorAll('.report-switch-btn'));
-      const monthTitle = 'За {{ selected_month_label }}';
-
-      function applyMode(mode) {
-        const data = mode === 'month' ? datasets.month : datasets.all;
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.values;
-        chart.update();
-
-        if (period) period.textContent = mode === 'month' ? monthTitle : 'За весь час';
-        if (total) total.textContent = `Всього: ${data.total}`;
-        buttons.forEach((btn) => btn.classList.toggle('is-active', btn.dataset.mode === mode));
+      if (target === 'cash_flow' && (!fromEl || !fromEl.value) && (!toEl || !toEl.value)) {
+        const today = new Date();
+        const yyyy  = today.getFullYear();
+        const mm    = String(today.getMonth() + 1).padStart(2, '0');
+        const dd    = String(today.getDate()).padStart(2, '0');
+        const url   = new URL(window.location.href);
+        url.searchParams.set('tab', 'cash_flow');
+        url.searchParams.set('date_from', yyyy + '-' + mm + '-01');
+        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + dd);
+        window.location.href = url.toString();
+        return;
       }
 
-      buttons.forEach((btn) => {
-        btn.addEventListener('click', () => applyMode(btn.dataset.mode));
-      });
-    }
-
-    const marketingDatasets = {
-      all: {
-        labels: {{ marketing_all_chart['labels']|tojson }},
-        values: {{ marketing_all_chart['values']|tojson }},
-        total: {{ marketing_all_total|tojson }}
-      },
-      month: {
-        labels: {{ marketing_month_chart['labels']|tojson }},
-        values: {{ marketing_month_chart['values']|tojson }},
-        total: {{ marketing_month_total|tojson }}
-      }
-    };
-
-    const forWhomDatasets = {
-      all: {
-        labels: {{ for_whom_all_chart['labels']|tojson }},
-        values: {{ for_whom_all_chart['values']|tojson }},
-        total: {{ for_whom_all_total|tojson }}
-      },
-      month: {
-        labels: {{ for_whom_month_chart['labels']|tojson }},
-        values: {{ for_whom_month_chart['values']|tojson }},
-        total: {{ for_whom_month_total|tojson }}
-      }
-    };
-
-    const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
-    const forWhomChart = createSwitchableChart('forWhomChart', forWhomDatasets, 'rgba(59, 130, 246, 0.72)');
-
-    bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets);
-    bindSwitch('for-whom-switch', 'for-whom-period', 'for-whom-total', forWhomChart, forWhomDatasets);
-
-    createLineTrendChart(
-      'monthlyOrdersTrendChart',
-      {{ monthly_orders_trend_chart['labels']|tojson }},
-      {{ monthly_orders_trend_chart['orders_values']|tojson }},
-      {{ monthly_orders_trend_chart['subscriptions_values']|tojson }}
-    );
-
-    createBarChart('deliveryTypeChart', {{ delivery_type_chart['labels']|tojson }}, {{ delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
-    createBarChart('sizeChart', {{ size_chart['labels']|tojson }}, {{ size_chart['values']|tojson }}, 'rgba(139, 92, 246, 0.72)');
+      tabBtns.forEach(function (b) { b.classList.remove('is-active'); });
+      tabPanes.forEach(function (p) { p.classList.remove('is-active'); });
+      btn.classList.add('is-active');
+      const pane = document.getElementById('tab-' + target);
+      if (pane) pane.classList.add('is-active');
+      if (filterTabInput) filterTabInput.value = target;
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', target);
+      window.history.replaceState(null, '', url.toString());
+    });
   });
+
+  // ── Flatpickr helper ───────────────────────────────
+  function makeDatePicker(inputId, fromHiddenId, toHiddenId, onChange) {
+    const fromEl = document.getElementById(fromHiddenId);
+    const toEl   = document.getElementById(toHiddenId);
+    if (!fromEl || !toEl) return null;
+
+    const initialFrom = fromEl.value;
+    const initialTo   = toEl.value;
+    const defaultDate = initialFrom
+      ? (initialTo && initialTo !== initialFrom ? [initialFrom, initialTo] : [initialFrom])
+      : [];
+
+    return flatpickr('#' + inputId, {
+      mode: 'range',
+      dateFormat: 'Y-m-d',
+      locale: 'uk',
+      defaultDate: defaultDate,
+      disableMobile: true,
+      onReady(_, __, instance) {
+        if (defaultDate.length) {
+          const [f, t] = instance.selectedDates;
+          instance.element.value = t
+            ? instance.formatDate(f, 'd.m') + ' — ' + instance.formatDate(t, 'd.m')
+            : instance.formatDate(f, 'd.m');
+        }
+      },
+      onChange(dates, _, instance) {
+        if (dates.length === 1) {
+          fromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+          toEl.value   = instance.formatDate(dates[0], 'Y-m-d');
+          instance.element.value = instance.formatDate(dates[0], 'd.m');
+        } else if (dates.length === 2) {
+          fromEl.value = instance.formatDate(dates[0], 'Y-m-d');
+          toEl.value   = instance.formatDate(dates[1], 'Y-m-d');
+          instance.element.value =
+            instance.formatDate(dates[0], 'd.m') + ' — ' + instance.formatDate(dates[1], 'd.m');
+        } else {
+          fromEl.value = '';
+          toEl.value   = '';
+        }
+        if (onChange) onChange();
+      },
+    });
+  }
+
+  // ── Main filter ────────────────────────────────────
+  (function () {
+    const form      = document.getElementById('reports-filter-form');
+    const fromInput = document.getElementById('reports-date-from');
+    const toInput   = document.getElementById('reports-date-to');
+    const allBtn    = document.getElementById('filter-all-time');
+    const sel       = document.getElementById('filter-month-select');
+    const submitBtn = document.getElementById('filter-submit');
+
+    const UA_MONTHS = ['Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function lastDay(y, m) { return new Date(y, m, 0).getDate(); }
+
+    const curFrom = fromInput.value;
+    const curTo   = toInput.value;
+
+    // Detect if curFrom/curTo is exactly a full calendar month
+    function matchedMonth() {
+      if (!curFrom || !curTo) return null;
+      const [fy, fm, fd] = curFrom.split('-').map(Number);
+      const [ty, tm, td] = curTo.split('-').map(Number);
+      if (fy !== ty || fm !== tm) return null;
+      if (fd !== 1) return null;
+      if (td !== lastDay(fy, fm)) return null;
+      return { y: fy, m: fm };
+    }
+    const activeMon = matchedMonth();
+
+    // Populate select grouped by year
+    const activeMonths = {{ active_months | tojson }};
+    const groups = {};
+    activeMonths.forEach(function (pair) {
+      const y = pair[0];
+      if (!groups[y]) groups[y] = [];
+      groups[y].push(pair[1]);
+    });
+    Object.keys(groups).sort(function (a, b) { return b - a; }).forEach(function (y) {
+      const grp = document.createElement('optgroup');
+      grp.label = y;
+      groups[y].forEach(function (m) {
+        const label = UA_MONTHS[m - 1];
+        const first = y + '-' + pad(m) + '-01';
+        const last  = y + '-' + pad(m) + '-' + pad(lastDay(Number(y), m));
+        const opt = document.createElement('option');
+        opt.value = first + '|' + last;
+        opt.textContent = label;
+        if (activeMon && activeMon.y === Number(y) && activeMon.m === m) opt.selected = true;
+        grp.appendChild(opt);
+      });
+      sel.appendChild(grp);
+    });
+
+    // Style select as active pill when a month is selected
+    if (activeMon) sel.classList.add('is-active');
+
+    // Month select change → submit immediately
+    sel.addEventListener('change', function () {
+      if (!sel.value) return;
+      const [from, to] = sel.value.split('|');
+      fromInput.value = from;
+      toInput.value   = to;
+      form.submit();
+    });
+
+    // "Весь час" → clear and submit
+    allBtn.addEventListener('click', function () {
+      fromInput.value = '';
+      toInput.value   = '';
+      const tabVal = filterTabInput ? filterTabInput.value : '';
+      if (tabVal === 'cash_flow') {
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'cash_flow');
+        url.searchParams.delete('date_from');
+        url.searchParams.delete('date_to');
+        url.searchParams.set('all', '1');
+        window.location.href = url.toString();
+      } else {
+        form.submit();
+      }
+    });
+
+    // Custom flatpickr — show submit button when user picks dates
+    const isCustomRange = curFrom && curTo && !activeMon;
+    if (isCustomRange) submitBtn.classList.remove('hidden');
+
+    makeDatePicker('reports-date-picker', 'reports-date-from', 'reports-date-to', function () {
+      submitBtn.classList.remove('hidden');
+      sel.classList.remove('is-active');
+      sel.value = '';
+    });
+  }());
+
+  // ── Export URL builder ─────────────────────────────
+  function buildExportUrl(base, fromId, toId, format) {
+    const p = new URLSearchParams();
+    const df = document.getElementById(fromId);
+    const dt = document.getElementById(toId);
+    if (df && df.value) p.set('date_from', df.value);
+    if (dt && dt.value) p.set('date_to', dt.value);
+    if (format) p.set('format', format);
+    return base + (p.toString() ? '?' + p.toString() : '');
+  }
+
+  function updateOrdersLinks() {
+    const csv  = document.getElementById('export-orders-csv');
+    const xlsx = document.getElementById('export-orders-xlsx');
+    if (csv)  csv.href  = buildExportUrl('/orders/export/csv',  'export-orders-from', 'export-orders-to', null);
+    if (xlsx) xlsx.href = buildExportUrl('/orders/export/xlsx', 'export-orders-from', 'export-orders-to', null);
+  }
+
+  function updateTxLinks() {
+    const csv  = document.getElementById('export-tx-csv');
+    const xlsx = document.getElementById('export-tx-xlsx');
+    if (csv)  csv.href  = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'csv');
+    if (xlsx) xlsx.href = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'xlsx');
+  }
+
+  makeDatePicker('export-orders-picker', 'export-orders-from', 'export-orders-to', updateOrdersLinks);
+  makeDatePicker('export-tx-picker',     'export-tx-from',     'export-tx-to',     updateTxLinks);
+  updateOrdersLinks();
+  updateTxLinks();
+
+  // ── Chart helpers ──────────────────────────────────
+  function createBarChart(canvasId, labels, values, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !labels || !labels.length) return;
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: values,
+          backgroundColor: color,
+          borderRadius: 8,
+          borderSkipped: false,
+          maxBarThickness: 46
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
+        },
+        scales: {
+          x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+
+  function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !labels || !labels.length) return;
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Нові разові замовлення',
+            data: ordersValues,
+            borderColor: 'rgba(17, 24, 39, 0.88)',
+            backgroundColor: 'rgba(17, 24, 39, 0.12)',
+            pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            tension: 0.28,
+            fill: false,
+          },
+          {
+            label: 'Нові підписки',
+            data: subscriptionsValues,
+            borderColor: 'rgba(16, 185, 129, 0.9)',
+            backgroundColor: 'rgba(16, 185, 129, 0.12)',
+            pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            borderWidth: 2,
+            tension: 0.28,
+            fill: false,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: { color: '#57534e', boxWidth: 12, usePointStyle: true } },
+          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff' }
+        },
+        scales: {
+          x: { ticks: { color: '#78716c', maxRotation: 40, minRotation: 0, font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+
+  function createSwitchableChart(canvasId, datasets, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const initial = datasets.all;
+    return new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: initial.labels,
+        datasets: [{
+          data: initial.values,
+          backgroundColor: color,
+          borderRadius: 8,
+          borderSkipped: false,
+          maxBarThickness: 46
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
+        },
+        scales: {
+          x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }
+
+  const PIE_COLORS = [
+    'rgba(59, 130, 246, 0.82)',
+    'rgba(245, 158, 11, 0.82)',
+    'rgba(16, 185, 129, 0.82)',
+    'rgba(239, 68, 68, 0.82)',
+    'rgba(139, 92, 246, 0.82)',
+    'rgba(236, 72, 153, 0.82)',
+    'rgba(20, 184, 166, 0.82)',
+    'rgba(249, 115, 22, 0.82)',
+    'rgba(99, 102, 241, 0.82)',
+    'rgba(161, 161, 170, 0.82)'
+  ];
+
+  function createSwitchablePieChart(canvasId, datasets) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return null;
+    const initial = datasets.all;
+    const total = initial.values.reduce(function(s, v) { return s + v; }, 0);
+    return new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: initial.labels,
+        datasets: [{
+          data: initial.values,
+          backgroundColor: PIE_COLORS,
+          borderColor: '#fff',
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '58%',
+        plugins: {
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              color: '#57534e',
+              font: { size: 12 },
+              padding: 14,
+              boxWidth: 14,
+              boxHeight: 14,
+              generateLabels: function(chart) {
+                const data = chart.data;
+                const sum = data.datasets[0].data.reduce(function(s, v) { return s + v; }, 0);
+                return data.labels.map(function(label, i) {
+                  const val = data.datasets[0].data[i] || 0;
+                  const pct = sum > 0 ? Math.round(val / sum * 100) : 0;
+                  return {
+                    text: label + ' — ' + pct + '%',
+                    fillStyle: PIE_COLORS[i % PIE_COLORS.length],
+                    strokeStyle: '#fff',
+                    lineWidth: 2,
+                    index: i
+                  };
+                });
+              }
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1c1917',
+            titleColor: '#fff',
+            bodyColor: '#d6d3d1',
+            callbacks: {
+              label: function(ctx) {
+                const sum = ctx.dataset.data.reduce(function(s, v) { return s + v; }, 0);
+                const pct = sum > 0 ? Math.round(ctx.parsed / sum * 100) : 0;
+                return ' ' + ctx.parsed + ' замовлень (' + pct + '%)';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets, rangeLabel) {
+    const wrap = document.getElementById(buttonWrapId);
+    if (!wrap || !chart) return;
+    const period = document.getElementById(periodLabelId);
+    const total  = document.getElementById(totalLabelId);
+    const buttons = Array.from(wrap.querySelectorAll('.report-switch-btn'));
+
+    function applyMode(mode) {
+      const data = mode === 'range' ? datasets.range : datasets.all;
+      chart.data.labels = data.labels;
+      chart.data.datasets[0].data = data.values;
+      chart.update();
+      if (period) period.textContent = mode === 'range' ? 'За ' + rangeLabel : 'За весь час';
+      if (total)  total.textContent  = 'Всього: ' + data.total;
+      buttons.forEach(function (btn) { btn.classList.toggle('is-active', btn.dataset.mode === mode); });
+    }
+
+    buttons.forEach(function (btn) { btn.addEventListener('click', function () { applyMode(btn.dataset.mode); }); });
+  }
+
+  // ── Chart data ─────────────────────────────────────
+  const rangeLabel = {{ ((date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to or ''))|tojson }};
+
+  const marketingDatasets = {
+    all:   { labels: {{ orders.marketing_all_chart['labels']|tojson }},   values: {{ orders.marketing_all_chart['values']|tojson }},   total: {{ orders.marketing_all_total|tojson }} },
+    range: { labels: {{ orders.marketing_range_chart['labels']|tojson }}, values: {{ orders.marketing_range_chart['values']|tojson }}, total: {{ orders.marketing_range_total|tojson }} }
+  };
+
+  const forWhomDatasets = {
+    all:   { labels: {{ orders.for_whom_all_chart['labels']|tojson }},   values: {{ orders.for_whom_all_chart['values']|tojson }},   total: {{ orders.for_whom_all_total|tojson }} },
+    range: { labels: {{ orders.for_whom_range_chart['labels']|tojson }}, values: {{ orders.for_whom_range_chart['values']|tojson }}, total: {{ orders.for_whom_range_total|tojson }} }
+  };
+
+  const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
+  const forWhomChart   = createSwitchablePieChart('forWhomChart', forWhomDatasets);
+
+  bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets, rangeLabel);
+  bindSwitch('for-whom-switch',  'for-whom-period',  'for-whom-total',  forWhomChart,   forWhomDatasets,   rangeLabel);
+
+  createLineTrendChart(
+    'monthlyOrdersTrendChart',
+    {{ orders.monthly_orders_trend_chart['labels']|tojson }},
+    {{ orders.monthly_orders_trend_chart['orders_values']|tojson }},
+    {{ orders.monthly_orders_trend_chart['subscriptions_values']|tojson }}
+  );
+
+  createBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
+  createBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          'rgba(139, 92, 246, 0.72)');
+
+  // ── Deliveries dynamics (area chart) ──────────────
+  (function () {
+    const canvas = document.getElementById('deliveriesDynamicsChart');
+    if (!canvas) return;
+    const labels = {{ deliveries.dynamics_chart['labels']|tojson }};
+    const values = {{ deliveries.dynamics_chart['values']|tojson }};
+    if (!labels.length) return;
+    new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Доставки',
+          data: values,
+          borderColor: 'rgba(16, 185, 129, 0.9)',
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+          pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          tension: 0.35,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
+        },
+        scales: {
+          x: { ticks: { color: '#78716c', maxRotation: 40, font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+        }
+      }
+    });
+  }());
+
+  // ── Deliveries by city ────────────────────────────
+  createBarChart(
+    'deliveriesCityChart',
+    {{ deliveries.city_chart['labels']|tojson }},
+    {{ deliveries.city_chart['values']|tojson }},
+    'rgba(245, 158, 11, 0.8)'
+  );
+
+  // ── Revenue breakdown toggle ───────────────────────
+  (function () {
+    const btn  = document.getElementById('revenue-breakdown-toggle');
+    const body = document.getElementById('revenue-breakdown-body');
+    const icon = document.getElementById('revenue-breakdown-icon');
+    if (!btn || !body) return;
+
+    btn.addEventListener('click', function () {
+      const open = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', open);
+      icon.style.transform = open ? '' : 'rotate(180deg)';
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+  }());
+
+  // ── Expense breakdown toggle ───────────────────────
+  (function () {
+    const btn  = document.getElementById('expense-breakdown-toggle');
+    const body = document.getElementById('expense-breakdown-body');
+    const icon = document.getElementById('expense-breakdown-icon');
+    if (!btn || !body) return;
+
+    btn.addEventListener('click', function () {
+      const open = !body.classList.contains('hidden');
+      body.classList.toggle('hidden', open);
+      icon.style.transform = open ? '' : 'rotate(180deg)';
+      btn.setAttribute('aria-expanded', String(!open));
+    });
+  }());
+
+  // ── Cash Flow chart ────────────────────────────────
+  (function () {
+    var cashFlowMode = {{ cash_flow.mode | tojson }};
+    var data = {{ cash_flow.chart | tojson }};
+    var canvas = document.getElementById('cashFlowChart');
+    if (!canvas || !data.labels || !data.labels.length) return;
+
+    if (cashFlowMode === 'monthly') {
+      // Monthly mode — click drills down to daily view of that month
+      canvas.style.cursor = 'pointer';
+      new Chart(canvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{ data: data.values, backgroundColor: '#e8e0a0', borderRadius: 8, borderSkipped: false, maxBarThickness: 60 }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false,
+              callbacks: { footer: function () { return '↓ Клікни для деталей'; } }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          },
+          onClick: function (event, elements) {
+            if (!elements.length) return;
+            var label = data.labels[elements[0].index]; // "05.2026"
+            var parts = label.split('.');
+            var mm = parts[0], yyyy = parts[1];
+            var y = parseInt(yyyy), m = parseInt(mm);
+            var lastDay = new Date(y, m, 0).getDate();
+            var pad = function (n) { return String(n).padStart(2, '0'); };
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', 'cash_flow');
+            url.searchParams.set('date_from', yyyy + '-' + pad(m) + '-01');
+            url.searchParams.set('date_to',   yyyy + '-' + pad(m) + '-' + pad(lastDay));
+            window.location.href = url.toString();
+          }
+        }
+      });
+    } else {
+      createBarChart('cashFlowChart', data.labels, data.values, '#e8e0a0');
+    }
+  }());
+
+  window.toggleExpenseGroup = function (btn) {
+    const row = btn.closest('.expense-bar-row');
+    const children = row.querySelector('.expense-group-children');
+    const icon = btn.querySelector('.expense-group-icon');
+    if (!children) return;
+    const open = !children.classList.contains('hidden');
+    children.classList.toggle('hidden', open);
+    icon.style.transform = open ? '' : 'rotate(90deg)';
+  };
+
+  // ── Revenue tab: search + active filter ───────────────────────────────────
+  (function () {
+    const searchInput   = document.getElementById('revenue-search');
+    const activeToggle  = document.getElementById('revenue-active-toggle');
+    const noResults     = document.getElementById('revenue-no-results');
+    const countEl       = document.getElementById('revenue-count');
+    if (!searchInput) return;
+
+    const allRows = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+
+    function applyFilters() {
+      const query      = searchInput.value.trim().toLowerCase();
+      const activeOnly = activeToggle.dataset.active === '1';
+      let visible = 0;
+
+      allRows.forEach(function (tr) {
+        const nameMatch   = !query || tr.dataset.client.includes(query);
+        const activityOk  = !activeOnly || tr.dataset.anyActivity === '1';
+        const show        = nameMatch && activityOk;
+        tr.style.display  = show ? '' : 'none';
+        if (show) visible++;
+      });
+
+      if (noResults) noResults.classList.toggle('hidden', visible > 0);
+      if (countEl)   countEl.textContent = visible + ' / ' + allRows.length;
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+
+    activeToggle.addEventListener('click', function () {
+      const on = activeToggle.dataset.active === '1';
+      activeToggle.dataset.active = on ? '0' : '1';
+      activeToggle.classList.toggle('bg-stone-900',  !on);
+      activeToggle.classList.toggle('border-stone-900', !on);
+      activeToggle.classList.toggle('text-white',    !on);
+      activeToggle.classList.toggle('bg-white',       on);
+      activeToggle.classList.toggle('border-stone-200', on);
+      activeToggle.classList.toggle('text-stone-600', on);
+      applyFilters();
+    });
+
+    // Auto-enable active filter when a date range is selected
+    const _urlParams = new URLSearchParams(window.location.search);
+    if (_urlParams.get('date_from') || _urlParams.get('date_to')) {
+      activeToggle.dataset.active = '1';
+      activeToggle.classList.add('bg-stone-900', 'border-stone-900', 'text-white');
+      activeToggle.classList.remove('bg-white', 'border-stone-200', 'text-stone-600');
+    }
+
+    // Show count on load
+    applyFilters();
+  }());
+
+  // ── Revenue edit mode ──────────────────────────────
+  (function () {
+    const editBtn   = document.getElementById('revenue-edit-btn');
+    const saveBtn   = document.getElementById('revenue-save-btn');
+    const cancelBtn = document.getElementById('revenue-cancel-btn');
+    const table     = document.querySelector('.revenue-table');
+    if (!editBtn) return;
+
+    function enterEditMode() {
+      table.classList.add('revenue-table--editing');
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        td.querySelector('.rv-display').classList.add('hidden');
+        const inp = td.querySelector('.rv-input');
+        inp.classList.remove('hidden');
+        inp.value = td.dataset.val;
+      });
+      editBtn.classList.add('hidden');
+      saveBtn.classList.remove('hidden');
+      cancelBtn.classList.remove('hidden');
+    }
+
+    function exitEditMode() {
+      table.classList.remove('revenue-table--editing');
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        td.querySelector('.rv-display').classList.remove('hidden');
+        td.querySelector('.rv-input').classList.add('hidden');
+      });
+      editBtn.classList.remove('hidden');
+      saveBtn.classList.add('hidden');
+      cancelBtn.classList.add('hidden');
+    }
+
+    editBtn.addEventListener('click', enterEditMode);
+    cancelBtn.addEventListener('click', exitEditMode);
+
+    saveBtn.addEventListener('click', function () {
+      const adjustments = [];
+      document.querySelectorAll('.rv-editable').forEach(function (td) {
+        const orig  = parseInt(td.dataset.val, 10) || 0;
+        const newVal = parseInt(td.querySelector('.rv-input').value, 10) || 0;
+        const delta = newVal - orig;
+        if (delta === 0) return;
+
+        const type     = td.dataset.type;
+        const clientId = parseInt(td.dataset.client, 10);
+        const subId    = td.dataset.sub ? parseInt(td.dataset.sub, 10) : null;
+        const month    = td.dataset.month;
+
+        adjustments.push({
+          client_id:       clientId,
+          subscription_id: subId,
+          month:           month,
+          delta_charged:   type === 'charged' ? delta : 0,
+          delta_paid:      type === 'paid'    ? delta : 0,
+        });
+      });
+
+      if (adjustments.length === 0) {
+        exitEditMode();
+        return;
+      }
+
+      saveBtn.disabled = true;
+      fetch('/reports/revenue/adjust', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ adjustments: adjustments }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) {
+            window.location.reload();
+          } else {
+            alert('Помилка збереження: ' + (data.error || 'unknown'));
+            saveBtn.disabled = false;
+          }
+        })
+        .catch(function () {
+          alert('Мережева помилка, спробуйте ще раз.');
+          saveBtn.disabled = false;
+        });
+    });
+  }());
+});
 </script>
 {% endblock %}

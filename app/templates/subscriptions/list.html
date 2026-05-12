@@ -10,10 +10,7 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-3">
-      <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
-        Активних: {{ active_count }} / Всього: {{ total_count }}
-      </div>
-      <button
+<button
         type="button"
         class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100"
         id="add-draft-btn"
@@ -36,7 +33,7 @@
 </section>
 
 <!-- Stat cards -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
   <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
     <div class="flex items-center gap-3">
       <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
@@ -61,12 +58,24 @@
   </div>
   <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-stone-100 rounded-xl flex items-center justify-center">
-        <i class="bi bi-archive text-stone-500 text-sm"></i>
+      <div class="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center">
+        <i class="bi bi-pencil-square text-violet-500 text-sm"></i>
       </div>
       <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Завершені</p>
-        <p class="text-2xl font-semibold text-stone-900">{{ completed_count }}</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ draft_count }}</p>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Драфтові</p>
+        <p class="text-[10px] text-stone-400">(Не оформ. Весільні)</p>
+      </div>
+    </div>
+  </div>
+  <div class="bg-white border border-amber-200 rounded-2xl px-4 py-3 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
+        <i class="bi bi-pause-circle text-amber-500 text-sm"></i>
+      </div>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">На стопі</p>
+        <p class="text-2xl font-semibold text-amber-600">{{ stopped_count }}</p>
       </div>
     </div>
   </div>
@@ -255,6 +264,11 @@
       {% if sub.delivery_day %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-stone-50 border border-stone-200 text-stone-500 text-xs">
         {{ sub.delivery_day }}
+      </span>
+      {% endif %}
+      {% if sub.current_cycle > 1 %}
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
+        Круг {{ sub.current_cycle }}
       </span>
       {% endif %}
       {% if sub.is_stopped %}
@@ -477,6 +491,10 @@
           </div>
         </div>
 
+        <button type="button" id="subscription-extend-btn" class="hidden w-full min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-green-200 bg-green-50 px-4 py-3 text-[15px] font-semibold text-green-700 transition-colors hover:bg-green-100 mb-3">
+          <i class="bi bi-arrow-repeat text-[20px]"></i>
+          Продовжити підписку
+        </button>
         <div id="subscription-actions-row" class="flex gap-3">
           <button type="button" id="subscription-stop-btn" class="hidden flex-1 min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-orange-200 bg-orange-50 px-4 py-3 text-[15px] font-semibold text-orange-700 transition-colors hover:bg-orange-100">
             <i class="bi bi-pause-circle text-[20px]"></i>
@@ -605,6 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const deliveryProgressEl = document.getElementById('subscription-delivery-progress');
   const typeEl = document.getElementById('subscription-type');
   const sizeEl = document.getElementById('subscription-size');
+  const extendBtn = document.getElementById('subscription-extend-btn');
   const stopBtn = document.getElementById('subscription-stop-btn');
   const resumeSection = document.getElementById('subscription-resume-section');
   const resumeConfirm = document.getElementById('subscription-resume-confirm');
@@ -836,6 +855,23 @@ document.addEventListener('DOMContentLoaded', function() {
       resumeSection.classList.toggle('hidden', !isStopped);
       resumeSection.style.display = isStopped ? 'block' : 'none';
       resetResumeState();
+
+      const canExtend = !isStopped && data.stats.status !== 'draft';
+      extendBtn.classList.toggle('hidden', !canExtend);
+      extendBtn.classList.toggle('flex', canExtend);
+
+      extendBtn.onclick = async () => {
+        if (!confirm('Додати ще один цикл доставок до цієї підписки?')) return;
+        try {
+          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
+          const result = await resp.json();
+          if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при продовженні');
+          detailModal.hide();
+          softReloadWithToast('Підписку продовжено', 'success');
+        } catch (error) {
+          showToast(error.message || 'Помилка при продовженні підписки', 'error');
+        }
+      };
 
       stopBtn.onclick = async () => {
         if (!confirm('Поставити підписку на СТОП?\n\nДоставки не відображатимуться у списку замовлень до відновлення.')) return;

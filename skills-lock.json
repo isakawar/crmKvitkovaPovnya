@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "microsoft-foundry": {
+      "source": "microsoft/azure-skills",
+      "sourceType": "github",
+      "skillPath": "skills/microsoft-foundry/SKILL.md",
+      "computedHash": "21e62042853e4348e92b0af06412d3b809f14022ce5066de4cc0c6809ca81346"
+    },
     "qa-expert": {
       "source": "daymade/claude-code-skills",
       "sourceType": "github",

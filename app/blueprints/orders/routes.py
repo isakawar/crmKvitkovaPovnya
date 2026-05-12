@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, jsonify, flash, Response, current_app, send_file
 from flask_login import login_required
 from app.extensions import db
 from app.models import Order, Client, Delivery
@@ -10,7 +10,6 @@ import json
 import requests
 from datetime import date, datetime
 from app.services.order_service import (
-    SUBSCRIPTION_TYPES,
     create_order_and_deliveries,
     get_or_create_client,
     get_orders,
@@ -19,6 +18,7 @@ from app.services.order_service import (
     delete_order,
 )
 from app.services.subscription_service import (
+    SUBSCRIPTION_TYPES,
     create_subscription,
     extend_subscription as svc_extend_subscription,
     calculate_reschedule_plan,
@@ -34,6 +34,7 @@ from app.services.route_optimizer_service import (
     RouteOptimizerError,
     RouteOptimizerInfeasibleError,
 )
+from app.services.route_service import save_routes as svc_save_routes
 import csv
 import io
 from sqlalchemy.orm import joinedload
@@ -64,6 +65,19 @@ def orders_list():
     end_idx = start_idx + per_page
 
     all_orders_count = Order.query.count()
+
+    _today = date.today()
+    _month_start = _today.replace(day=1)
+    orders_this_month_count = Order.query.filter(
+        Order.created_at >= datetime.combine(_month_start, datetime.min.time())
+    ).count()
+    delivered_this_month_count = Delivery.query.filter(
+        Delivery.status == 'Доставлено',
+        Delivery.delivery_date >= _month_start,
+        Delivery.delivery_date <= _today,
+    ).count()
+    stopped_subscriptions_count = Subscription.query.filter_by(is_stopped=True).count()
+
     orders = get_orders(
         q=search_query or None,
         phone=phone or None,
@@ -83,7 +97,7 @@ def orders_list():
     subscription_extensions_count = Subscription.query.filter(Subscription.is_extended.is_(True)).count()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     packaging_types = Settings.query.filter_by(type='packaging_type').order_by(Settings.value).all()
     deliveries = []
@@ -139,6 +153,9 @@ def orders_list():
         next_page=next_page,
         has_next=has_next,
         orders_count=all_orders_count,
+        orders_this_month_count=orders_this_month_count,
+        delivered_this_month_count=delivered_this_month_count,
+        stopped_subscriptions_count=stopped_subscriptions_count,
         clients_count=clients_count,
         per_page=per_page,
         cities=cities,
@@ -164,7 +181,7 @@ def order_form():
     clients = Client.query.all()
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
         'orders/form.html',
@@ -284,19 +301,54 @@ def order_create():
             return redirect('/orders/new')
 
     if is_subscription:
-        entity = create_subscription(client, request.form)
-        entity_id = entity.orders[0].id if entity.orders else None
-        logging.info(f'Subscription created: {entity.id}')
-
         extend_from_order_id = (request.form.get('extend_from_order_id') or '').strip()
         if extend_from_order_id and extend_from_order_id.isdigit():
             parent_order = Order.query.get(int(extend_from_order_id))
             if parent_order and parent_order.subscription_id:
                 parent_sub = Subscription.query.get(parent_order.subscription_id)
                 if parent_sub:
-                    parent_sub.is_extended = True
+                    from datetime import date as _date
+                    raw_date = (request.form.get('first_delivery_date') or '').strip()
+                    try:
+                        first_date = _date.fromisoformat(raw_date) if raw_date else None
+                    except ValueError:
+                        first_date = None
+                    overrides = {
+                        'recipient_name': request.form.get('recipient_name') or None,
+                        'recipient_phone': request.form.get('recipient_phone') or None,
+                        'recipient_social': request.form.get('recipient_social') or None,
+                        'city': request.form.get('city') or None,
+                        'street': request.form.get('street') or None,
+                        'building_number': request.form.get('building_number') or None,
+                        'floor': request.form.get('floor') or None,
+                        'entrance': request.form.get('entrance') or None,
+                        'is_pickup': request.form.get('is_pickup') == 'on',
+                        'address_comment': request.form.get('address_comment') or None,
+                        'delivery_method': request.form.get('delivery_method') or None,
+                        'size': request.form.get('size') or None,
+                        'custom_amount': request.form.get('custom_amount') or None,
+                        'first_delivery_date': first_date,
+                        'delivery_day': request.form.get('delivery_day') or None,
+                        'time_from': request.form.get('time_from') or None,
+                        'time_to': request.form.get('time_to') or None,
+                        'bouquet_type': request.form.get('bouquet_type') or None,
+                        'composition_type': request.form.get('composition_type') or None,
+                        'for_whom': request.form.get('for_whom') or None,
+                        'comment': request.form.get('comment') or None,
+                        'preferences': request.form.get('preferences') or None,
+                    }
+                    svc_extend_subscription(parent_sub, overrides=overrides)
+                    Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
                     db.session.commit()
+                    logging.info(f'Subscription {parent_sub.id} extended via dashboard')
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return jsonify({'success': True, 'order_id': None})
+                    flash('Підписку продовжено!', 'success')
+                    return redirect('/subscriptions')
 
+        entity = create_subscription(client, request.form)
+        entity_id = entity.orders[0].id if entity.orders else None
+        logging.info(f'Subscription created: {entity.id}')
         Subscription.query.filter_by(client_id=client.id, is_renewal_reminder=True).update({'is_renewal_reminder': False})
         db.session.commit()
     else:
@@ -352,9 +404,24 @@ def order_edit(order_id):
     delivery_bouquet_type = next((d.bouquet_type for d in order.deliveries if d.bouquet_type), None)
     delivery_composition_type = next((d.composition_type for d in order.deliveries if d.composition_type), None)
 
+    def _client_display(c):
+        parts = []
+        if c.instagram:
+            parts.append(c.instagram)
+        if c.telegram:
+            tg = c.telegram if c.telegram.startswith('@') else f'@{c.telegram}'
+            parts.append(tg)
+        if c.phone:
+            parts.append(c.phone)
+        if c.name:
+            parts.append(c.name)
+        return ' · '.join(parts) if parts else f'#{c.id}'
+
     return jsonify({
         'id': order.id,
+        'client_id': order.client_id,
         'client_instagram': order.client.instagram,
+        'client_display': _client_display(order.client),
         'recipient_name': order.recipient_name,
         'recipient_phone': order.recipient_phone,
         'recipient_social': order.recipient_social,
@@ -948,178 +1015,27 @@ def route_generator_save():
     except ValueError:
         return jsonify({'error': 'Некоректна дата'}), 400
 
-    routes = result.get('routes', [])
-    current_app.logger.info('SAVE_ROUTES: received %d routes: %s', len(routes), [
-        {'routeDbId': r.get('routeDbId'), 'stops_count': len(r.get('stops', []))} for r in routes
-    ])
-    if not routes:
+    if not result.get('routes'):
         return jsonify({'error': 'Немає маршрутів для збереження'}), 400
 
-    from app.models.delivery_route import DeliveryRoute, RouteDelivery
-
-    day_deliveries = (
-        Delivery.query
-        .options(joinedload(Delivery.order))
-        .filter(Delivery.delivery_date == selected_date)
-        .all()
-    )
-    addr_to_delivery_id = {}
-    for d in day_deliveries:
-        order = d.order
-        city = (order.city if order else '') or ''
-        street = (d.street or (order.street if order else '')) or ''
-        house = (d.building_number or (order.building_number if order else '')) or ''
-        parts = []
-        if city:
-            parts.append(city)
-        if street:
-            parts.append(street + (' ' + house if house else ''))
-        key = ', '.join(parts).lower().strip()
-        if key:
-            addr_to_delivery_id[key] = d.id
+    current_app.logger.info('SAVE_ROUTES: received %d routes', len(result['routes']))
 
     editing_route_id = data.get('editing_route_id')
-    is_single_route_edit = bool(editing_route_id)
-    saved_route_ids = []
+    saved_routes = svc_save_routes(result, selected_date, editing_route_id)
 
-    for route_data in routes:
-        stops = route_data.get('stops', [])
-        if not stops:
-            # If this was an existing DB route that is now empty, delete it
-            empty_route_db_id = route_data.get('routeDbId')
-            if empty_route_db_id:
-                dr_to_delete = DeliveryRoute.query.get(empty_route_db_id)
-                if dr_to_delete:
-                    old_delivery_ids = [s.delivery_id for s in dr_to_delete.stops]
-                    if old_delivery_ids:
-                        Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
-                            {'status': 'Очікує'}, synchronize_session=False
-                        )
-                    db.session.delete(dr_to_delete)
-                    db.session.flush()
-            continue
-
-        single_route_cache = json.dumps({
-            **{k: v for k, v in result.items() if k != 'routes'},
-            'routes': [route_data],
-        })
-
-        dr = None
-        # Per-route routeDbId takes priority (view_date multi-edit mode)
-        route_db_id = route_data.get('routeDbId')
-        # Fallback: legacy single editing_route_id (consumed once)
-        if not route_db_id and editing_route_id:
-            route_db_id = editing_route_id
-            editing_route_id = None
-        if route_db_id:
-            dr = DeliveryRoute.query.get(route_db_id)
-            if dr:
-                old_delivery_ids = [s.delivery_id for s in dr.stops]
-                if old_delivery_ids:
-                    Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
-                        {'status': 'Очікує'}, synchronize_session=False
-                    )
-                RouteDelivery.query.filter_by(route_id=dr.id).delete()
-                dr.route_date = selected_date
-                dr.deliveries_count = len(stops)
-                dr.total_distance_km = route_data.get('totalDistanceKm')
-                dr.estimated_duration_min = route_data.get('totalDriveMin')
-                dr.cached_result_json = single_route_cache
-                dr.cached_at = datetime.utcnow()
-                dr.content_changed_at = datetime.utcnow()
-                dep_str = (route_data.get('departureTime') or '').strip()
-                if dep_str:
-                    try:
-                        dr.start_time = datetime.strptime(dep_str, '%H:%M').time()
-                    except ValueError:
-                        pass
-                db.session.flush()
-            else:
-                dr = None
-
-        if not dr:
-            start_time_val = None
-            dep_str = (route_data.get('departureTime') or '').strip()
-            if dep_str:
-                try:
-                    start_time_val = datetime.strptime(dep_str, '%H:%M').time()
-                except ValueError:
-                    pass
-            dr = DeliveryRoute(
-                route_date=selected_date,
-                status='draft',
-                deliveries_count=len(stops),
-                total_distance_km=route_data.get('totalDistanceKm'),
-                estimated_duration_min=route_data.get('totalDriveMin'),
-                start_time=start_time_val,
-                cached_result_json=single_route_cache,
-                cached_at=datetime.utcnow(),
-            )
-            db.session.add(dr)
-            db.session.flush()
-
-        for i, stop in enumerate(stops):
-            delivery_id = stop.get('id')
-            if not delivery_id:
-                stop_addr = (stop.get('address') or '').lower().strip()
-                delivery_id = addr_to_delivery_id.get(stop_addr)
-            if not delivery_id:
-                continue
-
-            planned_arrival = None
-            if stop.get('eta'):
-                try:
-                    planned_arrival = datetime.strptime(
-                        f"{selected_date_str} {stop['eta']}", '%Y-%m-%d %H:%M'
-                    )
-                except ValueError:
-                    pass
-
-            rd = RouteDelivery(
-                route_id=dr.id,
-                delivery_id=delivery_id,
-                stop_order=i + 1,
-                duration_from_previous_min=stop.get('driveMin'),
-                planned_arrival=planned_arrival,
-            )
-            db.session.add(rd)
-
-            delivery = Delivery.query.get(delivery_id)
-            if delivery and delivery.status == 'Очікує':
-                delivery.status = 'Розподілено'
-
-        saved_route_ids.append(dr.id)
-
-    # Clean up routes for this date that existed before but were not included in the save.
-    # Skip when editing a single specific route — only the edited route is in the payload,
-    # so all other routes for the date would be incorrectly treated as stale.
-    any_db_id = any(r.get('routeDbId') for r in routes)
-    if not is_single_route_edit and any_db_id and saved_route_ids:
-        stale_routes = DeliveryRoute.query.filter(
-            DeliveryRoute.route_date == selected_date,
-            ~DeliveryRoute.id.in_(saved_route_ids)
-        ).all()
-        for stale in stale_routes:
-            old_delivery_ids = [s.delivery_id for s in stale.stops]
-            if old_delivery_ids:
-                Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
-                    {'status': 'Очікує'}, synchronize_session=False
-                )
-            db.session.delete(stale)
-            current_app.logger.info('SAVE_ROUTES: deleted stale route id=%d (not in saved set)', stale.id)
-
-    db.session.commit()
-
-    saved_routes_list = (
-        DeliveryRoute.query
-        .filter(DeliveryRoute.id.in_(saved_route_ids))
-        .options(joinedload(DeliveryRoute.courier))
+    from sqlalchemy.orm import joinedload as _jl
+    from app.models.delivery_route import DeliveryRoute as _DR
+    saved_routes_with_courier = (
+        _DR.query
+        .filter(_DR.id.in_([r.id for r in saved_routes]))
+        .options(_jl(_DR.courier))
         .all()
     )
+
     return jsonify({
         'success': True,
-        'route_ids': saved_route_ids,
-        'count': len(saved_route_ids),
+        'route_ids': [r.id for r in saved_routes],
+        'count': len(saved_routes),
         'editing_route_id': editing_route_id,
         'saved_routes': [{
             'id': dr.id,
@@ -1128,7 +1044,7 @@ def route_generator_save():
             'courier_has_telegram': bool(dr.courier and dr.courier.telegram_chat_id),
             'deliveries_count': dr.deliveries_count,
             'status': dr.status,
-        } for dr in saved_routes_list],
+        } for dr in saved_routes_with_courier],
     })
 
 
@@ -1374,9 +1290,6 @@ def extend_subscription(order_id):
         return jsonify({'success': False, 'error': 'Це не підписка'}), 400
 
     subscription = Subscription.query.get_or_404(order.subscription_id)
-    if subscription.is_extended:
-        return jsonify({'success': False, 'error': 'Цю підписку вже продовжено'}), 400
-
     try:
         svc_extend_subscription(subscription)
         return jsonify({
@@ -1387,6 +1300,12 @@ def extend_subscription(order_id):
         db.session.rollback()
         logging.error(f'Помилка продовження підписки: {e}')
         return jsonify({'success': False, 'error': 'Помилка при продовженні підписки'}), 500
+
+
+def _client_label(c):
+    if not c:
+        return ''
+    return c.instagram or c.telegram or c.phone or c.name or f'#{c.id}'
 
 
 @orders_bp.route('/orders/export/csv', methods=['GET'])
@@ -1441,7 +1360,7 @@ def export_orders_csv():
         c = d.client
         writer.writerow([
             d.id,
-            c.instagram if c else '',
+            _client_label(c),
             o.recipient_name or '' if o else '',
             d.phone or (o.recipient_phone if o else '') or '',
             o.city or '' if o else '',
@@ -1463,6 +1382,83 @@ def export_orders_csv():
     })
 
 
+@orders_bp.route('/orders/export/xlsx', methods=['GET'])
+@login_required
+def export_orders_xlsx():
+    from openpyxl import Workbook
+
+    date_from = request.args.get('date_from', '').strip()
+    date_to = request.args.get('date_to', '').strip()
+
+    deliveries_query = (
+        Delivery.query
+        .options(
+            joinedload(Delivery.order),
+            joinedload(Delivery.client),
+            joinedload(Delivery.courier),
+        )
+        .order_by(Delivery.delivery_date.asc(), Delivery.time_from.asc(), Delivery.id.asc())
+    )
+
+    if date_from:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date >= datetime.strptime(date_from, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            deliveries_query = deliveries_query.filter(
+                Delivery.delivery_date <= datetime.strptime(date_to, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    deliveries = deliveries_query.all()
+
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet('Замовлення')
+    ws.append([
+        'ID доставки', 'Instagram', 'Отримувач', 'Телефон',
+        'Місто', 'Адреса', 'Коментар до адреси',
+        'Розмір', 'Дата доставки', 'Час з', 'Час до',
+        'Статус', "Кур'єр", 'Коментар', 'Побажання', 'Спосіб доставки',
+    ])
+    for d in deliveries:
+        o = d.order
+        c = d.client
+        ws.append([
+            d.id,
+            _client_label(c),
+            o.recipient_name or '' if o else '',
+            d.phone or (o.recipient_phone if o else '') or '',
+            o.city or '' if o else '',
+            d.street or (o.street if o else '') or '',
+            d.address_comment or '',
+            d.size or (o.size if o else '') or '',
+            d.delivery_date.strftime('%Y-%m-%d') if d.delivery_date else '',
+            d.time_from or '',
+            d.time_to or '',
+            d.status or '',
+            d.courier.name if d.courier else '',
+            (d.comment or '').replace('\n', ' ').replace('\r', ' '),
+            (d.preferences or '').replace('\n', ' ').replace('\r', ' '),
+            d.delivery_method or '',
+        ])
+
+    filename_suffix = f'_{date_from}_{date_to}' if date_from and date_to else (f'_{date_from}' if date_from else '')
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return send_file(
+        buf,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'orders_export{filename_suffix}.xlsx',
+    )
+
+
 @orders_bp.route('/orders/extend-form-from-delivery/<int:delivery_id>')
 @login_required
 def extend_form_from_delivery(delivery_id):
@@ -1471,7 +1467,7 @@ def extend_form_from_delivery(delivery_id):
     client = delivery.client
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
-    sizes = Settings.query.filter_by(type='size').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
     return render_template(
         'orders/extend_modal.html',

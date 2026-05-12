@@ -252,7 +252,7 @@
 
           <div class="txn-field">
             <label class="txn-label">Сума (грн)</label>
-            <input type="number" id="txnAmount" name="amount" min="1" step="1" required placeholder="Наприклад: 500" class="txn-input">
+            <input type="number" id="txnAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 500.50" class="txn-input">
           </div>
 
           <div class="txn-field">
@@ -260,6 +260,13 @@
             <select id="txnPaymentType" name="payment_type" required class="txn-select">
               <option value="monobank" selected>Monobank</option>
               <option value="cash">Готівка</option>
+            </select>
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Рахунок оплати</label>
+            <select id="txnPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
             </select>
           </div>
 
@@ -298,6 +305,23 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!openBtn || !modalEl || !form) return;
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  const paymentAccountSelect = document.getElementById('txnPaymentAccountId');
+  let paymentAccountsLoaded = false;
+
+  async function loadPaymentAccounts() {
+    if (paymentAccountsLoaded) return;
+    try {
+      const res = await fetch('/settings/payment_accounts');
+      const accounts = await res.json();
+      accounts.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.id;
+        opt.textContent = a.value;
+        paymentAccountSelect.appendChild(opt);
+      });
+      paymentAccountsLoaded = true;
+    } catch (_) {}
+  }
 
   function todayISO() {
     return new Date().toISOString().slice(0, 10);
@@ -365,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(hideDropdown, 180);
   });
 
-  openBtn.addEventListener('click', function () {
+  openBtn.addEventListener('click', async function () {
     form.reset();
     clientSearch.value = '';
     clientIdInput.value = '';
@@ -373,6 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
     clearErrors();
     setLoading(false);
     txnDate.value = todayISO();
+    await loadPaymentAccounts();
     modal.show();
   });
 
@@ -390,6 +415,10 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть клієнта зі списку');
       return;
     }
+    if (!paymentAccountSelect.value) {
+      showErrors('Оберіть рахунок оплати');
+      return;
+    }
 
     setLoading(true);
 
@@ -397,6 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
       client_id: clientIdInput.value,
       amount: document.getElementById('txnAmount').value,
       payment_type: document.getElementById('txnPaymentType').value,
+      payment_account_id: paymentAccountSelect.value,
       date: txnDate.value,
     };
 
