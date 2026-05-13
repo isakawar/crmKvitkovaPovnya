@@ -1193,9 +1193,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const today = new Date();
       const yyyy  = today.getFullYear();
       const mm    = String(today.getMonth() + 1).padStart(2, '0');
-      const dd    = String(today.getDate()).padStart(2, '0');
+      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
       params.set('date_from', yyyy + '-' + mm + '-01');
-      params.set('date_to',   yyyy + '-' + mm + '-' + dd);
+      params.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
       window.location.replace('/reports?' + params.toString());
     }
   })();
@@ -1210,11 +1210,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const today = new Date();
         const yyyy  = today.getFullYear();
         const mm    = String(today.getMonth() + 1).padStart(2, '0');
-        const dd    = String(today.getDate()).padStart(2, '0');
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
         const url   = new URL(window.location.href);
         url.searchParams.set('tab', 'cash_flow');
         url.searchParams.set('date_from', yyyy + '-' + mm + '-01');
-        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + dd);
+        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
         window.location.href = url.toString();
         return;
       }

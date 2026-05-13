@@ -320,6 +320,7 @@ def create_subscription(client, form):
             for_whom=subscription.for_whom,
             comment=subscription.comment if i == 0 else None,
             preferences=subscription.preferences,
+            discount=subscription.discount,
         )
         db.session.add(order)
         db.session.flush()
@@ -367,6 +368,9 @@ def create_subscription_from_import(client, form, delivery_number):
     custom_amount_raw = (form.get('custom_amount') or '').strip()
     custom_amount = int(custom_amount_raw) if custom_amount_raw else None
 
+    discount_raw = (form.get('discount') or '').strip()
+    discount = int(discount_raw) if discount_raw else None
+
     is_wedding = form.get('is_wedding') in (True, 'true', 'True', '1', 'on')
 
     subscription = Subscription(
@@ -394,6 +398,7 @@ def create_subscription_from_import(client, form, delivery_number):
         for_whom=form.get('for_whom') or '',
         comment=form.get('comment') or None,
         preferences=form.get('preferences') or None,
+        discount=discount,
         is_wedding=is_wedding,
     )
 
@@ -438,6 +443,7 @@ def create_subscription_from_import(client, form, delivery_number):
             for_whom=subscription.for_whom,
             comment=subscription.comment if i == 0 else None,
             preferences=subscription.preferences,
+            discount=subscription.discount,
         )
         db.session.add(order)
         db.session.flush()
@@ -609,6 +615,7 @@ def extend_subscription(subscription, overrides=None):
             for_whom=overrides.get('for_whom') or subscription.for_whom,
             comment=overrides.get('comment') or (subscription.comment if i == 0 else None),
             preferences=overrides.get('preferences') or subscription.preferences,
+            discount=overrides.get('discount') if 'discount' in overrides else subscription.discount,
         )
         db.session.add(order)
         db.session.flush()

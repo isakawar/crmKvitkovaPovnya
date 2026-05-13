@@ -795,12 +795,24 @@ def get_cash_flow_data(date_from_str=None, date_to_str=None):
         and d_from.month == d_to_raw.month
         and d_from.year == d_to_raw.year
     )
+    is_partial_month = (
+        d_from.day == 1
+        and d_from.month == d_to.month
+        and d_from.year == d_to.year
+        and d_to.day < calendar.monthrange(d_from.year, d_from.month)[1]
+    )
     if is_full_month and d_to < d_to_raw:
         prev_month_last = d_from - timedelta(days=1)
         prev_d_from = prev_month_last.replace(day=1)
         prev_last_day = calendar.monthrange(prev_d_from.year, prev_d_from.month)[1]
-        prev_d_to = prev_d_from.replace(day=min(d_to.day, prev_last_day))
-        comparison_label = 'Аналогічний період минулого місяця'
+        prev_d_to = prev_d_from.replace(day=prev_last_day)
+        comparison_label = f'{UA_MONTHS[prev_d_from.month - 1]} {prev_d_from.year} (повний місяць)'
+    elif is_partial_month:
+        prev_month_last = d_from - timedelta(days=1)
+        prev_d_from = prev_month_last.replace(day=1)
+        prev_last_day = calendar.monthrange(prev_d_from.year, prev_d_from.month)[1]
+        prev_d_to = prev_d_from.replace(day=prev_last_day)
+        comparison_label = f'{UA_MONTHS[prev_d_from.month - 1]} {prev_d_from.year} (повний місяць)'
     else:
         duration = (d_to - d_from).days + 1
         prev_d_from = d_from - timedelta(days=duration)
