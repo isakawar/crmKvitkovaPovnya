@@ -266,7 +266,11 @@ def create_transaction():
     client.credits = (client.credits or 0) + amount_val
 
     db.session.add(txn)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'errors': [str(e)]}), 500
 
     return jsonify({'success': True, 'id': txn.id})
 
