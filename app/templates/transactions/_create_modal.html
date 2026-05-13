@@ -255,9 +255,8 @@
             <input type="number" id="txnAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 500.50" class="txn-input">
           </div>
 
-          <div class="txn-field">
-            <label class="txn-label">Тип оплати</label>
-            <select id="txnPaymentType" name="payment_type" required class="txn-select">
+          <div class="txn-field" style="display:none;">
+            <select id="txnPaymentType" name="payment_type" class="txn-select">
               <option value="monobank" selected>Monobank</option>
               <option value="cash">Готівка</option>
             </select>

@@ -259,6 +259,7 @@ MONTH_NAMES_UK = {
 @login_required
 def florist_sales():
     from app.models.florist_sale import FloristSale
+    from app.models.settings import Settings
 
     month_raw = (request.args.get('month') or '').strip()
     month_start = _parse_month(month_raw)
@@ -306,6 +307,8 @@ def florist_sales():
     selected_month_str = month_start.strftime('%Y-%m')
     selected_month_label = f"{MONTH_NAMES_UK[month_start.month]} {month_start.year}"
 
+    payment_accounts = Settings.query.filter_by(type='payment_account').order_by(Settings.value).all()
+
     return render_template(
         'florist/sales.html',
         count=count,
@@ -320,6 +323,7 @@ def florist_sales():
         selected_month_label=selected_month_label,
         prev_month=prev_month.strftime('%Y-%m'),
         next_month=next_month.strftime('%Y-%m') if has_next else None,
+        payment_accounts=payment_accounts,
     )
 
 
@@ -342,6 +346,9 @@ def florist_sales_add():
     if payment_type not in ('monobank', 'cash'):
         payment_type = 'cash'
 
+    raw_account = data.get('payment_account_id')
+    payment_account_id = int(raw_account) if raw_account else None
+
     comment = (data.get('comment') or '').strip() or None
     bonus_percent = Decimal('5.0')
     bonus_amount = (amount * bonus_percent / Decimal('100')).quantize(Decimal('0.01'))
@@ -353,6 +360,7 @@ def florist_sales_add():
         bonus_percent=bonus_percent,
         bonus_amount=bonus_amount,
         payment_type=payment_type,
+        payment_account_id=payment_account_id,
         comment=comment,
     )
     db.session.add(sale)
@@ -363,6 +371,7 @@ def florist_sales_add():
         client_id=None,
         amount=float(amount),
         payment_type=payment_type,
+        payment_account_id=payment_account_id,
         comment='Офлайн продаж',
         date=date.today(),
         created_by_id=current_user.id,
@@ -406,10 +415,14 @@ def florist_sales_edit(sale_id):
     if payment_type not in ('monobank', 'cash'):
         payment_type = 'cash'
 
+    raw_account = data.get('payment_account_id')
+    payment_account_id = int(raw_account) if raw_account else None
+
     comment = (data.get('comment') or '').strip() or None
     sale.amount = amount
     sale.bonus_amount = (amount * sale.bonus_percent / Decimal('100')).quantize(Decimal('0.01'))
     sale.payment_type = payment_type
+    sale.payment_account_id = payment_account_id
     sale.comment = comment
 
     if sale.transaction_id:
@@ -417,6 +430,7 @@ def florist_sales_edit(sale_id):
         if txn:
             txn.amount = float(amount)
             txn.payment_type = payment_type
+            txn.payment_account_id = payment_account_id
 
     try:
         db.session.commit()
