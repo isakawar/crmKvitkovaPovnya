@@ -341,7 +341,7 @@ def update_transaction(txn_id):
 
     if txn.transaction_type == 'credit' and txn.client:
         delta = amount_val - float(txn.amount or 0)
-        txn.client.credits = (txn.client.credits or 0) + delta
+        txn.client.credits = float(txn.client.credits or 0) + delta
 
     txn.amount = amount_val
     txn.date = txn_date
