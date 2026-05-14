@@ -1,0 +1,6 @@
+# Local development overrides — NOT used on production.
+# Docker Compose applies this file automatically when running locally.
+services:
+  web:
+    volumes:
+      - ./migrations:/app/migrations

@@ -34,7 +34,6 @@ services:
       - "8002:8000"
     volumes:
       - ./app:/app/app
-      - ./migrations:/app/migrations
       - ./scripts:/app/scripts
       - ./instance:/app/instance
       - ./logs:/app/logs
