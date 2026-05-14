@@ -2,6 +2,8 @@ from datetime import date, datetime
 import json
 import logging
 
+from sqlalchemy.orm import joinedload
+
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
@@ -30,6 +32,9 @@ def save_routes(
     """
     routes_data = result.get('routes', [])
     result_meta = {k: v for k, v in result.items() if k != 'routes'}
+
+    # Fallback: match stops by address when optimizer doesn't echo id field
+    addr_to_delivery_id = _build_addr_map(selected_date)
 
     saved_route_ids = []
     _editing_route_id = editing_route_id
@@ -60,6 +65,9 @@ def save_routes(
         for i, stop in enumerate(stops):
             delivery_id = stop.get('id')
             if not delivery_id:
+                stop_addr = (stop.get('address') or '').lower().strip()
+                delivery_id = addr_to_delivery_id.get(stop_addr)
+            if not delivery_id:
                 continue
 
             planned_arrival = _parse_eta(stop.get('eta'), selected_date)
@@ -89,6 +97,31 @@ def save_routes(
         .filter(DeliveryRoute.id.in_(saved_route_ids))
         .all()
     )
+
+
+def _build_addr_map(selected_date: date) -> dict:
+    """Build address → delivery_id map for fallback matching when stop has no id."""
+    deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.order))
+        .filter(Delivery.delivery_date == selected_date)
+        .all()
+    )
+    addr_map = {}
+    for d in deliveries:
+        order = d.order
+        city = (order.city if order else '') or ''
+        street = (d.street or (order.street if order else '')) or ''
+        house = (d.building_number or (order.building_number if order else '')) or ''
+        parts = []
+        if city:
+            parts.append(city)
+        if street:
+            parts.append(street + (' ' + house if house else ''))
+        key = ', '.join(parts).lower().strip()
+        if key:
+            addr_map[key] = d.id
+    return addr_map
 
 
 def _upsert_delivery_route(route_db_id, route_data, selected_date, stops, cached_json):

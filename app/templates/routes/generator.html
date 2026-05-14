@@ -1148,15 +1148,18 @@ document.addEventListener('click', function(e) {
     btn.disabled = true;
     btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Перераховую…';
 
-    // Save routeDbId/courierName mapping before recalculate (optimizer response won't include them)
+    // Save routeDbId/courierName/stop-ids mapping before recalculate (optimizer response won't include them)
     const routeDbIdByCourier = {};
     const courierNameByCourier = {};
+    const stopIdsByRouteIdx = {};
     currentRoutes.forEach(function(r, idx) {
       let key = r.courierId;
       if (typeof key === 'string') { const m = key.match(/\d+/); key = m ? parseInt(m[0], 10) : idx + 1; }
       else if (typeof key !== 'number' || key === null) { key = idx + 1; }
       if (r.routeDbId) routeDbIdByCourier[key] = r.routeDbId;
       if (r.courierName) courierNameByCourier[key] = r.courierName;
+      // Preserve delivery ids by stop position so save still works after recalculate
+      stopIdsByRouteIdx[idx] = (r.stops || []).map(function(s) { return s.id; });
     });
 
     const recalcRoutes = currentRoutes.map(function(route, idx) {
@@ -1174,6 +1177,7 @@ document.addEventListener('click', function(e) {
           .filter(function(s) { return s.lat && s.lng; })
           .map(function(s) {
             return {
+              id: s.id,
               lat: s.lat, lng: s.lng,
               address: s.address || '',
               timeStart: s.timeStart || null,
@@ -1203,10 +1207,14 @@ document.addEventListener('click', function(e) {
       }
 
       currentRoutes = data.routes || currentRoutes;
-      // Restore routeDbId and courierName after recalculate (optimizer strips them)
-      currentRoutes.forEach(function(r) {
+      // Restore routeDbId, courierName, and stop ids after recalculate (optimizer strips them)
+      currentRoutes.forEach(function(r, idx) {
         if (!r.routeDbId && routeDbIdByCourier[r.courierId]) r.routeDbId = routeDbIdByCourier[r.courierId];
         if (!r.courierName && courierNameByCourier[r.courierId]) r.courierName = courierNameByCourier[r.courierId];
+        const prevIds = stopIdsByRouteIdx[idx] || [];
+        (r.stops || []).forEach(function(stop, si) {
+          if (!stop.id && prevIds[si]) stop.id = prevIds[si];
+        });
       });
       hasChanges = false;
       document.getElementById('changes-banner').classList.remove('visible');
