@@ -132,6 +132,8 @@ grep -r "down_revision" migrations/versions/*.py | grep -v "__pycache__"
 
 Set `down_revision` to that value. **Never assume** the head is the last migration you worked on — another migration may have been added in between. Creating a branch (two files with the same `down_revision`) causes Alembic multiple-heads error and the container won't start.
 
+**Migration commit rule**: Never apply a migration (`flask db upgrade`) on any environment before the file is committed to git. The correct order is always: create file → `git commit` → `flask db upgrade`. Stubs are forbidden — if a migration was applied outside of git, add the real file to git immediately.
+
 ---
 
 ## DB Table Names (gotcha)
