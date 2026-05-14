@@ -6,6 +6,19 @@ import re
 PHONE_PATTERN = re.compile(r'^\+380[0-9]{9}$')
 
 
+def _client_snapshot(client) -> dict:
+    return {
+        'name': client.name,
+        'instagram': client.instagram,
+        'telegram': client.telegram,
+        'phone': client.phone,
+        'email': client.email,
+        'marketing_source': client.marketing_source,
+        'personal_discount': client.personal_discount,
+        'credits': str(client.credits) if client.credits is not None else None,
+    }
+
+
 def get_all_clients():
     return Client.query.order_by(Client.id.desc()).all()
 
@@ -136,6 +149,15 @@ def create_client(instagram=None, telegram=None, phone=None, name=None,
     )
     db.session.add(client)
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'create', 'client', client.id,
+        f'Створено клієнта {client.name or client.instagram or client.phone or f"#{client.id}"}',
+        after_data=_client_snapshot(client),
+    )
     return client, None
 
 
@@ -143,6 +165,7 @@ def update_client(client_id, instagram=None, telegram=None, phone=None, name=Non
                   phone_viber=False, phone_telegram=False, phone_whatsapp=False,
                   marketing_source=None, personal_discount=None, email=None):
     client = get_client_by_id(client_id)
+    before = _client_snapshot(client)
 
     instagram = instagram.strip().lstrip('@') if instagram and instagram.strip() else None
     telegram = telegram.strip() if telegram and telegram.strip() else None
@@ -172,6 +195,16 @@ def update_client(client_id, instagram=None, telegram=None, phone=None, name=Non
     client.personal_discount = personal_discount
     client.email = email
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'edit', 'client', client.id,
+        f'Редаговано клієнта {client.name or client.instagram or client.phone or f"#{client.id}"}',
+        before_data=before,
+        after_data=_client_snapshot(client),
+    )
     return client, None
 
 

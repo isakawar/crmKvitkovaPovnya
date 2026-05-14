@@ -12,6 +12,8 @@ class ActivityLog(db.Model):
     entity_type = db.Column(db.String(30))
     entity_id   = db.Column(db.Integer, nullable=True)
     description = db.Column(db.String(255))
+    before_data = db.Column(db.JSON, nullable=True)
+    after_data  = db.Column(db.JSON, nullable=True)
     created_at  = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     user = db.relationship('User', lazy='joined', passive_deletes=True)

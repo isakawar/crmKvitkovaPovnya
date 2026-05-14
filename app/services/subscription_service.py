@@ -13,6 +13,21 @@ WEEKDAY_MAP = {'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5,
 REVERSE_WEEKDAY_MAP = {v: k for k, v in WEEKDAY_MAP.items()}
 
 
+def _subscription_snapshot(sub) -> dict:
+    return {
+        'client_id': sub.client_id,
+        'type': sub.type,
+        'status': sub.status,
+        'size': sub.size,
+        'delivery_day': sub.delivery_day,
+        'city': sub.city,
+        'recipient_name': sub.recipient_name,
+        'recipient_phone': sub.recipient_phone,
+        'is_stopped': sub.is_stopped,
+        'discount': sub.discount,
+    }
+
+
 def calculate_next_delivery_date(previous_date, subscription_type, desired_weekday):
     if subscription_type == 'Weekly':
         next_date = previous_date + datetime.timedelta(days=7)
@@ -341,6 +356,16 @@ def create_subscription(client, form):
         db.session.add(delivery)
 
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    client_label = client.name or client.instagram or f'#{client.id}'
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'create', 'subscription', subscription.id,
+        f'Створено підписку #{subscription.id} ({subscription.type}) для {client_label}',
+        after_data=_subscription_snapshot(subscription),
+    )
     return subscription
 
 
@@ -627,12 +652,26 @@ def extend_subscription(subscription, overrides=None):
         db.session.add(delivery)
 
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'extend', 'subscription', subscription.id,
+        f'Продовжено підписку #{subscription.id} (цикл {next_cycle})',
+        after_data=_subscription_snapshot(subscription),
+    )
     return subscription
 
 
 def delete_subscription(subscription):
     from app.models.delivery_route import RouteDelivery
     from app.models.recipient_phone import RecipientPhone
+
+    sub_id = subscription.id
+    before = _subscription_snapshot(subscription)
+    client_label = (subscription.client.name or subscription.client.instagram or f'#{subscription.client_id}'
+                    if subscription.client else f'#{subscription.client_id}')
 
     for order in list(subscription.orders):
         for delivery in list(order.deliveries):
@@ -645,6 +684,15 @@ def delete_subscription(subscription):
     db.session.flush()
     db.session.delete(subscription)
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'delete', 'subscription', sub_id,
+        f'Видалено підписку #{sub_id} для {client_label}',
+        before_data=before,
+    )
 
 
 def create_draft_subscription(client, contact_date, draft_comment=None, draft_bank_link=None, draft_wedding_date=None):
