@@ -23,7 +23,8 @@ def app():
     flask_app.config['LOGIN_DISABLED'] = True
     with flask_app.app_context():
         _db.create_all()
-        yield flask_app
+        with flask_app.test_request_context('/'):
+            yield flask_app
         _db.session.remove()
         _db.drop_all()
 
