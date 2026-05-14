@@ -11,6 +11,25 @@ logger = logging.getLogger(__name__)
 from app.services.subscription_service import SUBSCRIPTION_TYPES  # noqa: F401
 
 
+def _order_snapshot(order) -> dict:
+    return {
+        'client_id': order.client_id,
+        'size': order.size,
+        'delivery_date': str(order.delivery_date) if order.delivery_date else None,
+        'city': order.city,
+        'street': order.street,
+        'address_comment': order.address_comment,
+        'recipient_name': order.recipient_name,
+        'recipient_phone': order.recipient_phone,
+        'is_pickup': order.is_pickup,
+        'delivery_method': order.delivery_method,
+        'charged_amount': str(order.charged_amount) if order.charged_amount is not None else None,
+        'discount': order.discount,
+        'for_whom': order.for_whom,
+        'comment': order.comment,
+    }
+
+
 def get_or_create_client(instagram):
     client = Client.query.filter_by(instagram=instagram).first()
     if not client:
@@ -92,6 +111,15 @@ def create_order_and_deliveries(client, form):
     )
     db.session.add(delivery)
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'create', 'order', order.id,
+        f'Створено замовлення #{order.id} для {client.name or client.instagram or f"#{client.id}"}',
+        after_data=_order_snapshot(order),
+    )
     return order
 
 
@@ -173,6 +201,7 @@ def paginate_orders(orders, page=1, per_page=10):
 
 
 def update_order(order, form):
+    before = _order_snapshot(order)
     new_client_id = form.get('client_id', '').strip()
     if new_client_id:
         try:
@@ -244,11 +273,25 @@ def update_order(order, form):
         delivery.time_to = order.time_to
 
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'edit', 'order', order.id,
+        f'Редаговано замовлення #{order.id}',
+        before_data=before,
+        after_data=_order_snapshot(order),
+    )
     return order
 
 
 def delete_order(order):
     logger.warning(f'Deleting order {order.id}')
+    order_id = order.id
+    before = _order_snapshot(order)
+    client_label = order.client.name or order.client.instagram or f'#{order.client_id}' if order.client else ''
+
     from app.models.delivery_route import RouteDelivery
     for delivery in list(order.deliveries):
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
@@ -257,3 +300,12 @@ def delete_order(order):
     db.session.flush()
     db.session.delete(order)
     db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'delete', 'order', order_id,
+        f'Видалено замовлення #{order_id} ({client_label})',
+        before_data=before,
+    )

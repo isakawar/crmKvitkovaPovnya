@@ -1,0 +1,237 @@
+{% extends 'layout.html' %}
+{% block content %}
+
+<div class="mb-5">
+    <h1 class="text-xl font-semibold text-stone-900 mb-1">Лог змін</h1>
+    <p class="text-sm text-stone-500">Хто і які зміни вносив у систему</p>
+</div>
+
+<!-- Filters -->
+<form method="GET" class="bg-white border border-stone-200 rounded-xl px-4 py-3 mb-4 flex flex-wrap gap-3 items-end">
+    <div>
+        <label class="text-xs text-stone-500 block mb-1">Користувач</label>
+        <select name="user_id" class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-stone-700 bg-white">
+            <option value="">Всі</option>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if selected_user_id == u.id|string %}selected{% endif %}>
+                {{ u.display_name or u.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="text-xs text-stone-500 block mb-1">Сутність</label>
+        <select name="entity_type" class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-stone-700 bg-white">
+            <option value="">Всі</option>
+            {% for key, label in entity_labels.items() %}
+            <option value="{{ key }}" {% if selected_entity_type == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="text-xs text-stone-500 block mb-1">Дія</label>
+        <select name="action" class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-stone-700 bg-white">
+            <option value="">Всі</option>
+            {% for key, label in action_labels.items() %}
+            <option value="{{ key }}" {% if selected_action == key %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div>
+        <label class="text-xs text-stone-500 block mb-1">Від</label>
+        <input type="date" name="date_from" value="{{ date_from }}"
+               class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-stone-700">
+    </div>
+    <div>
+        <label class="text-xs text-stone-500 block mb-1">До</label>
+        <input type="date" name="date_to" value="{{ date_to }}"
+               class="border border-stone-200 rounded-lg px-3 py-1.5 text-sm text-stone-700">
+    </div>
+    <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium px-4 py-1.5 rounded-lg transition-colors">
+        Застосувати
+    </button>
+    {% if selected_user_id or selected_entity_type or selected_action or date_from or date_to %}
+    <a href="/activity-log" class="text-sm text-stone-400 hover:text-stone-600 py-1.5 transition-colors">Скинути</a>
+    {% endif %}
+</form>
+
+<!-- Table -->
+<div class="bg-white border border-stone-200 rounded-xl overflow-hidden">
+    {% if entries %}
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="border-b border-stone-100 bg-stone-50">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Час</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Хто</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Дія</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Що</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Опис</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Деталі</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-stone-100">
+            {% for entry in entries %}
+            <tr class="hover:bg-stone-50 transition-colors">
+                <td class="px-4 py-3 text-stone-500 whitespace-nowrap">{{ entry.created_at | kyiv_time }}</td>
+                <td class="px-4 py-3 font-medium text-stone-800 whitespace-nowrap">{{ entry.user_label }}</td>
+                <td class="px-4 py-3 whitespace-nowrap">
+                    {% set action_colors = {
+                        'create': 'bg-green-100 text-green-700',
+                        'edit': 'bg-blue-100 text-blue-700',
+                        'delete': 'bg-red-100 text-red-700',
+                        'extend': 'bg-amber-100 text-amber-700',
+                    } %}
+                    <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium {{ action_colors.get(entry.action, 'bg-stone-100 text-stone-600') }}">
+                        {{ action_labels.get(entry.action, entry.action) }}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-stone-600 whitespace-nowrap">
+                    {{ entity_labels.get(entry.entity_type, entry.entity_type) }}
+                    {% if entry.entity_id %}
+                    <span class="text-stone-400">#{{ entry.entity_id }}</span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3 text-stone-700 max-w-xs truncate">{{ entry.description }}</td>
+                <td class="px-4 py-3">
+                    {% if entry.before_data or entry.after_data %}
+                    <details class="group">
+                        <summary class="cursor-pointer text-xs text-amber-600 hover:text-amber-700 font-medium select-none list-none">
+                            <span class="group-open:hidden">Показати ▾</span>
+                            <span class="hidden group-open:inline">Сховати ▴</span>
+                        </summary>
+                        <div class="mt-2 activity-diff text-xs font-mono border border-stone-200 rounded-lg overflow-hidden"
+                             data-before='{{ entry.before_data | tojson if entry.before_data else "null" }}'
+                             data-after='{{ entry.after_data | tojson if entry.after_data else "null" }}'></div>
+                    </details>
+                    {% else %}
+                    <span class="text-stone-300 text-xs">—</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div class="flex items-center justify-between px-4 py-3 border-t border-stone-100">
+        <span class="text-sm text-stone-500">
+            Записів: {{ pagination.total }}, сторінка {{ pagination.page }} з {{ pagination.pages }}
+        </span>
+        <div class="flex gap-1">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.prev_num }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}{% if selected_entity_type %}&entity_type={{ selected_entity_type }}{% endif %}{% if selected_action %}&action={{ selected_action }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+               class="px-3 py-1.5 text-sm border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50 transition-colors">← Назад</a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.next_num }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}{% if selected_entity_type %}&entity_type={{ selected_entity_type }}{% endif %}{% if selected_action %}&action={{ selected_action }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
+               class="px-3 py-1.5 text-sm border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50 transition-colors">Вперед →</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="py-16 text-center text-stone-400">
+        <i class="bi bi-journal-text text-4xl mb-3 block"></i>
+        <p class="text-sm">Записів не знайдено</p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    function fmtVal(v) {
+        if (v === null || v === undefined) return '<span style="color:#d1d5db">null</span>';
+        if (typeof v === 'boolean') return `<span style="color:#7c3aed">${v}</span>`;
+        if (typeof v === 'number') return `<span style="color:#0369a1">${v}</span>`;
+        return escHtml(String(v));
+    }
+
+    function renderDiff(container, before, after) {
+        const keys = Array.from(new Set([
+            ...(before ? Object.keys(before) : []),
+            ...(after ? Object.keys(after) : []),
+        ]));
+
+        // create-only or delete-only: single column
+        if (!before || !after) {
+            const data = before || after;
+            const isCreate = !!after;
+            const rows = keys.map(key => {
+                const val = data[key];
+                const bg = isCreate ? '#f0fdf4' : '#fef2f2';
+                return `<tr style="background:${bg}">
+                    <td style="padding:3px 10px;color:#78716c;white-space:nowrap">${escHtml(key)}</td>
+                    <td style="padding:3px 10px">${fmtVal(val)}</td>
+                </tr>`;
+            }).join('');
+            container.innerHTML = `<table style="width:100%;border-collapse:collapse">${rows}</table>`;
+            return;
+        }
+
+        // edit: two columns Before | After
+        const S = 'padding:3px 10px;vertical-align:top';
+        let headerHtml = `<tr style="background:#f5f5f4">
+            <td style="${S};color:#a8a29e;font-size:10px;text-transform:uppercase;letter-spacing:.05em;width:80px">Поле</td>
+            <td style="${S};color:#a8a29e;font-size:10px;text-transform:uppercase;letter-spacing:.05em">До</td>
+            <td style="${S};color:#a8a29e;font-size:10px;text-transform:uppercase;letter-spacing:.05em;border-left:1px solid #e7e5e4">Після</td>
+        </tr>`;
+
+        const changedRows = [], sameRows = [];
+        for (const key of keys) {
+            const oldVal = before[key];
+            const newVal = after[key];
+            const changed = JSON.stringify(oldVal) !== JSON.stringify(newVal);
+            const rowStyle = changed ? 'background:#f0fdf4' : '';
+            const afterStyle = changed ? 'font-weight:600;color:#15803d' : '';
+            const row = `<tr style="${rowStyle}">
+                <td style="${S};color:#78716c;white-space:nowrap">${escHtml(key)}</td>
+                <td style="${S};color:#9ca3af;text-decoration:${changed ? 'line-through' : 'none'}">${fmtVal(oldVal)}</td>
+                <td style="${S};border-left:1px solid #e7e5e4;${afterStyle}">${fmtVal(newVal)}</td>
+            </tr>`;
+            if (changed) changedRows.push(row);
+            else sameRows.push(row);
+        }
+
+        let tableRows = changedRows.join('');
+        if (sameRows.length) {
+            const id = 'ds-' + Math.random().toString(36).slice(2);
+            tableRows += `<tr><td colspan="3" style="padding:0">
+                <button onclick="var el=document.getElementById('${id}');el.hidden=!el.hidden;this.textContent=el.hidden?'▸ Незмінені поля (${sameRows.length})':'▾ Незмінені поля (${sameRows.length})'"
+                    style="width:100%;text-align:left;padding:3px 10px;font-size:11px;color:#a8a29e;background:#fafaf9;border:none;border-top:1px solid #e7e5e4;cursor:pointer">
+                    ▸ Незмінені поля (${sameRows.length})
+                </button>
+                <table id="${id}" hidden style="width:100%;border-collapse:collapse">${sameRows.join('')}</table>
+            </td></tr>`;
+        }
+
+        if (!changedRows.length && !sameRows.length) {
+            container.innerHTML = `<div style="padding:6px 10px;color:#a8a29e">Даних немає</div>`;
+            return;
+        }
+
+        container.innerHTML = `<table style="width:100%;border-collapse:collapse">${headerHtml}${tableRows}</table>`;
+    }
+
+    function escHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    document.querySelectorAll('details').forEach(details => {
+        details.addEventListener('toggle', function () {
+            if (!this.open) return;
+            const el = this.querySelector('.activity-diff');
+            if (!el || el.dataset.rendered) return;
+            el.dataset.rendered = '1';
+            const before = JSON.parse(el.dataset.before || 'null');
+            const after = JSON.parse(el.dataset.after || 'null');
+            renderDiff(el, before, after);
+        }, { once: false });
+    });
+});
+</script>
+{% endblock %}

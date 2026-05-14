@@ -260,6 +260,14 @@
             <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
             <span>Транзакції</span>
         </a>
+        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        <a href="/activity-log" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/activity-log') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
+            <span>Лог змін</span>
+        </a>
+        {% endif %}
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-1
@@ -381,6 +389,15 @@
             <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
             <span class="nav-label">Транзакції</span>
         </a>
+        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        <a href="/activity-log"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/activity-log') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Лог змін">
+            <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
+            <span class="nav-label">Лог змін</span>
+        </a>
+        {% endif %}
         <!-- Spacer -->
         <div class="flex-1"></div>
 

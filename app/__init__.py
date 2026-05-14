@@ -53,6 +53,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.subscriptions import subscriptions_bp
     from app.blueprints.ai_agent import ai_agent_bp
     from app.blueprints.photos.routes import photos_bp
+    from app.blueprints.activity_log import activity_log_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -69,6 +70,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(subscriptions_bp)
     app.register_blueprint(ai_agent_bp)
     app.register_blueprint(photos_bp)
+    app.register_blueprint(activity_log_bp)
 
     # Ensure upload folder exists
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads/order_photos'), exist_ok=True)
@@ -138,6 +140,12 @@ def create_app(config_class=DevelopmentConfig):
 
     from zoneinfo import ZoneInfo
     _kyiv_tz = ZoneInfo('Europe/Kyiv')
+
+    import json as _json
+
+    @app.template_filter('pretty_json')
+    def pretty_json_filter(value):
+        return _json.dumps(value, ensure_ascii=False, indent=2)
 
     @app.template_filter('kyiv_time')
     def kyiv_time_filter(dt):
