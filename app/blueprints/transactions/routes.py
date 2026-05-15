@@ -266,7 +266,11 @@ def create_transaction():
     client.credits = (client.credits or 0) + amount_val
 
     db.session.add(txn)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'errors': [str(e)]}), 500
 
     return jsonify({'success': True, 'id': txn.id})
 
@@ -337,7 +341,7 @@ def update_transaction(txn_id):
 
     if txn.transaction_type == 'credit' and txn.client:
         delta = amount_val - float(txn.amount or 0)
-        txn.client.credits = (txn.client.credits or 0) + delta
+        txn.client.credits = float(txn.client.credits or 0) + delta
 
     txn.amount = amount_val
     txn.date = txn_date

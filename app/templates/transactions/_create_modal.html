@@ -255,9 +255,8 @@
             <input type="number" id="txnAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 500.50" class="txn-input">
           </div>
 
-          <div class="txn-field">
-            <label class="txn-label">Тип оплати</label>
-            <select id="txnPaymentType" name="payment_type" required class="txn-select">
+          <div class="txn-field" style="display:none;">
+            <select id="txnPaymentType" name="payment_type" class="txn-select">
               <option value="monobank" selected>Monobank</option>
               <option value="cash">Готівка</option>
             </select>
@@ -268,6 +267,11 @@
             <select id="txnPaymentAccountId" name="payment_account_id" required class="txn-select">
               <option value="">— Оберіть рахунок —</option>
             </select>
+          </div>
+
+          <div class="txn-field">
+            <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
+            <input type="text" id="txnComment" name="comment" placeholder="Опис" class="txn-input">
           </div>
 
           <div class="txn-field">
@@ -427,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function () {
       amount: document.getElementById('txnAmount').value,
       payment_type: document.getElementById('txnPaymentType').value,
       payment_account_id: paymentAccountSelect.value,
+      comment: document.getElementById('txnComment').value.trim(),
       date: txnDate.value,
     };
 

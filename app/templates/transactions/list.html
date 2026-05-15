@@ -159,7 +159,6 @@
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Тип</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Клієнт / Витрата</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Сума</th>
-          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Деталі</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Рахунок</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Хто вніс</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap text-center">Дія</th>
@@ -197,23 +196,6 @@
           </td>
           <td class="px-3 py-3 font-semibold whitespace-nowrap {% if txn.transaction_type == 'debit' %}text-rose-600{% else %}text-stone-900{% endif %}">
             {% if txn.transaction_type == 'debit' %}−{% endif %}{{ txn.amount }} грн
-          </td>
-          <td class="px-3 py-3">
-            {% if txn.transaction_type == 'credit' %}
-              {% if txn.payment_type == 'monobank' %}
-              <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap">
-                <i class="bi bi-credit-card"></i> Monobank
-              </span>
-              {% elif txn.payment_type == 'cash' %}
-              <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-700 whitespace-nowrap">
-                <i class="bi bi-cash"></i> Готівка
-              </span>
-              {% endif %}
-            {% elif txn.comment %}
-            <span class="text-xs text-stone-500">{{ txn.comment }}</span>
-            {% else %}
-            <span class="text-stone-300">—</span>
-            {% endif %}
           </td>
           <td class="px-3 py-3 text-xs text-stone-700 truncate">
             {% if txn.payment_account_setting %}
