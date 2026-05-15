@@ -32,57 +32,26 @@
   </div>
 </section>
 
-<!-- Stat cards -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-  <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center">
-        <i class="bi bi-arrow-repeat text-blue-500 text-sm"></i>
-      </div>
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
-        <p class="text-2xl font-semibold text-stone-900">{{ total_count }}</p>
-      </div>
-    </div>
-  </div>
-  <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center">
-        <i class="bi bi-check-circle text-emerald-500 text-sm"></i>
-      </div>
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Активні</p>
-        <p class="text-2xl font-semibold text-stone-900">{{ active_count }}</p>
-      </div>
-    </div>
-  </div>
-  <div class="bg-white border border-stone-200 rounded-2xl px-4 py-3 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center">
-        <i class="bi bi-pencil-square text-violet-500 text-sm"></i>
-      </div>
-      <div>
-        <p class="text-2xl font-semibold text-stone-900">{{ draft_count }}</p>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Драфтові</p>
-        <p class="text-[10px] text-stone-400">(Не оформ. Весільні)</p>
-      </div>
-    </div>
-  </div>
-  <div class="bg-white border border-amber-200 rounded-2xl px-4 py-3 shadow-sm">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center">
-        <i class="bi bi-pause-circle text-amber-500 text-sm"></i>
-      </div>
-      <div>
-        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">На стопі</p>
-        <p class="text-2xl font-semibold text-amber-600">{{ stopped_count }}</p>
-      </div>
-    </div>
-  </div>
+<!-- Tab bar -->
+<div style="display:flex;gap:0;margin-bottom:1.25rem;border-bottom:2px solid #e7e5e4;">
+  {% for t, label, count in [
+      ('all',      'Всі',        all_count),
+      ('active',   'Активні',    active_count),
+      ('draft',    'Драфтові',   draft_count),
+      ('stopped',  'На стопі',   stopped_count),
+      ('finished', 'Закінчені',  finished_count),
+  ] %}
+  <a href="?tab={{ t }}{% if search_query %}&q={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+     style="padding:0.5rem 1.1rem;font-size:0.875rem;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;
+            {% if tab == t %}color:#c2410c;border-bottom-color:#c2410c;{% else %}color:#78716c;{% endif %}">
+    {{ label }} <span style="font-size:0.75rem;font-weight:400;color:#a8a29e;">({{ count }})</span>
+  </a>
+  {% endfor %}
 </div>
 
 <!-- Filters -->
 <form method="get" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
+  <input type="hidden" name="tab" value="{{ tab }}">
   <div class="relative min-w-[280px] flex-1 md:max-w-md">
     <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
     <input
@@ -113,20 +82,16 @@
     Фільтрувати
   </button>
   {% if search_query or city_filter or type_filter %}
-  <a href="{{ url_for('subscriptions.subscriptions_list') }}"
+  <a href="{{ url_for('subscriptions.subscriptions_list') }}?tab={{ tab }}"
      class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
     Скинути
   </a>
   {% endif %}
 </form>
 
-<!-- Draft subscriptions -->
-{% if drafts %}
+<!-- Draft subscriptions (tab=draft only) -->
+{% if tab == 'draft' %}
 <section class="mb-6">
-  <div class="flex items-center gap-3 mb-3">
-    <h2 class="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Потребують контакту</h2>
-    <span class="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">{{ drafts|length }}</span>
-  </div>
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for sub in drafts %}
     <div class="relative bg-white border-2 border-dashed border-amber-300 rounded-xl p-5 hover:shadow-md transition-all">
@@ -211,9 +176,15 @@
       </div>
     </div>
     {% endfor %}
+    {% if not drafts %}
+    <div class="col-span-3 flex flex-col items-center justify-center py-20 text-stone-400">
+      <i class="bi bi-pencil-square text-5xl mb-4"></i>
+      <p class="text-lg font-medium">Чернеток не знайдено</p>
+    </div>
+    {% endif %}
   </div>
 </section>
-{% endif %}
+{% else %}
 
 <!-- Cards -->
 {% if subscriptions %}
@@ -317,8 +288,9 @@
   </p>
 </div>
 {% endif %}
+{% endif %}{# end else (not draft tab) #}
 
-{% set total_pages = (total_count // per_page) + (1 if total_count % per_page else 0) %}
+{% set total_pages = (tab_count // per_page) + (1 if tab_count % per_page else 0) %}
 {% if total_pages > 1 %}
 <nav class="flex items-center justify-center gap-2 mt-8">
   <a href="?{{ update_query(1) }}"
