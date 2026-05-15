@@ -452,9 +452,17 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-card__label">Скасовані</div>
-        <div class="kpi-card__value kpi-card__value--red">{{ deliveries.cancelled }}</div>
-        <div class="kpi-card__sub">{{ deliveries.cancelled_pct }}% від загальної</div>
+        <div class="kpi-card__label">Нові клієнти</div>
+        <div class="kpi-card__value kpi-card__value--green">{{ deliveries.new_clients }}</div>
+        <div class="kpi-card__sub">
+          {% if deliveries.new_clients_delta_pct is not none %}
+            {% if deliveries.new_clients_delta >= 0 %}+{% endif %}{{ deliveries.new_clients_delta }} ({% if deliveries.new_clients_delta >= 0 %}+{% endif %}{{ deliveries.new_clients_delta_pct }}%) vs попередній
+          {% elif deliveries.new_clients_delta != 0 %}
+            {% if deliveries.new_clients_delta >= 0 %}+{% endif %}{{ deliveries.new_clients_delta }} vs попередній
+          {% else %}
+            без змін vs попередній
+          {% endif %}
+        </div>
       </div>
     </div>
 
