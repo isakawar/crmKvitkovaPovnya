@@ -32,62 +32,70 @@
   </div>
 </section>
 
-<!-- Tab bar -->
-<div style="display:flex;gap:0;margin-bottom:1.25rem;border-bottom:2px solid #e7e5e4;">
-  {% for t, label, count in [
-      ('all',      'Всі',        all_count),
-      ('active',   'Активні',    active_count),
-      ('draft',    'Драфтові',   draft_count),
-      ('stopped',  'На стопі',   stopped_count),
-      ('finished', 'Закінчені',  finished_count),
-  ] %}
-  <a href="?tab={{ t }}{% if search_query %}&q={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}"
-     style="padding:0.5rem 1.1rem;font-size:0.875rem;font-weight:600;text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;
-            {% if tab == t %}color:#c2410c;border-bottom-color:#c2410c;{% else %}color:#78716c;{% endif %}">
-    {{ label }} <span style="font-size:0.75rem;font-weight:400;color:#a8a29e;">({{ count }})</span>
-  </a>
-  {% endfor %}
-</div>
-
-<!-- Filters -->
-<form method="get" class="flex flex-wrap items-center gap-3 mb-6 bg-white border border-stone-200 rounded-xl px-5 py-3">
-  <input type="hidden" name="tab" value="{{ tab }}">
-  <div class="relative min-w-[280px] flex-1 md:max-w-md">
-    <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
-    <input
-      type="text"
-      name="q"
-      value="{{ search_query }}"
-      placeholder="Пошук за Instagram, отримувачем або телефоном..."
-      class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-      autocomplete="off"
-    />
-  </div>
-  <select name="city"
-          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
-    <option value="">Всі міста</option>
-    {% for city in cities %}
-      <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+<!-- Tab bar + Filters -->
+<style>
+.sub-tab{display:inline-flex;align-items:center;gap:.4rem;padding:0 1.1rem;height:38px;border-radius:8px 8px 0 0;text-decoration:none;white-space:nowrap;font-size:.875rem;font-weight:500;color:#78716c;background:#f5f5f4;border:1px solid #e7e5e4;border-bottom:1px solid #e7e5e4;transition:background .15s,color .15s;cursor:pointer;position:relative;}
+.sub-tab:hover{background:#ece9e6;color:#1c1917;}
+.sub-tab.is-active{background:#ffffff;color:#1c1917;font-weight:700;border-color:#e7e5e4;border-bottom-color:#ffffff;z-index:2;}
+.sub-tab__badge{font-size:.68rem;font-weight:600;padding:.05rem .4rem;border-radius:9999px;background:#e7e5e4;color:#78716c;}
+.sub-tab.is-active .sub-tab__badge{background:#f0f0ee;color:#57534e;}
+</style>
+<div style="margin-bottom:1.5rem;">
+  <!-- Tabs row -->
+  <div style="display:flex;gap:3px;position:relative;z-index:1;">
+    {% for t, label, count in [
+        ('all',      'Всі',        all_count),
+        ('active',   'Активні',    active_count),
+        ('draft',    'Драфтові',   draft_count),
+        ('stopped',  'На стопі',   stopped_count),
+        ('finished', 'Закінчені',  finished_count),
+    ] %}
+    <a href="?tab={{ t }}{% if search_query %}&q={{ search_query }}{% endif %}{% if city_filter %}&city={{ city_filter }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+       class="sub-tab {% if tab == t %}is-active{% endif %}">
+      {{ label }}<span class="sub-tab__badge">{{ count }}</span>
+    </a>
     {% endfor %}
-  </select>
-  <select name="type"
-          class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
-    <option value="">Всі типи</option>
-    <option value="Weekly" {% if type_filter == 'Weekly' %}selected{% endif %}>Weekly</option>
-    <option value="Monthly" {% if type_filter == 'Monthly' %}selected{% endif %}>Monthly</option>
-    <option value="Bi-weekly" {% if type_filter == 'Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
-  </select>
-  <button type="submit"
-          class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
-    Фільтрувати
-  </button>
-  {% if search_query or city_filter or type_filter %}
-  <a href="{{ url_for('subscriptions.subscriptions_list') }}?tab={{ tab }}"
-     class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
-    Скинути
-  </a>
-  {% endif %}
-</form>
+  </div>
+  <!-- Filter card — margin-top:-1px щоб злитись з нижньою межею табів -->
+  <form method="get" style="margin-top:-1px;position:relative;z-index:0;" class="flex flex-wrap items-center gap-3 bg-white border border-stone-200 rounded-b-2xl rounded-tr-2xl shadow-sm px-5 py-3">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <div class="relative min-w-[280px] flex-1 md:max-w-md">
+      <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400"></i>
+      <input
+        type="text"
+        name="q"
+        value="{{ search_query }}"
+        placeholder="Пошук за Instagram, отримувачем або телефоном..."
+        class="w-full rounded-lg border border-stone-200 bg-stone-50 py-1.5 pl-9 pr-4 text-sm text-stone-900 placeholder:text-stone-400 transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
+        autocomplete="off"
+      />
+    </div>
+    <select name="city"
+            class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+      <option value="">Всі міста</option>
+      {% for city in cities %}
+        <option value="{{ city.value }}" {% if city_filter == city.value %}selected{% endif %}>{{ city.value }}</option>
+      {% endfor %}
+    </select>
+    <select name="type"
+            class="px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-sm text-stone-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+      <option value="">Всі типи</option>
+      <option value="Weekly" {% if type_filter == 'Weekly' %}selected{% endif %}>Weekly</option>
+      <option value="Monthly" {% if type_filter == 'Monthly' %}selected{% endif %}>Monthly</option>
+      <option value="Bi-weekly" {% if type_filter == 'Bi-weekly' %}selected{% endif %}>Bi-weekly</option>
+    </select>
+    <button type="submit"
+            class="px-4 py-1.5 bg-stone-900 text-white text-sm font-medium rounded-lg hover:bg-stone-700 transition-colors">
+      Фільтрувати
+    </button>
+    {% if search_query or city_filter or type_filter %}
+    <a href="{{ url_for('subscriptions.subscriptions_list') }}?tab={{ tab }}"
+       class="px-4 py-1.5 bg-white border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition-colors">
+      Скинути
+    </a>
+    {% endif %}
+  </form>
+</div>
 
 <!-- Draft subscriptions (tab=draft only) -->
 {% if tab == 'draft' %}
