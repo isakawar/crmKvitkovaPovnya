@@ -1,4 +1,5 @@
 import io
+from decimal import Decimal
 from datetime import date, datetime
 from flask import render_template, request, jsonify, send_file, abort
 from sqlalchemy import or_
@@ -263,7 +264,7 @@ def create_transaction():
         date=txn_date,
         created_by_id=current_user.id,
     )
-    client.credits = (client.credits or 0) + amount_val
+    client.credits = (client.credits or Decimal(0)) + Decimal(str(amount_val))
 
     db.session.add(txn)
     try:
@@ -340,8 +341,8 @@ def update_transaction(txn_id):
         return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
 
     if txn.transaction_type == 'credit' and txn.client:
-        delta = amount_val - float(txn.amount or 0)
-        txn.client.credits = float(txn.client.credits or 0) + delta
+        delta = Decimal(str(amount_val)) - (txn.amount or Decimal(0))
+        txn.client.credits = (txn.client.credits or Decimal(0)) + delta
 
     txn.amount = amount_val
     txn.date = txn_date
