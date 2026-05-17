@@ -46,6 +46,7 @@ def subscriptions_list():
     search_query = request.args.get('q', '').strip()
     city_filter = request.args.get('city', '').strip()
     type_filter = request.args.get('type', '').strip()
+    tab = request.args.get('tab', 'active')
     page = int(request.args.get('page', 1))
     per_page = 30
 
@@ -55,8 +56,6 @@ def subscriptions_list():
         sub_type=type_filter or None,
     )
 
-    drafts = get_draft_subscriptions()
-
     data = []
     for sub in subscriptions:
         all_deliveries = [d for order in sub.orders for d in order.deliveries]
@@ -64,11 +63,25 @@ def subscriptions_list():
         completed = sum(1 for d in all_deliveries if d.status == 'Доставлено')
         data.append({'subscription': sub, 'total': total, 'completed': completed})
 
-    active_count = sum(1 for s in data if s['completed'] < s['total'])
-    total_count = len(data)
-    stopped_count = Subscription.query.filter_by(is_stopped=True).count()
-    draft_count = Subscription.query.filter_by(status='draft').count()
+    all_count = len(data)
+    active_count = sum(1 for s in data if s['completed'] < s['total'] and not s['subscription'].is_stopped)
+    stopped_count = sum(1 for s in data if s['subscription'].is_stopped)
+    finished_count = sum(1 for s in data if s['completed'] == s['total'] and not s['subscription'].is_stopped)
+    if tab == 'active':
+        data = [s for s in data if s['completed'] < s['total'] and not s['subscription'].is_stopped]
+    elif tab == 'stopped':
+        data = [s for s in data if s['subscription'].is_stopped]
+    elif tab == 'finished':
+        data = [s for s in data if s['completed'] == s['total'] and not s['subscription'].is_stopped]
 
+    if tab == 'draft':
+        drafts = get_draft_subscriptions(q=search_query or None)
+        draft_count = len(drafts)
+    else:
+        drafts = []
+        draft_count = Subscription.query.filter_by(status='draft').count()
+
+    tab_count = len(drafts) if tab == 'draft' else len(data)
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     data_page = data[start_idx:end_idx]
@@ -83,10 +96,13 @@ def subscriptions_list():
         subscriptions=data_page,
         drafts=drafts,
         today=dt.date.today(),
+        tab=tab,
+        all_count=all_count,
         active_count=active_count,
         draft_count=draft_count,
-        total_count=total_count,
         stopped_count=stopped_count,
+        finished_count=finished_count,
+        tab_count=tab_count,
         per_page=per_page,
         page=page,
         cities=cities,

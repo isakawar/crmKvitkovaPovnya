@@ -265,6 +265,16 @@ def get_orders_data(date_from_str=None, date_to_str=None):
     }
 
 
+def _new_clients_in_range(d_from, d_to):
+    """Count Client records created within [d_from, d_to]."""
+    q = db.session.query(func.count(Client.id))
+    if d_from:
+        q = q.filter(Client.created_at >= d_from)
+    if d_to:
+        q = q.filter(Client.created_at <= d_to)
+    return q.scalar() or 0
+
+
 def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     """Delivery KPIs: status counts (SQL aggregation), dynamics, city distribution."""
     from app.models.delivery import Delivery
@@ -336,6 +346,31 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
         .all()
     )
 
+    # New clients for selected period; fallback to current month
+    if d_from or d_to:
+        nc_from, nc_to = d_from, d_to
+    else:
+        today = date.today()
+        nc_from = today.replace(day=1)
+        nc_to = today
+
+    new_clients = _new_clients_in_range(nc_from, nc_to)
+
+    # Compare with the equivalent previous period
+    if nc_from and nc_to:
+        duration = (nc_to - nc_from).days + 1
+        prev_nc_to = nc_from - timedelta(days=1)
+        prev_nc_from = prev_nc_to - timedelta(days=duration - 1)
+        prev_new_clients = _new_clients_in_range(prev_nc_from, prev_nc_to)
+    else:
+        prev_new_clients = 0
+
+    new_clients_delta = new_clients - prev_new_clients
+    if prev_new_clients > 0:
+        new_clients_delta_pct = round(new_clients_delta / prev_new_clients * 100, 1)
+    else:
+        new_clients_delta_pct = None
+
     return {
         'total': total,
         'completed': completed,
@@ -345,6 +380,9 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
         'in_progress_pct': in_progress_pct,
         'cancelled_pct': cancelled_pct,
         'total_change_pct': total_change_pct,
+        'new_clients': new_clients,
+        'new_clients_delta': new_clients_delta,
+        'new_clients_delta_pct': new_clients_delta_pct,
         'dynamics_chart': {'labels': dyn_labels, 'values': dyn_values},
         'city_chart': _items_to_chart(_rows_to_items(city_rows)),
     }

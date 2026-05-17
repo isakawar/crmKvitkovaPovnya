@@ -718,7 +718,7 @@ def create_draft_subscription(client, contact_date, draft_comment=None, draft_ba
     return subscription
 
 
-def get_draft_subscriptions(contact_date_to=None):
+def get_draft_subscriptions(contact_date_to=None, q=None):
     query = (
         Subscription.query
         .options(joinedload(Subscription.client))
@@ -731,6 +731,19 @@ def get_draft_subscriptions(contact_date_to=None):
             Subscription.contact_date.isnot(None),
             Subscription.contact_date <= contact_date_to,
         )
+
+    if q:
+        q_stripped = q.lstrip('@')
+        like_q = f'%{q}%'
+        like_q_stripped = f'%{q_stripped}%'
+        query = query.filter(or_(
+            Client.instagram.ilike(like_q),
+            Client.phone.ilike(like_q),
+            Client.telegram.ilike(like_q),
+            Client.telegram.ilike(like_q_stripped),
+            Subscription.recipient_name.ilike(like_q),
+            Subscription.recipient_phone.ilike(like_q),
+        ))
 
     return query.order_by(Subscription.contact_date.asc(), Subscription.created_at.asc()).all()
 
