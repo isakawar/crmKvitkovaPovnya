@@ -23,101 +23,126 @@
 
   <section class="settings-grid" aria-label="Розділи налаштувань">
 
-    <a class="settings-grid-card" href="{{ url_for('settings.directories_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-journals"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Довідники</p>
-        <h2 class="settings-grid-card__title">Довідники</h2>
-        <p class="settings-grid-card__text">Типи підписки, розміри, для кого, маркетингові джерела, пакування та цінова матриця.</p>
+    <div class="settings-grid-card">
+      <div class="settings-grid-card__header">
+        <span class="settings-grid-card__icon"><i class="bi bi-journals"></i></span>
+        <div>
+          <p class="settings-grid-card__eyebrow">Довідники</p>
+          <h2 class="settings-grid-card__title">Довідники</h2>
+        </div>
       </div>
-      <div class="settings-grid-card__meta">
-        <span>Керувати списками</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      <div class="settings-grid-card__action-list">
+        <a href="{{ url_for('settings.directories_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-list-ul settings-grid-card__action-item__icon"></i>
+          Керувати списками
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
       </div>
-    </a>
+    </div>
 
-    <a class="settings-grid-card" href="{{ url_for('settings.couriers_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-person-badge"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Команда</p>
-        <h2 class="settings-grid-card__title">Кур'єри</h2>
-        <p class="settings-grid-card__text">Додавайте кур'єрів, оновлюйте статус активності та контролюйте Telegram-підключення.</p>
+    <div class="settings-grid-card">
+      <div class="settings-grid-card__header">
+        <span class="settings-grid-card__icon"><i class="bi bi-people-fill"></i></span>
+        <div>
+          <p class="settings-grid-card__eyebrow">Команда</p>
+          <h2 class="settings-grid-card__title">Команда</h2>
+        </div>
       </div>
-      <div class="settings-grid-card__meta">
-        <span>База кур'єрів</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      <div class="settings-grid-card__action-list">
+        <a href="{{ url_for('settings.couriers_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-person-badge settings-grid-card__action-item__icon"></i>
+          Кур'єри
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        {% if current_user.has_permission('manage_users') %}
+        <a href="{{ url_for('settings.users_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-person-gear settings-grid-card__action-item__icon"></i>
+          Користувачі
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        {% endif %}
       </div>
-    </a>
-
-    {% if current_user.has_permission('manage_users') %}
-    <a class="settings-grid-card" href="{{ url_for('settings.users_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-people"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Адміністрування</p>
-        <h2 class="settings-grid-card__title">Користувачі</h2>
-        <p class="settings-grid-card__text">Створюйте акаунти менеджерів і флористів, змінюйте паролі та деактивуйте доступ.</p>
-      </div>
-      <div class="settings-grid-card__meta">
-        <span>Управляти командою</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
-      </div>
-    </a>
-    {% endif %}
+    </div>
 
     {% if current_user.has_permission('edit_settings') %}
-    <a class="settings-grid-card" href="{{ url_for('settings.features_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-toggles"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Функції</p>
-        <h2 class="settings-grid-card__title">Фіче флаги</h2>
-        <p class="settings-grid-card__text">Вмикайте та вимикайте функції системи: AI Асистент, банер розподілу по маршрутах.</p>
+    <div class="settings-grid-card">
+      <div class="settings-grid-card__header">
+        <span class="settings-grid-card__icon"><i class="bi bi-toggles"></i></span>
+        <div>
+          <p class="settings-grid-card__eyebrow">Функції</p>
+          <h2 class="settings-grid-card__title">Фіче флаги</h2>
+        </div>
+        <div class="settings-feature-preview">
+          <div class="settings-feature-row">
+            <span class="settings-feature-dot {% if ai_on %}settings-feature-dot--on{% endif %}"></span>
+            AI Асистент
+          </div>
+          <div class="settings-feature-row">
+            <span class="settings-feature-dot {% if banner_on %}settings-feature-dot--on{% endif %}"></span>
+            Банер маршрутів
+          </div>
+        </div>
       </div>
-      <div class="settings-grid-card__meta">
-        <span>Керувати функціями</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      <div class="settings-grid-card__action-list">
+        <a href="{{ url_for('settings.features_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-toggles settings-grid-card__action-item__icon"></i>
+          Керувати функціями
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
       </div>
-    </a>
+    </div>
     {% endif %}
 
-    <a class="settings-grid-card" href="{{ url_for('photos.list_photos') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-images"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Технічне</p>
-        <h2 class="settings-grid-card__title">Фото букетів</h2>
-        <p class="settings-grid-card__text">Перегляд, завантаження та масове видалення фото букетів прив'язаних до замовлень.</p>
+    <div class="settings-grid-card">
+      <div class="settings-grid-card__header">
+        <span class="settings-grid-card__icon"><i class="bi bi-database-up"></i></span>
+        <div>
+          <p class="settings-grid-card__eyebrow">Дані</p>
+          <h2 class="settings-grid-card__title">Дані</h2>
+        </div>
       </div>
-      <div class="settings-grid-card__meta">
-        <span>Відкрити галерею</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      <div class="settings-grid-card__action-list">
+        <a href="{{ url_for('import_csv.kvitkovapovnya_import_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-file-earmark-arrow-up settings-grid-card__action-item__icon"></i>
+          Імпорт CSV
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        <a href="{{ url_for('import_csv.kvitkovapovnya_import_page', tab='export') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-download settings-grid-card__action-item__icon"></i>
+          Експорт даних
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
       </div>
-    </a>
+    </div>
 
-    <a class="settings-grid-card" href="{{ url_for('import_csv.kvitkovapovnya_import_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-file-earmark-arrow-up"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Дані</p>
-        <h2 class="settings-grid-card__title">Імпорт CSV</h2>
-        <p class="settings-grid-card__text">Завантажте клієнтів і замовлення з CSV-файлу для швидкого старту або міграції.</p>
+    <div class="settings-grid-card">
+      <div class="settings-grid-card__header">
+        <span class="settings-grid-card__icon"><i class="bi bi-images"></i></span>
+        <div>
+          <p class="settings-grid-card__eyebrow">Технічне</p>
+          <h2 class="settings-grid-card__title">Медіа та Фінанси</h2>
+        </div>
       </div>
-      <div class="settings-grid-card__meta">
-        <span>Перейти до імпорту</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      <div class="settings-grid-card__action-list">
+        <a href="{{ url_for('photos.list_photos') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-images settings-grid-card__action-item__icon"></i>
+          Фото букетів
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        <a href="{{ url_for('settings.charges_page') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-credit-card-2-front settings-grid-card__action-item__icon"></i>
+          Списання з клієнтів
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        <a href="{{ url_for('activity_log.activity_log_list') }}" class="settings-grid-card__action-item">
+          <i class="bi bi-shield-check settings-grid-card__action-item__icon"></i>
+          Лог змін
+          <i class="bi bi-arrow-up-right settings-grid-card__action-item__arrow"></i>
+        </a>
+        {% endif %}
       </div>
-    </a>
-
-    <a class="settings-grid-card" href="{{ url_for('settings.charges_page') }}">
-      <span class="settings-grid-card__icon"><i class="bi bi-credit-card-2-front"></i></span>
-      <div>
-        <p class="settings-grid-card__eyebrow">Фінанси</p>
-        <h2 class="settings-grid-card__title">Списання з клієнтів</h2>
-        <p class="settings-grid-card__text">Історія списань за виконані доставки: сума, замовлення, знижка та дата.</p>
-      </div>
-      <div class="settings-grid-card__meta">
-        <span>Переглянути списання</span>
-        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
-      </div>
-    </a>
-
+    </div>
 
   </section>
 </div>

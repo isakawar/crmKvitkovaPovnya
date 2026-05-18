@@ -14,7 +14,9 @@ bp = Blueprint('settings', __name__)
 @login_required
 @permission_required('view_settings')
 def settings_page():
-    return render_template('settings/index.html')
+    ai_on = not Settings.query.filter_by(type='feature_flag', value='ai_agent_disabled').first()
+    banner_on = not Settings.query.filter_by(type='feature_flag', value='distribute_banner_disabled').first()
+    return render_template('settings/index.html', ai_on=ai_on, banner_on=banner_on)
 
 
 @bp.route('/settings/couriers')

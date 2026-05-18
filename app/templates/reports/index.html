@@ -170,47 +170,6 @@
     color: #78716c;
   }
 
-  /* Export blocks */
-  .export-block {
-    border: 1px solid #e7e5e4;
-    border-radius: 1.2rem;
-    background: #fff;
-    padding: 1.5rem;
-    box-shadow: 0 4px 12px rgba(28, 25, 23, 0.04);
-  }
-
-  .export-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: 0.75rem;
-    font-size: 0.85rem;
-    font-weight: 600;
-    border: 1px solid #e7e5e4;
-    background: #fff;
-    color: #1c1917;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
-    text-decoration: none;
-  }
-
-  .export-btn:hover {
-    background: #fafaf9;
-    border-color: #d6d3d1;
-  }
-
-  .export-btn--primary {
-    background: #1c1917;
-    color: #fff;
-    border-color: #1c1917;
-  }
-
-  .export-btn--primary:hover {
-    background: #292524;
-    border-color: #292524;
-  }
-
   /* P&L expense bar */
   .expense-bar-row {
     margin-bottom: 1rem;
@@ -403,10 +362,6 @@
     <button type="button" class="reports-tab-btn {% if active_tab == 'pl' %}is-active{% endif %}" data-tab="pl">
       <i class="bi bi-graph-up-arrow"></i>
       P&L
-    </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'export' %}is-active{% endif %}" data-tab="export">
-      <i class="bi bi-download"></i>
-      Експорт
     </button>
     <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
       <i class="bi bi-cash-stack"></i>
@@ -840,85 +795,6 @@
     </div>
 
   </div>{# /tab-pl #}
-
-  <!-- ════════════════════════════════════════════
-       TAB: EXPORT
-  ════════════════════════════════════════════ -->
-  <div id="tab-export" class="reports-tab-content {% if active_tab == 'export' %}is-active{% endif %}">
-
-    <p class="text-sm text-stone-500">Оберіть діапазон дат та завантажте дані у потрібному форматі. Якщо дати не вказані — експортується весь доступний архів.</p>
-
-    <!-- Orders export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-box-seam text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Замовлення</h2>
-          </div>
-          <p class="text-sm text-stone-500">ID, клієнт, адреса, розмір, дата, статус, кур'єр, коментарі</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-orders-from" value="{{ date_from }}">
-            <input type="hidden" id="export-orders-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-orders-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-orders-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-orders-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Transactions export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-arrow-left-right text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Транзакції</h2>
-          </div>
-          <p class="text-sm text-stone-500">Дата, тип, клієнт, сума, спосіб оплати, тип витрати, коментар</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-tx-from" value="{{ date_from }}">
-            <input type="hidden" id="export-tx-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-tx-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-tx-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-tx-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>{# /tab-export #}
 
   <!-- ════════════════════════════════════════════
        TAB: CASH FLOW
@@ -1375,36 +1251,6 @@ document.addEventListener('DOMContentLoaded', function () {
       sel.value = '';
     });
   }());
-
-  // ── Export URL builder ─────────────────────────────
-  function buildExportUrl(base, fromId, toId, format) {
-    const p = new URLSearchParams();
-    const df = document.getElementById(fromId);
-    const dt = document.getElementById(toId);
-    if (df && df.value) p.set('date_from', df.value);
-    if (dt && dt.value) p.set('date_to', dt.value);
-    if (format) p.set('format', format);
-    return base + (p.toString() ? '?' + p.toString() : '');
-  }
-
-  function updateOrdersLinks() {
-    const csv  = document.getElementById('export-orders-csv');
-    const xlsx = document.getElementById('export-orders-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/orders/export/csv',  'export-orders-from', 'export-orders-to', null);
-    if (xlsx) xlsx.href = buildExportUrl('/orders/export/xlsx', 'export-orders-from', 'export-orders-to', null);
-  }
-
-  function updateTxLinks() {
-    const csv  = document.getElementById('export-tx-csv');
-    const xlsx = document.getElementById('export-tx-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'csv');
-    if (xlsx) xlsx.href = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'xlsx');
-  }
-
-  makeDatePicker('export-orders-picker', 'export-orders-from', 'export-orders-to', updateOrdersLinks);
-  makeDatePicker('export-tx-picker',     'export-tx-from',     'export-tx-to',     updateTxLinks);
-  updateOrdersLinks();
-  updateTxLinks();
 
   // ── Chart helpers ──────────────────────────────────
   function createBarChart(canvasId, labels, values, color) {

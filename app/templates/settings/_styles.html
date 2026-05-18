@@ -108,29 +108,34 @@
     flex-direction: column;
     gap: 1rem;
     width: 100%;
-    min-height: 220px;
+    min-height: 200px;
     padding: 1.25rem;
     border-radius: 1.6rem;
     text-align: left;
     text-decoration: none;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
-  }
-
-  button.settings-grid-card {
-    cursor: pointer;
+    overflow: hidden;
+    transition: box-shadow 0.16s ease, border-color 0.16s ease;
   }
 
   a.settings-grid-card {
     color: inherit;
   }
 
-  .settings-grid-card:hover,
-  .settings-grid-card:focus-visible {
+  a.settings-grid-card:hover,
+  a.settings-grid-card:focus-visible {
     transform: translateY(-2px);
     border-color: #d6d3d1;
     box-shadow: 0 20px 44px rgba(28, 25, 23, 0.09);
     outline: none;
     color: inherit;
+  }
+
+  .settings-grid-card__header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+    min-height: 110px;
   }
 
   .settings-grid-card--accent {
@@ -143,17 +148,17 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: 1rem;
-    background: #fafaf9;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.9rem;
+    background: #f5f5f4;
     color: #1c1917;
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .settings-grid-card__eyebrow {
     margin: 0;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
@@ -161,41 +166,98 @@
   }
 
   .settings-grid-card__title {
-    margin: 0.2rem 0 0.35rem;
-    font-size: 1.45rem;
+    margin: 0.15rem 0 0;
+    font-size: 1.35rem;
     line-height: 1.1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
     color: #1c1917;
   }
 
-  .settings-grid-card__text {
-    margin: 0;
-    font-size: 0.96rem;
-    line-height: 1.6;
-    color: #78716c;
+  /* Action list — flush to card edges via negative margin */
+  .settings-grid-card__action-list {
+    border-top: 1px solid #f0efee;
+    display: flex;
+    flex-direction: column;
+    margin: 0 -1.25rem -1.25rem;
   }
 
-  .settings-grid-card__meta {
-    margin-top: auto;
+  .settings-grid-card__action-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.8rem;
-    color: #57534e;
-    font-size: 0.85rem;
+    gap: 0.65rem;
+    padding: 0 1.25rem;
+    min-height: 48px;
+    color: #44403c;
+    font-size: 0.875rem;
     font-weight: 600;
+    text-decoration: none;
+    border-top: 1px solid #f0efee;
+    border-left: 2px solid transparent;
+    transition: background 0.14s, color 0.14s, border-left-color 0.14s;
+    cursor: pointer;
   }
 
-  .settings-grid-card__chevron {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 999px;
-    border: 1px solid #e7e5e4;
+  .settings-grid-card__action-item:first-child {
+    border-top: none;
+  }
+
+  .settings-grid-card__action-item:hover {
+    background: #fdf8f0;
+    color: #1c1917;
+    border-left-color: #f59e0b;
+  }
+
+  .settings-grid-card__action-item__icon {
+    color: #a8a29e;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    transition: color 0.14s;
+  }
+
+  .settings-grid-card__action-item:hover .settings-grid-card__action-item__icon {
     color: #78716c;
-    background: #fff;
+  }
+
+  .settings-grid-card__action-item__arrow {
+    margin-left: auto;
+    color: #d6d3d1;
+    font-size: 0.78rem;
+    transition: transform 0.15s ease, color 0.14s;
+  }
+
+  .settings-grid-card__action-item:hover .settings-grid-card__action-item__arrow {
+    transform: translateX(3px);
+    color: #78716c;
+  }
+
+  /* Feature flags preview */
+  .settings-feature-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.2rem;
+  }
+
+  .settings-feature-row {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.8rem;
+    color: #78716c;
+  }
+
+  .settings-feature-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #d6d3d1;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  .settings-feature-dot--on {
+    background: #22c55e;
+    box-shadow: 0 0 0 2.5px rgba(34, 197, 94, 0.18);
   }
 
   .settings-couriers {
