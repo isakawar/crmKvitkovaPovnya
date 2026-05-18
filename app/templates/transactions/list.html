@@ -252,38 +252,34 @@
 </section>
 
 {% if pagination.pages > 1 %}
-<nav class="mt-4 flex items-center justify-between">
-  <p class="text-xs text-stone-400">
-    Показано {{ pagination.first }}–{{ pagination.last }} з {{ pagination.total }}
-  </p>
-  <div class="flex items-center gap-1">
-    {% if pagination.has_prev %}
-    <a href="?page={{ pagination.prev_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}&account={{ account_filter }}"
-       class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
-      <i class="bi bi-chevron-left text-xs"></i>
-    </a>
-    {% endif %}
+{% set qs = 'date_from=' ~ date_from ~ '&date_to=' ~ date_to ~ '&client_q=' ~ client_q ~ '&created_by=' ~ created_by_filter ~ '&txn_type=' ~ txn_type_filter ~ '&account=' ~ account_filter %}
+<nav class="mt-4 flex items-center justify-center gap-1 flex-wrap">
+  {% if pagination.has_prev %}
+  <a href="?{{ qs }}&page={{ pagination.prev_num }}"
+     class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">
+    <i class="bi bi-chevron-left text-xs"></i>
+  </a>
+  {% endif %}
 
-    {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
-      {% if p %}
-        {% if p == pagination.page %}
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-stone-900 text-xs font-medium text-white">{{ p }}</span>
-        {% else %}
-        <a href="?page={{ p }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}&account={{ account_filter }}"
-           class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-xs text-stone-600 transition-colors hover:bg-stone-50">{{ p }}</a>
-        {% endif %}
+  {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+    {% if p %}
+      {% if p == pagination.page %}
+      <span class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg bg-stone-900 px-2 text-sm font-medium text-white">{{ p }}</span>
       {% else %}
-        <span class="inline-flex h-8 w-8 items-center justify-center text-xs text-stone-300">…</span>
+      <a href="?{{ qs }}&page={{ p }}"
+         class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-sm text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">{{ p }}</a>
       {% endif %}
-    {% endfor %}
-
-    {% if pagination.has_next %}
-    <a href="?page={{ pagination.next_num }}&date_from={{ date_from }}&date_to={{ date_to }}&client_q={{ client_q }}&created_by={{ created_by_filter }}&txn_type={{ txn_type_filter }}&account={{ account_filter }}"
-       class="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-stone-200 bg-white text-stone-600 transition-colors hover:bg-stone-50">
-      <i class="bi bi-chevron-right text-xs"></i>
-    </a>
+    {% else %}
+      <span class="inline-flex h-9 min-w-[24px] items-center justify-center text-sm text-stone-400">…</span>
     {% endif %}
-  </div>
+  {% endfor %}
+
+  {% if pagination.has_next %}
+  <a href="?{{ qs }}&page={{ pagination.next_num }}"
+     class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">
+    <i class="bi bi-chevron-right text-xs"></i>
+  </a>
+  {% endif %}
 </nav>
 {% endif %}
 
