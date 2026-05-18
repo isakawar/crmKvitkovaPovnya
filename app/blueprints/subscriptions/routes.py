@@ -14,6 +14,7 @@ from app.services.subscription_service import (
     get_draft_subscriptions,
     create_draft_subscription,
     update_draft_subscription,
+    update_subscription,
     extend_subscription,
     delete_subscription,
     stop_subscription,
@@ -121,18 +122,21 @@ def subscriptions_list():
 def subscription_create_draft():
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
-    instagram = (request.form.get('client_instagram') or '').strip()
+    client_id_raw = (request.form.get('client_id') or '').strip()
     contact_date_raw = (request.form.get('contact_date') or '').strip()
 
-    if not instagram or not contact_date_raw:
+    if not client_id_raw or not contact_date_raw:
         if is_ajax:
             return jsonify({'success': False, 'error': 'Вкажіть клієнта і дату контакту'}), 400
         return '', 400
 
-    client = Client.query.filter_by(instagram=instagram).first()
+    try:
+        client = Client.query.get(int(client_id_raw))
+    except (ValueError, TypeError):
+        client = None
     if not client:
         if is_ajax:
-            return jsonify({'success': False, 'error': f'Клієнта {instagram} не знайдено'}), 404
+            return jsonify({'success': False, 'error': 'Клієнта не знайдено'}), 404
         return '', 404
 
     draft_comment = (request.form.get('draft_comment') or '').strip() or None
@@ -263,9 +267,13 @@ def subscription_detail(subscription_id):
                 subscription.entrance,
                 subscription.address_comment,
             ),
+            'street': subscription.street or '',
+            'building_number': subscription.building_number or '',
+            'floor': subscription.floor or '',
+            'entrance': subscription.entrance or '',
             'delivery_type': subscription.type,
             'size': subscription.size,
-            'custom_amount': subscription.custom_amount,
+            'custom_amount': subscription.custom_amount or '',
             'delivery_day': subscription.delivery_day,
             'first_delivery_date': first_order.delivery_date.strftime('%d.%m.%Y') if first_order else '',
             'time_from': subscription.time_from or '',
@@ -274,6 +282,7 @@ def subscription_detail(subscription_id):
             'is_pickup': subscription.is_pickup,
             'for_whom': subscription.for_whom or '',
         },
+        'discount': subscription.discount or '',
         'notes': {
             'comment': subscription.comment or '',
             'preferences': subscription.preferences or '',
@@ -316,6 +325,19 @@ def subscription_detail(subscription_id):
         ],
         'related_orders': related_orders,
     })
+
+
+@subscriptions_bp.route('/subscriptions/<int:subscription_id>/edit', methods=['POST'])
+@login_required
+def subscription_edit(subscription_id):
+    subscription = Subscription.query.get_or_404(subscription_id)
+    try:
+        update_subscription(subscription, request.form)
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Error editing subscription {subscription_id}: {e}')
+        return jsonify({'success': False, 'error': 'Помилка при збереженні підписки'}), 500
 
 
 @subscriptions_bp.route('/subscriptions/<int:subscription_id>/extend', methods=['POST'])

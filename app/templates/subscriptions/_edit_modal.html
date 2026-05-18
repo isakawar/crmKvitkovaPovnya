@@ -1,0 +1,175 @@
+<div class="modal fade" id="subscriptionEditModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 680px;">
+    <div class="modal-content border-0 rounded-[28px] overflow-hidden">
+      <div class="border-b border-stone-200 bg-white px-6 py-4 flex items-center justify-between">
+        <h5 class="text-base font-semibold text-stone-900">Редагувати підписку</h5>
+        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-stone-200 text-stone-500 hover:bg-stone-100" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg text-sm"></i>
+        </button>
+      </div>
+      <div class="bg-stone-50 max-h-[calc(100dvh-10rem)] overflow-y-auto px-6 py-5">
+        <div id="sub-edit-error" class="hidden mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"></div>
+        <form id="sub-edit-form" novalidate>
+
+          <!-- Отримувач -->
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400 mb-3">Отримувач</p>
+          <div class="grid grid-cols-2 gap-3 mb-5">
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Ім'я <span class="text-red-500">*</span></label>
+              <input type="text" name="recipient_name" id="sub-edit-recipient-name" required
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Телефон <span class="text-red-500">*</span></label>
+              <input type="text" name="recipient_phone" id="sub-edit-recipient-phone" required
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-stone-600 mb-1">Соцмережа</label>
+              <input type="text" name="recipient_social" id="sub-edit-recipient-social" placeholder="Instagram, Telegram..."
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+          </div>
+
+          <!-- Адреса -->
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400 mb-3">Адреса</p>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Місто <span class="text-red-500">*</span></label>
+              <select name="city" id="sub-edit-city"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                {% for city in cities %}
+                  <option value="{{ city.value }}">{{ city.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="flex items-end pb-2">
+              <label class="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+                <input type="checkbox" name="is_pickup" id="sub-edit-is-pickup"
+                  class="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500" />
+                Самовивіз
+              </label>
+            </div>
+          </div>
+          <div id="sub-edit-address-fields" class="grid grid-cols-2 gap-3 mb-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-stone-600 mb-1">Вулиця</label>
+              <input type="text" name="street" id="sub-edit-street"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Будинок</label>
+              <input type="text" name="building_number" id="sub-edit-building"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Під'їзд</label>
+              <input type="text" name="entrance" id="sub-edit-entrance"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Поверх</label>
+              <input type="text" name="floor" id="sub-edit-floor"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Коментар до адреси</label>
+              <input type="text" name="address_comment" id="sub-edit-address-comment"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+          </div>
+
+          <!-- Час і метод -->
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400 mb-3">Час і метод доставки</p>
+          <div class="grid grid-cols-3 gap-3 mb-5">
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Метод</label>
+              <select name="delivery_method" id="sub-edit-delivery-method"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                <option value="courier">Кур'єр</option>
+                <option value="nova_poshta">Нова Пошта</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Час від</label>
+              <input type="time" name="time_from" id="sub-edit-time-from"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Час до</label>
+              <input type="time" name="time_to" id="sub-edit-time-to"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+          </div>
+
+          <!-- Букет -->
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400 mb-3">Букет</p>
+          <div class="grid grid-cols-2 gap-3 mb-5">
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Розмір <span class="text-red-500">*</span></label>
+              <select name="size" id="sub-edit-size" required
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                {% for size in sizes %}
+                  <option value="{{ size.value }}">{{ size.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Сума (для "Власний")</label>
+              <input type="number" name="custom_amount" id="sub-edit-custom-amount" min="0"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Тип букету</label>
+              <input type="text" name="bouquet_type" id="sub-edit-bouquet-type"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Склад</label>
+              <input type="text" name="composition_type" id="sub-edit-composition-type"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+          </div>
+
+          <!-- Нотатки -->
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-stone-400 mb-3">Нотатки</p>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Кому</label>
+              <select name="for_whom" id="sub-edit-for-whom"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                <option value="">— не вказано —</option>
+                {% for fw in for_whom %}
+                  <option value="{{ fw.value }}">{{ fw.value }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-stone-600 mb-1">Знижка (%)</label>
+              <input type="number" name="discount" id="sub-edit-discount" min="0" max="100"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent" />
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-stone-600 mb-1">Коментар</label>
+              <textarea name="comment" id="sub-edit-comment" rows="2"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-stone-600 mb-1">Побажання</label>
+              <textarea name="preferences" id="sub-edit-preferences" rows="2"
+                class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"></textarea>
+            </div>
+          </div>
+
+          <p class="text-xs text-stone-400 mb-4">Зміни застосуються до підписки та всіх незавершених доставок.</p>
+
+          <button type="submit"
+            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+            <i class="bi bi-check2"></i>
+            Зберегти зміни
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

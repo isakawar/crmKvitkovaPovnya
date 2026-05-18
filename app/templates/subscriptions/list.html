@@ -475,6 +475,10 @@
           <i class="bi bi-arrow-repeat text-[20px]"></i>
           Продовжити підписку
         </button>
+        <button type="button" id="subscription-edit-btn" class="flex w-full min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-stone-200 bg-white px-4 py-3 text-[15px] font-semibold text-stone-700 transition-colors hover:bg-stone-50 mb-3">
+          <i class="bi bi-pencil text-[18px]"></i>
+          Редагувати
+        </button>
         <div id="subscription-actions-row" class="flex gap-3">
           <button type="button" id="subscription-stop-btn" class="hidden flex-1 min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-orange-200 bg-orange-50 px-4 py-3 text-[15px] font-semibold text-orange-700 transition-colors hover:bg-orange-100">
             <i class="bi bi-pause-circle text-[20px]"></i>
@@ -506,17 +510,16 @@
       <div class="bg-stone-50 px-6 py-5">
         <div id="draft-create-error" class="hidden mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700"></div>
         <form id="draft-create-form" novalidate>
+          <input type="hidden" name="client_id" id="draft-client-id" value="">
           <div class="mb-4">
             <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-stone-500 mb-1.5">Клієнт</label>
             <div class="relative">
               <input
                 type="text"
                 id="draft-client-search"
-                name="client_instagram"
                 placeholder="Instagram, Telegram, телефон..."
                 autocomplete="off"
                 class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                required
               />
               <div id="draft-client-results" class="absolute left-0 right-0 top-full z-50 mt-1 hidden rounded-xl border border-stone-200 bg-white shadow-lg overflow-hidden"></div>
             </div>
@@ -620,6 +623,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const resumeSingleBtn = document.getElementById('subscription-resume-single-btn');
 
   let pendingResumePlan = null;
+  let _currentSub = null;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -800,6 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
         throw new Error(data.error || 'Не вдалося завантажити підписку');
       }
 
+      _currentSub = data;
       document.getElementById('subscriptionDetailModalLabel').textContent = 'Підписка';
       ownerName.textContent = data.recipient.name || data.client.instagram || data.client.phone || '—';
       ownerHandle.textContent = formatHandle(data);
@@ -976,6 +981,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }
 
+  // ── Edit subscription ─────────────────────────────────────────────
+  const editBtn = document.getElementById('subscription-edit-btn');
+
+  editBtn?.addEventListener('click', () => {
+    if (!_currentSub) return;
+    detailModalElement.addEventListener('hidden.bs.modal', function onHidden() {
+      detailModalElement.removeEventListener('hidden.bs.modal', onHidden);
+      if (window.orderComposerApi && window.orderComposerApi.openSubscriptionEditor) {
+        window.orderComposerApi.openSubscriptionEditor(_currentSub);
+      }
+    });
+    detailModal.hide();
+  });
+
   document.querySelectorAll('[data-subscription-id]').forEach(button => {
     button.addEventListener('click', function() {
       openSubscriptionDetail(this.getAttribute('data-subscription-id'));
@@ -999,10 +1018,12 @@ document.addEventListener('DOMContentLoaded', function () {
   const draftCreateForm = document.getElementById('draft-create-form');
   const draftClientSearch = document.getElementById('draft-client-search');
   const draftClientResults = document.getElementById('draft-client-results');
+  const draftClientIdInput = document.getElementById('draft-client-id');
   const draftCreateError = document.getElementById('draft-create-error');
 
   addDraftBtn?.addEventListener('click', () => {
     draftCreateForm.reset();
+    if (draftClientIdInput) draftClientIdInput.value = '';
     draftCreateError.classList.add('hidden');
     draftCreateModal.show();
   });
@@ -1015,12 +1036,13 @@ document.addEventListener('DOMContentLoaded', function () {
       const clients = await res.json();
       if (!clients.length) { draftClientResults.classList.add('hidden'); return; }
       draftClientResults.innerHTML = clients.map(c =>
-        `<button type="button" class="w-full px-4 py-2 text-sm text-left text-stone-800 hover:bg-stone-50">${window.escapeHtmlDraft(c.display)}</button>`
+        `<button type="button" class="w-full px-4 py-2 text-sm text-left text-stone-800 hover:bg-stone-50" data-client-id="${c.id}" data-display="${c.display}">${c.display}</button>`
       ).join('');
       draftClientResults.classList.remove('hidden');
       draftClientResults.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', function () {
-          draftClientSearch.value = this.textContent.trim();
+          draftClientSearch.value = this.dataset.display || this.textContent.trim();
+          if (draftClientIdInput) draftClientIdInput.value = this.dataset.clientId || '';
           draftClientResults.classList.add('hidden');
         });
       });
@@ -1034,6 +1056,11 @@ document.addEventListener('DOMContentLoaded', function () {
   draftCreateForm?.addEventListener('submit', async function (e) {
     e.preventDefault();
     draftCreateError.classList.add('hidden');
+    if (!draftClientIdInput?.value) {
+      draftCreateError.textContent = 'Оберіть клієнта зі списку';
+      draftCreateError.classList.remove('hidden');
+      return;
+    }
     const body = new FormData(this);
     try {
       const res = await fetch('/subscriptions/draft', {
