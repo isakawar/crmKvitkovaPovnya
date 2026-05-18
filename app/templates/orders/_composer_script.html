@@ -500,6 +500,13 @@ document.addEventListener('DOMContentLoaded', function() {
         clearClientInfoBlock();
         addOrderForm.removeAttribute('data-edit-id');
         addOrderForm.removeAttribute('data-extend-mode');
+        addOrderForm.removeAttribute('data-subscription-edit-id');
+        addOrderForm.querySelectorAll('[data-sub-edit-hidden]').forEach(el => el.remove());
+        const _fdi = document.getElementById('first-delivery-date-input');
+        if (_fdi) {
+            _fdi.setAttribute('required', 'required');
+            _fdi.closest('.order-field')?.classList.remove('hidden');
+        }
         window.currentDeliveryId = null;
         toggleDeleteOrderBtn(false);
         if (extendFromInput) {
@@ -783,17 +790,19 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (currentComposerFlow === 'subscription' && !deliveryTypeSelect.value) {
+        const isSubscriptionEdit = Boolean(addOrderForm.getAttribute('data-subscription-edit-id'));
+
+        if (!isSubscriptionEdit && currentComposerFlow === 'subscription' && !deliveryTypeSelect.value) {
             showOrderError('Оберіть тип підписки');
             return;
         }
 
-        if (currentComposerFlow === 'subscription' && !deliveryDaySelect.value) {
+        if (!isSubscriptionEdit && currentComposerFlow === 'subscription' && !deliveryDaySelect.value) {
             showOrderError('Оберіть день доставки для підписки');
             return;
         }
 
-        if (currentComposerFlow === 'subscription' && deliveryCountInput) {
+        if (!isSubscriptionEdit && currentComposerFlow === 'subscription' && deliveryCountInput) {
             const countVal = parseInt(deliveryCountInput.value.trim(), 10);
             if (isNaN(countVal) || countVal < 1 || countVal > 52) {
                 showOrderError('Кількість доставок має бути від 1 до 52');
@@ -802,9 +811,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         setComposerSubmitting(true);
-        const orderId = addOrderForm.getAttribute('data-edit-id');
-        const isEditing = Boolean(orderId);
-        const url = isEditing ? `/orders/${orderId}/edit` : '/orders/new';
+        const subscriptionEditId = addOrderForm.getAttribute('data-subscription-edit-id');
+        const orderId = subscriptionEditId ? null : addOrderForm.getAttribute('data-edit-id');
+        const isEditing = Boolean(subscriptionEditId || orderId);
+        const url = subscriptionEditId
+            ? `/subscriptions/${subscriptionEditId}/edit`
+            : (orderId ? `/orders/${orderId}/edit` : '/orders/new');
 
         try {
             const fd = new FormData(addOrderForm);
@@ -1005,10 +1017,90 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    function openSubscriptionEditor(subData) {
+        resetComposerForm('subscription', subData.client.instagram || '');
+        lockScenarioSwitch(true);
+        addOrderForm.setAttribute('data-subscription-edit-id', subData.id);
+
+        if (clientSearch) clientSearch.value = subData.client.instagram || subData.client.telegram || subData.client.phone || '';
+        addOrderForm.querySelector('[name="recipient_name"]').value = subData.recipient.name || '';
+        recipientPhoneInput.value = subData.recipient.phone || '';
+        addOrderForm.querySelector('[name="recipient_social"]').value = subData.recipient.social || '';
+        if (citySelect) citySelect.value = subData.delivery.city || '';
+        addressInput.value = subData.delivery.street || '';
+        if (addressCommentInput) {
+            addressCommentInput.value = subData.notes.address_comment || '';
+            addressCommentInput.style.height = 'auto';
+            addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px';
+        }
+        if (sizeSelect) { sizeSelect.value = subData.delivery.size || ''; syncCustomAmountState(); }
+        if (customAmountInput) customAmountInput.value = subData.delivery.custom_amount || '';
+        const forWhomSel = addOrderForm.querySelector('[name="for_whom"]');
+        if (forWhomSel) forWhomSel.value = subData.delivery.for_whom || '';
+        if (commentInput) commentInput.value = subData.notes.comment || '';
+        if (preferencesInput) preferencesInput.value = subData.notes.preferences || '';
+        if (clientDiscountInput) clientDiscountInput.value = subData.discount || '';
+        const tfFrom = addOrderForm.querySelector('[name="time_from"]');
+        const tfTo = addOrderForm.querySelector('[name="time_to"]');
+        if (tfFrom) tfFrom.value = subData.delivery.time_from || '';
+        if (tfTo) tfTo.value = subData.delivery.time_to || '';
+
+        if (subData.delivery.is_pickup) {
+            setDeliveryMode('pickup');
+        } else if (subData.delivery.delivery_method === 'nova_poshta') {
+            setDeliveryMode('nova_poshta');
+        } else {
+            setDeliveryMode('courier');
+        }
+
+        // Set schedule fields with current values (required by validation) then hide them
+        deliveryTypeSelect.value = ensureDeliveryTypeOption(subData.delivery.delivery_type || '', subData.delivery.delivery_type || '');
+        if (deliveryDaySelect) deliveryDaySelect.value = subData.delivery.delivery_day || '';
+        if (deliveryCountInput) deliveryCountInput.value = '4';
+        if (deliveryTypeField) deliveryTypeField.classList.add('hidden');
+        if (deliveryDayField) deliveryDayField.classList.add('hidden');
+        const firstDeliveryInput = document.getElementById('first-delivery-date-input');
+        if (firstDeliveryInput) {
+            firstDeliveryInput.closest('.order-field')?.classList.add('hidden');
+            firstDeliveryInput.removeAttribute('required');
+            firstDeliveryInput.value = '';
+        }
+
+        // Hidden inputs for fields not present in the composer form
+        [
+            { name: 'building_number', value: subData.delivery.building_number || '' },
+            { name: 'floor',           value: subData.delivery.floor || '' },
+            { name: 'entrance',        value: subData.delivery.entrance || '' },
+            { name: 'bouquet_type',    value: subData.notes.bouquet_type || '' },
+            { name: 'composition_type', value: subData.notes.composition_type || '' },
+        ].forEach(({ name, value }) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            input.dataset.subEditHidden = '1';
+            addOrderForm.appendChild(input);
+        });
+
+        // Apply edit-mode copy (overrides the "create" copy set by resetComposerForm)
+        applyComposerCopy('subscription', true);
+        if (orderModalDescription) {
+            const clientLabel = subData.client.instagram
+                ? (subData.client.instagram.startsWith('@') ? subData.client.instagram : '@' + subData.client.instagram)
+                : (subData.client.telegram || subData.client.phone || '');
+            orderModalDescription.textContent = clientLabel
+                ? `Клієнт: ${clientLabel} — зміни застосуються до всіх незавершених доставок.`
+                : 'Зміни застосуються до всіх незавершених доставок.';
+        }
+
+        addOrderModal.show();
+    }
+
     window.orderComposerApi = {
         openComposer,
         openOrderEditor,
         openSubscriptionExtension,
+        openSubscriptionEditor,
     };
 
     if (composerBackBtn) {

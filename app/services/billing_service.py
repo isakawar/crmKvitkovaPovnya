@@ -163,15 +163,23 @@ def reconcile_historical_charges(dry_run: bool = True) -> dict:
     }
 
 
-def get_charges_data(date_from_str: str | None, date_to_str: str | None) -> dict:
+def get_charges_data(
+    date_from_str: str | None,
+    date_to_str: str | None,
+    client_search: str | None = None,
+    page: int = 1,
+    per_page: int = 50,
+) -> dict:
     """Return delivery_charge transactions with client, order and discount info.
 
     Returns:
-        rows: list of dicts with keys: id, date, client_id, client_name,
-              order_id, amount, discount
-        total_amount: sum of all amounts in the filtered period
-        date_from, date_to: parsed date objects or None
+        rows: list of dicts for the current page
+        total_amount: sum across the full filtered set (all pages)
+        count: total records in the filtered set
+        page, pages, per_page: pagination metadata
     """
+    from sqlalchemy import or_, func
+
     date_from = None
     date_to = None
     try:
@@ -182,7 +190,7 @@ def get_charges_data(date_from_str: str | None, date_to_str: str | None) -> dict
     except ValueError:
         pass
 
-    query = (
+    base_query = (
         db.session.query(Transaction, Delivery, Order, Client)
         .join(Delivery, Transaction.delivery_id == Delivery.id)
         .join(Order, Delivery.order_id == Order.id)
@@ -190,15 +198,32 @@ def get_charges_data(date_from_str: str | None, date_to_str: str | None) -> dict
         .filter(Transaction.transaction_type == 'delivery_charge')
     )
     if date_from:
-        query = query.filter(Transaction.date >= date_from)
+        base_query = base_query.filter(Transaction.date >= date_from)
     if date_to:
-        query = query.filter(Transaction.date <= date_to)
+        base_query = base_query.filter(Transaction.date <= date_to)
+    if client_search:
+        like_q = f'%{client_search.strip()}%'
+        base_query = base_query.filter(
+            or_(
+                Client.name.ilike(like_q),
+                Client.instagram.ilike(like_q),
+                Client.telegram.ilike(like_q),
+                Client.phone.contains(client_search.strip()),
+            )
+        )
 
-    query = query.order_by(Transaction.date.desc(), Transaction.id.desc())
+    all_amounts = base_query.with_entities(Transaction.amount).all()
+    total_amount_row = sum(r.amount for r in all_amounts)
+    count = len(all_amounts)
+
+    ordered = base_query.order_by(Transaction.date.desc(), Transaction.id.desc())
+    page = max(1, page)
+    pages = max(1, (count + per_page - 1) // per_page)
+    page = min(page, pages)
+    paginated = ordered.offset((page - 1) * per_page).limit(per_page).all()
 
     rows = []
-    total_amount = 0
-    for txn, delivery, order, client in query.all():
+    for txn, delivery, order, client in paginated:
         client_name = client.display_name if client else '—'
         rows.append({
             'id': txn.id,
@@ -210,12 +235,14 @@ def get_charges_data(date_from_str: str | None, date_to_str: str | None) -> dict
             'amount': txn.amount,
             'discount': order.discount or 0,
         })
-        total_amount += txn.amount
 
     return {
         'rows': rows,
-        'total_amount': total_amount,
-        'count': len(rows),
+        'total_amount': total_amount_row,
+        'count': count,
+        'page': page,
+        'pages': pages,
+        'per_page': per_page,
         'date_from': date_from,
         'date_to': date_to,
     }

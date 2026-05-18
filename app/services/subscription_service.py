@@ -668,6 +668,14 @@ def delete_subscription(subscription):
     from app.models.delivery_route import RouteDelivery
     from app.models.recipient_phone import RecipientPhone
 
+    has_delivered = any(
+        d.status == 'Доставлено'
+        for order in subscription.orders
+        for d in order.deliveries
+    )
+    if has_delivered:
+        raise ValueError('Не можна видалити підписку з доставленими замовленнями')
+
     sub_id = subscription.id
     before = _subscription_snapshot(subscription)
     client_label = (subscription.client.name or subscription.client.instagram or f'#{subscription.client_id}'
@@ -754,6 +762,103 @@ def update_draft_subscription(subscription, contact_date, draft_comment=None, dr
     subscription.draft_bank_link = draft_bank_link or None
     subscription.draft_wedding_date = draft_wedding_date
     db.session.commit()
+    return subscription
+
+
+def update_subscription(subscription, form):
+    """Update editable fields on subscription + propagate to non-delivered orders/deliveries."""
+    from app.services.billing_service import get_order_price
+
+    before = _subscription_snapshot(subscription)
+
+    is_pickup = form.get('is_pickup') == 'on'
+
+    subscription.recipient_name = form.get('recipient_name', '').strip()
+    subscription.recipient_phone = form.get('recipient_phone', '').strip()
+    subscription.recipient_social = form.get('recipient_social', '').strip() or None
+
+    subscription.city = form.get('city', '').strip()
+    subscription.is_pickup = is_pickup
+    subscription.street = 'Самовивіз' if is_pickup else (form.get('street', '').strip())
+    subscription.building_number = form.get('building_number', '').strip() or None
+    subscription.floor = form.get('floor', '').strip() or None
+    subscription.entrance = form.get('entrance', '').strip() or None
+    subscription.address_comment = form.get('address_comment', '').strip() or None
+
+    if form.get('delivery_method'):
+        subscription.delivery_method = form.get('delivery_method')
+    subscription.time_from = form.get('time_from', '').strip() or None
+    subscription.time_to = form.get('time_to', '').strip() or None
+
+    subscription.size = form.get('size', '').strip()
+    custom_amount_raw = form.get('custom_amount', '').strip()
+    subscription.custom_amount = int(custom_amount_raw) if custom_amount_raw else None
+    subscription.bouquet_type = form.get('bouquet_type', '').strip() or None
+    subscription.composition_type = form.get('composition_type', '').strip() or None
+
+    subscription.for_whom = form.get('for_whom', '').strip()
+    subscription.comment = form.get('comment', '').strip() or None
+    subscription.preferences = form.get('preferences', '').strip() or None
+    discount_raw = form.get('discount', '').strip()
+    subscription.discount = int(discount_raw) if discount_raw else None
+
+    for order in subscription.orders:
+        all_delivered = all(d.status == 'Доставлено' for d in order.deliveries)
+        if all_delivered:
+            continue
+
+        order.recipient_name = subscription.recipient_name
+        order.recipient_phone = subscription.recipient_phone
+        order.recipient_social = subscription.recipient_social
+        order.city = subscription.city
+        order.is_pickup = subscription.is_pickup
+        order.street = subscription.street
+        order.building_number = subscription.building_number
+        order.floor = subscription.floor
+        order.entrance = subscription.entrance
+        order.address_comment = subscription.address_comment
+        order.delivery_method = subscription.delivery_method
+        order.time_from = subscription.time_from
+        order.time_to = subscription.time_to
+        order.size = subscription.size
+        order.custom_amount = subscription.custom_amount
+        order.bouquet_type = subscription.bouquet_type
+        order.composition_type = subscription.composition_type
+        order.for_whom = subscription.for_whom
+        order.comment = subscription.comment
+        order.preferences = subscription.preferences
+        order.discount = subscription.discount
+        order.charged_amount = get_order_price(order)
+
+        for delivery in order.deliveries:
+            if delivery.status in ('Доставлено', 'Скасовано'):
+                continue
+            delivery.phone = subscription.recipient_phone
+            delivery.is_pickup = subscription.is_pickup
+            delivery.street = subscription.street if not subscription.is_pickup else None
+            delivery.building_number = subscription.building_number if not subscription.is_pickup else None
+            delivery.floor = subscription.floor if not subscription.is_pickup else None
+            delivery.entrance = subscription.entrance if not subscription.is_pickup else None
+            delivery.address_comment = subscription.address_comment
+            delivery.delivery_method = subscription.delivery_method
+            delivery.time_from = subscription.time_from
+            delivery.time_to = subscription.time_to
+            delivery.bouquet_type = subscription.bouquet_type
+            delivery.composition_type = subscription.composition_type
+            delivery.preferences = subscription.preferences
+            delivery.comment = subscription.comment
+
+    db.session.commit()
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'edit', 'subscription', subscription.id,
+        f'Редаговано підписку #{subscription.id}',
+        before_data=before,
+        after_data=_subscription_snapshot(subscription),
+    )
     return subscription
 
 

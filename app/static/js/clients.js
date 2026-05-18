@@ -699,5 +699,11 @@ document.addEventListener('DOMContentLoaded', function () {
   updateMessengerState();
   updateSubscriptionButtonState();
   updatePreviewCard();
+
+  const openClientId = new URLSearchParams(window.location.search).get('open');
+  if (openClientId) {
+    loadClientData(openClientId);
+    history.replaceState(null, '', window.location.pathname);
+  }
 });
 

@@ -64,14 +64,19 @@ def charges_page():
     from app.services.billing_service import get_charges_data
     date_from = request.args.get('date_from', '').strip() or None
     date_to = request.args.get('date_to', '').strip() or None
-    data = get_charges_data(date_from, date_to)
+    client_search = request.args.get('client_search', '').strip() or None
+    page = int(request.args.get('page', 1) or 1)
+    data = get_charges_data(date_from, date_to, client_search=client_search, page=page)
     return render_template(
         'settings/charges.html',
         rows=data['rows'],
         total_amount=data['total_amount'],
         count=data['count'],
+        page=data['page'],
+        pages=data['pages'],
         date_from=date_from or '',
         date_to=date_to or '',
+        client_search=client_search or '',
     )
 
 @bp.route('/settings/update', methods=['POST'])

@@ -114,20 +114,39 @@
 
     <!-- Pagination -->
     {% if pagination.pages > 1 %}
-    <div class="flex items-center justify-between px-4 py-3 border-t border-stone-100">
-        <span class="text-sm text-stone-500">
-            Записів: {{ pagination.total }}, сторінка {{ pagination.page }} з {{ pagination.pages }}
-        </span>
-        <div class="flex gap-1">
-            {% if pagination.has_prev %}
-            <a href="?page={{ pagination.prev_num }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}{% if selected_entity_type %}&entity_type={{ selected_entity_type }}{% endif %}{% if selected_action %}&action={{ selected_action }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
-               class="px-3 py-1.5 text-sm border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50 transition-colors">← Назад</a>
+    {% set qs_log = '' %}
+    {%- if selected_user_id %}{% set qs_log = qs_log ~ '&user_id=' ~ selected_user_id %}{% endif -%}
+    {%- if selected_entity_type %}{% set qs_log = qs_log ~ '&entity_type=' ~ selected_entity_type %}{% endif -%}
+    {%- if selected_action %}{% set qs_log = qs_log ~ '&action=' ~ selected_action %}{% endif -%}
+    {%- if date_from %}{% set qs_log = qs_log ~ '&date_from=' ~ date_from %}{% endif -%}
+    {%- if date_to %}{% set qs_log = qs_log ~ '&date_to=' ~ date_to %}{% endif -%}
+    <div class="flex items-center justify-center gap-1 flex-wrap px-4 py-3 border-t border-stone-100">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{{ qs_log }}"
+           class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">
+          <i class="bi bi-chevron-left text-xs"></i>
+        </a>
+        {% endif %}
+
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+          {% if p %}
+            {% if p == pagination.page %}
+            <span class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg bg-stone-900 px-2 text-sm font-medium text-white">{{ p }}</span>
+            {% else %}
+            <a href="?page={{ p }}{{ qs_log }}"
+               class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-sm text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">{{ p }}</a>
             {% endif %}
-            {% if pagination.has_next %}
-            <a href="?page={{ pagination.next_num }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}{% if selected_entity_type %}&entity_type={{ selected_entity_type }}{% endif %}{% if selected_action %}&action={{ selected_action }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}"
-               class="px-3 py-1.5 text-sm border border-stone-200 rounded-lg text-stone-600 hover:bg-stone-50 transition-colors">Вперед →</a>
-            {% endif %}
-        </div>
+          {% else %}
+            <span class="inline-flex h-9 min-w-[24px] items-center justify-center text-sm text-stone-400">…</span>
+          {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{{ qs_log }}"
+           class="inline-flex h-9 min-w-[36px] items-center justify-center rounded-lg border border-stone-200 bg-white px-2 text-stone-600 transition-colors hover:bg-stone-50 hover:border-stone-400">
+          <i class="bi bi-chevron-right text-xs"></i>
+        </a>
+        {% endif %}
     </div>
     {% endif %}
 
