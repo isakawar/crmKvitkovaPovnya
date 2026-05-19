@@ -1020,7 +1020,8 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
     post_paid    = {r.client_id: int(r.paid    or 0) for r in post_tx}
     post_charged = {r.client_id: int(r.charged or 0) for r in post_tx}
 
-    # ── Load and apply manual adjustments ────────────────────────────────────
+    # ── Backward compat: apply legacy adj_charged from RevenueAdjustment ────────
+    # adj_paid is no longer used here — paid adjustments now create real credit transactions
     from app.models.revenue_adjustment import RevenueAdjustment
     for a in (
         db.session.query(RevenueAdjustment)
@@ -1028,15 +1029,12 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             RevenueAdjustment.client_id.in_(all_client_ids),
             RevenueAdjustment.month >= months[0],
             RevenueAdjustment.month <= months[-1],
+            RevenueAdjustment.adj_charged != 0,
         )
         .all()
     ):
-        if a.adj_charged:
-            bucket = charged_by.setdefault((a.client_id, a.subscription_id), {})
-            bucket[a.month] = bucket.get(a.month, 0) + a.adj_charged
-        if a.adj_paid:
-            bucket = paid_by.setdefault(a.client_id, {})
-            bucket[a.month] = bucket.get(a.month, 0) + a.adj_paid
+        bucket = charged_by.setdefault((a.client_id, a.subscription_id), {})
+        bucket[a.month] = bucket.get(a.month, 0) + a.adj_charged
 
     # ── Load clients sorted by name ───────────────────────────────────────────
     all_clients = (

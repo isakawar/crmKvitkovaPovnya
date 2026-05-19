@@ -4,7 +4,6 @@ from flask_login import login_required, current_user
 
 from app.extensions import db
 from app.models.client import Client
-from app.models.revenue_adjustment import RevenueAdjustment
 from app.models.transaction import Transaction
 from app.services.reports_service import (
     get_orders_data,
@@ -67,44 +66,34 @@ def revenue_adjust():
         if delta_charged == 0 and delta_paid == 0:
             continue
 
+        client = db.session.get(Client, client_id)
+        if client is None:
+            return jsonify({'ok': False, 'error': f'client {client_id} not found'}), 400
+
+        month_label = month.strftime('%m.%Y')
+
         if delta_charged != 0:
-            client = db.session.get(Client, client_id)
-            if client is None:
-                return jsonify({'ok': False, 'error': f'client {client_id} not found'}), 400
-            tx = Transaction(
+            db.session.add(Transaction(
                 transaction_type='delivery_charge',
                 client_id=client_id,
                 amount=delta_charged,
                 delivery_id=None,
                 date=month,
-                comment=f'Ручне коригування нарахувань за {month.strftime("%m.%Y")}',
+                comment=f'Адмін коригування балансу за {month_label}',
                 created_by_id=current_user.id,
-            )
-            db.session.add(tx)
+            ))
             client.credits = (client.credits or 0) - delta_charged
 
         if delta_paid != 0:
-            q = db.session.query(RevenueAdjustment).filter(
-                RevenueAdjustment.client_id == client_id,
-                RevenueAdjustment.month == month,
-            )
-            if sub_id is None:
-                q = q.filter(RevenueAdjustment.subscription_id.is_(None))
-            else:
-                q = q.filter(RevenueAdjustment.subscription_id == sub_id)
-
-            adj = q.first()
-            if adj:
-                adj.adj_paid += delta_paid
-            else:
-                adj = RevenueAdjustment(
-                    client_id=client_id,
-                    subscription_id=sub_id,
-                    month=month,
-                    adj_charged=0,
-                    adj_paid=delta_paid,
-                )
-                db.session.add(adj)
+            db.session.add(Transaction(
+                transaction_type='credit',
+                client_id=client_id,
+                amount=delta_paid,
+                date=month,
+                comment=f'Адмін коригування балансу за {month_label}',
+                created_by_id=current_user.id,
+            ))
+            client.credits = (client.credits or 0) + delta_paid
 
     db.session.commit()
     return jsonify({'ok': True})

@@ -251,14 +251,20 @@
             {% endif %}
           </td>
           <td>
+            {% if row.is_adjustment %}
+            <span class="muted" style="font-style:italic">{{ row.comment }}</span>
+            {% else %}
             <a href="{{ url_for('orders.orders_list', open=row.order_id) }}" class="link-subtle" target="_blank" rel="noopener noreferrer">
               #{{ row.order_id }}
             </a>
+            {% endif %}
           </td>
-          <td class="muted">#{{ row.delivery_id }}</td>
-          <td><strong>{{ row.amount }} грн</strong></td>
+          <td class="muted">{% if row.delivery_id %}#{{ row.delivery_id }}{% else %}—{% endif %}</td>
+          <td><strong {% if row.amount < 0 %}style="color:#ef4444"{% endif %}>{{ row.amount }} грн</strong></td>
           <td>
-            {% if row.discount %}
+            {% if row.is_adjustment %}
+            <span class="discount-badge discount-badge--none">—</span>
+            {% elif row.discount %}
             <span class="discount-badge">{{ row.discount }}%</span>
             {% else %}
             <span class="discount-badge discount-badge--none">0%</span>

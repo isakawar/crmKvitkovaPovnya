@@ -192,8 +192,8 @@ def get_charges_data(
 
     base_query = (
         db.session.query(Transaction, Delivery, Order, Client)
-        .join(Delivery, Transaction.delivery_id == Delivery.id)
-        .join(Order, Delivery.order_id == Order.id)
+        .outerjoin(Delivery, Transaction.delivery_id == Delivery.id)
+        .outerjoin(Order, Delivery.order_id == Order.id)
         .outerjoin(Client, Transaction.client_id == Client.id)
         .filter(Transaction.transaction_type == 'delivery_charge')
     )
@@ -225,15 +225,18 @@ def get_charges_data(
     rows = []
     for txn, delivery, order, client in paginated:
         client_name = client.display_name if client else '—'
+        is_adjustment = delivery is None
         rows.append({
             'id': txn.id,
             'date': txn.date,
             'client_id': txn.client_id,
             'client_name': client_name,
-            'order_id': order.id,
-            'delivery_id': delivery.id,
+            'order_id': order.id if order else None,
+            'delivery_id': delivery.id if delivery else None,
             'amount': txn.amount,
-            'discount': order.discount or 0,
+            'discount': order.discount if order else 0,
+            'comment': txn.comment or '—',
+            'is_adjustment': is_adjustment,
         })
 
     return {
