@@ -316,7 +316,7 @@
   .revenue-table__td--indent {}
   /* Client group separator */
   .revenue-table__row--last td { border-bottom: 3px solid #d6d3d1 !important; }
-  /* Sticky columns */
+  /* Sticky columns (horizontal) */
   .revenue-table__fixed {
     position: sticky;
     left: 0;
@@ -328,6 +328,26 @@
   .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 6px rgba(0,0,0,0.07); border-right: 2px solid #d6d3d1; }
   .revenue-table__totals-row .revenue-table__fixed { background: #fef3c7; }
   .revenue-table__row:hover .revenue-table__fixed { background: #fafaf9; }
+  /* Sticky header rows (vertical) */
+  .revenue-table__head-row th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  .revenue-table__subhead-row th {
+    position: sticky;
+    top: 29px;
+    z-index: 2;
+  }
+  .revenue-table__totals-row td {
+    position: sticky;
+    top: 55px;
+    z-index: 2;
+  }
+  /* Corner cells: sticky in both axes → must be above all other sticky cells */
+  .revenue-table__head-row .revenue-table__fixed,
+  .revenue-table__subhead-row .revenue-table__fixed,
+  .revenue-table__totals-row .revenue-table__fixed { z-index: 3; }
   /* Month separator (solid, stronger than dotted sub-col dividers) */
   .revenue-table__sep { border-right: 2px solid #c9c5c1 !important; }
   /* Edit mode */
@@ -1003,7 +1023,7 @@
       <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
-          <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець</p>
+          <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець &middot; <span class="text-blue-400">Поч. редагується через кнопку &laquo;Редагувати&raquo;</span></p>
         </div>
         {% if revenue.rows %}
         <div class="flex flex-wrap items-center gap-2">
@@ -1027,6 +1047,14 @@
           </button>
           <!-- Visible count -->
           <span id="revenue-count" class="text-xs text-stone-400"></span>
+          <!-- Sort by balance -->
+          <button id="revenue-sort-btn"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
+                  data-dir="0"
+                  title="Сортувати за залишком на кінець останнього місяця">
+            <i class="bi bi-arrow-down-up text-xs"></i>
+            <span>За балансом</span>
+          </button>
           <!-- Edit mode buttons -->
           <button id="revenue-edit-btn"
                   class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-700 transition-colors hover:border-amber-400 hover:text-stone-900">
@@ -1045,7 +1073,7 @@
       </div>
 
       {% if revenue.rows %}
-      <div class="overflow-x-auto">
+      <div class="overflow-auto" style="max-height: calc(100vh - 220px);">
         <table class="revenue-table w-full text-sm border-collapse">
           <thead>
             {# Month header row #}
@@ -1086,7 +1114,8 @@
             {% for row in revenue.rows %}
             <tr class="revenue-table__row {% if not row.is_first_for_client %}revenue-table__row--cont{% endif %} {% if row.is_last_for_client %}revenue-table__row--last{% endif %}"
                 data-client="{{ row.client.display_name | lower }}"
-                data-any-activity="{{ '1' if row.any_activity else '0' }}">
+                data-any-activity="{{ '1' if row.any_activity else '0' }}"
+                {% if row.is_first_for_client %}data-balance="{{ row.months[revenue.months[-1]].balance_end if row.months[revenue.months[-1]].balance_end is not none else 0 }}"{% endif %}>
 
               {# ── Fixed left columns ── #}
               {% if row.is_first_for_client %}
@@ -1106,13 +1135,24 @@
 
               {# Поч — client balance at start of month, only on first row #}
               {% if md.balance_start is not none %}
-                {% if md.balance_start > 0 %}
-                <td class="revenue-table__td {{ bnd }} text-right text-emerald-600 text-xs">{{ md.balance_start }}</td>
-                {% elif md.balance_start < 0 %}
-                <td class="revenue-table__td {{ bnd }} text-right text-red-400 text-xs">{{ md.balance_start }}</td>
-                {% else %}
-                <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
-                {% endif %}
+              <td class="revenue-table__td {{ bnd }} text-right rv-balance-editable"
+                  data-val="{{ md.balance_start }}"
+                  data-client="{{ row.client.id }}"
+                  data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                <span class="rv-display">
+                  {% if md.balance_start > 0 %}
+                    <span class="text-emerald-600 text-xs">{{ md.balance_start }}</span>
+                  {% elif md.balance_start < 0 %}
+                    <span class="text-red-400 text-xs">{{ md.balance_start }}</span>
+                  {% else %}
+                    <span class="text-stone-300 text-xs">0</span>
+                  {% endif %}
+                  {% if md.adj %}
+                    <span class="block text-xs {% if md.adj > 0 %}text-blue-500{% else %}text-orange-400{% endif %}" title="Коригування балансу">{% if md.adj > 0 %}+{% endif %}{{ md.adj }}</span>
+                  {% endif %}
+                </span>
+                <input class="rv-input hidden" type="number" value="{{ md.balance_start }}">
+              </td>
               {% else %}
               <td class="revenue-table__td {{ bnd }}"></td>
               {% endif %}
@@ -1835,6 +1875,65 @@ document.addEventListener('DOMContentLoaded', function () {
     applyFilters();
   }());
 
+  // ── Revenue sort by balance ────────────────────────
+  (function () {
+    const sortBtn = document.getElementById('revenue-sort-btn');
+    if (!sortBtn) return;
+    const tbody = document.querySelector('.revenue-table tbody');
+    if (!tbody) return;
+
+    // Save original DOM order for reset
+    const originalRows = Array.from(tbody.querySelectorAll('tr'));
+
+    function collectGroups() {
+      const groups = [];
+      let cur = null;
+      for (const row of tbody.querySelectorAll('tr')) {
+        if ('balance' in row.dataset) {
+          cur = { balance: parseFloat(row.dataset.balance) || 0, rows: [row] };
+          groups.push(cur);
+        } else if (cur) {
+          cur.rows.push(row);
+        }
+      }
+      return groups;
+    }
+
+    function applySort(dir) {
+      if (dir === 0) {
+        originalRows.forEach(function (r) { tbody.appendChild(r); });
+        return;
+      }
+      const groups = collectGroups();
+      groups.sort(function (a, b) { return dir * (a.balance - b.balance); });
+      groups.forEach(function (g) { g.rows.forEach(function (r) { tbody.appendChild(r); }); });
+    }
+
+    sortBtn.addEventListener('click', function () {
+      const cur = parseInt(sortBtn.dataset.dir, 10) || 0;
+      const next = cur === 0 ? 1 : cur === 1 ? -1 : 0;
+      sortBtn.dataset.dir = next;
+
+      const icon = sortBtn.querySelector('i');
+      const label = sortBtn.querySelector('span');
+      if (next === 1) {
+        icon.className = 'bi bi-sort-numeric-down text-xs';
+        label.textContent = 'Від меншого';
+        sortBtn.classList.add('border-amber-400', 'text-stone-900');
+      } else if (next === -1) {
+        icon.className = 'bi bi-sort-numeric-up-alt text-xs';
+        label.textContent = 'Від більшого';
+        sortBtn.classList.add('border-amber-400', 'text-stone-900');
+      } else {
+        icon.className = 'bi bi-arrow-down-up text-xs';
+        label.textContent = 'За балансом';
+        sortBtn.classList.remove('border-amber-400', 'text-stone-900');
+      }
+
+      applySort(next);
+    });
+  }());
+
   // ── Revenue edit mode ──────────────────────────────
   (function () {
     const editBtn   = document.getElementById('revenue-edit-btn');
@@ -1845,7 +1944,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function enterEditMode() {
       table.classList.add('revenue-table--editing');
-      document.querySelectorAll('.rv-editable').forEach(function (td) {
+      document.querySelectorAll('.rv-editable, .rv-balance-editable').forEach(function (td) {
         td.querySelector('.rv-display').classList.add('hidden');
         const inp = td.querySelector('.rv-input');
         inp.classList.remove('hidden');
@@ -1858,7 +1957,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function exitEditMode() {
       table.classList.remove('revenue-table--editing');
-      document.querySelectorAll('.rv-editable').forEach(function (td) {
+      document.querySelectorAll('.rv-editable, .rv-balance-editable').forEach(function (td) {
         td.querySelector('.rv-display').classList.remove('hidden');
         td.querySelector('.rv-input').classList.add('hidden');
       });
@@ -1873,9 +1972,9 @@ document.addEventListener('DOMContentLoaded', function () {
     saveBtn.addEventListener('click', function () {
       const adjustments = [];
       document.querySelectorAll('.rv-editable').forEach(function (td) {
-        const orig  = parseInt(td.dataset.val, 10) || 0;
+        const orig   = parseInt(td.dataset.val, 10) || 0;
         const newVal = parseInt(td.querySelector('.rv-input').value, 10) || 0;
-        const delta = newVal - orig;
+        const delta  = newVal - orig;
         if (delta === 0) return;
 
         const type     = td.dataset.type;
@@ -1892,24 +1991,55 @@ document.addEventListener('DOMContentLoaded', function () {
         });
       });
 
-      if (adjustments.length === 0) {
+      const balanceAdjustments = [];
+      document.querySelectorAll('.rv-balance-editable').forEach(function (td) {
+        const orig   = parseInt(td.dataset.val, 10) || 0;
+        const newVal = parseInt(td.querySelector('.rv-input').value, 10) || 0;
+        const delta  = newVal - orig;
+        if (delta === 0) return;
+
+        balanceAdjustments.push({
+          client_id: parseInt(td.dataset.client, 10),
+          month:     td.dataset.month,
+          delta:     delta,
+        });
+      });
+
+      if (adjustments.length === 0 && balanceAdjustments.length === 0) {
         exitEditMode();
         return;
       }
 
       saveBtn.disabled = true;
-      fetch('/reports/revenue/adjust', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ adjustments: adjustments }),
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (data.ok) {
-            window.location.reload();
-          } else {
-            alert('Помилка збереження: ' + (data.error || 'unknown'));
+
+      const requests = [];
+      if (adjustments.length > 0) {
+        requests.push(
+          fetch('/reports/revenue/adjust', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ adjustments: adjustments }),
+          }).then(function (r) { return r.json(); })
+        );
+      }
+      if (balanceAdjustments.length > 0) {
+        requests.push(
+          fetch('/reports/revenue/balance-adjust', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ adjustments: balanceAdjustments }),
+          }).then(function (r) { return r.json(); })
+        );
+      }
+
+      Promise.all(requests)
+        .then(function (results) {
+          const failed = results.find(function (d) { return !d.ok; });
+          if (failed) {
+            alert('Помилка збереження: ' + (failed.error || 'unknown'));
             saveBtn.disabled = false;
+          } else {
+            window.location.reload();
           }
         })
         .catch(function () {

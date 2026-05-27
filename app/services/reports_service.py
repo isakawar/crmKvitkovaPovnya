@@ -1006,11 +1006,31 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
     ):
         paid_by.setdefault(r.client_id, {})[date(int(r.y), int(r.m), 1)] = int(r.paid or 0)
 
+    # ── Balance adjustments in range per (client_id, month) ───────────────────
+    adj_by: dict = {}
+    for r in (
+        db.session.query(
+            Transaction.client_id,
+            func.extract('year',  Transaction.date).label('y'),
+            func.extract('month', Transaction.date).label('m'),
+            func.sum(Transaction.amount).label('adj'),
+        )
+        .filter(
+            Transaction.transaction_type == 'adjustment',
+            Transaction.client_id.in_(all_client_ids),
+            Transaction.date >= d_from,
+            Transaction.date <= d_to,
+        )
+        .group_by(Transaction.client_id, 'y', 'm')
+        .all()
+    ):
+        adj_by.setdefault(r.client_id, {})[date(int(r.y), int(r.m), 1)] = int(r.adj or 0)
+
     # ── Balance at range start: credits - post_paid + post_charged ────────────
     post_tx = (
         db.session.query(
             Transaction.client_id,
-            func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('paid'),
+            func.sum(case((Transaction.transaction_type.in_(['credit', 'adjustment']), Transaction.amount), else_=0)).label('paid'),
             func.sum(case((Transaction.transaction_type == 'delivery_charge', Transaction.amount), else_=0)).label('charged'),
         )
         .filter(Transaction.client_id.in_(all_client_ids), Transaction.date >= d_from)
@@ -1064,15 +1084,16 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             continue
 
         # Client balance at range start
-        balance = (client.credits or 0) - post_paid.get(cid, 0) + post_charged.get(cid, 0)
+        balance = int(client.credits or 0) - post_paid.get(cid, 0) + post_charged.get(cid, 0)
 
         # Client-level monthly data (paid + running balance across ALL subscriptions)
         client_monthly = {}
         for mo in months:
             paid = paid_by.get(cid, {}).get(mo, 0)
+            adj = adj_by.get(cid, {}).get(mo, 0)
             total_charged = sum(charged_by.get((cid, sr['sub_id']), {}).get(mo, 0) for sr in sub_row_defs)
-            bal_end = balance + paid - total_charged
-            client_monthly[mo] = {'paid': paid, 'balance_start': balance, 'balance_end': bal_end}
+            bal_end = balance + paid + adj - total_charged
+            client_monthly[mo] = {'paid': paid, 'adj': adj, 'balance_start': balance, 'balance_end': bal_end}
             totals[mo]['paid'] += paid
             balance = bal_end
 
@@ -1093,6 +1114,7 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
                 month_data[mo] = {
                     'charged': charged,
                     'paid':          cm['paid']          if is_first else None,
+                    'adj':           cm['adj']           if is_first else None,
                     'balance_start': cm['balance_start'] if is_first else None,
                     'balance_end':   cm['balance_end']   if is_first else None,
                 }
