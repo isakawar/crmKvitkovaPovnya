@@ -323,9 +323,7 @@
     background: #fff;
     z-index: 1;
   }
-  .revenue-table__fixed:first-child { left: 0; min-width: 160px; max-width: 160px; }
-  .revenue-table__fixed:nth-child(2) { left: 160px; min-width: 70px; }
-  .revenue-table__fixed:nth-child(3) { left: 230px; min-width: 70px; box-shadow: 2px 0 6px rgba(0,0,0,0.07); border-right: 2px solid #d6d3d1; }
+  .revenue-table__fixed:first-child { left: 0; min-width: 180px; max-width: 220px; box-shadow: 2px 0 6px rgba(0,0,0,0.07); border-right: 2px solid #d6d3d1; }
   .revenue-table__totals-row .revenue-table__fixed { background: #fef3c7; }
   .revenue-table__row:hover .revenue-table__fixed { background: #fafaf9; }
   /* Sticky header rows (vertical) */
@@ -344,7 +342,7 @@
     top: 55px;
     z-index: 2;
   }
-  /* Corner cells: sticky in both axes → must be above all other sticky cells */
+  /* Corner cell (Клієнт): sticky in both axes → must be above all other sticky cells */
   .revenue-table__head-row .revenue-table__fixed,
   .revenue-table__subhead-row .revenue-table__fixed,
   .revenue-table__totals-row .revenue-table__fixed { z-index: 3; }
@@ -1079,8 +1077,6 @@
             {# Month header row #}
             <tr class="revenue-table__head-row">
               <th class="revenue-table__fixed revenue-table__th text-left">Клієнт</th>
-              <th class="revenue-table__fixed revenue-table__th text-center" style="left:160px">Тип</th>
-              <th class="revenue-table__fixed revenue-table__th text-center" style="left:230px">Розмір</th>
               {% for mo in revenue.months %}
               {% set bnd = 'revenue-table__th--band' if loop.index0 % 2 == 1 else '' %}
               <th class="revenue-table__th revenue-table__th--month {{ bnd }}" colspan="4">{{ mo.strftime('%m.%Y') }}</th>
@@ -1088,7 +1084,7 @@
             </tr>
             {# Sub-column labels #}
             <tr class="revenue-table__subhead-row">
-              <th class="revenue-table__fixed revenue-table__subth" colspan="3"></th>
+              <th class="revenue-table__fixed revenue-table__subth"></th>
               {% for mo in revenue.months %}
               {% set bnd = 'revenue-table__subth--band' if loop.index0 % 2 == 1 else '' %}
               <th class="revenue-table__subth text-right {{ bnd }}">Поч.</th>
@@ -1099,42 +1095,32 @@
             </tr>
             {# Totals row #}
             <tr class="revenue-table__totals-row">
-              <td class="revenue-table__fixed revenue-table__td font-semibold text-stone-700" colspan="3">Разом</td>
+              <td class="revenue-table__fixed revenue-table__td font-semibold text-stone-700">Разом</td>
               {% for mo in revenue.months %}
               {% set t = revenue.totals[mo] %}
               {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
-              <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">0</td>
+              <td class="revenue-table__td {{ bnd }} text-right text-stone-300 text-xs">—</td>
               <td class="revenue-table__td {{ bnd }} text-right font-bold text-stone-800">{% if t.charged %}{{ t.charged }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
               <td class="revenue-table__td {{ bnd }} text-right font-semibold text-stone-700">{% if t.paid %}{{ t.paid }}{% else %}<span class="font-normal text-stone-300">0</span>{% endif %}</td>
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">—</td>
               {% endfor %}
             </tr>
           </thead>
           <tbody>
             {% for row in revenue.rows %}
-            <tr class="revenue-table__row {% if not row.is_first_for_client %}revenue-table__row--cont{% endif %} {% if row.is_last_for_client %}revenue-table__row--last{% endif %}"
+            <tr class="revenue-table__row revenue-table__row--last"
                 data-client="{{ row.client.display_name | lower }}"
                 data-any-activity="{{ '1' if row.any_activity else '0' }}"
-                {% if row.is_first_for_client %}data-balance="{{ row.months[revenue.months[-1]].balance_end if row.months[revenue.months[-1]].balance_end is not none else 0 }}"{% endif %}>
+                data-balance="{{ row.months[revenue.months[-1]].balance_end }}">
 
-              {# ── Fixed left columns ── #}
-              {% if row.is_first_for_client %}
               <td class="revenue-table__fixed revenue-table__td font-medium text-stone-800 truncate" title="{{ row.client.display_name }}">{{ row.client.display_name }}</td>
-              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:160px">{{ row.subscription_type or '—' }}</td>
-              <td class="revenue-table__fixed revenue-table__td text-center text-stone-500" style="left:230px">{{ row.size }}</td>
-              {% else %}
-              <td class="revenue-table__fixed revenue-table__td"></td>
-              <td class="revenue-table__fixed revenue-table__td text-center" style="left:160px">{{ row.subscription_type }}</td>
-              <td class="revenue-table__fixed revenue-table__td text-center" style="left:230px">{{ row.size }}</td>
-              {% endif %}
 
               {# ── Month columns ── #}
               {% for mo in revenue.months %}
               {% set md = row.months[mo] %}
               {% set bnd = 'revenue-table__td--band' if loop.index0 % 2 == 1 else '' %}
 
-              {# Поч — client balance at start of month, only on first row #}
-              {% if md.balance_start is not none %}
+              {# Поч #}
               <td class="revenue-table__td {{ bnd }} text-right rv-balance-editable"
                   data-val="{{ md.balance_start }}"
                   data-client="{{ row.client.id }}"
@@ -1153,55 +1139,41 @@
                 </span>
                 <input class="rv-input hidden" type="number" value="{{ md.balance_start }}">
               </td>
-              {% else %}
-              <td class="revenue-table__td {{ bnd }}"></td>
-              {% endif %}
 
-              {# Нар — per subscription charge #}
+              {# Нар #}
               <td class="revenue-table__td {{ bnd }} text-right rv-editable"
                   data-type="charged"
                   data-val="{{ md.charged or 0 }}"
                   data-client="{{ row.client.id }}"
-                  data-sub="{{ row.subscription_id if row.subscription_id else '' }}"
+                  data-sub=""
                   data-month="{{ mo.strftime('%Y-%m-%d') }}">
                 <span class="rv-display">
-                  {% if md.charged %}
-                    <span class="font-semibold text-stone-800">{{ md.charged }}</span>
-                  {% else %}
-                    <span class="text-stone-300">0</span>
-                  {% endif %}
+                  {% if md.charged %}<span class="font-semibold text-stone-800">{{ md.charged }}</span>
+                  {% else %}<span class="text-stone-300">0</span>{% endif %}
                 </span>
                 <input class="rv-input hidden" type="number" min="0" value="{{ md.charged or 0 }}">
               </td>
 
-              {# Опл — client-level, only on first row #}
-              {% if md.paid is not none %}
-                <td class="revenue-table__td {{ bnd }} text-right text-stone-600 rv-editable"
-                    data-type="paid"
-                    data-val="{{ md.paid or 0 }}"
-                    data-client="{{ row.client.id }}"
-                    data-sub=""
-                    data-month="{{ mo.strftime('%Y-%m-%d') }}">
-                  <span class="rv-display">
-                    {% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}
-                  </span>
-                  <input class="rv-input hidden" type="number" min="0" value="{{ md.paid or 0 }}">
-                </td>
-              {% else %}
-              <td class="revenue-table__td {{ bnd }}"></td>
-              {% endif %}
+              {# Опл #}
+              <td class="revenue-table__td {{ bnd }} text-right text-stone-600 rv-editable"
+                  data-type="paid"
+                  data-val="{{ md.paid or 0 }}"
+                  data-client="{{ row.client.id }}"
+                  data-sub=""
+                  data-month="{{ mo.strftime('%Y-%m-%d') }}">
+                <span class="rv-display">
+                  {% if md.paid %}{{ md.paid }}{% else %}<span class="text-stone-300">0</span>{% endif %}
+                </span>
+                <input class="rv-input hidden" type="number" min="0" value="{{ md.paid or 0 }}">
+              </td>
 
-              {# Кін — client balance at end of month, only on first row #}
-              {% if md.balance_end is not none %}
-                {% if md.balance_end > 0 %}
-                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
-                {% elif md.balance_end < 0 %}
-                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
-                {% else %}
-                <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
-                {% endif %}
+              {# Кін #}
+              {% if md.balance_end > 0 %}
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
+              {% elif md.balance_end < 0 %}
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
               {% else %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep"></td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
               {% endif %}
 
               {% endfor %}
