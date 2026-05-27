@@ -1,8 +1,11 @@
 from flask import render_template, request, abort
 from flask_login import login_required, current_user
+from sqlalchemy import or_, and_
 from app.blueprints.activity_log import activity_log_bp
 from app.models.activity_log import ActivityLog
 from app.models.user import User
+from app.models.client import Client
+from app.models.order import Order
 
 ENTITY_LABELS = {
     'order': 'Замовлення',
@@ -32,13 +35,29 @@ def activity_log_list():
     action = request.args.get('action', '').strip()
     date_from = request.args.get('date_from', '').strip()
     date_to = request.args.get('date_to', '').strip()
+    client_id = request.args.get('client_id', '').strip()
+    order_id = request.args.get('order_id', '').strip()
 
     query = ActivityLog.query
 
     if user_id:
         query = query.filter(ActivityLog.user_id == int(user_id))
-    if entity_type:
+
+    if client_id:
+        cid = int(client_id)
+        order_ids = [r[0] for r in Order.query.filter_by(client_id=cid).with_entities(Order.id).all()]
+        query = query.filter(or_(
+            and_(ActivityLog.entity_type == 'client', ActivityLog.entity_id == cid),
+            and_(ActivityLog.entity_type == 'order', ActivityLog.entity_id.in_(order_ids)),
+        ))
+    elif order_id:
+        query = query.filter(
+            ActivityLog.entity_type == 'order',
+            ActivityLog.entity_id == int(order_id),
+        )
+    elif entity_type:
         query = query.filter(ActivityLog.entity_type == entity_type)
+
     if action:
         query = query.filter(ActivityLog.action == action)
     if date_from:
@@ -60,6 +79,12 @@ def activity_log_list():
 
     users = User.query.filter(User.user_type.in_(['admin', 'manager'])).order_by(User.display_name).all()
 
+    selected_client_display = ''
+    if client_id:
+        c = Client.query.get(int(client_id))
+        if c:
+            selected_client_display = c.display_name
+
     return render_template(
         'activity_log/index.html',
         entries=pagination.items,
@@ -72,4 +97,7 @@ def activity_log_list():
         selected_action=action,
         date_from=date_from,
         date_to=date_to,
+        selected_client_id=client_id,
+        selected_client_display=selected_client_display,
+        selected_order_id=order_id,
     )
