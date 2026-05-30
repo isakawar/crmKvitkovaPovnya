@@ -1006,11 +1006,31 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
     ):
         paid_by.setdefault(r.client_id, {})[date(int(r.y), int(r.m), 1)] = int(r.paid or 0)
 
+    # ── Balance adjustments in range per (client_id, month) ───────────────────
+    adj_by: dict = {}
+    for r in (
+        db.session.query(
+            Transaction.client_id,
+            func.extract('year',  Transaction.date).label('y'),
+            func.extract('month', Transaction.date).label('m'),
+            func.sum(Transaction.amount).label('adj'),
+        )
+        .filter(
+            Transaction.transaction_type == 'adjustment',
+            Transaction.client_id.in_(all_client_ids),
+            Transaction.date >= d_from,
+            Transaction.date <= d_to,
+        )
+        .group_by(Transaction.client_id, 'y', 'm')
+        .all()
+    ):
+        adj_by.setdefault(r.client_id, {})[date(int(r.y), int(r.m), 1)] = int(r.adj or 0)
+
     # ── Balance at range start: credits - post_paid + post_charged ────────────
     post_tx = (
         db.session.query(
             Transaction.client_id,
-            func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('paid'),
+            func.sum(case((Transaction.transaction_type.in_(['credit', 'adjustment']), Transaction.amount), else_=0)).label('paid'),
             func.sum(case((Transaction.transaction_type == 'delivery_charge', Transaction.amount), else_=0)).label('charged'),
         )
         .filter(Transaction.client_id.in_(all_client_ids), Transaction.date >= d_from)
@@ -1046,70 +1066,56 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
         .all()
     )
 
+    # ── Pre-compute total charged per (client_id, month) across all subscriptions ─
+    client_charged_by: dict = {}
+    for (cid, _), mo_amounts in charged_by.items():
+        if cid is None:
+            continue
+        bucket = client_charged_by.setdefault(cid, {})
+        for mo, amount in mo_amounts.items():
+            bucket[mo] = bucket.get(mo, 0) + amount
+
     totals = {mo: {'charged': 0, 'paid': 0} for mo in months}
-    client_groups = []  # [(total_paid, [rows_for_client])]
+    client_groups = []  # [(total_paid, [row])]
 
     for client in all_clients:
         cid = client.id
 
-        # Build sub-row definitions: one per subscription + optional one-time row
-        sub_row_defs = [
-            {'type': s.type, 'size': sub_sizes.get(s.id, ''), 'sub_id': s.id}
-            for s in subs_by_client.get(cid, [])
-        ]
-        if (cid, None) in charged_by:
-            sub_row_defs.append({'type': 'Разове', 'size': '—', 'sub_id': None})
-
-        if not sub_row_defs:
+        has_subs = bool(subs_by_client.get(cid)) or (cid, None) in charged_by
+        if not has_subs:
             continue
 
         # Client balance at range start
-        balance = (client.credits or 0) - post_paid.get(cid, 0) + post_charged.get(cid, 0)
+        balance = int(client.credits or 0) - post_paid.get(cid, 0) + post_charged.get(cid, 0)
 
-        # Client-level monthly data (paid + running balance across ALL subscriptions)
-        client_monthly = {}
+        month_data = {}
         for mo in months:
-            paid = paid_by.get(cid, {}).get(mo, 0)
-            total_charged = sum(charged_by.get((cid, sr['sub_id']), {}).get(mo, 0) for sr in sub_row_defs)
-            bal_end = balance + paid - total_charged
-            client_monthly[mo] = {'paid': paid, 'balance_start': balance, 'balance_end': bal_end}
-            totals[mo]['paid'] += paid
+            paid    = paid_by.get(cid, {}).get(mo, 0)
+            adj     = adj_by.get(cid, {}).get(mo, 0)
+            charged = client_charged_by.get(cid, {}).get(mo, 0)
+            bal_end = balance + paid + adj - charged
+            month_data[mo] = {
+                'charged':       charged,
+                'paid':          paid,
+                'adj':           adj,
+                'balance_start': balance,
+                'balance_end':   bal_end,
+            }
+            totals[mo]['charged'] += charged
+            totals[mo]['paid']    += paid
             balance = bal_end
 
         any_activity = any(
-            charged_by.get((cid, sr['sub_id']), {}).get(mo, 0) > 0 or client_monthly[mo]['paid'] > 0
-            for sr in sub_row_defs for mo in months
+            month_data[mo]['charged'] > 0 or month_data[mo]['paid'] > 0
+            for mo in months
         )
+        total_paid = sum(month_data[mo]['paid'] for mo in months)
 
-        total_paid = sum(client_monthly[mo]['paid'] for mo in months)
-
-        client_rows = []
-        for idx, sr in enumerate(sub_row_defs):
-            is_first = idx == 0
-            month_data = {}
-            for mo in months:
-                charged = charged_by.get((cid, sr['sub_id']), {}).get(mo, 0)
-                cm = client_monthly[mo]
-                month_data[mo] = {
-                    'charged': charged,
-                    'paid':          cm['paid']          if is_first else None,
-                    'balance_start': cm['balance_start'] if is_first else None,
-                    'balance_end':   cm['balance_end']   if is_first else None,
-                }
-                totals[mo]['charged'] += charged
-
-            client_rows.append({
-                'client':              client,
-                'is_first_for_client': is_first,
-                'is_last_for_client':  idx == len(sub_row_defs) - 1,
-                'subscription_type':   sr['type'],
-                'size':                sr['size'] or '—',
-                'subscription_id':     sr['sub_id'],
-                'months':              month_data,
-                'any_activity':        any_activity,
-            })
-
-        client_groups.append((total_paid, client_rows))
+        client_groups.append((total_paid, [{
+            'client':       client,
+            'months':       month_data,
+            'any_activity': any_activity,
+        }]))
 
     client_groups.sort(key=lambda x: x[0], reverse=True)
     rows = [row for _, group in client_groups for row in group]

@@ -108,3 +108,61 @@ def revenue_adjust():
 
     db.session.commit()
     return jsonify({'ok': True})
+
+
+@reports_bp.route('/reports/revenue/balance-adjust', methods=['POST'])
+@login_required
+@permission_required('view_reports')
+def revenue_balance_adjust():
+    data = request.get_json(silent=True) or {}
+    adjustments = data.get('adjustments', [])
+    if not adjustments:
+        return jsonify({'ok': False, 'error': 'no adjustments'}), 400
+
+    for item in adjustments:
+        try:
+            client_id = int(item['client_id'])
+            month = date_type.fromisoformat(item['month'])
+            delta = int(item['delta'])
+        except (KeyError, ValueError, TypeError):
+            return jsonify({'ok': False, 'error': 'invalid item'}), 400
+
+        if delta == 0:
+            continue
+
+        client = db.session.get(Client, client_id)
+        if client is None:
+            return jsonify({'ok': False, 'error': f'client {client_id} not found'}), 400
+
+        existing = (
+            db.session.query(Transaction)
+            .filter(
+                Transaction.transaction_type == 'adjustment',
+                Transaction.client_id == client_id,
+                Transaction.date == month,
+            )
+            .first()
+        )
+
+        if existing:
+            new_amount = existing.amount + delta
+            if new_amount == 0:
+                db.session.delete(existing)
+            else:
+                existing.amount = new_amount
+                existing.comment = f'Коригування балансу {month.strftime("%m.%Y")}'
+        else:
+            tx = Transaction(
+                transaction_type='adjustment',
+                client_id=client_id,
+                amount=delta,
+                date=month,
+                comment=f'Коригування балансу {month.strftime("%m.%Y")}',
+                created_by_id=current_user.id,
+            )
+            db.session.add(tx)
+
+        client.credits = (client.credits or 0) + delta
+
+    db.session.commit()
+    return jsonify({'ok': True})

@@ -271,15 +271,17 @@ document.addEventListener('DOMContentLoaded', function () {
       credit: 'Поповнення',
       debit: 'Списання',
       delivery_charge: 'Списання (доставка)',
+      adjustment: 'Коригування балансу',
     };
 
     if (transactions.length === 0) {
       list.innerHTML = '<p class="text-sm text-stone-400 px-4 py-3">Немає транзакцій</p>';
     } else {
       const rows = transactions.map(t => {
-        const isCredit = t.type === 'credit';
-        const amountClass = isCredit ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold';
-        const amountSign = isCredit ? '+' : '−';
+        const isCredit = t.type === 'credit' || (t.type === 'adjustment' && t.amount > 0);
+        const isAdjustment = t.type === 'adjustment';
+        const amountClass = isAdjustment ? 'text-blue-500 font-semibold' : (isCredit ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold');
+        const amountSign = (t.type === 'adjustment' ? (t.amount >= 0 ? '+' : '') : (isCredit ? '+' : '−'));
         const label = typeLabels[t.type] || t.type;
         const paymentBadge = t.payment_type
           ? `<span class="text-xs text-stone-400 ml-1">(${t.payment_type})</span>`
