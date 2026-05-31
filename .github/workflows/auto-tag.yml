@@ -10,14 +10,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  run-e2e:
-    if: github.event.pull_request.merged == true
-    uses: isakawar/crmKvitkovaPovnya-e2e/.github/workflows/e2e.yml@main
-    with:
-      crm_ref: ${{ github.sha }}
+  # run-e2e:
+  #   if: github.event.pull_request.merged == true
+  #   uses: isakawar/crmKvitkovaPovnya-e2e/.github/workflows/e2e.yml@main
+  #   with:
+  #     crm_ref: ${{ github.sha }}
 
   tag-release:
-    needs: run-e2e
+    # needs: run-e2e  # uncomment when e2e repo is ready
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
