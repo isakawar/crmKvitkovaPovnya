@@ -267,6 +267,12 @@
             <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
             <span>Лог змін</span>
         </a>
+        <a href="{{ url_for('notifications.index') }}" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/notifications') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-check2-square text-lg flex-shrink-0"></i>
+            <span>Завдання</span>
+        </a>
         {% endif %}
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
@@ -397,6 +403,13 @@
             <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
             <span class="nav-label">Лог змін</span>
         </a>
+        <a href="{{ url_for('notifications.index') }}"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/notifications') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Завдання">
+            <i class="bi bi-check2-square text-lg flex-shrink-0"></i>
+            <span class="nav-label">Завдання</span>
+        </a>
         {% endif %}
         <!-- Spacer -->
         <div class="flex-1"></div>
@@ -437,6 +450,36 @@
             <span class="text-sm font-semibold text-stone-700">CRM Kvitkova Povnya</span>
         </div>
         <div class="flex items-center gap-2">
+            {% if current_user.is_authenticated and current_user.user_type in ['admin', 'manager'] %}
+            <div class="relative" id="notification-bell-wrapper">
+                <button id="notification-bell-btn" aria-label="Завдання"
+                        style="position:relative;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1.5px solid {% if action_items_pending_count > 0 %}#fbbf24{% else %}#e7e5e4{% endif %};background:{% if action_items_pending_count > 0 %}#fffbeb{% else %}#fff{% endif %};color:{% if action_items_pending_count > 0 %}#b45309{% else %}#78716c{% endif %};cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.375rem;">
+                    <i class="bi bi-bell{% if action_items_pending_count > 0 %}-fill{% endif %}" style="font-size:1rem;line-height:1;"></i>
+                    {% if action_items_pending_count > 0 %}
+                    <span id="notif-badge" style="font-size:0.75rem;font-weight:700;color:#b45309;line-height:1;">{{ action_items_pending_count if action_items_pending_count <= 99 else '99+' }}</span>
+                    {% else %}
+                    <span id="notif-badge" style="display:none;font-size:0.75rem;font-weight:700;color:#b45309;line-height:1;"></span>
+                    {% endif %}
+                </button>
+                <div id="notification-dropdown"
+                     style="display:none;position:absolute;right:0;top:calc(100% + 6px);width:320px;max-height:420px;background:#fff;border:1px solid #e7e5e4;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.10);z-index:9999;overflow:hidden;flex-direction:column;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem 0.625rem;border-bottom:1px solid #f5f5f4;flex-shrink:0;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <i class="bi bi-bell-fill" style="font-size:0.8rem;color:#f59e0b;"></i>
+                            <span style="font-size:0.875rem;font-weight:700;color:#1c1917;">Нагадування</span>
+                        </div>
+                        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
+                        <a href="{{ url_for('notifications.index') }}" style="font-size:0.7rem;color:#d97706;text-decoration:none;padding:0.2rem 0.5rem;border-radius:4px;background:#fffbeb;border:1px solid #fde68a;">+ Створити</a>
+                        {% endif %}
+                    </div>
+                    <div id="notification-list" style="overflow-y:auto;max-height:340px;"></div>
+                    <div id="notification-empty" style="display:none;padding:2rem 1rem;text-align:center;color:#a8a29e;font-size:0.85rem;">
+                        <i class="bi bi-check-circle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:.4;"></i>
+                        Всі завдання виконано
+                    </div>
+                </div>
+            </div>
+            {% endif %}
             {% if current_user.is_authenticated %}
             <div class="relative" id="user-dropdown-wrapper">
                 <button onclick="document.getElementById('user-menu').classList.toggle('hidden')"
@@ -510,6 +553,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (wrapper && !wrapper.contains(e.target)) {
             var menu = document.getElementById('user-menu');
             if (menu) menu.classList.add('hidden');
+        }
+    });
+
+    // Close notification dropdown on outside click
+    document.addEventListener('click', function(e) {
+        var bellWrapper = document.getElementById('notification-bell-wrapper');
+        if (bellWrapper && !bellWrapper.contains(e.target)) {
+            if (window.notifSetOpen) window.notifSetOpen(false);
         }
     });
     {% endif %}
@@ -907,5 +958,167 @@ document.addEventListener('submit', function(e) {
     <div class="toast-body py-2"></div>
   </div>
 </div>
+{% if current_user.is_authenticated and current_user.user_type in ['admin', 'manager'] %}
+<script>
+(function() {
+    var POLL_INTERVAL_MS = 7 * 60 * 1000;
+    var TOAST_SESSION_KEY = '__action_items_toast_count';
+
+    var _ddOpen = false;
+
+    window.notifSetOpen = function(open) {
+        _ddOpen = open;
+        var dd = document.getElementById('notification-dropdown');
+        if (!dd) return;
+        dd.style.display = open ? 'flex' : 'none';
+        if (open) dd.style.flexDirection = 'column';
+    };
+
+    function updateBell(count) {
+        var btn = document.getElementById('notification-bell-btn');
+        var badge = document.getElementById('notif-badge');
+        if (!btn || !badge) return;
+        if (count > 0) {
+            btn.style.borderColor = '#fbbf24';
+            btn.style.background = '#fffbeb';
+            btn.style.color = '#b45309';
+            btn.querySelector('i').className = 'bi bi-bell-fill';
+            btn.querySelector('i').style.fontSize = '1rem';
+            badge.style.display = 'inline';
+            badge.textContent = count <= 99 ? count : '99+';
+        } else {
+            btn.style.borderColor = '#e7e5e4';
+            btn.style.background = '#fff';
+            btn.style.color = '#78716c';
+            btn.querySelector('i').className = 'bi bi-bell';
+            badge.style.display = 'none';
+        }
+    }
+
+    var MAX_PER_SECTION = 5;
+
+    function renderSection(list, label, icon, items, renderItem) {
+        if (!items.length) return;
+        var header = document.createElement('div');
+        header.style.cssText = 'padding:0.5rem 1rem 0.25rem;font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#a8a29e;display:flex;align-items:center;gap:0.3rem;';
+        header.innerHTML = '<span>' + icon + '</span><span>' + label + '</span>';
+        if (items.length > MAX_PER_SECTION) {
+            var more = document.createElement('a');
+            more.href = '/dashboard';
+            more.style.cssText = 'margin-left:auto;font-size:0.65rem;color:#d97706;text-decoration:none;font-weight:600;';
+            more.textContent = '+' + (items.length - MAX_PER_SECTION) + ' ще';
+            header.appendChild(more);
+        }
+        list.appendChild(header);
+        items.slice(0, MAX_PER_SECTION).forEach(function(item) { list.appendChild(renderItem(item)); });
+    }
+
+    function makeAutoItem(item) {
+        var el = document.createElement('a');
+        el.href = item.url || '/dashboard';
+        el.style.cssText = 'display:flex;align-items:flex-start;gap:0.625rem;padding:0.5rem 1rem;text-decoration:none;transition:background .1s;border-bottom:1px solid #fafaf9;';
+        el.onmouseover = function() { this.style.background='#fafaf9'; };
+        el.onmouseout  = function() { this.style.background=''; };
+        el.onclick = function() { if (window.notifSetOpen) window.notifSetOpen(false); };
+        var bgColor = item.type === 'draft' ? '#dbeafe' : '#d1fae5';
+        var txtColor = item.type === 'draft' ? '#1d4ed8' : '#065f46';
+        var overdueHtml = item.is_overdue
+            ? '<span style="font-size:0.65rem;font-weight:700;color:#ef4444;">' + item.subtitle + '</span>'
+            : '<span style="font-size:0.65rem;color:#a8a29e;">' + (item.subtitle || '') + '</span>';
+        el.innerHTML =
+            '<span style="width:28px;height:28px;border-radius:6px;background:' + bgColor + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">' +
+              '<i class="bi bi-' + (item.type === 'draft' ? 'telephone' : 'arrow-repeat') + '" style="font-size:0.75rem;color:' + txtColor + ';"></i>' +
+            '</span>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<p style="font-size:0.8rem;font-weight:500;color:#1c1917;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + item.title + '</p>' +
+              overdueHtml +
+            '</div>' +
+            '<i class="bi bi-chevron-right" style="font-size:0.65rem;color:#d6d3d1;flex-shrink:0;margin-top:4px;"></i>';
+        return el;
+    }
+
+    function makeActionItem(item) {
+        var el = document.createElement('div');
+        el.style.cssText = 'display:flex;align-items:flex-start;gap:0.625rem;padding:0.5rem 1rem;border-bottom:1px solid #fafaf9;';
+        var overdueHtml = item.is_overdue
+            ? '<span style="font-size:0.65rem;font-weight:700;color:#ef4444;">Прострочено' + (item.subtitle ? ': ' + item.subtitle : '') + '</span>'
+            : (item.subtitle ? '<span style="font-size:0.65rem;color:#a8a29e;">До: ' + item.subtitle + '</span>' : '');
+        el.innerHTML =
+            '<span style="width:28px;height:28px;border-radius:6px;background:#fef3c7;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">' +
+              '<i class="bi bi-check2-square" style="font-size:0.75rem;color:#b45309;"></i>' +
+            '</span>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<p style="font-size:0.8rem;font-weight:500;color:#1c1917;margin:0;">' + item.title + '</p>' +
+              overdueHtml +
+            '</div>' +
+            '<button style="flex-shrink:0;font-size:0.7rem;padding:0.25rem 0.6rem;border-radius:5px;background:#fff;color:#78716c;border:1px solid #e7e5e4;cursor:pointer;white-space:nowrap;" class="notif-complete-btn" data-id="' + item.action_item_id + '">Виконано</button>';
+        return el;
+    }
+
+    function renderNotifList(items) {
+        var list = document.getElementById('notification-list');
+        var empty = document.getElementById('notification-empty');
+        if (!list) return;
+        list.innerHTML = '';
+        updateBell(items ? items.length : 0);
+        if (!items || items.length === 0) {
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        var actionItems = items.filter(function(i) { return i.type === 'action_item'; });
+        var drafts      = items.filter(function(i) { return i.type === 'draft'; });
+        var renewals    = items.filter(function(i) { return i.type === 'renewal'; });
+
+        renderSection(list, 'Завдання від адміна', '📋', actionItems, makeActionItem);
+        renderSection(list, 'Чернетки', '📞', drafts, makeAutoItem);
+        renderSection(list, 'Продовження', '🔄', renewals, makeAutoItem);
+
+        list.querySelectorAll('.notif-complete-btn').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var id = this.getAttribute('data-id');
+                fetch('/notifications/' + id + '/complete', {method: 'POST'})
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { if (data.success) fetchPending(); });
+            });
+        });
+    }
+
+    function fetchPending() {
+        fetch('/notifications/pending')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) { if (data) renderNotifList(data.items || []); })
+            .catch(function() {});
+    }
+
+    function maybeShowPageLoadToast() {
+        var count = parseInt('{{ action_items_pending_count | default(0) }}', 10);
+        if (count <= 0) return;
+        var prevCount = parseInt(sessionStorage.getItem(TOAST_SESSION_KEY) || '0', 10);
+        if (count <= prevCount) return;
+        sessionStorage.setItem(TOAST_SESSION_KEY, String(count));
+        var label = count === 1 ? 'незавершене завдання' : 'незавершених завдань';
+        if (typeof showToast === 'function') showToast(count + ' ' + label, 'warning');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        maybeShowPageLoadToast();
+        fetchPending();
+        setInterval(fetchPending, POLL_INTERVAL_MS);
+
+        var bellBtn = document.getElementById('notification-bell-btn');
+        if (bellBtn) {
+            bellBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                window.notifSetOpen(!_ddOpen);
+                if (_ddOpen) fetchPending();
+            });
+        }
+    });
+})();
+</script>
+{% endif %}
 </body>
 </html>

@@ -1,0 +1,262 @@
+{% extends 'layout.html' %}
+{% block title %}Завдання для менеджерів{% endblock %}
+
+{% block content %}
+<style>
+.ntf-page { max-width: 860px; margin: 0 auto; }
+.ntf-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+.ntf-title { font-size: 1.15rem; font-weight: 700; color: #1c1917; }
+.ntf-subtitle { font-size: 0.8rem; color: #a8a29e; margin-top: 0.1rem; }
+.ntf-btn-new { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 0.5rem; background: #f59e0b; color: #fff; font-size: 0.85rem; font-weight: 600; border: none; cursor: pointer; transition: background .15s; }
+.ntf-btn-new:hover { background: #d97706; }
+
+.ntf-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e7e5e4; border-radius: 0.875rem; overflow: hidden; font-size: 0.85rem; }
+.ntf-table thead tr { background: #fafaf9; border-bottom: 1px solid #e7e5e4; }
+.ntf-table th { padding: 0.625rem 1rem; text-align: left; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #a8a29e; }
+.ntf-table td { padding: 0.75rem 1rem; border-bottom: 1px solid #f5f5f4; vertical-align: middle; }
+.ntf-table tr:last-child td { border-bottom: none; }
+.ntf-table tr:hover td { background: #fafaf9; }
+
+.ntf-badge { display: inline-block; font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 999px; font-weight: 500; }
+.ntf-badge--pending { background: #fffbeb; color: #b45309; }
+.ntf-badge--done    { background: #f0fdf4; color: #15803d; }
+.ntf-badge--any     { background: #eff6ff; color: #1d4ed8; }
+.ntf-badge--all     { background: #f5f3ff; color: #7c3aed; }
+.ntf-badge--overdue { background: #fef2f2; color: #dc2626; }
+
+.ntf-recipient { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.78rem; color: #57534e; }
+.ntf-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* Modal */
+.ntf-overlay { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 1rem; }
+.ntf-overlay.is-open { display: flex; }
+.ntf-modal { background: #fff; border-radius: 1.125rem; box-shadow: 0 20px 60px rgba(0,0,0,.18); width: 100%; max-width: 460px; display: flex; flex-direction: column; max-height: 90vh; }
+.ntf-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 1.125rem 1.375rem 1rem; border-bottom: 1px solid #f5f5f4; flex-shrink: 0; }
+.ntf-modal__title { font-size: 1rem; font-weight: 700; color: #1c1917; }
+.ntf-modal__close { background: none; border: none; cursor: pointer; color: #a8a29e; font-size: 1.1rem; line-height: 1; padding: 0.25rem; border-radius: 0.375rem; transition: color .15s; }
+.ntf-modal__close:hover { color: #1c1917; }
+.ntf-modal__body { padding: 1.25rem 1.375rem; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1rem; }
+.ntf-modal__foot { display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.375rem; border-top: 1px solid #f5f5f4; flex-shrink: 0; }
+
+.ntf-field label { display: block; font-size: 0.72rem; font-weight: 600; color: #78716c; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 0.4rem; }
+.ntf-field input[type="text"],
+.ntf-field input[type="datetime-local"],
+.ntf-field textarea { width: 100%; box-sizing: border-box; border: 1.5px solid #e7e5e4; border-radius: 0.5rem; padding: 0.55rem 0.75rem; font-size: 0.875rem; color: #1c1917; background: #fff; outline: none; transition: border-color .15s; font-family: inherit; }
+.ntf-field input:focus,
+.ntf-field textarea:focus { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,.12); }
+.ntf-field textarea { resize: none; }
+
+/* Pill user selector */
+.ntf-pills { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.ntf-pill { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 999px; border: 1.5px solid #e7e5e4; background: #fff; font-size: 0.8rem; color: #57534e; cursor: pointer; transition: all .15s; user-select: none; }
+.ntf-pill:hover { border-color: #fbbf24; color: #92400e; }
+.ntf-pill input { display: none; }
+.ntf-pill.is-selected { border-color: #f59e0b; background: #fffbeb; color: #92400e; font-weight: 600; }
+.ntf-pill .ntf-pill__role { font-size: 0.65rem; color: #a8a29e; font-weight: 400; }
+.ntf-pill.is-selected .ntf-pill__role { color: #b45309; }
+
+/* Mode toggle */
+.ntf-mode { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+.ntf-mode-opt { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.6rem 0.75rem; border-radius: 0.625rem; border: 1.5px solid #e7e5e4; cursor: pointer; transition: all .15s; }
+.ntf-mode-opt:hover { border-color: #fbbf24; }
+.ntf-mode-opt input { display: none; }
+.ntf-mode-opt.is-selected { border-color: #f59e0b; background: #fffbeb; }
+.ntf-mode-opt__label { font-size: 0.8rem; font-weight: 600; color: #1c1917; }
+.ntf-mode-opt__desc  { font-size: 0.7rem; color: #a8a29e; }
+.ntf-mode-opt.is-selected .ntf-mode-opt__label { color: #92400e; }
+.ntf-mode-opt.is-selected .ntf-mode-opt__desc  { color: #b45309; }
+
+/* Buttons */
+.ntf-btn-cancel { padding: 0.5rem 1.125rem; border-radius: 0.5rem; border: 1.5px solid #e7e5e4; background: #fff; color: #57534e; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: background .15s; }
+.ntf-btn-cancel:hover { background: #fafaf9; }
+.ntf-btn-submit { padding: 0.5rem 1.375rem; border-radius: 0.5rem; border: none; background: #f59e0b; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.ntf-btn-submit:hover { background: #d97706; }
+
+.ntf-empty { padding: 3rem 1rem; text-align: center; color: #a8a29e; font-size: 0.875rem; }
+.ntf-empty i { font-size: 2rem; display: block; margin-bottom: 0.75rem; opacity: .3; }
+
+.ntf-del-btn { background: none; border: none; cursor: pointer; color: #d6d3d1; padding: 0.25rem; border-radius: 0.375rem; transition: color .15s; font-size: 0.95rem; }
+.ntf-del-btn:hover { color: #ef4444; }
+</style>
+
+<div class="ntf-page">
+    <div class="ntf-header">
+        <div>
+            <div class="ntf-title">Завдання для менеджерів</div>
+            <div class="ntf-subtitle">Призначайте завдання менеджерам із дедлайном</div>
+        </div>
+        <button class="ntf-btn-new" onclick="openModal()">
+            <i class="bi bi-plus-lg"></i> Нове завдання
+        </button>
+    </div>
+
+    {% if items %}
+    <table class="ntf-table">
+        <thead>
+            <tr>
+                <th>Завдання</th>
+                <th>Призначено</th>
+                <th>Дедлайн</th>
+                <th>Режим</th>
+                <th>Статус</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in items %}
+        {% set pending_count = item.recipients.filter_by(status='pending').count() %}
+        {% set total_count   = item.recipients.count() %}
+        <tr id="item-row-{{ item.id }}">
+            <td>
+                <div style="font-weight:600;color:#1c1917;">{{ item.title }}</div>
+                {% if item.description %}
+                <div style="font-size:0.75rem;color:#a8a29e;margin-top:0.15rem;">{{ item.description }}</div>
+                {% endif %}
+            </td>
+            <td>
+                {% for r in item.recipients.all() %}
+                <div class="ntf-recipient">
+                    <span class="ntf-dot" style="background:{{ '#f59e0b' if r.status == 'pending' else '#10b981' }};"></span>
+                    {{ r.user.display_name or r.user.username }}
+                </div>
+                {% endfor %}
+            </td>
+            <td>
+                {% if item.due_at %}
+                {% set is_overdue = item.due_at < now %}
+                <span class="ntf-badge {{ 'ntf-badge--overdue' if is_overdue else '' }}" style="{{ '' if is_overdue else 'color:#57534e;' }}">
+                    {{ item.due_at | kyiv_time }}
+                </span>
+                {% else %}
+                <span style="color:#d6d3d1;">—</span>
+                {% endif %}
+            </td>
+            <td>
+                <span class="ntf-badge {{ 'ntf-badge--any' if item.completion_mode == 'any' else 'ntf-badge--all' }}">
+                    {{ 'Будь-хто' if item.completion_mode == 'any' else 'Кожен' }}
+                </span>
+            </td>
+            <td>
+                {% if pending_count == 0 %}
+                <span class="ntf-badge ntf-badge--done">Виконано</span>
+                {% else %}
+                <span class="ntf-badge ntf-badge--pending">{{ pending_count }}/{{ total_count }} очікує</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right;">
+                <button class="ntf-del-btn" onclick="deleteItem({{ item.id }})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="background:#fff;border:1px solid #e7e5e4;border-radius:0.875rem;">
+        <div class="ntf-empty">
+            <i class="bi bi-check2-square"></i>
+            Завдань поки немає. Натисніть «Нове завдання»!
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal -->
+<div class="ntf-overlay" id="create-modal" onclick="if(event.target===this)closeModal()">
+    <div class="ntf-modal">
+        <div class="ntf-modal__head">
+            <span class="ntf-modal__title">Нове завдання</span>
+            <button class="ntf-modal__close" onclick="closeModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <form method="POST" action="{{ url_for('notifications.create') }}">
+            <div class="ntf-modal__body">
+
+                <div class="ntf-field">
+                    <label>Назва <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="title" required placeholder="Наприклад: Замовити квіти">
+                </div>
+
+                <div class="ntf-field">
+                    <label>Опис</label>
+                    <textarea name="description" rows="2" placeholder="Додаткові деталі (необов'язково)"></textarea>
+                </div>
+
+                <div class="ntf-field">
+                    <label>Дедлайн</label>
+                    <input type="datetime-local" name="due_at">
+                </div>
+
+                <div class="ntf-field">
+                    <label>Призначити <span style="color:#ef4444;">*</span></label>
+                    <div class="ntf-pills">
+                    {% for manager in managers %}
+                    <label class="ntf-pill" id="pill-{{ manager.id }}">
+                        <input type="checkbox" name="user_ids" value="{{ manager.id }}"
+                               onchange="togglePill(this, {{ manager.id }})">
+                        <i class="bi bi-person" style="font-size:0.75rem;"></i>
+                        {{ manager.display_name or manager.username }}
+                        <span class="ntf-pill__role">{{ manager.user_type }}</span>
+                    </label>
+                    {% endfor %}
+                    </div>
+                </div>
+
+                <div class="ntf-field">
+                    <label>Режим виконання</label>
+                    <div class="ntf-mode">
+                        <label class="ntf-mode-opt is-selected" id="mode-any">
+                            <input type="radio" name="completion_mode" value="any" checked
+                                   onchange="toggleMode('any')">
+                            <span class="ntf-mode-opt__label">Будь-хто</span>
+                            <span class="ntf-mode-opt__desc">Достатньо одного</span>
+                        </label>
+                        <label class="ntf-mode-opt" id="mode-all">
+                            <input type="radio" name="completion_mode" value="all"
+                                   onchange="toggleMode('all')">
+                            <span class="ntf-mode-opt__label">Кожен</span>
+                            <span class="ntf-mode-opt__desc">Всі мають виконати</span>
+                        </label>
+                    </div>
+                </div>
+
+            </div>
+            <div class="ntf-modal__foot">
+                <button type="button" class="ntf-btn-cancel" onclick="closeModal()">Скасувати</button>
+                <button type="submit" class="ntf-btn-submit">Створити</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal()  { document.getElementById('create-modal').classList.add('is-open'); }
+function closeModal() { document.getElementById('create-modal').classList.remove('is-open'); }
+
+function togglePill(checkbox, id) {
+    document.getElementById('pill-' + id).classList.toggle('is-selected', checkbox.checked);
+}
+
+function toggleMode(val) {
+    document.getElementById('mode-any').classList.toggle('is-selected', val === 'any');
+    document.getElementById('mode-all').classList.toggle('is-selected', val === 'all');
+}
+
+function deleteItem(id) {
+    if (!confirm('Видалити завдання?')) return;
+    fetch('/notifications/' + id + '/delete', {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var row = document.getElementById('item-row-' + id);
+                if (row) row.remove();
+                showToast('Завдання видалено', 'success');
+            } else {
+                showToast('Помилка видалення', 'error');
+            }
+        });
+}
+</script>
+{% endblock %}

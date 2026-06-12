@@ -17,5 +17,6 @@ from .order_photo import OrderPhoto
 from .route_dispatch_log import RouteDispatchLog
 from .expense_category import ExpenseCategory
 from .revenue_adjustment import RevenueAdjustment
+from .action_item import ActionItem, ActionItemRecipient
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient']
