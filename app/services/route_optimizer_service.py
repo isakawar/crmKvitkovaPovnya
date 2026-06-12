@@ -63,6 +63,25 @@ def _parse_error(body: dict, status_code: int):
     raise RouteOptimizerError(f"Оптимізатор повернув помилку HTTP {status_code}")
 
 
+def _enrich_stop_ids(result: dict, orders: list[dict]) -> None:
+    """Set stop['id'] from orders when the optimizer didn't echo it back."""
+    addr_to_id = {}
+    for o in orders:
+        city = (o.get("city") or "").strip()
+        street = (o.get("address") or "").strip()
+        house = (o.get("house") or "").strip()
+        addr_part = f"{street} {house}".strip() if house else street
+        key = f"{city}, {addr_part}".lower() if city else addr_part.lower()
+        if key and o.get("id") is not None:
+            addr_to_id[key] = o["id"]
+
+    for route in result.get("routes", []):
+        for stop in route.get("stops", []):
+            if not stop.get("id"):
+                addr = (stop.get("address") or "").lower().strip()
+                stop["id"] = addr_to_id.get(addr)
+
+
 def optimize_json(deliveries: Iterable, optimizer_url: str) -> dict:
     """/api/optimize/json — always synchronous, returns result directly."""
     orders = [_delivery_to_order_json(d) for d in deliveries]
@@ -85,7 +104,9 @@ def optimize_json(deliveries: Iterable, optimizer_url: str) -> dict:
         pass
 
     if response.status_code == 200:
-        return _ensure_stats(body)
+        result = _ensure_stats(body)
+        _enrich_stop_ids(result, orders)
+        return result
 
     _parse_error(body, response.status_code)
 

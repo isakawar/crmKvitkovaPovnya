@@ -1,6 +1,7 @@
 from datetime import date, datetime
 import json
 import logging
+import re
 
 from sqlalchemy.orm import joinedload
 
@@ -65,7 +66,7 @@ def save_routes(
         for i, stop in enumerate(stops):
             delivery_id = stop.get('id')
             if not delivery_id:
-                stop_addr = (stop.get('address') or '').lower().strip()
+                stop_addr = re.sub(r'\s+', ' ', (stop.get('address') or '').lower().strip())
                 delivery_id = addr_to_delivery_id.get(stop_addr)
             if not delivery_id:
                 continue
@@ -118,7 +119,7 @@ def _build_addr_map(selected_date: date) -> dict:
             parts.append(city)
         if street:
             parts.append(street + (' ' + house if house else ''))
-        key = ', '.join(parts).lower().strip()
+        key = re.sub(r'\s+', ' ', ', '.join(parts).lower().strip())
         if key:
             addr_map[key] = d.id
     return addr_map
