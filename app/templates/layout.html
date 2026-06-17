@@ -451,6 +451,30 @@
         </div>
         <div class="flex items-center gap-2">
             {% if current_user.is_authenticated and current_user.user_type in ['admin', 'manager'] %}
+            <div class="relative" id="stuck-deliveries-wrapper">
+                <button id="stuck-deliveries-btn" aria-label="Завислі доставки"
+                        style="position:relative;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1.5px solid {% if stuck_deliveries_count > 0 %}#fca5a5{% else %}#e7e5e4{% endif %};background:{% if stuck_deliveries_count > 0 %}#fef2f2{% else %}#fff{% endif %};color:{% if stuck_deliveries_count > 0 %}#dc2626{% else %}#78716c{% endif %};cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.375rem;">
+                    <i class="bi bi-truck" style="font-size:1rem;line-height:1;"></i>
+                    {% if stuck_deliveries_count > 0 %}
+                    <span id="stuck-badge" style="font-size:0.75rem;font-weight:700;color:#dc2626;line-height:1;">{{ stuck_deliveries_count if stuck_deliveries_count <= 99 else '99+' }}</span>
+                    {% else %}
+                    <span id="stuck-badge" style="display:none;font-size:0.75rem;font-weight:700;color:#dc2626;line-height:1;"></span>
+                    {% endif %}
+                </button>
+                <div id="stuck-dropdown"
+                     style="display:none;position:absolute;right:0;top:calc(100% + 6px);width:320px;max-height:420px;background:#fff;border:1px solid #e7e5e4;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.10);z-index:9999;overflow:hidden;flex-direction:column;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem 0.625rem;border-bottom:1px solid #f5f5f4;flex-shrink:0;">
+                        <i class="bi bi-truck" style="font-size:0.8rem;color:#ef4444;"></i>
+                        <span style="font-size:0.875rem;font-weight:700;color:#1c1917;">Завислі доставки</span>
+                        <span id="stuck-header-count" style="margin-left:auto;font-size:0.7rem;color:#ef4444;font-weight:700;"></span>
+                    </div>
+                    <div id="stuck-list" style="overflow-y:auto;max-height:340px;"></div>
+                    <div id="stuck-empty" style="display:none;padding:2rem 1rem;text-align:center;color:#a8a29e;font-size:0.85rem;">
+                        <i class="bi bi-check-circle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:.4;"></i>
+                        Всі доставки закриті
+                    </div>
+                </div>
+            </div>
             <div class="relative" id="notification-bell-wrapper">
                 <button id="notification-bell-btn" aria-label="Завдання"
                         style="position:relative;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1.5px solid {% if action_items_pending_count > 0 %}#fbbf24{% else %}#e7e5e4{% endif %};background:{% if action_items_pending_count > 0 %}#fffbeb{% else %}#fff{% endif %};color:{% if action_items_pending_count > 0 %}#b45309{% else %}#78716c{% endif %};cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.375rem;">
@@ -476,6 +500,32 @@
                     <div id="notification-empty" style="display:none;padding:2rem 1rem;text-align:center;color:#a8a29e;font-size:0.85rem;">
                         <i class="bi bi-check-circle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:.4;"></i>
                         Всі завдання виконано
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% if current_user.is_authenticated and current_user.user_type == 'florist' %}
+            <div class="relative" id="florist-pending-wrapper">
+                <button id="florist-pending-btn" aria-label="Затверджені доставки"
+                        style="position:relative;padding:0.375rem 0.5rem;border-radius:0.5rem;border:1.5px solid {% if florist_pending_count > 0 %}#fca5a5{% else %}#e7e5e4{% endif %};background:{% if florist_pending_count > 0 %}#fef2f2{% else %}#fff{% endif %};color:{% if florist_pending_count > 0 %}#dc2626{% else %}#78716c{% endif %};cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:0.375rem;">
+                    <i class="bi bi-truck" style="font-size:1rem;line-height:1;"></i>
+                    {% if florist_pending_count > 0 %}
+                    <span id="florist-badge" style="font-size:0.75rem;font-weight:700;color:#dc2626;line-height:1;">{{ florist_pending_count if florist_pending_count <= 99 else '99+' }}</span>
+                    {% else %}
+                    <span id="florist-badge" style="display:none;font-size:0.75rem;font-weight:700;color:#dc2626;line-height:1;"></span>
+                    {% endif %}
+                </button>
+                <div id="florist-pending-dropdown"
+                     style="display:none;position:absolute;right:0;top:calc(100% + 6px);width:320px;max-height:420px;background:#fff;border:1px solid #e7e5e4;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.10);z-index:9999;overflow:hidden;flex-direction:column;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem 0.625rem;border-bottom:1px solid #f5f5f4;flex-shrink:0;">
+                        <i class="bi bi-truck" style="font-size:0.8rem;color:#ef4444;"></i>
+                        <span style="font-size:0.875rem;font-weight:700;color:#1c1917;">Затверджені доставки</span>
+                        <span id="florist-header-count" style="margin-left:auto;font-size:0.7rem;color:#ef4444;font-weight:700;"></span>
+                    </div>
+                    <div id="florist-pending-list" style="overflow-y:auto;max-height:340px;"></div>
+                    <div id="florist-pending-empty" style="display:none;padding:2rem 1rem;text-align:center;color:#a8a29e;font-size:0.85rem;">
+                        <i class="bi bi-check-circle" style="font-size:1.5rem;display:block;margin-bottom:0.5rem;opacity:.4;"></i>
+                        Всі доставки оброблено
                     </div>
                 </div>
             </div>
@@ -1112,10 +1162,216 @@ document.addEventListener('submit', function(e) {
         if (bellBtn) {
             bellBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                window.notifSetOpen(!_ddOpen);
-                if (_ddOpen) fetchPending();
+                var opening = !_ddOpen;
+                window.notifSetOpen(opening);
+                if (opening) {
+                    fetchPending();
+                    if (window.stuckSetOpen) window.stuckSetOpen(false);
+                }
             });
         }
+    });
+})();
+</script>
+<script>
+(function() {
+    var _stuckOpen = false;
+
+    window.stuckSetOpen = function(open) {
+        _stuckOpen = open;
+        var dd = document.getElementById('stuck-dropdown');
+        if (!dd) return;
+        dd.style.display = open ? 'flex' : 'none';
+        if (open) dd.style.flexDirection = 'column';
+    };
+
+    function updateStuckBadge(count) {
+        var btn = document.getElementById('stuck-deliveries-btn');
+        var badge = document.getElementById('stuck-badge');
+        if (!btn || !badge) return;
+        if (count > 0) {
+            btn.style.borderColor = '#fca5a5';
+            btn.style.background = '#fef2f2';
+            btn.style.color = '#dc2626';
+            badge.style.display = 'inline';
+            badge.textContent = count <= 99 ? count : '99+';
+        } else {
+            btn.style.borderColor = '#e7e5e4';
+            btn.style.background = '#fff';
+            btn.style.color = '#78716c';
+            badge.style.display = 'none';
+        }
+        var headerCount = document.getElementById('stuck-header-count');
+        if (headerCount) headerCount.textContent = count > 0 ? count + ' шт.' : '';
+    }
+
+    function renderStuckList(count, items) {
+        var list = document.getElementById('stuck-list');
+        var empty = document.getElementById('stuck-empty');
+        if (!list) return;
+        list.innerHTML = '';
+        updateStuckBadge(count);
+        if (!items || items.length === 0) {
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        items.forEach(function(d) {
+            var el = document.createElement('a');
+            el.href = d.url || '/deliveries';
+            el.style.cssText = 'display:flex;align-items:center;gap:0.625rem;padding:0.5rem 1rem;text-decoration:none;transition:background .1s;border-bottom:1px solid #fafaf9;';
+            el.onmouseover = function() { this.style.background = '#fafaf9'; };
+            el.onmouseout  = function() { this.style.background = ''; };
+            el.onclick = function() { window.stuckSetOpen(false); };
+            el.innerHTML =
+                '<span style="width:28px;height:28px;border-radius:6px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                  '<i class="bi bi-truck" style="font-size:0.75rem;color:#dc2626;"></i>' +
+                '</span>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<p style="font-size:0.8rem;font-weight:500;color:#1c1917;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + d.client + '</p>' +
+                  '<span style="font-size:0.65rem;color:#a8a29e;">' + d.date + ' · ' + d.status + '</span>' +
+                '</div>' +
+                '<i class="bi bi-chevron-right" style="font-size:0.65rem;color:#d6d3d1;flex-shrink:0;"></i>';
+            list.appendChild(el);
+        });
+
+        if (count > items.length) {
+            var more = document.createElement('div');
+            more.style.cssText = 'padding:0.625rem 1rem;font-size:0.75rem;color:#a8a29e;text-align:center;';
+            more.textContent = 'та ще ' + (count - items.length) + '…';
+            list.appendChild(more);
+        }
+    }
+
+    function fetchStuck() {
+        fetch('/notifications/stuck-deliveries')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) { if (data) renderStuckList(data.count, data.items || []); })
+            .catch(function() {});
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchStuck();
+        setInterval(fetchStuck, 7 * 60 * 1000);
+
+        var btn = document.getElementById('stuck-deliveries-btn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var opening = !_stuckOpen;
+                window.stuckSetOpen(opening);
+                if (opening) {
+                    fetchStuck();
+                    if (window.notifSetOpen) window.notifSetOpen(false);
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var wrapper = document.getElementById('stuck-deliveries-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) window.stuckSetOpen(false);
+        });
+    });
+})();
+</script>
+{% endif %}
+{% if current_user.is_authenticated and current_user.user_type == 'florist' %}
+<script>
+(function() {
+    var _floristOpen = false;
+
+    function floristSetOpen(open) {
+        _floristOpen = open;
+        var dd = document.getElementById('florist-pending-dropdown');
+        if (!dd) return;
+        dd.style.display = open ? 'flex' : 'none';
+        if (open) dd.style.flexDirection = 'column';
+    }
+
+    function updateFloristBadge(count) {
+        var btn = document.getElementById('florist-pending-btn');
+        var badge = document.getElementById('florist-badge');
+        if (!btn || !badge) return;
+        if (count > 0) {
+            btn.style.borderColor = '#fca5a5';
+            btn.style.background = '#fef2f2';
+            btn.style.color = '#dc2626';
+            badge.style.display = 'inline';
+            badge.textContent = count <= 99 ? count : '99+';
+        } else {
+            btn.style.borderColor = '#e7e5e4';
+            btn.style.background = '#fff';
+            btn.style.color = '#78716c';
+            badge.style.display = 'none';
+        }
+        var hc = document.getElementById('florist-header-count');
+        if (hc) hc.textContent = count > 0 ? count + ' шт.' : '';
+    }
+
+    function renderFloristList(count, items) {
+        var list = document.getElementById('florist-pending-list');
+        var empty = document.getElementById('florist-pending-empty');
+        if (!list) return;
+        list.innerHTML = '';
+        updateFloristBadge(count);
+        if (!items || items.length === 0) {
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        items.forEach(function(d) {
+            var el = document.createElement('a');
+            el.href = d.url || '/florist';
+            el.style.cssText = 'display:flex;align-items:center;gap:0.625rem;padding:0.5rem 1rem;text-decoration:none;transition:background .1s;border-bottom:1px solid #fafaf9;';
+            el.onmouseover = function() { this.style.background = '#fafaf9'; };
+            el.onmouseout  = function() { this.style.background = ''; };
+            el.onclick = function() { floristSetOpen(false); };
+            el.innerHTML =
+                '<span style="width:28px;height:28px;border-radius:6px;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+                  '<i class="bi bi-truck" style="font-size:0.75rem;color:#dc2626;"></i>' +
+                '</span>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<p style="font-size:0.8rem;font-weight:500;color:#1c1917;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + d.client + '</p>' +
+                  '<span style="font-size:0.65rem;color:#a8a29e;">' + d.date + ' · ' + d.time + (d.florist_status && d.florist_status !== '—' ? ' · ' + d.florist_status : '') + '</span>' +
+                '</div>' +
+                '<i class="bi bi-chevron-right" style="font-size:0.65rem;color:#d6d3d1;flex-shrink:0;"></i>';
+            list.appendChild(el);
+        });
+
+        if (count > items.length) {
+            var more = document.createElement('div');
+            more.style.cssText = 'padding:0.625rem 1rem;font-size:0.75rem;color:#a8a29e;text-align:center;';
+            more.textContent = 'та ще ' + (count - items.length) + '…';
+            list.appendChild(more);
+        }
+    }
+
+    function fetchFloristPending() {
+        fetch('/notifications/florist-pending')
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(data) { if (data) renderFloristList(data.count, data.items || []); })
+            .catch(function() {});
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchFloristPending();
+        setInterval(fetchFloristPending, 7 * 60 * 1000);
+
+        var btn = document.getElementById('florist-pending-btn');
+        if (btn) {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                floristSetOpen(!_floristOpen);
+                if (_floristOpen) fetchFloristPending();
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var wrapper = document.getElementById('florist-pending-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) floristSetOpen(false);
+        });
     });
 })();
 </script>

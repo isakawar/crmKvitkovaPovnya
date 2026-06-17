@@ -175,24 +175,74 @@ def assign_deliveries(assignments):
 def get_all_deliveries_ordered():
     return Delivery.query.order_by(Delivery.delivery_date).all()
 
-def get_overdue_unclosed_deliveries(today):
+def get_overdue_unclosed_deliveries(today, include_today: bool = False, limit: int | None = None):
     """Return deliveries whose date has passed but status is not terminal.
 
-    Used by the dashboard and future Telegram florist reminders.
+    include_today=True → delivery_date <= today (used by navbar stuck-counter).
     Terminal statuses: 'Доставлено', 'Скасовано'.
     """
     from app.models import Order
     from app.models.client import Client
-    return (
+    date_filter = Delivery.delivery_date <= today if include_today else Delivery.delivery_date < today
+    q = (
         Delivery.query
         .join(Order, Order.id == Delivery.order_id)
         .join(Client, Client.id == Order.client_id)
         .filter(
-            Delivery.delivery_date < today,
+            date_filter,
             Delivery.status.notin_(['Доставлено', 'Скасовано']),
         )
         .order_by(Delivery.delivery_date.asc())
-        .all()
+    )
+    if limit:
+        q = q.limit(limit)
+    return q.all()
+
+
+def get_stuck_deliveries_count(today) -> int:
+    """Scalar COUNT of stuck deliveries (date <= today, not terminal) for navbar badge."""
+    return (
+        Delivery.query
+        .filter(
+            Delivery.delivery_date <= today,
+            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+        )
+        .count()
+    )
+
+
+def get_florist_approved_pending(today, limit: int | None = None):
+    """Approved deliveries for florist: time_from set today, not cancelled, florist not done."""
+    from app.models import Order
+    from app.models.client import Client
+    q = (
+        Delivery.query
+        .join(Order, Order.id == Delivery.order_id)
+        .join(Client, Client.id == Delivery.client_id)
+        .filter(
+            Delivery.delivery_date == today,
+            Delivery.status != 'Скасовано',
+            Delivery.time_from.isnot(None),
+            Delivery.florist_status.notin_(['Доставлено']),
+        )
+        .order_by(Delivery.time_from.asc())
+    )
+    if limit:
+        q = q.limit(limit)
+    return q.all()
+
+
+def get_florist_approved_pending_count(today) -> int:
+    """Scalar COUNT of approved pending deliveries for florist navbar badge."""
+    return (
+        Delivery.query
+        .filter(
+            Delivery.delivery_date == today,
+            Delivery.status != 'Скасовано',
+            Delivery.time_from.isnot(None),
+            Delivery.florist_status.notin_(['Доставлено']),
+        )
+        .count()
     )
 
 

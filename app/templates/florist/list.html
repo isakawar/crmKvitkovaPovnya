@@ -216,6 +216,9 @@
     background: #ecfdf5;
     border-bottom-color: #a7f3d0;
   }
+
+  .florist-row--delivered td { background: #f0fdf4; }
+  .florist-table tbody tr.florist-row--delivered:hover td { background: #dcfce7; }
 </style>
 {% endblock %}
 
@@ -290,7 +293,7 @@
   {% if client and client.instagram %}
     {% set instagram = ('@' + client.instagram.lstrip('@')) if client.instagram.startswith('@') else client.instagram %}
   {% endif %}
-  <tr data-delivery-row-id="{{ delivery.id }}">
+  <tr data-delivery-row-id="{{ delivery.id }}"{% if delivery.status == 'Доставлено' %} class="florist-row--delivered"{% endif %}>
     <td class="w-10">
       <input
         type="checkbox"

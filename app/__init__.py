@@ -236,14 +236,29 @@ def create_app(config_class=DevelopmentConfig):
     @app.context_processor
     def inject_action_items_count():
         if not current_user.is_authenticated:
-            return dict(action_items_pending_count=0)
+            return dict(action_items_pending_count=0, stuck_deliveries_count=0)
         if getattr(current_user, 'user_type', None) == 'florist':
-            return dict(action_items_pending_count=0)
+            try:
+                from datetime import date
+                from app.services.delivery_service import get_florist_approved_pending_count
+                return dict(
+                    action_items_pending_count=0,
+                    stuck_deliveries_count=0,
+                    florist_pending_count=get_florist_approved_pending_count(date.today()),
+                )
+            except Exception:
+                return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)
         try:
+            from datetime import date
             from app.services.notification_service import get_notifications_count_for_user
-            return dict(action_items_pending_count=get_notifications_count_for_user(current_user.id))
+            from app.services.delivery_service import get_stuck_deliveries_count
+            return dict(
+                action_items_pending_count=get_notifications_count_for_user(current_user.id),
+                stuck_deliveries_count=get_stuck_deliveries_count(date.today()),
+                florist_pending_count=0,
+            )
         except Exception:
-            return dict(action_items_pending_count=0)
+            return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)
 
     @app.context_processor
     def inject_feature_flags():

@@ -11,11 +11,75 @@ from app.services.action_item_service import (
     delete_action_item,
 )
 from app.services.notification_service import get_notifications_for_user
+from app.services.delivery_service import (
+    get_overdue_unclosed_deliveries,
+    get_stuck_deliveries_count,
+    get_florist_approved_pending,
+    get_florist_approved_pending_count,
+)
 
 
 def _require_admin():
     if not (getattr(current_user, 'user_type', None) == 'admin' or current_user.has_role('admin')):
         abort(403)
+
+
+@notifications_bp.route('/notifications/stuck-deliveries')
+@login_required
+def stuck_deliveries_api():
+    from datetime import date
+    if getattr(current_user, 'user_type', None) == 'florist':
+        return jsonify({'count': 0, 'items': []}), 403
+
+    today = date.today()
+    count = get_stuck_deliveries_count(today)
+    deliveries = get_overdue_unclosed_deliveries(today, include_today=True, limit=20)
+
+    items = []
+    for d in deliveries:
+        client = d.client
+        name = 'Клієнт'
+        if client:
+            name = (client.instagram or client.phone or 'Клієнт').lstrip('@')
+        items.append({
+            'id': d.id,
+            'date': d.delivery_date.strftime('%d.%m.%Y'),
+            'client': name,
+            'status': d.status,
+            'url': f'/orders?delivery_id={d.id}',
+        })
+
+    return jsonify({'count': count, 'items': items})
+
+
+@notifications_bp.route('/notifications/florist-pending')
+@login_required
+def florist_pending_api():
+    if getattr(current_user, 'user_type', None) != 'florist':
+        return jsonify({'count': 0, 'items': []}), 403
+
+    from datetime import date
+    today = date.today()
+    count = get_florist_approved_pending_count(today)
+    deliveries = get_florist_approved_pending(today, limit=20)
+
+    items = []
+    for d in deliveries:
+        client = d.client
+        name = 'Клієнт'
+        if client:
+            name = (client.instagram or client.phone or 'Клієнт').lstrip('@')
+        time_label = f'{d.time_from}' + (f'–{d.time_to}' if d.time_to else '')
+        items.append({
+            'id': d.id,
+            'date': d.delivery_date.strftime('%d.%m.%Y'),
+            'client': name,
+            'time': time_label,
+            'florist_status': d.florist_status or '—',
+            'url': f'/florist?date={d.delivery_date.isoformat()}',
+        })
+
+    return jsonify({'count': count, 'items': items})
 
 
 @notifications_bp.route('/notifications/pending')

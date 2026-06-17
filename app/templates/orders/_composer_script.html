@@ -494,6 +494,13 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.classList.toggle('inline-flex', show);
     }
 
+    function toggleMarkDeliveredBtn(show) {
+        const btn = document.getElementById('mark-delivered-btn');
+        if (!btn) return;
+        btn.classList.toggle('hidden', !show);
+        btn.classList.toggle('inline-flex', show);
+    }
+
     function resetComposerForm(flow = 'order', clientInstagram = '', options = {}) {
         addOrderForm.reset();
         clearExtraPhones();
@@ -508,7 +515,9 @@ document.addEventListener('DOMContentLoaded', function() {
             _fdi.closest('.order-field')?.classList.remove('hidden');
         }
         window.currentDeliveryId = null;
+        window.currentFirstPendingDeliveryId = null;
         toggleDeleteOrderBtn(false);
+        toggleMarkDeliveredBtn(false);
         if (extendFromInput) {
             extendFromInput.value = '';
         }
@@ -849,6 +858,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 await window._uploadPendingOrderPhoto(data.order_id);
             }
 
+            if (typeof window.deletePendingDraft === 'function') {
+                await window.deletePendingDraft();
+            }
+
             if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
                 showToast(successMessage, 'success');
                 window.showRescheduleModal(data.reschedule_suggestion);
@@ -899,6 +912,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (addressCommentInput) { addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         syncCustomAmountState();
         window.currentDeliveryId = options.deliveryId || null;
+        window.currentFirstPendingDeliveryId = orderData.first_pending_delivery_id || null;
+        const pendingStatuses = ['Очікує', 'Розподілено'];
+        toggleMarkDeliveredBtn(Boolean(orderData.delivery_status && pendingStatuses.includes(orderData.delivery_status)));
         setComposerFlow(flow, true);
         if (options.forceOrderTitle && orderModalTitle) {
             orderModalTitle.textContent = 'Редагувати замовлення';
@@ -1280,6 +1296,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 softReload();
             } catch (e) {
                 alert('Помилка зʼєднання');
+            }
+        });
+    }
+
+    // ── Mark as delivered ───────────────────────────────────────────────
+    const markDeliveredBtn = document.getElementById('mark-delivered-btn');
+    if (markDeliveredBtn) {
+        markDeliveredBtn.addEventListener('click', async function () {
+            const deliveryId = window.currentDeliveryId || window.currentFirstPendingDeliveryId;
+            if (!deliveryId) return;
+            try {
+                const resp = await fetch(`/orders/deliveries/${deliveryId}/mark-delivered`, { method: 'POST' });
+                const data = await resp.json().catch(() => ({}));
+                if (!resp.ok || !data.success) throw new Error(data.error || 'Помилка');
+                addOrderModal.hide();
+                showToast('Статус змінено на Доставлено', 'success');
+                softReload();
+            } catch (e) {
+                showToast(e.message || 'Помилка', 'error');
             }
         });
     }

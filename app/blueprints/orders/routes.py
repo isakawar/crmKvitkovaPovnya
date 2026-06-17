@@ -45,6 +45,24 @@ orders_bp = Blueprint('orders', __name__)
 @orders_bp.route('/orders', methods=['GET'])
 @login_required
 def orders_list():
+    # --- delivery_id shortcut: find a single delivery by its ID ---
+    delivery_id_raw = request.args.get('delivery_id', '').strip()
+    highlight_delivery_id = int(delivery_id_raw) if delivery_id_raw.isdigit() else None
+    if highlight_delivery_id:
+        _d = Delivery.query.get(highlight_delivery_id)
+        if _d:
+            return redirect(url_for(
+                'orders.orders_list',
+                subscription_id=_d.order.subscription_id if (_d.order and _d.order.subscription_id) else None,
+                date_from=_d.delivery_date.isoformat(),
+                date_to=_d.delivery_date.isoformat(),
+                highlight=highlight_delivery_id,
+            ))
+        # delivery not found — fall through to normal list
+        highlight_delivery_id = None
+
+    highlight_delivery_id = int(request.args.get('highlight', 0)) or None
+
     search_query = (
         request.args.get('q', '').strip()
         or request.args.get('instagram', '').strip()
@@ -172,6 +190,7 @@ def orders_list():
         date_to_filter=date_to,
         packaging_types=packaging_types,
         subscription_id_filter=subscription_id,
+        highlight_delivery_id=highlight_delivery_id,
     )
 
 
@@ -403,6 +422,11 @@ def order_edit(order_id):
     delivery_address_comment = next((d.address_comment for d in order.deliveries if d.address_comment), None)
     delivery_bouquet_type = next((d.bouquet_type for d in order.deliveries if d.bouquet_type), None)
     delivery_composition_type = next((d.composition_type for d in order.deliveries if d.composition_type), None)
+    first_pending = next(
+        (d for d in sorted(order.deliveries, key=lambda d: d.delivery_date or date.min)
+         if d.status not in ('Доставлено', 'Скасовано')),
+        None,
+    )
 
     def _client_display(c):
         parts = []
@@ -447,6 +471,8 @@ def order_edit(order_id):
         'composition_type': order.composition_type or delivery_composition_type,
         'can_extend_subscription': False,
         'additional_phones': [rp.phone for rp in sorted(order.additional_phones, key=lambda x: x.position)],
+        'delivery_status': first_pending.status if first_pending else None,
+        'first_pending_delivery_id': first_pending.id if first_pending else None,
     })
 
 
@@ -528,6 +554,17 @@ def delivery_delete(delivery_id):
         RecipientPhone.query.filter_by(order_id=order.id).delete()
         db.session.delete(order)
     db.session.commit()
+    return jsonify({'success': True})
+
+
+@orders_bp.route('/orders/deliveries/<int:delivery_id>/mark-delivered', methods=['POST'])
+@login_required
+def delivery_mark_delivered(delivery_id):
+    delivery = Delivery.query.get_or_404(delivery_id)
+    if delivery.status in ('Доставлено', 'Скасовано'):
+        return jsonify({'success': False, 'error': 'Статус вже фінальний'}), 400
+    from app.services.delivery_service import set_delivery_status
+    set_delivery_status(delivery, 'Доставлено')
     return jsonify({'success': True})
 
 
