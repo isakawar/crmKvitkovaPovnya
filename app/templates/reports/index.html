@@ -1887,6 +1887,7 @@ document.addEventListener('DOMContentLoaded', function () {
       updateCheckmarks(mode);
       applySort(mode);
       applyFilters();
+      try { sessionStorage.setItem('revenue_filter_mode', mode); } catch(e) {}
     }
 
     // Toggle panel
@@ -1911,8 +1912,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
     searchInput.addEventListener('input', applyFilters);
 
-    applyFilters();
-    updateCheckmarks(currentMode);
+    try {
+      const savedSearch = sessionStorage.getItem('revenue_search');
+      if (savedSearch) { searchInput.value = savedSearch; sessionStorage.removeItem('revenue_search'); }
+      const saved = sessionStorage.getItem('revenue_filter_mode');
+      if (saved && MODE_LABELS[saved]) { setMode(saved); } else { applyFilters(); updateCheckmarks(currentMode); }
+    } catch(e) { applyFilters(); updateCheckmarks(currentMode); }
   }());
 
   // ── Revenue edit mode ──────────────────────────────
@@ -2020,6 +2025,7 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('Помилка збереження: ' + (failed.error || 'unknown'));
             saveBtn.disabled = false;
           } else {
+            try { sessionStorage.setItem('revenue_search', document.getElementById('revenue-search').value || ''); } catch(e) {}
             window.location.reload();
           }
         })
