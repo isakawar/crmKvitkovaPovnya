@@ -1109,15 +1109,13 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             month_data[mo]['charged'] > 0 or month_data[mo]['paid'] > 0
             for mo in months
         )
-        total_paid = sum(month_data[mo]['paid'] for mo in months)
 
-        client_groups.append((total_paid, [{
+        client_groups.append((None, [{
             'client':       client,
             'months':       month_data,
             'any_activity': any_activity,
         }]))
 
-    client_groups.sort(key=lambda x: x[0], reverse=True)
     rows = [row for _, group in client_groups for row in group]
 
     return {
