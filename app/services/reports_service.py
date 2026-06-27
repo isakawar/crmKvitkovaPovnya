@@ -1058,9 +1058,13 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             bucket = paid_by.setdefault(a.client_id, {})
             bucket[a.month] = bucket.get(a.month, 0) + a.adj_paid
 
-    # ── Load clients sorted by display_name (instagram → phone → name) ──────
+    # ── Load clients sorted by display_name, stripping leading symbols ───────
+    import re as _re
+    def _sort_key(c):
+        name = c.display_name or ''
+        return _re.sub(r'^[^a-zA-Zа-яА-ЯіІїЇєЄ0-9]+', '', name).lower()
     all_clients = db.session.query(Client).filter(Client.id.in_(all_client_ids)).all()
-    all_clients.sort(key=lambda c: (c.display_name or '').lower())
+    all_clients.sort(key=_sort_key)
 
     # ── Pre-compute total charged per (client_id, month) across all subscriptions ─
     client_charged_by: dict = {}
