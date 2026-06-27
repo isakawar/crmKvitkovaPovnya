@@ -611,6 +611,11 @@ def update_delivery_times():
         old_dates[delivery.id] = delivery.delivery_date
         delivery.time_from = None if clear_time else (time_from or None)
         delivery.time_to = None if clear_time else (time_to or None)
+        if clear_time:
+            if delivery.florist_status == 'Затверджено':
+                delivery.florist_status = None
+        elif time_from and delivery.florist_status not in ('Зібрано', "Передано кур'єру", 'Доставлено'):
+            delivery.florist_status = 'Затверджено'
         if delivery_date:
             delivery.delivery_date = delivery_date
             if delivery.status == 'Розподілено':

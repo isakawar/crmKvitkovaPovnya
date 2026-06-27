@@ -211,8 +211,11 @@ def get_stuck_deliveries_count(today) -> int:
     )
 
 
+_FLORIST_ACTIVE_STATUSES = ('Затверджено', 'Зібрано', "Передано кур'єру")
+
+
 def get_florist_approved_pending(today, limit: int | None = None):
-    """Approved deliveries for florist: time_from set today, not cancelled, florist not done."""
+    """Active florist deliveries for today: florist_status in active statuses, not cancelled."""
     from app.models import Order
     from app.models.client import Client
     q = (
@@ -222,10 +225,9 @@ def get_florist_approved_pending(today, limit: int | None = None):
         .filter(
             Delivery.delivery_date == today,
             Delivery.status != 'Скасовано',
-            Delivery.time_from.isnot(None),
-            Delivery.florist_status.notin_(['Доставлено']),
+            Delivery.florist_status.in_(_FLORIST_ACTIVE_STATUSES),
         )
-        .order_by(Delivery.time_from.asc())
+        .order_by(Delivery.time_from.asc().nullslast())
     )
     if limit:
         q = q.limit(limit)
@@ -233,14 +235,13 @@ def get_florist_approved_pending(today, limit: int | None = None):
 
 
 def get_florist_approved_pending_count(today) -> int:
-    """Scalar COUNT of approved pending deliveries for florist navbar badge."""
+    """Scalar COUNT of active florist deliveries for navbar badge."""
     return (
         Delivery.query
         .filter(
             Delivery.delivery_date == today,
             Delivery.status != 'Скасовано',
-            Delivery.time_from.isnot(None),
-            Delivery.florist_status.notin_(['Доставлено']),
+            Delivery.florist_status.in_(_FLORIST_ACTIVE_STATUSES),
         )
         .count()
     )

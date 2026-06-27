@@ -132,7 +132,8 @@ def create_app(config_class=DevelopmentConfig):
                 and not request.endpoint.startswith('florist.')
                 and not request.endpoint.startswith('photos.')
                 and not request.endpoint.startswith('auth.')
-                and request.endpoint != 'static'):
+                and request.endpoint != 'static'
+                and request.endpoint != 'notifications.florist_pending_api'):
             return redirect(url_for('florist.florist_routes'))
 
     # Головна сторінка перенаправляє на список замовлень
@@ -240,11 +241,11 @@ def create_app(config_class=DevelopmentConfig):
         if getattr(current_user, 'user_type', None) == 'florist':
             try:
                 from datetime import date
-                from app.services.delivery_service import get_florist_approved_pending_count
+                from app.services.delivery_service import get_stuck_deliveries_count
                 return dict(
                     action_items_pending_count=0,
                     stuck_deliveries_count=0,
-                    florist_pending_count=get_florist_approved_pending_count(date.today()),
+                    florist_pending_count=get_stuck_deliveries_count(date.today()),
                 )
             except Exception:
                 return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)

@@ -519,7 +519,7 @@
                      style="display:none;position:absolute;right:0;top:calc(100% + 6px);width:320px;max-height:420px;background:#fff;border:1px solid #e7e5e4;border-radius:0.875rem;box-shadow:0 8px 24px rgba(0,0,0,0.10);z-index:9999;overflow:hidden;flex-direction:column;">
                     <div style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem 0.625rem;border-bottom:1px solid #f5f5f4;flex-shrink:0;">
                         <i class="bi bi-truck" style="font-size:0.8rem;color:#ef4444;"></i>
-                        <span style="font-size:0.875rem;font-weight:700;color:#1c1917;">Затверджені доставки</span>
+                        <span style="font-size:0.875rem;font-weight:700;color:#1c1917;">Не доставлені</span>
                         <span id="florist-header-count" style="margin-left:auto;font-size:0.7rem;color:#ef4444;font-weight:700;"></span>
                     </div>
                     <div id="florist-pending-list" style="overflow-y:auto;max-height:340px;"></div>
@@ -1309,6 +1309,14 @@ document.addEventListener('submit', function(e) {
         if (hc) hc.textContent = count > 0 ? count + ' шт.' : '';
     }
 
+    function showFloristLoading() {
+        var list = document.getElementById('florist-pending-list');
+        var empty = document.getElementById('florist-pending-empty');
+        if (!list) return;
+        if (empty) empty.style.display = 'none';
+        list.innerHTML = '<div style="padding:1.25rem 1rem;text-align:center;color:#a8a29e;font-size:0.8rem;">Завантаження…</div>';
+    }
+
     function renderFloristList(count, items) {
         var list = document.getElementById('florist-pending-list');
         var empty = document.getElementById('florist-pending-empty');
@@ -1334,7 +1342,7 @@ document.addEventListener('submit', function(e) {
                 '</span>' +
                 '<div style="flex:1;min-width:0;">' +
                   '<p style="font-size:0.8rem;font-weight:500;color:#1c1917;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + d.client + '</p>' +
-                  '<span style="font-size:0.65rem;color:#a8a29e;">' + d.date + ' · ' + d.time + (d.florist_status && d.florist_status !== '—' ? ' · ' + d.florist_status : '') + '</span>' +
+                  '<span style="font-size:0.65rem;color:#a8a29e;">' + d.date + (d.time ? ' · ' + d.time : '') + (d.status ? ' · ' + d.status : '') + '</span>' +
                 '</div>' +
                 '<i class="bi bi-chevron-right" style="font-size:0.65rem;color:#d6d3d1;flex-shrink:0;"></i>';
             list.appendChild(el);
@@ -1351,7 +1359,7 @@ document.addEventListener('submit', function(e) {
     function fetchFloristPending() {
         fetch('/notifications/florist-pending')
             .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(data) { if (data) renderFloristList(data.count, data.items || []); })
+            .then(function(data) { if (data) renderFloristList(data.count || 0, data.items || []); })
             .catch(function() {});
     }
 
@@ -1363,8 +1371,12 @@ document.addEventListener('submit', function(e) {
         if (btn) {
             btn.addEventListener('click', function(e) {
                 e.stopPropagation();
-                floristSetOpen(!_floristOpen);
-                if (_floristOpen) fetchFloristPending();
+                var opening = !_floristOpen;
+                floristSetOpen(opening);
+                if (opening) {
+                    showFloristLoading();
+                    fetchFloristPending();
+                }
             });
         }
 

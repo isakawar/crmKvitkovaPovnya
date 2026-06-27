@@ -14,8 +14,6 @@ from app.services.notification_service import get_notifications_for_user
 from app.services.delivery_service import (
     get_overdue_unclosed_deliveries,
     get_stuck_deliveries_count,
-    get_florist_approved_pending,
-    get_florist_approved_pending_count,
 )
 
 
@@ -46,7 +44,7 @@ def stuck_deliveries_api():
             'date': d.delivery_date.strftime('%d.%m.%Y'),
             'client': name,
             'status': d.status,
-            'url': f'/orders?delivery_id={d.id}',
+            'url': f'/florist?date={d.delivery_date.isoformat()}#delivery-{d.id}',
         })
 
     return jsonify({'count': count, 'items': items})
@@ -58,25 +56,53 @@ def florist_pending_api():
     if getattr(current_user, 'user_type', None) != 'florist':
         return jsonify({'count': 0, 'items': []}), 403
 
-    from datetime import date
+    from datetime import date, datetime
+    from app.models.delivery import Delivery
+    from app.extensions import db
+    from sqlalchemy.orm import joinedload
+
     today = date.today()
-    count = get_florist_approved_pending_count(today)
-    deliveries = get_florist_approved_pending(today, limit=20)
+
+    deliveries = (
+        Delivery.query
+        .options(joinedload(Delivery.client))
+        .filter(
+            Delivery.delivery_date <= today,
+            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+        )
+        .order_by(Delivery.delivery_date.asc())
+        .limit(20)
+        .all()
+    )
+    count = (
+        Delivery.query
+        .filter(
+            Delivery.delivery_date <= today,
+            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+        )
+        .count()
+    )
 
     items = []
     for d in deliveries:
+        dd = d.delivery_date
+        if isinstance(dd, str):
+            try:
+                dd = datetime.strptime(dd, '%Y-%m-%d').date()
+            except Exception:
+                dd = None
         client = d.client
         name = 'Клієнт'
         if client:
             name = (client.instagram or client.phone or 'Клієнт').lstrip('@')
-        time_label = f'{d.time_from}' + (f'–{d.time_to}' if d.time_to else '')
+        time_label = (f'{d.time_from}' + (f'–{d.time_to}' if d.time_to else '')) if d.time_from else ''
         items.append({
             'id': d.id,
-            'date': d.delivery_date.strftime('%d.%m.%Y'),
+            'date': dd.strftime('%d.%m.%Y') if dd else '',
             'client': name,
             'time': time_label,
-            'florist_status': d.florist_status or '—',
-            'url': f'/florist?date={d.delivery_date.isoformat()}',
+            'status': d.status,
+            'url': f'/florist?date={dd.isoformat()}#delivery-{d.id}' if dd else '/florist',
         })
 
     return jsonify({'count': count, 'items': items})
