@@ -1036,23 +1036,38 @@
               class="h-8 w-48 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
           </div>
-          <!-- Active-only toggle -->
-          <button id="revenue-active-toggle"
-                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
-                  data-active="0">
-            <i class="bi bi-funnel text-xs"></i>
-            Тільки активні
-          </button>
+          <!-- Filter dropdown -->
+          <div class="relative" id="revenue-filter-wrap">
+            <button id="revenue-filter-btn"
+                    class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
+                    data-mode="alpha">
+              <i class="bi bi-funnel text-xs"></i>
+              <span id="revenue-filter-label">За алфавітом</span>
+              <i class="bi bi-chevron-down text-xs"></i>
+            </button>
+            <div id="revenue-filter-panel"
+                 class="hidden absolute right-0 top-full mt-1 z-50 w-52 rounded-xl border border-stone-200 bg-white shadow-lg py-1">
+              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="alpha">
+                <i class="bi bi-check-lg text-xs text-amber-500" data-check="alpha"></i>
+                За алфавітом
+              </button>
+              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="active">
+                <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="active"></i>
+                Тільки активні
+              </button>
+              <div class="my-1 border-t border-stone-100"></div>
+              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="bal-asc">
+                <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="bal-asc"></i>
+                За балансом ↑
+              </button>
+              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="bal-desc">
+                <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="bal-desc"></i>
+                За балансом ↓
+              </button>
+            </div>
+          </div>
           <!-- Visible count -->
           <span id="revenue-count" class="text-xs text-stone-400"></span>
-          <!-- Sort by balance -->
-          <button id="revenue-sort-btn"
-                  class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
-                  data-dir="0"
-                  title="Сортувати за залишком на кінець останнього місяця">
-            <i class="bi bi-arrow-down-up text-xs"></i>
-            <span>За балансом</span>
-          </button>
           <!-- Edit mode buttons -->
           <button id="revenue-edit-btn"
                   class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-300 bg-white px-3 text-sm text-stone-700 transition-colors hover:border-amber-400 hover:text-stone-900">
@@ -1794,26 +1809,68 @@ document.addEventListener('DOMContentLoaded', function () {
     icon.style.transform = open ? '' : 'rotate(90deg)';
   };
 
-  // ── Revenue tab: search + active filter ───────────────────────────────────
+  // ── Revenue tab: search + filter/sort dropdown ───────────────────────────
   (function () {
-    const searchInput   = document.getElementById('revenue-search');
-    const activeToggle  = document.getElementById('revenue-active-toggle');
-    const noResults     = document.getElementById('revenue-no-results');
-    const countEl       = document.getElementById('revenue-count');
-    if (!searchInput) return;
+    const searchInput = document.getElementById('revenue-search');
+    const noResults   = document.getElementById('revenue-no-results');
+    const countEl     = document.getElementById('revenue-count');
+    const filterBtn   = document.getElementById('revenue-filter-btn');
+    const filterPanel = document.getElementById('revenue-filter-panel');
+    const filterLabel = document.getElementById('revenue-filter-label');
+    if (!searchInput || !filterBtn) return;
 
-    const allRows = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+    const allRows     = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+    const tbody       = document.querySelector('.revenue-table tbody');
+    const originalRows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
+
+    let currentMode = 'alpha';
+
+    const MODE_LABELS = {
+      'alpha':    'За алфавітом',
+      'active':   'Тільки активні',
+      'bal-asc':  'За балансом ↑',
+      'bal-desc': 'За балансом ↓',
+    };
+
+    function updateCheckmarks(mode) {
+      document.querySelectorAll('[data-check]').forEach(function (el) {
+        el.classList.toggle('invisible', el.dataset.check !== mode);
+      });
+    }
+
+    function applySort(mode) {
+      if (!tbody) return;
+      if (mode === 'alpha') {
+        originalRows.forEach(function (r) { tbody.appendChild(r); });
+        return;
+      }
+      if (mode === 'bal-asc' || mode === 'bal-desc') {
+        const dir = mode === 'bal-asc' ? 1 : -1;
+        const groups = [];
+        let cur = null;
+        for (const row of tbody.querySelectorAll('tr')) {
+          if ('balance' in row.dataset) {
+            cur = { balance: parseFloat(row.dataset.balance) || 0, rows: [row] };
+            groups.push(cur);
+          } else if (cur) {
+            cur.rows.push(row);
+          }
+        }
+        groups.sort(function (a, b) { return dir * (a.balance - b.balance); });
+        groups.forEach(function (g) { g.rows.forEach(function (r) { tbody.appendChild(r); }); });
+      }
+    }
 
     function applyFilters() {
       const query      = searchInput.value.trim().toLowerCase();
-      const activeOnly = activeToggle.dataset.active === '1';
+      const activeOnly = currentMode === 'active';
       let visible = 0;
 
       allRows.forEach(function (tr) {
-        const nameMatch   = !query || tr.dataset.client.includes(query);
-        const activityOk  = !activeOnly || tr.dataset.anyActivity === '1';
-        const show        = nameMatch && activityOk;
-        tr.style.display  = show ? '' : 'none';
+        const nameMatch  = !query || tr.dataset.client.includes(query);
+        const activityOk = !activeOnly || tr.dataset.anyActivity === '1';
+        const show       = nameMatch && activityOk;
+        tr.style.display = show ? '' : 'none';
         if (show) visible++;
       });
 
@@ -1821,89 +1878,47 @@ document.addEventListener('DOMContentLoaded', function () {
       if (countEl)   countEl.textContent = visible + ' / ' + allRows.length;
     }
 
-    searchInput.addEventListener('input', applyFilters);
-
-    activeToggle.addEventListener('click', function () {
-      const on = activeToggle.dataset.active === '1';
-      activeToggle.dataset.active = on ? '0' : '1';
-      activeToggle.classList.toggle('bg-stone-900',  !on);
-      activeToggle.classList.toggle('border-stone-900', !on);
-      activeToggle.classList.toggle('text-white',    !on);
-      activeToggle.classList.toggle('bg-white',       on);
-      activeToggle.classList.toggle('border-stone-200', on);
-      activeToggle.classList.toggle('text-stone-600', on);
+    function setMode(mode) {
+      currentMode = mode;
+      filterLabel.textContent = MODE_LABELS[mode] || 'Фільтри';
+      const isDefault = mode === 'alpha';
+      filterBtn.classList.toggle('border-amber-400', !isDefault);
+      filterBtn.classList.toggle('text-stone-900',   !isDefault);
+      updateCheckmarks(mode);
+      applySort(mode);
       applyFilters();
+    }
+
+    // Toggle panel
+    filterBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      filterPanel.classList.toggle('hidden');
     });
+
+    // Close on outside click
+    document.addEventListener('click', function () {
+      filterPanel.classList.add('hidden');
+    });
+    filterPanel.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    // Option click
+    document.querySelectorAll('.revenue-filter-option').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setMode(btn.dataset.mode);
+        filterPanel.classList.add('hidden');
+      });
+    });
+
+    searchInput.addEventListener('input', applyFilters);
 
     // Auto-enable active filter when a date range is selected
     const _urlParams = new URLSearchParams(window.location.search);
     if (_urlParams.get('date_from') || _urlParams.get('date_to')) {
-      activeToggle.dataset.active = '1';
-      activeToggle.classList.add('bg-stone-900', 'border-stone-900', 'text-white');
-      activeToggle.classList.remove('bg-white', 'border-stone-200', 'text-stone-600');
+      setMode('active');
+    } else {
+      applyFilters();
     }
-
-    // Show count on load
-    applyFilters();
-  }());
-
-  // ── Revenue sort by balance ────────────────────────
-  (function () {
-    const sortBtn = document.getElementById('revenue-sort-btn');
-    if (!sortBtn) return;
-    const tbody = document.querySelector('.revenue-table tbody');
-    if (!tbody) return;
-
-    // Save original DOM order for reset
-    const originalRows = Array.from(tbody.querySelectorAll('tr'));
-
-    function collectGroups() {
-      const groups = [];
-      let cur = null;
-      for (const row of tbody.querySelectorAll('tr')) {
-        if ('balance' in row.dataset) {
-          cur = { balance: parseFloat(row.dataset.balance) || 0, rows: [row] };
-          groups.push(cur);
-        } else if (cur) {
-          cur.rows.push(row);
-        }
-      }
-      return groups;
-    }
-
-    function applySort(dir) {
-      if (dir === 0) {
-        originalRows.forEach(function (r) { tbody.appendChild(r); });
-        return;
-      }
-      const groups = collectGroups();
-      groups.sort(function (a, b) { return dir * (a.balance - b.balance); });
-      groups.forEach(function (g) { g.rows.forEach(function (r) { tbody.appendChild(r); }); });
-    }
-
-    sortBtn.addEventListener('click', function () {
-      const cur = parseInt(sortBtn.dataset.dir, 10) || 0;
-      const next = cur === 0 ? 1 : cur === 1 ? -1 : 0;
-      sortBtn.dataset.dir = next;
-
-      const icon = sortBtn.querySelector('i');
-      const label = sortBtn.querySelector('span');
-      if (next === 1) {
-        icon.className = 'bi bi-sort-numeric-down text-xs';
-        label.textContent = 'Від меншого';
-        sortBtn.classList.add('border-amber-400', 'text-stone-900');
-      } else if (next === -1) {
-        icon.className = 'bi bi-sort-numeric-up-alt text-xs';
-        label.textContent = 'Від більшого';
-        sortBtn.classList.add('border-amber-400', 'text-stone-900');
-      } else {
-        icon.className = 'bi bi-arrow-down-up text-xs';
-        label.textContent = 'За балансом';
-        sortBtn.classList.remove('border-amber-400', 'text-stone-900');
-      }
-
-      applySort(next);
-    });
+    updateCheckmarks(currentMode);
   }());
 
   // ── Revenue edit mode ──────────────────────────────
