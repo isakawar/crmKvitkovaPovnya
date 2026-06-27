@@ -1911,13 +1911,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     searchInput.addEventListener('input', applyFilters);
 
-    // Auto-enable active filter when a date range is selected
-    const _urlParams = new URLSearchParams(window.location.search);
-    if (_urlParams.get('date_from') || _urlParams.get('date_to')) {
-      setMode('active');
-    } else {
-      applyFilters();
-    }
+    applyFilters();
     updateCheckmarks(currentMode);
   }());
 
