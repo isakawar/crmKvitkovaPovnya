@@ -1,9 +1,29 @@
 {% extends 'layout.html' %}
 {% block content %}
 
-<div class="mb-5">
+<div class="mb-4">
     <h1 class="text-xl font-semibold text-stone-900 mb-1">Лог змін</h1>
     <p class="text-sm text-stone-500">Хто і які зміни вносив у систему</p>
+</div>
+
+<!-- Tabs -->
+{% set tab_defs = [
+    ('all', 'Всі'),
+    ('orders', 'Замовлення'),
+    ('routes', 'Маршрути'),
+    ('subscriptions', 'Підписки'),
+    ('clients', 'Клієнти'),
+    ('deliveries', 'Доставки'),
+] %}
+{% macro tab_qs(t) %}tab={{ t }}{% if selected_user_id %}&user_id={{ selected_user_id }}{% endif %}{% if selected_action %}&action={{ selected_action }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% endmacro %}
+<div class="flex gap-1 mb-4 flex-wrap">
+    {% for t_key, t_label in tab_defs %}
+    <a href="?{{ tab_qs(t_key) }}"
+       class="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors
+              {% if active_tab == t_key %}bg-stone-900 text-white{% else %}bg-white border border-stone-200 text-stone-600 hover:bg-stone-50{% endif %}">
+        {{ t_label }}
+    </a>
+    {% endfor %}
 </div>
 
 <!-- Filters -->
@@ -78,7 +98,7 @@
                 <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Хто</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Дія</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Що</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Опис</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Клієнт</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-stone-500 uppercase tracking-wide">Деталі</th>
             </tr>
         </thead>
@@ -93,18 +113,53 @@
                         'edit': 'bg-blue-100 text-blue-700',
                         'delete': 'bg-red-100 text-red-700',
                         'extend': 'bg-amber-100 text-amber-700',
+                        'send': 'bg-violet-100 text-violet-700',
+                        'status_change': 'bg-sky-100 text-sky-700',
+                        'stop': 'bg-orange-100 text-orange-700',
+                        'resume': 'bg-teal-100 text-teal-700',
                     } %}
                     <span class="inline-block px-2 py-0.5 rounded-full text-xs font-medium {{ action_colors.get(entry.action, 'bg-stone-100 text-stone-600') }}">
                         {{ action_labels.get(entry.action, entry.action) }}
                     </span>
                 </td>
-                <td class="px-4 py-3 text-stone-600 whitespace-nowrap">
-                    {{ entity_labels.get(entry.entity_type, entry.entity_type) }}
-                    {% if entry.entity_id %}
-                    <span class="text-stone-400">#{{ entry.entity_id }}</span>
+                <td class="px-4 py-3 text-stone-600">
+                    <div class="whitespace-nowrap">
+                        {{ entity_labels.get(entry.entity_type, entry.entity_type) }}
+                        {% if entry.entity_id %}
+                        <span class="text-stone-400">#{{ entry.entity_id }}</span>
+                        {% endif %}
+                    </div>
+                    {% if entry.entity_type == 'order' %}
+                    {% set snap = entry.after_data or entry.before_data %}
+                    {% if snap %}
+                    <div class="text-xs text-stone-400 mt-0.5 leading-tight max-w-[220px]">
+                        {%- set client_label = snap.client_name if snap.client_name else snap.recipient_name -%}
+                        {%- set addr_parts = [] -%}
+                        {%- if snap.city %}{% set _ = addr_parts.append(snap.city) %}{% endif -%}
+                        {%- if snap.street %}{% set _ = addr_parts.append(snap.street) %}{% endif -%}
+                        {%- if snap.is_pickup %}<span class="text-amber-500 font-medium">самовивіз</span>{% elif addr_parts %}{{ addr_parts | join(', ') }}{% endif -%}
+                        {%- if client_label %} · {{ client_label }}{% endif -%}
+                    </div>
+                    {% endif %}
                     {% endif %}
                 </td>
-                <td class="px-4 py-3 text-stone-700 max-w-xs truncate">{{ entry.description }}</td>
+                <td class="px-4 py-3 text-stone-700">
+                    {% set snap = entry.after_data or entry.before_data %}
+                    {% if entry.entity_type in ('order', 'subscription') and snap %}
+                        {% set cl = clients_map.get(snap.client_id) if snap.client_id else none %}
+                        {% set cname = snap.client_name if snap.client_name else snap.recipient_name %}
+                        {% set contact = (cl.instagram or cl.telegram or cl.phone) if cl else (snap.client_instagram or snap.client_telegram or snap.client_phone) %}
+                        <div>{{ cname or '—' }}</div>
+                        {% if contact %}<div class="text-xs text-stone-400">{{ contact }}</div>{% endif %}
+                    {% elif entry.entity_type == 'client' and snap %}
+                        {% set cname = snap.name or snap.instagram or '—' %}
+                        {% set contact = snap.instagram or snap.telegram or snap.phone %}
+                        <div>{{ cname }}</div>
+                        {% if contact and contact != cname %}<div class="text-xs text-stone-400">{{ contact }}</div>{% endif %}
+                    {% else %}
+                        <span class="text-stone-400 text-xs truncate block max-w-[200px]">{{ entry.description }}</span>
+                    {% endif %}
+                </td>
                 <td class="px-4 py-3">
                     {% if entry.before_data or entry.after_data %}
                     <button type="button"
@@ -131,6 +186,7 @@
     <!-- Pagination -->
     {% if pagination.pages > 1 %}
     {% set qs_log = '' %}
+    {%- if active_tab and active_tab != 'all' %}{% set qs_log = qs_log ~ '&tab=' ~ active_tab %}{% endif -%}
     {%- if selected_user_id %}{% set qs_log = qs_log ~ '&user_id=' ~ selected_user_id %}{% endif -%}
     {%- if selected_entity_type %}{% set qs_log = qs_log ~ '&entity_type=' ~ selected_entity_type %}{% endif -%}
     {%- if selected_action %}{% set qs_log = qs_log ~ '&action=' ~ selected_action %}{% endif -%}
@@ -257,10 +313,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalBody    = document.getElementById('diff-modal-body');
 
     const ACTION_COLORS = {
-        create: 'bg-green-100 text-green-700',
-        edit:   'bg-blue-100 text-blue-700',
-        delete: 'bg-red-100 text-red-700',
-        extend: 'bg-amber-100 text-amber-700',
+        create:        'bg-green-100 text-green-700',
+        edit:          'bg-blue-100 text-blue-700',
+        delete:        'bg-red-100 text-red-700',
+        extend:        'bg-amber-100 text-amber-700',
+        send:          'bg-violet-100 text-violet-700',
+        status_change: 'bg-sky-100 text-sky-700',
+        stop:          'bg-orange-100 text-orange-700',
+        resume:        'bg-teal-100 text-teal-700',
     };
 
     function openModal(btn) {

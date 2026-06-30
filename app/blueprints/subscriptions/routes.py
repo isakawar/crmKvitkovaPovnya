@@ -1,7 +1,7 @@
 import datetime as dt
 
 from flask import jsonify, render_template, request
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
 
 from app.blueprints.subscriptions import subscriptions_bp
@@ -365,6 +365,14 @@ def subscription_stop(subscription_id):
     try:
         stop_subscription(sub)
         db.session.commit()
+        from app.services.activity_log_service import log as _log
+        client_label = sub.client.name if sub.client else f'#{sub.client_id}'
+        _log(
+            current_user._get_current_object() if current_user.is_authenticated else None,
+            'stop', 'subscription', sub.id,
+            f'Підписку #{sub.id} ({sub.type}) клієнта {client_label} зупинено',
+            after_data={'is_stopped': True, 'type': sub.type},
+        )
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
@@ -403,6 +411,14 @@ def subscription_resume_apply(subscription_id):
     try:
         apply_resume_plan(sub, plan)
         db.session.commit()
+        from app.services.activity_log_service import log as _log
+        client_label = sub.client.name if sub.client else f'#{sub.client_id}'
+        _log(
+            current_user._get_current_object() if current_user.is_authenticated else None,
+            'resume', 'subscription', sub.id,
+            f'Підписку #{sub.id} ({sub.type}) клієнта {client_label} відновлено',
+            after_data={'is_stopped': False, 'type': sub.type},
+        )
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()

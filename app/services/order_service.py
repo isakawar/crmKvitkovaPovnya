@@ -12,8 +12,13 @@ from app.services.subscription_service import SUBSCRIPTION_TYPES  # noqa: F401
 
 
 def _order_snapshot(order) -> dict:
+    client = order.client
     return {
         'client_id': order.client_id,
+        'client_name': (client.name or client.instagram or '') if client else '',
+        'client_instagram': client.instagram if client else '',
+        'client_telegram': client.telegram if client else '',
+        'client_phone': client.phone if client else '',
         'size': order.size,
         'custom_amount': order.custom_amount,
         'charged_amount': str(order.charged_amount) if order.charged_amount is not None else None,

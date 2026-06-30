@@ -10,6 +10,12 @@ import json
 import urllib.parse
 import requests as http_requests
 
+
+def _route_log(action, route, description, before_data=None, after_data=None):
+    from app.services.activity_log_service import log as _log
+    _user = current_user._get_current_object() if current_user.is_authenticated else None
+    _log(_user, action, 'route', route.id, description, before_data=before_data, after_data=after_data)
+
 routes_bp = Blueprint('routes', __name__)
 
 
@@ -136,8 +142,14 @@ def assign_route(route_id):
     # Notify old courier if route was sent and courier is being changed
     old_courier_id = route.courier_id
     new_courier_id = courier_id or None
+    old_courier = Courier.query.get(old_courier_id) if old_courier_id else None
+    new_courier = Courier.query.get(new_courier_id) if new_courier_id else None
+    before_assign = {
+        'courier': old_courier.name if old_courier else None,
+        'price': route.delivery_price,
+        'date': route.route_date.strftime('%d.%m.%Y'),
+    }
     if old_courier_id and old_courier_id != new_courier_id and route.telegram_message_id:
-        old_courier = Courier.query.get(old_courier_id)
         if old_courier and old_courier.telegram_chat_id:
             bot_token = current_app.config.get('TELEGRAM_BOT_TOKEN')
             cancel_text = (
@@ -152,6 +164,14 @@ def assign_route(route_id):
     if delivery_price is not None:
         route.delivery_price = delivery_price
     db.session.commit()
+
+    courier_label = new_courier.name if new_courier else 'знято'
+    desc = f"Кур'єр маршруту {route.route_date.strftime('%d.%m.%Y')}: {courier_label}"
+    _route_log('edit', route, desc, before_data=before_assign, after_data={
+        'courier': new_courier.name if new_courier else None,
+        'price': route.delivery_price,
+        'date': route.route_date.strftime('%d.%m.%Y'),
+    })
     return redirect(url_for('routes.saved_routes'))
 
 
@@ -195,6 +215,10 @@ def assign_and_send_route(route_id):
             total_distance_km=route.total_distance_km,
         ))
         db.session.commit()
+        _route_log('send', route,
+            f"Маршрут {route.route_date.strftime('%d.%m.%Y')} призначено таксі «{courier.name}»",
+            after_data={'courier': courier.name, 'type': 'taxi', 'date': route.route_date.strftime('%d.%m.%Y'),
+                        'price': route.delivery_price, 'deliveries_count': route.deliveries_count})
         if is_ajax:
             return jsonify({'success': True, 'message': f'Маршрут призначено службі таксі «{courier.name}»'})
         flash(f'Маршрут призначено службі таксі «{courier.name}»', 'success')
@@ -313,6 +337,10 @@ def assign_and_send_route(route_id):
         total_distance_km=route.total_distance_km,
     ))
     db.session.commit()
+    _route_log('send', route,
+        f"Маршрут {route.route_date.strftime('%d.%m.%Y')} відправлено кур'єру {courier.name} (Telegram)",
+        after_data={'courier': courier.name, 'type': 'telegram', 'date': route.route_date.strftime('%d.%m.%Y'),
+                    'price': route.delivery_price, 'deliveries_count': route.deliveries_count})
 
     if is_ajax:
         return jsonify({'success': True})
@@ -468,8 +496,13 @@ def update_start_time(route_id):
     time_str = (data.get('start_time') or '').strip()
 
     if not time_str:
+        old_time = route.start_time.strftime('%H:%M') if route.start_time else None
         route.start_time = None
         db.session.commit()
+        _route_log('edit', route,
+            f"Час виїзду маршруту {route.route_date.strftime('%d.%m.%Y')} скинуто",
+            before_data={'start_time': old_time, 'date': route.route_date.strftime('%d.%m.%Y')},
+            after_data={'start_time': None, 'date': route.route_date.strftime('%d.%m.%Y')})
         return jsonify({'success': True, 'recalculated': 0, 'arrivals': {}})
 
     try:
@@ -477,6 +510,7 @@ def update_start_time(route_id):
     except ValueError:
         return jsonify({'success': False, 'error': 'Невірний формат часу'}), 400
 
+    old_time = route.start_time.strftime('%H:%M') if route.start_time else None
     route.start_time = parsed
     if route.sent_at:
         route.content_changed_at = datetime.utcnow()
@@ -497,6 +531,10 @@ def update_start_time(route_id):
             arrivals[stop.id] = None
 
     db.session.commit()
+    _route_log('edit', route,
+        f"Час виїзду маршруту {route.route_date.strftime('%d.%m.%Y')}: {time_str}",
+        before_data={'start_time': old_time, 'date': route.route_date.strftime('%d.%m.%Y')},
+        after_data={'start_time': time_str, 'date': route.route_date.strftime('%d.%m.%Y')})
     return jsonify({'success': True, 'recalculated': recalculated, 'arrivals': arrivals})
 
 
@@ -515,6 +553,7 @@ def change_route_status(route_id):
     if new_status == 'sent' and not courier_id and not route.courier_id:
         return jsonify({'ok': False, 'error': 'Оберіть курʼєра для цього статусу'}), 400
 
+    old_status = route.status
     route.status = new_status
     if courier_id:
         route.courier_id = courier_id
@@ -524,6 +563,11 @@ def change_route_status(route_id):
             if stop.delivery:
                 set_delivery_status(stop.delivery, 'Доставлено')
     db.session.commit()
+    _route_log('status_change', route,
+        f"Статус маршруту {route.route_date.strftime('%d.%m.%Y')}: {old_status} → {new_status}",
+        before_data={'status': old_status, 'date': route.route_date.strftime('%d.%m.%Y')},
+        after_data={'status': new_status, 'date': route.route_date.strftime('%d.%m.%Y'),
+                    'deliveries_count': route.deliveries_count})
     return jsonify({'ok': True})
 
 
@@ -531,6 +575,17 @@ def change_route_status(route_id):
 @login_required
 def delete_route(route_id):
     route = DeliveryRoute.query.get_or_404(route_id)
+
+    # Capture info before deleting
+    route_date_str = route.route_date.strftime('%d.%m.%Y')
+    deliveries_count = route.deliveries_count
+    courier = route.courier
+    before_data = {
+        'date': route_date_str,
+        'deliveries_count': deliveries_count,
+        'courier': courier.name if courier else None,
+        'status': route.status,
+    }
 
     # Reset delivery statuses back to 'Очікує' before deleting
     delivery_ids = [stop.delivery_id for stop in route.stops]
@@ -542,6 +597,11 @@ def delete_route(route_id):
 
     db.session.delete(route)
     db.session.commit()
+    _user = current_user._get_current_object() if current_user.is_authenticated else None
+    from app.services.activity_log_service import log as _log
+    _log(_user, 'delete', 'route', route_id,
+        f"Видалено маршрут на {route_date_str} ({deliveries_count} доставок)",
+        before_data=before_data)
     flash('Маршрут видалено', 'success')
     return redirect(url_for('routes.saved_routes'))
 

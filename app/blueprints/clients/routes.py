@@ -125,12 +125,24 @@ def client_delete(client_id):
     has_deliveries = Delivery.query.filter_by(client_id=client_id).first() is not None
     if has_deliveries:
         return jsonify({'success': False, 'error': 'Неможливо видалити клієнта з існуючими доставками'}), 400
+    from app.services.client_service import _client_snapshot
+    before_data = _client_snapshot(client)
+    client_label = client.name or client.instagram or f'#{client.id}'
+    client_id_saved = client.id
     try:
         db.session.delete(client)
         db.session.commit()
     except IntegrityError:
         db.session.rollback()
         return jsonify({'success': False, 'error': 'Неможливо видалити клієнта: є пов\'язані замовлення або записи'}), 400
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    _log(
+        current_user._get_current_object() if current_user.is_authenticated else None,
+        'delete', 'client', client_id_saved,
+        f'Видалено клієнта {client_label}',
+        before_data=before_data,
+    )
     return jsonify({'success': True})
 
 @clients_bp.route('/clients/json', methods=['GET'])

@@ -14,8 +14,13 @@ REVERSE_WEEKDAY_MAP = {v: k for k, v in WEEKDAY_MAP.items()}
 
 
 def _subscription_snapshot(sub) -> dict:
+    client = sub.client
     return {
         'client_id': sub.client_id,
+        'client_name': (client.name or client.instagram or '') if client else '',
+        'client_instagram': client.instagram if client else '',
+        'client_telegram': client.telegram if client else '',
+        'client_phone': client.phone if client else '',
         'type': sub.type,
         'status': sub.status,
         'size': sub.size,

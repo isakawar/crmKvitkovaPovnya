@@ -138,6 +138,23 @@ def set_delivery_status(d, new_status):
         from app.services.billing_service import charge_delivery
         charge_delivery(d)
     db.session.commit()
+    if new_status in ('Доставлено', 'Скасовано'):
+        try:
+            from flask_login import current_user
+            from app.services.activity_log_service import log as _log
+            order = d.order
+            client_label = ''
+            if order and order.client:
+                client_label = f' ({order.client.name or order.client.instagram or ""})'.strip()
+            _log(
+                current_user._get_current_object() if current_user.is_authenticated else None,
+                'edit', 'delivery', d.id,
+                f'Статус доставки #{d.id}{client_label}: {prev_status} → {new_status}',
+                before_data={'status': prev_status},
+                after_data={'status': new_status},
+            )
+        except Exception:
+            pass
     return d
 
 def assign_deliveries(assignments):
