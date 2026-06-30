@@ -793,6 +793,7 @@
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-3">
             <span style="display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:50%; background:{{ route_color }}; color:#fff; font-size:0.78rem; font-weight:700; flex-shrink:0;">{{ loop.index }}</span>
+            <span style="font-size:0.78rem; font-weight:600; color:#a8a29e; letter-spacing:0.01em; flex-shrink:0;">#{{ route.id }}</span>
             <div class="relative route-status-wrap" onclick="event.stopPropagation()">
               <span class="route-badge route-badge-status-{{ route.status }}"
                     style="cursor:pointer; user-select:none;"

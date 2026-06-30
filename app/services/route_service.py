@@ -160,6 +160,40 @@ def _upsert_delivery_route(route_db_id, route_data, selected_date, stops, cached
     return dr
 
 
+def remove_delivery_from_route(delivery) -> dict:
+    """Remove a single delivery from its assigned route.
+
+    Resets delivery status to 'Очікує', deletes the RouteDelivery stop,
+    and either deletes the now-empty route or marks it as changed if already sent.
+    Returns a dict with info about the affected route.
+    """
+    stop = RouteDelivery.query.filter_by(delivery_id=delivery.id).first()
+    if not stop:
+        return {}
+
+    route = stop.route
+    total_stops = RouteDelivery.query.filter_by(route_id=route.id).count()
+    remaining = total_stops - 1
+
+    route_id = route.id
+    route_status = route.status
+
+    db.session.delete(stop)
+    delivery.status = 'Очікує'
+    delivery.courier_id = None
+
+    if remaining == 0:
+        db.session.delete(route)
+        db.session.commit()
+        return {'route_id': route_id, 'route_status': route_status, 'remaining_stops': 0, 'route_deleted': True}
+
+    if route_status in ('sent', 'accepted'):
+        route.content_changed_at = datetime.utcnow()
+
+    db.session.commit()
+    return {'route_id': route_id, 'route_status': route_status, 'remaining_stops': remaining, 'route_deleted': False}
+
+
 def _reset_route_deliveries(dr: DeliveryRoute):
     old_delivery_ids = [s.delivery_id for s in dr.stops]
     if old_delivery_ids:

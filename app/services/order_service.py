@@ -158,10 +158,13 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
         query = query.filter(or_(not_stopped, has_delivered, has_individually_resumed))
     # When searching by client: include all orders (stopped subscriptions visible with СТОП badge)
     if q:
-        q_stripped = q.lstrip('@')
+        q_stripped = q.lstrip('@').lstrip('#')
         like_q = f'%{q}%'
         like_q_stripped = f'%{q_stripped}%'
-        query = query.filter(or_(
+        id_filter = None
+        if q_stripped.isdigit():
+            id_filter = Order.id == int(q_stripped)
+        text_filters = or_(
             Client.instagram.ilike(like_q),
             Client.phone.ilike(like_q),
             Client.telegram.ilike(like_q),
@@ -172,7 +175,8 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
             Order.recipient_social.ilike(like_q_stripped),
             Order.city.ilike(like_q),
             Order.street.ilike(like_q),
-        ))
+        )
+        query = query.filter(or_(id_filter, text_filters) if id_filter is not None else text_filters)
     if phone:
         query = query.filter(Order.recipient_phone.contains(phone))
     if instagram:
