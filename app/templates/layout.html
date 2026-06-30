@@ -1011,7 +1011,6 @@ document.addEventListener('submit', function(e) {
 {% if current_user.is_authenticated and current_user.user_type in ['admin', 'manager'] %}
 <script>
 (function() {
-    var POLL_INTERVAL_MS = 7 * 60 * 1000;
     var TOAST_SESSION_KEY = '__action_items_toast_count';
 
     var _ddOpen = false;
@@ -1156,7 +1155,6 @@ document.addEventListener('submit', function(e) {
     document.addEventListener('DOMContentLoaded', function() {
         maybeShowPageLoadToast();
         fetchPending();
-        setInterval(fetchPending, POLL_INTERVAL_MS);
 
         var bellBtn = document.getElementById('notification-bell-btn');
         if (bellBtn) {
@@ -1253,7 +1251,6 @@ document.addEventListener('submit', function(e) {
 
     document.addEventListener('DOMContentLoaded', function() {
         fetchStuck();
-        setInterval(fetchStuck, 7 * 60 * 1000);
 
         var btn = document.getElementById('stuck-deliveries-btn');
         if (btn) {
@@ -1365,7 +1362,6 @@ document.addEventListener('submit', function(e) {
 
     document.addEventListener('DOMContentLoaded', function() {
         fetchFloristPending();
-        setInterval(fetchFloristPending, 7 * 60 * 1000);
 
         var btn = document.getElementById('florist-pending-btn');
         if (btn) {
