@@ -216,6 +216,9 @@
     background: #ecfdf5;
     border-bottom-color: #a7f3d0;
   }
+
+  .florist-row--delivered td { background: #f0fdf4; }
+  .florist-table tbody tr.florist-row--delivered:hover td { background: #dcfce7; }
 </style>
 {% endblock %}
 
@@ -234,7 +237,9 @@
 {% endmacro %}
 
 {% macro florist_status_badge(status) %}
-  {% if status == 'Зібрано' %}
+  {% if status == 'Затверджено' %}
+    <span class="florist-badge" style="background:#fffbeb;color:#b45309;border-color:#fde68a;">Затверджено</span>
+  {% elif status == 'Зібрано' %}
     <span class="florist-badge florist-badge-prep-assembled">Зібрано</span>
   {% elif status == "Передано кур'єру" %}
     <span class="florist-badge florist-badge-prep-handoff">Передано кур'єру</span>
@@ -290,7 +295,7 @@
   {% if client and client.instagram %}
     {% set instagram = ('@' + client.instagram.lstrip('@')) if client.instagram.startswith('@') else client.instagram %}
   {% endif %}
-  <tr data-delivery-row-id="{{ delivery.id }}">
+  <tr id="delivery-{{ delivery.id }}" data-delivery-row-id="{{ delivery.id }}"{% if delivery.status == 'Доставлено' %} class="florist-row--delivered"{% endif %}>
     <td class="w-10">
       <input
         type="checkbox"
@@ -363,6 +368,16 @@
       {% endif %}
     </td>
     {% if show_time %}<td class="whitespace-nowrap text-sm">{{ time_slot }}</td>{% endif %}
+    <td class="w-10">
+      {% if delivery.florist_status in ('Затверджено', 'Зібрано', "Передано кур'єру") %}
+      <button type="button"
+              class="florist-quick-done-btn inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
+              data-delivery-id="{{ delivery.id }}"
+              title="Позначити як Доставлено">
+        <i class="bi bi-check-circle-fill text-base"></i>
+      </button>
+      {% endif %}
+    </td>
     <td class="addr-cell">
       {% if delivery.is_pickup %}
         <span class="florist-badge">Самовивіз</span>
@@ -407,6 +422,7 @@
       <th>Коментар</th>
       <th>Фото</th>
       {% if show_time %}<th>Час</th>{% endif %}
+      <th></th>
       <th>Адреса</th>
     </tr>
   </thead>
@@ -493,6 +509,22 @@
       <p class="mt-1 text-xs text-stone-500">Очікують виконання</p>
     </article>
   </section>
+
+  {% if overdue_florist_count > 0 %}
+  <div id="florist-overdue-banner"
+       class="flex items-center justify-between gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-3">
+    <div class="flex items-center gap-3">
+      <i class="bi bi-exclamation-triangle-fill text-red-500 text-lg flex-shrink-0"></i>
+      <span class="text-sm font-semibold text-red-700">
+        {{ overdue_florist_count }} {{ 'доставка' if overdue_florist_count == 1 else ('доставки' if overdue_florist_count < 5 else 'доставок') }} вже мали бути виконані — не забудьте позначити!
+      </span>
+    </div>
+    <button type="button" onclick="document.getElementById('florist-overdue-banner').remove()"
+            class="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors">
+      <i class="bi bi-x-lg text-sm"></i>
+    </button>
+  </div>
+  {% endif %}
 
   <section class="rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm">
     <div class="flex flex-wrap items-center gap-3">
@@ -1060,6 +1092,57 @@
       btn.nextElementSibling.hidden = expanded;
     });
   });
+
+  // Quick "Доставлено" button per delivery row
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.florist-quick-done-btn');
+    if (!btn) return;
+    const deliveryId = btn.dataset.deliveryId;
+    if (!deliveryId) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split text-base"></i>';
+    try {
+      const res = await fetch('/florist/deliveries/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivery_ids: [parseInt(deliveryId)], status_key: 'delivered' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      const row = btn.closest('tr');
+      if (row) {
+        // Replace quick button cell with green checkmark
+        btn.closest('td').innerHTML = '<i class="bi bi-check-circle-fill text-emerald-500 text-base"></i>';
+        // Update florist_status badge in the row
+        const badgeCell = row.querySelector('.florist-badge[style*="Затверджено"], .florist-badge-prep-assembled, .florist-badge-prep-handoff');
+        if (badgeCell) {
+          badgeCell.className = 'florist-badge florist-badge-prep-delivered';
+          badgeCell.textContent = 'Доставлено';
+        }
+      }
+      if (typeof showToast === 'function') showToast('Доставлено!', 'success');
+    } catch(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-check-circle-fill text-base"></i>';
+      if (typeof showToast === 'function') showToast(err.message || 'Помилка', 'error');
+    }
+  });
+</script>
+<script>
+(function() {
+  var hash = window.location.hash;
+  if (!hash || !hash.startsWith('#delivery-')) return;
+  document.addEventListener('DOMContentLoaded', function() {
+    var row = document.querySelector(hash);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.style.transition = 'background 0.3s';
+    row.style.background = '#fef9c3';
+    setTimeout(function() {
+      row.style.background = '';
+    }, 2500);
+  });
+})();
 </script>
 {% endblock %}
 

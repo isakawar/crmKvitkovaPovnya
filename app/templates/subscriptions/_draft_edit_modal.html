@@ -49,12 +49,18 @@
               class="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
             ></textarea>
           </div>
-          <button
-            type="submit"
-            class="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
-          >
-            Зберегти
-          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" id="draft-delete-btn" title="Видалити чернетку"
+                    class="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-red-200 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors">
+              <i class="bi bi-trash3 text-sm"></i>
+            </button>
+            <button
+              type="submit"
+              class="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
+            >
+              Зберегти
+            </button>
+          </div>
         </form>
       </div>
     </div>

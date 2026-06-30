@@ -710,7 +710,7 @@
         {% for sub in draft_reminders %}
         {% set days_overdue = (today - sub.contact_date).days if sub.contact_date else 0 %}
         {% set row_class = 'dash-row--danger' if days_overdue >= 3 else ('dash-row--warn' if days_overdue > 0 else 'dash-row--calm') %}
-        <article class="dash-row {{ row_class }}{% if loop.index > 6 %} is-collapsed-extra{% endif %}">
+        <article class="dash-row {{ row_class }}{% if loop.index > 6 %} is-collapsed-extra{% endif %}" id="dash-draft-{{ sub.id }}">
           <div class="dash-row__main">
             <div class="dash-row__title">
               <strong>{{ sub.client.instagram.lstrip('@') if sub.client and sub.client.instagram else '—' }}</strong>
@@ -798,6 +798,7 @@
         {% for item in ended_subscriptions %}
         {% set row_class = 'dash-row--danger' if item.days_overdue >= 6 else ('dash-row--warn' if item.days_overdue >= 3 else 'dash-row--calm') %}
         <article class="dash-row {{ row_class }}"
+                 id="dash-renewal-{{ item.order_id }}"
                  data-ended-id="{{ item.order_id }}"
                  data-last-order-id="{{ item.last_order_id or '' }}"
                  data-client-instagram="{{ item.client_instagram or '' }}"
@@ -851,6 +852,53 @@
       {% endif %}
     </div>
   </section>
+
+  {% if action_items %}
+  <section class="dash-action-hub" style="margin-top:1.5rem;">
+    <div class="dash-queue">
+      <div class="dash-queue__head">
+        <div>
+          <span class="dash-queue__eyebrow"><i class="bi bi-check2-square"></i> Завдання</span>
+          <h2 class="dash-queue__title">Призначені адміністратором</h2>
+        </div>
+        <div class="dash-queue__stat">
+          <strong>{{ action_items|length }}</strong>
+          <span>активних</span>
+        </div>
+      </div>
+      <div class="dash-queue__list">
+        {% for r in action_items %}
+        {% set ai = r.action_item %}
+        {% set is_overdue = ai.due_at and ai.due_at < today_dt %}
+        <article class="dash-row {{ 'dash-row--danger' if is_overdue else 'dash-row--calm' }}" id="dash-action-item-{{ ai.id }}">
+          <div class="dash-row__main">
+            <div class="dash-row__title">
+              <strong>{{ ai.title }}</strong>
+              {% if is_overdue %}
+              <span class="dash-badge dash-badge--danger">Прострочено</span>
+              {% endif %}
+            </div>
+            {% if ai.description %}
+            <div class="dash-row__snippet">{{ ai.description }}</div>
+            {% endif %}
+            {% if ai.due_at %}
+            <div class="dash-row__meta">
+              <span>До: {{ ai.due_at | kyiv_time }}</span>
+            </div>
+            {% endif %}
+          </div>
+          <div class="dash-row__actions">
+            <button class="dash-action-btn dash-action-btn--primary"
+                    onclick="completeDashActionItem({{ ai.id }}, this)">
+              Виконано
+            </button>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <!-- Snooze Modal -->
   <div id="snoozeModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.45);align-items:center;justify-content:center;" aria-modal="true" role="dialog">
@@ -1154,5 +1202,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// Highlight item from notification click
+document.addEventListener('DOMContentLoaded', function() {
+    var param = new URLSearchParams(window.location.search).get('highlight');
+    if (!param) return;
+    history.replaceState(null, '', window.location.pathname);
+
+    var el = null;
+    if (param.startsWith('draft-'))   el = document.getElementById('dash-draft-'   + param.slice(6));
+    if (param.startsWith('renewal-')) el = document.getElementById('dash-renewal-' + param.slice(8));
+
+    if (!el) {
+        console.warn('[highlight] element not found for param:', param);
+        return;
+    }
+
+    // Ensure visible
+    el.classList.remove('is-collapsed-extra');
+    var list = el.closest('[data-collapsible-list]');
+    if (list) {
+        list.querySelectorAll('.is-collapsed-extra').forEach(function(r) { r.classList.remove('is-collapsed-extra'); });
+        var btn = list.nextElementSibling;
+        if (btn && btn.hasAttribute('data-expand-list')) btn.hidden = true;
+    }
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Flash using keyframe animation injected inline
+    var styleId = '__highlight-anim';
+    if (!document.getElementById(styleId)) {
+        var s = document.createElement('style');
+        s.id = styleId;
+        s.textContent = '@keyframes dashHighlight{0%{background-color:rgba(251,191,36,0)}20%{background-color:rgba(251,191,36,0.35)}80%{background-color:rgba(251,191,36,0.2)}100%{background-color:rgba(251,191,36,0)}}';
+        document.head.appendChild(s);
+    }
+    el.style.animation = 'none';
+    el.offsetHeight; // force reflow
+    el.style.animation = 'dashHighlight 2.5s ease forwards';
+    el.addEventListener('animationend', function() { el.style.animation = ''; }, { once: true });
+});
+
+function completeDashActionItem(actionItemId, btn) {
+    fetch('/notifications/' + actionItemId + '/complete', {method: 'POST'})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                var row = document.getElementById('dash-action-item-' + actionItemId);
+                if (row) row.remove();
+                showToast('Завдання виконано', 'success');
+            } else {
+                showToast(data.error || 'Помилка', 'error');
+            }
+        });
+}
 </script>
 {% endblock %}

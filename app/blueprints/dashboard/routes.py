@@ -1,6 +1,6 @@
 from datetime import date, timedelta, datetime
 from flask import render_template, request, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from sqlalchemy import func, case, and_, or_
 
 from . import dashboard_bp
@@ -159,6 +159,12 @@ def dashboard_page():
 
     draft_reminders = get_draft_subscriptions(contact_date_to=today)
 
+    try:
+        from app.services.action_item_service import get_pending_for_user
+        action_items = get_pending_for_user(current_user.id)
+    except Exception:
+        action_items = []
+
     cities = Settings.query.filter_by(type='city').order_by(Settings.value).all()
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
@@ -167,6 +173,7 @@ def dashboard_page():
     return render_template(
         'dashboard/index.html',
         today=today,
+        today_dt=datetime(today.year, today.month, today.day),
         deliveries_total=deliveries_total,
         delivered_total=delivered_total,
         in_couriers_total=in_couriers_total,
@@ -189,6 +196,7 @@ def dashboard_page():
         routes_without_courier=routes_without_courier,
         draft_reminders=draft_reminders,
         ended_subscriptions=ended_subscriptions,
+        action_items=action_items,
         cities=cities,
         delivery_types=delivery_types,
         sizes=sizes,

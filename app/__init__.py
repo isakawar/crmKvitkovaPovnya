@@ -54,6 +54,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.ai_agent import ai_agent_bp
     from app.blueprints.photos.routes import photos_bp
     from app.blueprints.activity_log import activity_log_bp
+    from app.blueprints.notifications import notifications_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -71,6 +72,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(ai_agent_bp)
     app.register_blueprint(photos_bp)
     app.register_blueprint(activity_log_bp)
+    app.register_blueprint(notifications_bp)
 
     # Ensure upload folder exists
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads/order_photos'), exist_ok=True)
@@ -130,7 +132,8 @@ def create_app(config_class=DevelopmentConfig):
                 and not request.endpoint.startswith('florist.')
                 and not request.endpoint.startswith('photos.')
                 and not request.endpoint.startswith('auth.')
-                and request.endpoint != 'static'):
+                and request.endpoint != 'static'
+                and request.endpoint != 'notifications.florist_pending_api'):
             return redirect(url_for('florist.florist_routes'))
 
     # Головна сторінка перенаправляє на список замовлень
@@ -230,6 +233,33 @@ def create_app(config_class=DevelopmentConfig):
     @app.context_processor
     def inject_version():
         return dict(app_version=version)
+
+    @app.context_processor
+    def inject_action_items_count():
+        if not current_user.is_authenticated:
+            return dict(action_items_pending_count=0, stuck_deliveries_count=0)
+        if getattr(current_user, 'user_type', None) == 'florist':
+            try:
+                from datetime import date
+                from app.services.delivery_service import get_stuck_deliveries_count
+                return dict(
+                    action_items_pending_count=0,
+                    stuck_deliveries_count=0,
+                    florist_pending_count=get_stuck_deliveries_count(date.today()),
+                )
+            except Exception:
+                return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)
+        try:
+            from datetime import date
+            from app.services.notification_service import get_notifications_count_for_user
+            from app.services.delivery_service import get_stuck_deliveries_count
+            return dict(
+                action_items_pending_count=get_notifications_count_for_user(current_user.id),
+                stuck_deliveries_count=get_stuck_deliveries_count(date.today()),
+                florist_pending_count=0,
+            )
+        except Exception:
+            return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)
 
     @app.context_processor
     def inject_feature_flags():

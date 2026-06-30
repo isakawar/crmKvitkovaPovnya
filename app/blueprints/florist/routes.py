@@ -20,6 +20,7 @@ WEEKDAY_MAP = {
     6: 'Неділя',
 }
 
+FLORIST_STATUS_APPROVED = 'Затверджено'
 FLORIST_STATUS_ASSEMBLED = 'Зібрано'
 FLORIST_STATUS_HANDOFF = "Передано кур'єру"
 FLORIST_STATUS_DELIVERED = 'Доставлено'
@@ -28,6 +29,7 @@ FLORIST_STATUS_OPTIONS = {
     'handoff': FLORIST_STATUS_HANDOFF,
     'delivered': FLORIST_STATUS_DELIVERED,
 }
+FLORIST_ACTIVE_STATUSES = (FLORIST_STATUS_APPROVED, FLORIST_STATUS_ASSEMBLED, FLORIST_STATUS_HANDOFF)
 
 
 def _parse_selected_date(raw_value, fallback_date):
@@ -193,6 +195,14 @@ def florist_routes():
     order_ids = {delivery.order_id for delivery in all_deliveries if delivery.order_id}
     subscription_delivery_index = _build_subscription_delivery_index(order_ids)
 
+    now_time = datetime.now().strftime('%H:%M')
+    overdue_florist_count = sum(
+        1 for d in all_deliveries
+        if d.florist_status in FLORIST_ACTIVE_STATUSES
+        and d.time_from
+        and d.time_from <= now_time
+    ) if selected_date == today else 0
+
     return render_template(
         'florist/list.html',
         weekday_map=WEEKDAY_MAP,
@@ -211,6 +221,7 @@ def florist_routes():
         pickup_deliveries=pickup_deliveries,
         florist_status_options=FLORIST_STATUS_OPTIONS,
         subscription_delivery_index=subscription_delivery_index,
+        overdue_florist_count=overdue_florist_count,
     )
 
 

@@ -503,7 +503,7 @@
             {% set delivery_mode = 'Самовивіз' if delivery.is_pickup else ('Нова пошта' if delivery.delivery_method == 'nova_poshta' else '') %}
             {% set delivery_type_label = (order.subscription.type if (order and order.subscription) else ('One-time' if order else '—')) %}
             {% set time_confirmed = delivery.time_from or delivery.time_to %}
-            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row' if time_confirmed else 'delivery-time-no-time-row' }}"
+            <tr class="border-b border-stone-200 align-top transition-colors {{ 'delivery-time-confirmed-row' if time_confirmed else 'delivery-time-no-time-row' }} {{ 'delivery-highlight-row' if highlight_delivery_id and delivery.id == highlight_delivery_id else '' }}"
                 data-delivery-id="{{ delivery.id }}"
                 data-order-id="{{ order.id if order else '' }}"
                 data-time-from="{{ delivery.time_from or '' }}"
@@ -1364,6 +1364,21 @@
       }
     });
   }
+
+  // Scroll to and flash-highlight a delivery row when ?highlight=<id>
+  {% if highlight_delivery_id %}
+  document.addEventListener('DOMContentLoaded', function() {
+    var row = document.querySelector('tr[data-delivery-id="{{ highlight_delivery_id }}"]');
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.style.transition = 'background .3s';
+    row.style.background = '#fef2f2';
+    setTimeout(function() { row.style.background = '#fff7ed'; }, 600);
+    setTimeout(function() { row.style.background = '#fef2f2'; }, 1200);
+    setTimeout(function() { row.style.background = '#fff7ed'; }, 1800);
+    setTimeout(function() { row.style.background = ''; }, 2500);
+  });
+  {% endif %}
 })();
 </script>
 {% endblock %}
