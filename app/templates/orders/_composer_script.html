@@ -917,6 +917,11 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
 
         const modalInstance = new bootstrap.Modal(modal);
+        const rcOverlay = document.getElementById('rcDimOverlay');
+        if (rcOverlay) { rcOverlay.style.opacity = '1'; rcOverlay.style.pointerEvents = 'auto'; }
+        modal.addEventListener('hidden.bs.modal', () => {
+            if (rcOverlay) { rcOverlay.style.opacity = '0'; rcOverlay.style.pointerEvents = 'none'; }
+        }, { once: true });
         newConfirmBtn.addEventListener('click', async () => {
             modalInstance.hide();
             fd.set('force_date_change', 'true');

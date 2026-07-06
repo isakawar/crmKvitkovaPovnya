@@ -264,6 +264,38 @@
   {% endif %}
 {% endmacro %}
 
+{% macro contact_blocks(has_client, client, instagram, has_recipient, recipient_name, recipient_social, recipient_phone, inline=false) %}
+  {% if has_client or has_recipient %}
+  {% if inline %}
+  <button type="button" class="client-contact-toggle mt-1.5 flex items-center gap-1 text-xs text-stone-400 hover:text-stone-600 transition-colors" aria-expanded="false">
+    <span>Клієнт / Отримувач</span>
+    <i class="bi bi-chevron-down text-[10px] transition-transform duration-150"></i>
+  </button>
+  <div class="client-contact-expanded hidden mt-1">
+  {% endif %}
+    {% if has_client %}
+    <div class="{% if not inline %}{% else %}{% endif %} border-t border-stone-100 pt-2 mt-2 first:border-0 first:pt-0 first:mt-0">
+      <div class="text-[10px] font-semibold text-stone-400 uppercase tracking-wide mb-1">Клієнт</div>
+      {% if instagram %}<div class="text-xs text-stone-600 break-all">{{ instagram }}</div>{% endif %}
+      {% if client and client.name %}<div class="text-xs text-stone-600">{{ client.name }}</div>{% endif %}
+      {% if client and client.telegram %}<div class="text-xs text-stone-500">{{ client.telegram }}</div>{% endif %}
+      {% if client and client.phone %}<div class="text-xs text-stone-500">{{ client.phone }}</div>{% endif %}
+    </div>
+    {% endif %}
+    {% if has_recipient %}
+    <div class="border-t border-stone-100 pt-2 mt-2">
+      <div class="text-[10px] font-semibold text-stone-400 uppercase tracking-wide mb-1">Отримувач</div>
+      {% if recipient_name and recipient_name != '—' %}<div class="text-xs text-stone-600 break-all">{{ recipient_name }}</div>{% endif %}
+      {% if recipient_social %}<div class="text-xs text-stone-500 break-all">{{ recipient_social }}</div>{% endif %}
+      {% if recipient_phone %}<div class="text-xs text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
+    </div>
+    {% endif %}
+  {% if inline %}
+  </div>
+  {% endif %}
+  {% endif %}
+{% endmacro %}
+
 {% macro delivery_row(delivery, stop_order='—', planned_arrival=None, show_time=True) %}
   {% set order = delivery.order %}
   {% set client = delivery.client %}
@@ -295,6 +327,9 @@
   {% if client and client.instagram %}
     {% set instagram = ('@' + client.instagram.lstrip('@')) if client.instagram.startswith('@') else client.instagram %}
   {% endif %}
+  {% set recipient_social = (order.recipient_social if order else '') or '' %}
+  {% set has_client_contact = client and (instagram or client.name or client.telegram or client.phone) %}
+  {% set has_recipient_contact = (recipient_name and recipient_name != '—') or recipient_social or recipient_phone %}
   <tr id="delivery-{{ delivery.id }}" data-delivery-row-id="{{ delivery.id }}"{% if delivery.status == 'Доставлено' %} class="florist-row--delivered"{% endif %}>
     <td class="w-10">
       <input
@@ -381,15 +416,13 @@
     <td class="addr-cell">
       {% if delivery.is_pickup %}
         <span class="florist-badge">Самовивіз</span>
-        <div class="mt-1 font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
-        {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
         {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
+        {{ contact_blocks(has_client_contact, client, instagram, has_recipient_contact, recipient_name, recipient_social, recipient_phone, inline=true) }}
       {% elif delivery.delivery_method == 'nova_poshta' %}
         <span class="florist-badge">Нова пошта</span>
-        <div class="mt-1 font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
-        {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
         {% if street %}<div class="mt-1 text-xs text-stone-500">{{ street }}{% if building %}, {{ building }}{% endif %}</div>{% endif %}
         {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
+        {{ contact_blocks(has_client_contact, client, instagram, has_recipient_contact, recipient_name, recipient_social, recipient_phone, inline=true) }}
       {% else %}
         {% if delivery.courier and delivery.courier.is_taxi %}
           <span class="florist-badge" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">
@@ -401,10 +434,8 @@
           <i class="bi bi-chevron-down addr-chevron"></i>
         </button>
         <div class="addr-expanded" hidden>
-          <div class="font-medium text-stone-700 text-sm break-all">{{ recipient_name }}</div>
-          {% if instagram %}<div class="text-sm text-stone-500 break-all">{{ instagram }}</div>{% endif %}
-          {% if recipient_phone %}<div class="text-sm text-stone-500 break-all">{{ recipient_phone }}</div>{% endif %}
-          {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
+          {% if address_comment %}<div class="mb-2 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
+          {{ contact_blocks(has_client_contact, client, instagram, has_recipient_contact, recipient_name, recipient_social, recipient_phone, inline=false) }}
         </div>
       {% endif %}
     </td>
@@ -1090,6 +1121,18 @@
       const expanded = btn.getAttribute('aria-expanded') === 'true';
       btn.setAttribute('aria-expanded', String(!expanded));
       btn.nextElementSibling.hidden = expanded;
+    });
+
+    // Collapsible client/recipient contact blocks (pickup & nova_poshta)
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('.client-contact-toggle');
+      if (!btn) return;
+      const panel = btn.nextElementSibling;
+      const isOpen = !panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', isOpen);
+      btn.setAttribute('aria-expanded', String(!isOpen));
+      const chevron = btn.querySelector('.bi-chevron-down');
+      if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
     });
   });
 
