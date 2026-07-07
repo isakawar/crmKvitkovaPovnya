@@ -591,17 +591,18 @@ def delete_route(route_id):
     delivery_ids = [stop.delivery_id for stop in route.stops]
     if delivery_ids:
         from app.models.delivery import Delivery
-        Delivery.query.filter(Delivery.id.in_(delivery_ids)).update(
-            {'status': 'Очікує'}, synchronize_session=False
-        )
+        for delivery in Delivery.query.filter(Delivery.id.in_(delivery_ids)).all():
+            delivery.status = 'Очікує'
 
     db.session.delete(route)
-    db.session.commit()
+
     _user = current_user._get_current_object() if current_user.is_authenticated else None
     from app.services.activity_log_service import log as _log
     _log(_user, 'delete', 'route', route_id,
         f"Видалено маршрут на {route_date_str} ({deliveries_count} доставок)",
         before_data=before_data)
+
+    db.session.commit()
     flash('Маршрут видалено', 'success')
     return redirect(url_for('routes.saved_routes'))
 
