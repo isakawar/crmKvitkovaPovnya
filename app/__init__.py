@@ -121,6 +121,8 @@ def create_app(config_class=DevelopmentConfig):
     # Захист всіх маршрутів за замовчуванням
     @app.before_request
     def require_login():
+        if app.config.get('LOGIN_DISABLED'):
+            return
         public_endpoints = ['auth.login', 'static', 'changelog']
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):

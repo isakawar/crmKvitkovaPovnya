@@ -11,6 +11,8 @@ ENTITY_LABELS = {
     'order': 'Замовлення',
     'client': 'Клієнт',
     'subscription': 'Підписка',
+    'route': 'Маршрут',
+    'delivery': 'Доставка',
 }
 
 ACTION_LABELS = {
@@ -18,6 +20,18 @@ ACTION_LABELS = {
     'edit': 'Редагування',
     'delete': 'Видалення',
     'extend': 'Продовження',
+    'send': 'Відправка',
+    'status_change': 'Зміна статусу',
+    'stop': 'Зупинка',
+    'resume': 'Відновлення',
+}
+
+TAB_ENTITY_MAP = {
+    'orders': 'order',
+    'routes': 'route',
+    'subscriptions': 'subscription',
+    'clients': 'client',
+    'deliveries': 'delivery',
 }
 
 
@@ -30,6 +44,9 @@ def activity_log_list():
     page = int(request.args.get('page', 1))
     per_page = 50
 
+    tab = request.args.get('tab', '').strip()
+    active_tab = tab if tab in TAB_ENTITY_MAP else 'all'
+
     user_id = request.args.get('user_id', '').strip()
     entity_type = request.args.get('entity_type', '').strip()
     action = request.args.get('action', '').strip()
@@ -37,6 +54,10 @@ def activity_log_list():
     date_to = request.args.get('date_to', '').strip()
     client_id = request.args.get('client_id', '').strip()
     order_id = request.args.get('order_id', '').strip()
+
+    # Tab overrides entity_type filter (unless client/order-specific filters are active)
+    if active_tab != 'all' and not client_id and not order_id:
+        entity_type = TAB_ENTITY_MAP[active_tab]
 
     query = ActivityLog.query
 
@@ -79,6 +100,16 @@ def activity_log_list():
 
     users = User.query.filter(User.user_type.in_(['admin', 'manager'])).order_by(User.display_name).all()
 
+    # Build client lookup map for all entries that have client_id in snapshot
+    client_ids = set()
+    for entry in pagination.items:
+        snap = entry.after_data or entry.before_data
+        if snap and snap.get('client_id'):
+            client_ids.add(snap['client_id'])
+    clients_map = {}
+    if client_ids:
+        clients_map = {c.id: c for c in Client.query.filter(Client.id.in_(client_ids)).all()}
+
     selected_client_display = ''
     if client_id:
         c = Client.query.get(int(client_id))
@@ -90,8 +121,11 @@ def activity_log_list():
         entries=pagination.items,
         pagination=pagination,
         users=users,
+        clients_map=clients_map,
         entity_labels=ENTITY_LABELS,
         action_labels=ACTION_LABELS,
+        tab_entity_map=TAB_ENTITY_MAP,
+        active_tab=active_tab,
         selected_user_id=user_id,
         selected_entity_type=entity_type,
         selected_action=action,

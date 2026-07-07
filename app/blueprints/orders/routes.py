@@ -34,7 +34,7 @@ from app.services.route_optimizer_service import (
     RouteOptimizerError,
     RouteOptimizerInfeasibleError,
 )
-from app.services.route_service import save_routes as svc_save_routes
+from app.services.route_service import save_routes as svc_save_routes, remove_delivery_from_route
 import csv
 import io
 from sqlalchemy.orm import joinedload
@@ -395,7 +395,6 @@ def order_edit(order_id):
     if request.method == 'POST':
         logging.info(f'EDIT ORDER {order_id}')
 
-        # Capture first active delivery + its date before update
         import datetime as _dt
         active_before = sorted(
             [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']],
@@ -404,18 +403,57 @@ def order_edit(order_id):
         first_delivery = active_before[0] if active_before else None
         old_date = first_delivery.delivery_date if first_delivery else None
 
-        update_order(order, request.form)
-
-        reschedule_suggestion = None
         new_date_raw = (request.form.get('first_delivery_date') or '').strip()
-        if first_delivery and old_date and new_date_raw:
+        new_date = None
+        if new_date_raw:
             try:
                 new_date = _dt.datetime.strptime(new_date_raw, '%Y-%m-%d').date()
+            except Exception:
+                pass
+
+        force = request.form.get('force_date_change') == 'true'
+
+        # Warn manager if the delivery is already assigned to a route and the date is changing
+        if new_date and old_date and new_date != old_date and not force:
+            if first_delivery:
+                stop = RouteDelivery.query.filter_by(delivery_id=first_delivery.id).first()
+                if stop:
+                    route = stop.route
+                    courier_name = route.courier.name if route.courier else '—'
+                    status_labels = {
+                        'draft': 'Чернетка',
+                        'sent': 'Відправлено',
+                        'accepted': 'Прийнято',
+                        'rejected': 'Відхилено',
+                        'completed': 'Виконано',
+                    }
+                    return jsonify({
+                        'route_conflict': {
+                            'route_id': route.id,
+                            'route_date': route.route_date.strftime('%d.%m.%Y'),
+                            'route_status': route.status,
+                            'route_status_label': status_labels.get(route.status, route.status),
+                            'courier_name': courier_name,
+                            'stops_count': len(route.stops),
+                        }
+                    }), 200
+
+        update_order(order, request.form)
+
+        # Remove from route after forced date change
+        route_removed = None
+        if force and new_date and old_date and new_date != old_date:
+            if first_delivery:
+                route_removed = remove_delivery_from_route(first_delivery)
+
+        reschedule_suggestion = None
+        if first_delivery and old_date and new_date and new_date != old_date:
+            try:
                 reschedule_suggestion = calculate_reschedule_plan(first_delivery, old_date, new_date)
             except Exception:
                 pass
 
-        return jsonify({'success': True, 'reschedule_suggestion': reschedule_suggestion})
+        return jsonify({'success': True, 'reschedule_suggestion': reschedule_suggestion, 'route_removed': route_removed})
 
     delivery_comment = next((d.comment for d in order.deliveries if d.comment), None)
     delivery_preferences = next((d.preferences for d in order.deliveries if d.preferences), None)
@@ -458,7 +496,11 @@ def order_edit(order_id):
         'delivery_type': 'One-time',
         'size': order.size,
         'custom_amount': order.custom_amount,
-        'first_delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
+        'first_delivery_date': (
+            first_pending.delivery_date.strftime('%Y-%m-%d')
+            if first_pending and first_pending.delivery_date
+            else (order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '')
+        ),
         'delivery_day': '',
         'time_from': order.time_from,
         'time_to': order.time_to,
@@ -607,8 +649,14 @@ def update_delivery_times():
         return jsonify({'success': False, 'error': 'Доставки не знайдені'}), 404
 
     old_dates = {}
+    before_snapshots = {}
     for delivery in deliveries:
         old_dates[delivery.id] = delivery.delivery_date
+        before_snapshots[delivery.id] = {
+            'delivery_date': str(delivery.delivery_date) if delivery.delivery_date else None,
+            'time_from': delivery.time_from,
+            'time_to': delivery.time_to,
+        }
         delivery.time_from = None if clear_time else (time_from or None)
         delivery.time_to = None if clear_time else (time_to or None)
         if clear_time:
@@ -621,6 +669,32 @@ def update_delivery_times():
             if delivery.status == 'Розподілено':
                 RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
                 delivery.status = 'Очікує'
+            if delivery.order_id:
+                _order = Order.query.get(delivery.order_id)
+                if _order:
+                    active = sorted(
+                        [d for d in _order.deliveries if d.status not in ('Доставлено', 'Скасовано')],
+                        key=lambda d: d.delivery_date or date.min,
+                    )
+                    if active and active[0].id == delivery.id:
+                        _order.delivery_date = delivery_date
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    for delivery in deliveries:
+        after = {
+            'delivery_date': str(delivery.delivery_date) if delivery.delivery_date else None,
+            'time_from': delivery.time_from,
+            'time_to': delivery.time_to,
+        }
+        _log(
+            current_user._get_current_object() if current_user.is_authenticated else None,
+            'edit', 'order', delivery.order_id,
+            f'Змінено час/дату доставки #{delivery.id} (замовлення #{delivery.order_id})',
+            before_data=before_snapshots[delivery.id],
+            after_data=after,
+        )
+
     db.session.commit()
 
     reschedule_suggestion = None

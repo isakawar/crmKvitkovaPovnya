@@ -16,6 +16,7 @@ def save_routes(
     result: dict,
     selected_date: date,
     editing_route_id: int | None = None,
+    user=None,
 ) -> list[DeliveryRoute]:
     """Persist optimized routes for a given date.
 
@@ -40,6 +41,7 @@ def save_routes(
     saved_route_ids = []
     _editing_route_id = editing_route_id
     is_single_route_edit = bool(editing_route_id)
+    _log_entries = []  # (action, route_id, date_str, stops_info)
 
     for route_data in routes_data:
         stops = route_data.get('stops', [])
@@ -61,8 +63,10 @@ def save_routes(
             route_db_id = _editing_route_id
             _editing_route_id = None
 
+        is_new_route = not route_db_id or not DeliveryRoute.query.get(route_db_id)
         dr = _upsert_delivery_route(route_db_id, route_data, selected_date, stops, single_route_cache)
 
+        stops_info = []
         for i, stop in enumerate(stops):
             delivery_id = stop.get('id')
             if not delivery_id:
@@ -85,6 +89,27 @@ def save_routes(
             if delivery and delivery.status == 'Очікує':
                 delivery.status = 'Розподілено'
 
+            client_name = ''
+            if delivery:
+                if delivery.client:
+                    client_name = delivery.client.name or ''
+                elif delivery.order and delivery.order.client:
+                    client_name = delivery.order.client.name or ''
+            stops_info.append({
+                'stop': i + 1,
+                'delivery_id': delivery_id,
+                'client': client_name,
+                'address': stop.get('address', ''),
+                'eta': stop.get('eta', ''),
+            })
+
+        _log_entries.append((
+            'create' if is_new_route else 'edit',
+            dr.id,
+            selected_date.strftime('%d.%m.%Y'),
+            len(stops),
+            stops_info,
+        ))
         saved_route_ids.append(dr.id)
 
     any_db_id = any(r.get('routeDbId') for r in routes_data)  # noqa: SIM118
@@ -92,6 +117,27 @@ def save_routes(
         _cleanup_stale_routes(selected_date, saved_route_ids)
 
     db.session.commit()
+
+    if _log_entries:
+        from flask_login import current_user
+        from app.services.activity_log_service import log as _log
+        _user = user
+        if _user is None:
+            try:
+                _user = current_user._get_current_object() if current_user.is_authenticated else None
+            except Exception:
+                _user = None
+        for action, route_id, date_str, deliveries_count, stops_info in _log_entries:
+            verb = 'Створено' if action == 'create' else 'Відредаговано'
+            _log(
+                _user, action, 'route', route_id,
+                f'{verb} маршрут на {date_str} ({deliveries_count} доставок)',
+                after_data={
+                    'date': date_str,
+                    'deliveries_count': deliveries_count,
+                    'stops': stops_info,
+                },
+            )
 
     return (
         DeliveryRoute.query
@@ -158,6 +204,40 @@ def _upsert_delivery_route(route_db_id, route_data, selected_date, stops, cached
     db.session.add(dr)
     db.session.flush()
     return dr
+
+
+def remove_delivery_from_route(delivery) -> dict:
+    """Remove a single delivery from its assigned route.
+
+    Resets delivery status to 'Очікує', deletes the RouteDelivery stop,
+    and either deletes the now-empty route or marks it as changed if already sent.
+    Returns a dict with info about the affected route.
+    """
+    stop = RouteDelivery.query.filter_by(delivery_id=delivery.id).first()
+    if not stop:
+        return {}
+
+    route = stop.route
+    total_stops = RouteDelivery.query.filter_by(route_id=route.id).count()
+    remaining = total_stops - 1
+
+    route_id = route.id
+    route_status = route.status
+
+    db.session.delete(stop)
+    delivery.status = 'Очікує'
+    delivery.courier_id = None
+
+    if remaining == 0:
+        db.session.delete(route)
+        db.session.commit()
+        return {'route_id': route_id, 'route_status': route_status, 'remaining_stops': 0, 'route_deleted': True}
+
+    if route_status in ('sent', 'accepted'):
+        route.content_changed_at = datetime.utcnow()
+
+    db.session.commit()
+    return {'route_id': route_id, 'route_status': route_status, 'remaining_stops': remaining, 'route_deleted': False}
 
 
 def _reset_route_deliveries(dr: DeliveryRoute):

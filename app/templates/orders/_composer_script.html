@@ -545,6 +545,8 @@ document.addEventListener('DOMContentLoaded', function() {
             extendHeaderBtn.removeAttribute('data-order-id');
             extendHeaderBtn.removeAttribute('data-client-instagram');
         }
+        const _badge = document.getElementById('order-id-badge');
+        if (_badge) { _badge.classList.add('hidden'); _badge.textContent = ''; }
     }
 
     function openComposer(flow = 'order', clientInstagram = '') {
@@ -843,6 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const data = await response.json().catch(() => ({}));
 
+            if (response.ok && data.route_conflict) {
+                showRouteConflictModal(data.route_conflict, fd, url);
+                return;
+            }
+
             if (!(response.ok && data.success)) {
                 showOrderError(data.error || 'Помилка збереження');
                 return;
@@ -862,6 +869,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 await window.deletePendingDraft();
             }
 
+            if (data.route_removed && !data.route_removed.route_deleted) {
+                showToast(`Доставку видалено з маршруту #${data.route_removed.route_id}`, 'success');
+            }
+
             if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
                 showToast(successMessage, 'success');
                 window.showRescheduleModal(data.reschedule_suggestion);
@@ -874,6 +885,77 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             setComposerSubmitting(false);
         }
+    }
+
+    function showRouteConflictModal(conflict, fd, url) {
+        const modal = document.getElementById('routeConflictModal');
+        if (!modal) return;
+
+        document.getElementById('rcRouteId').textContent = `#${conflict.route_id}`;
+        document.getElementById('rcRouteDate').textContent = conflict.route_date;
+        document.getElementById('rcCourierName').textContent = conflict.courier_name;
+        document.getElementById('rcStopsCount').textContent = conflict.stops_count;
+
+        const statusEl = document.getElementById('rcRouteStatus');
+        statusEl.textContent = conflict.route_status_label;
+        const statusColors = {
+            draft:     'color: #78716c;',
+            sent:      'color: #2563eb; font-weight: 600;',
+            accepted:  'color: #16a34a; font-weight: 600;',
+            rejected:  'color: #dc2626; font-weight: 600;',
+            completed: 'color: #7c3aed; font-weight: 600;',
+        };
+        statusEl.setAttribute('style', statusColors[conflict.route_status] || 'color: #1c1917;');
+
+        const warning = document.getElementById('rcSentWarning');
+        if (warning) {
+            warning.classList.toggle('hidden', !['sent', 'accepted'].includes(conflict.route_status));
+        }
+
+        const confirmBtn = document.getElementById('rcConfirmBtn');
+        const newConfirmBtn = confirmBtn.cloneNode(true);
+        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+        const modalInstance = new bootstrap.Modal(modal);
+        const rcOverlay = document.getElementById('rcDimOverlay');
+        if (rcOverlay) { rcOverlay.style.opacity = '1'; rcOverlay.style.pointerEvents = 'auto'; }
+        modal.addEventListener('hidden.bs.modal', () => {
+            if (rcOverlay) { rcOverlay.style.opacity = '0'; rcOverlay.style.pointerEvents = 'none'; }
+        }, { once: true });
+        newConfirmBtn.addEventListener('click', async () => {
+            modalInstance.hide();
+            fd.set('force_date_change', 'true');
+            setComposerSubmitting(true);
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd,
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!(response.ok && data.success)) {
+                    showOrderError(data.error || 'Помилка збереження');
+                    return;
+                }
+                addOrderModal.hide();
+                const routeRemovedMsg = data.route_removed && !data.route_removed.route_deleted
+                    ? `Доставку видалено з маршруту #${data.route_removed.route_id}. `
+                    : '';
+                if (data.reschedule_suggestion && typeof window.showRescheduleModal === 'function') {
+                    if (routeRemovedMsg) showToast(routeRemovedMsg.trim(), 'success');
+                    showToast('Замовлення успішно оновлено!', 'success');
+                    window.showRescheduleModal(data.reschedule_suggestion);
+                } else {
+                    softReloadWithToast(routeRemovedMsg + 'Замовлення успішно оновлено!', 'success');
+                }
+            } catch (e) {
+                showOrderError('Помилка зʼєднання з сервером');
+            } finally {
+                setComposerSubmitting(false);
+            }
+        });
+
+        modalInstance.show();
     }
 
     function populateComposerForm(orderData, orderId, options = {}) {
@@ -918,6 +1000,16 @@ document.addEventListener('DOMContentLoaded', function() {
         setComposerFlow(flow, true);
         if (options.forceOrderTitle && orderModalTitle) {
             orderModalTitle.textContent = 'Редагувати замовлення';
+        }
+
+        const orderIdBadge = document.getElementById('order-id-badge');
+        if (orderIdBadge) {
+            if (orderId) {
+                orderIdBadge.textContent = `#${orderId}`;
+                orderIdBadge.classList.remove('hidden');
+            } else {
+                orderIdBadge.classList.add('hidden');
+            }
         }
 
         if (extendHeaderBtn) {
