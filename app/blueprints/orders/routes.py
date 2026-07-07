@@ -649,8 +649,14 @@ def update_delivery_times():
         return jsonify({'success': False, 'error': 'Доставки не знайдені'}), 404
 
     old_dates = {}
+    before_snapshots = {}
     for delivery in deliveries:
         old_dates[delivery.id] = delivery.delivery_date
+        before_snapshots[delivery.id] = {
+            'delivery_date': str(delivery.delivery_date) if delivery.delivery_date else None,
+            'time_from': delivery.time_from,
+            'time_to': delivery.time_to,
+        }
         delivery.time_from = None if clear_time else (time_from or None)
         delivery.time_to = None if clear_time else (time_to or None)
         if clear_time:
@@ -672,6 +678,23 @@ def update_delivery_times():
                     )
                     if active and active[0].id == delivery.id:
                         _order.delivery_date = delivery_date
+
+    from flask_login import current_user
+    from app.services.activity_log_service import log as _log
+    for delivery in deliveries:
+        after = {
+            'delivery_date': str(delivery.delivery_date) if delivery.delivery_date else None,
+            'time_from': delivery.time_from,
+            'time_to': delivery.time_to,
+        }
+        _log(
+            current_user._get_current_object() if current_user.is_authenticated else None,
+            'edit', 'order', delivery.order_id,
+            f'Змінено час/дату доставки #{delivery.id} (замовлення #{delivery.order_id})',
+            before_data=before_snapshots[delivery.id],
+            after_data=after,
+        )
+
     db.session.commit()
 
     reschedule_suggestion = None
