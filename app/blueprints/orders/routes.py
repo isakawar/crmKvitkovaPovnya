@@ -496,7 +496,11 @@ def order_edit(order_id):
         'delivery_type': 'One-time',
         'size': order.size,
         'custom_amount': order.custom_amount,
-        'first_delivery_date': order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '',
+        'first_delivery_date': (
+            first_pending.delivery_date.strftime('%Y-%m-%d')
+            if first_pending and first_pending.delivery_date
+            else (order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '')
+        ),
         'delivery_day': '',
         'time_from': order.time_from,
         'time_to': order.time_to,
@@ -659,6 +663,15 @@ def update_delivery_times():
             if delivery.status == 'Розподілено':
                 RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
                 delivery.status = 'Очікує'
+            if delivery.order_id:
+                _order = Order.query.get(delivery.order_id)
+                if _order:
+                    active = sorted(
+                        [d for d in _order.deliveries if d.status not in ('Доставлено', 'Скасовано')],
+                        key=lambda d: d.delivery_date or date.min,
+                    )
+                    if active and active[0].id == delivery.id:
+                        _order.delivery_date = delivery_date
     db.session.commit()
 
     reschedule_suggestion = None
