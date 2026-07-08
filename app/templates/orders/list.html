@@ -636,7 +636,11 @@
                     {{ order.sequence_number }}/4
                   </span>
                   {% endif %}
-                  {% if order and order.cycle_number and order.cycle_number > 1 %}
+                  {% if order and order.subscription and order.subscription.parent_subscription_id %}
+                  <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+                    Продовження
+                  </span>
+                  {% elif order and order.cycle_number and order.cycle_number > 1 %}
                   <span class="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
                     Круг {{ order.cycle_number }}
                   </span>

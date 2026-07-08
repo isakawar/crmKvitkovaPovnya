@@ -632,16 +632,6 @@ def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
             func.max(Delivery.delivery_date).label('last_date'),
         )
         .join(Delivery, Delivery.order_id == Order.id)
-        .filter(Order.subscription_id.isnot(None), Order.cycle_number == 1)
-        .group_by(Order.subscription_id)
-        .subquery()
-    )
-
-    max_cycle_subq = (
-        db.session.query(
-            Order.subscription_id,
-            func.max(Order.cycle_number).label('max_cycle'),
-        )
         .filter(Order.subscription_id.isnot(None))
         .group_by(Order.subscription_id)
         .subquery()
@@ -650,12 +640,11 @@ def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
     q = (
         db.session.query(
             func.count(Subscription.id).label('total'),
-            func.count(case((max_cycle_subq.c.max_cycle > 1, Subscription.id))).label('renewed'),
+            func.count(case((Subscription.is_extended == True, Subscription.id))).label('renewed'),  # noqa: E712
             func.count(case((Subscription.followup_status == 'declined', Subscription.id))).label('declined'),
             func.count(case((Subscription.followup_status == 'pending', Subscription.id))).label('pending'),
         )
         .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
-        .outerjoin(max_cycle_subq, max_cycle_subq.c.subscription_id == Subscription.id)
         .filter(Subscription.is_renewal_reminder == False)  # noqa: E712
     )
 

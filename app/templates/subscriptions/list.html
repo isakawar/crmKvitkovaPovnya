@@ -245,9 +245,9 @@
         {{ sub.delivery_day }}
       </span>
       {% endif %}
-      {% if sub.current_cycle > 1 %}
+      {% if sub.parent_subscription_id %}
       <span class="inline-flex items-center px-2 py-0.5 rounded-md border border-amber-200 bg-amber-50 text-amber-700 text-xs font-medium">
-        Круг {{ sub.current_cycle }}
+        Продовження
       </span>
       {% endif %}
       {% if sub.is_stopped %}
