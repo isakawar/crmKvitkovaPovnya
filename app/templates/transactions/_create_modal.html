@@ -2,13 +2,60 @@
   .txn-modal-dialog {
     max-width: 480px;
     margin: 1rem auto;
+    transition: max-width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .txn-modal-dialog.is-expanded {
+    max-width: 880px;
   }
 
   .txn-modal-content {
+    display: flex;
+    flex-direction: column;
     border: 1px solid #e7e5e4;
     border-radius: 20px;
     overflow: hidden;
     box-shadow: 0 20px 48px rgba(28, 25, 23, 0.14);
+  }
+
+  .txn-cols-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .txn-form-col {
+    flex: 0 0 480px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .txn-form-col form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .txn-breakdown-col {
+    overflow: hidden;
+    max-width: 0;
+    transition: max-width 280ms cubic-bezier(0.4, 0, 0.2, 1);
+    background: #fafaf9;
+    border-left: 1px solid #f1f0ef;
+  }
+  .txn-modal-dialog.is-expanded .txn-breakdown-col {
+    max-width: 400px;
+  }
+
+  .txn-bd-inner {
+    width: 400px;
+    padding: 1.1rem 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    height: 100%;
+    overflow-y: auto;
+    box-sizing: border-box;
   }
 
   .txn-modal-header {
@@ -19,211 +66,181 @@
     justify-content: space-between;
     gap: 0.75rem;
   }
-
-  .txn-modal-header-left {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
+  .txn-modal-header-left { display: flex; align-items: center; gap: 0.75rem; }
   .txn-modal-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 12px;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #b45309;
-    font-size: 18px;
-    flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 12px;
+    background: #fffbeb; border: 1px solid #fde68a;
+    display: flex; align-items: center; justify-content: center;
+    color: #b45309; font-size: 18px; flex-shrink: 0;
   }
-
-  .txn-modal-title {
-    margin: 0;
-    font-size: 17px;
-    font-weight: 700;
-    color: #1c1917;
-    line-height: 1.2;
-  }
-
-  .txn-modal-subtitle {
-    margin: 2px 0 0;
-    font-size: 12.5px;
-    color: #a8a29e;
-    line-height: 1.3;
-  }
-
+  .txn-modal-title { margin: 0; font-size: 17px; font-weight: 700; color: #1c1917; line-height: 1.2; }
+  .txn-modal-subtitle { margin: 2px 0 0; font-size: 12.5px; color: #a8a29e; line-height: 1.3; }
   .txn-close-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    border: 1px solid #e7e5e4;
-    background: #ffffff;
-    color: #a8a29e;
-    transition: all .15s ease;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
+    width: 32px; height: 32px; border-radius: 10px;
+    border: 1px solid #e7e5e4; background: #ffffff; color: #a8a29e;
+    transition: all .15s ease; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
   }
-
-  .txn-close-btn:hover {
-    border-color: #d6d3d1;
-    color: #57534e;
-    background: #fafaf9;
-  }
+  .txn-close-btn:hover { border-color: #d6d3d1; color: #57534e; background: #fafaf9; }
 
   .txn-modal-body {
     padding: 1rem 1.25rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+    display: flex; flex-direction: column; gap: 0.75rem;
   }
 
-  .txn-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-    position: relative;
-  }
-
+  .txn-field { display: flex; flex-direction: column; gap: 0.3rem; position: relative; }
   .txn-label {
-    font-size: 10.5px;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: #a8a29e;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #a8a29e;
   }
 
-  .txn-input,
-  .txn-select {
-    width: 100%;
-    height: 40px;
-    padding: 0 0.8rem;
-    font-size: 14px;
-    border: 1px solid #d6d3d1;
-    border-radius: 10px;
-    background: #ffffff;
-    color: #1c1917;
-    transition: border-color .15s ease, box-shadow .15s ease;
+  .txn-input, .txn-select {
+    width: 100%; height: 40px; padding: 0 0.8rem; font-size: 14px;
+    border: 1px solid #d6d3d1; border-radius: 10px; background: #ffffff;
+    color: #1c1917; transition: border-color .15s ease, box-shadow .15s ease;
   }
-
   .txn-select {
-    appearance: none;
-    -webkit-appearance: none;
-    padding-right: 2.2rem;
+    appearance: none; -webkit-appearance: none; padding-right: 2.2rem;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23a8a29e' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.75rem center;
-    cursor: pointer;
+    background-repeat: no-repeat; background-position: right 0.75rem center; cursor: pointer;
   }
-
-  .txn-input:focus,
-  .txn-select:focus {
-    outline: none;
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+  .txn-input:focus, .txn-select:focus {
+    outline: none; border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(251,191,36,0.15);
   }
 
   .txn-client-dropdown {
-    position: absolute;
-    top: calc(100% + 2px);
-    left: 0;
-    right: 0;
-    z-index: 1060;
-    background: #ffffff;
-    border: 1px solid #e7e5e4;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(28, 25, 23, 0.12);
-    overflow: hidden;
-    max-height: 200px;
-    overflow-y: auto;
+    position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+    z-index: 1060; background: #ffffff; border: 1px solid #e7e5e4;
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(28,25,23,0.12);
+    overflow: hidden; max-height: 200px; overflow-y: auto;
   }
-
   .txn-client-dropdown button {
-    display: block;
-    width: 100%;
-    text-align: left;
-    padding: 0.5rem 0.8rem;
-    font-size: 13.5px;
-    color: #1c1917;
-    background: none;
-    border: none;
-    border-bottom: 1px solid #f5f5f4;
-    transition: background .1s ease;
-    cursor: pointer;
+    display: block; width: 100%; text-align: left; padding: 0.5rem 0.8rem;
+    font-size: 13.5px; color: #1c1917; background: none; border: none;
+    border-bottom: 1px solid #f5f5f4; transition: background .1s ease; cursor: pointer;
   }
-
-  .txn-client-dropdown button:last-child {
-    border-bottom: none;
-  }
-
-  .txn-client-dropdown button:hover {
-    background: #fafaf9;
-  }
-
-  .txn-client-dropdown button .txn-dd-phone {
-    display: block;
-    font-size: 11.5px;
-    color: #a8a29e;
-    margin-top: 1px;
-  }
+  .txn-client-dropdown button:last-child { border-bottom: none; }
+  .txn-client-dropdown button:hover { background: #fafaf9; }
+  .txn-client-dropdown button .txn-dd-phone { display: block; font-size: 11.5px; color: #a8a29e; margin-top: 1px; }
 
   .txn-modal-footer {
-    border-top: 1px solid #f1f0ef;
-    padding: 0.85rem 1.25rem;
-    display: flex;
-    gap: 0.5rem;
+    border-top: 1px solid #f1f0ef; padding: 0.85rem 1.25rem; display: flex; gap: 0.5rem;
+    margin-top: auto;
   }
-
   .txn-btn {
-    flex: 1;
-    height: 40px;
-    border-radius: 10px;
-    padding: 0 1rem;
-    font-size: 14px;
-    font-weight: 600;
-    border: 1px solid transparent;
-    transition: all .15s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
+    flex: 1; height: 40px; border-radius: 10px; padding: 0 1rem;
+    font-size: 14px; font-weight: 600; border: 1px solid transparent;
+    transition: all .15s ease; display: flex; align-items: center; justify-content: center; gap: 0.35rem;
+  }
+  .txn-btn--ghost { background: #ffffff; border-color: #e7e5e4; color: #57534e; }
+  .txn-btn--ghost:hover { background: #fafaf9; border-color: #d6d3d1; }
+  .txn-btn--primary { background: #1c1917; color: #ffffff; }
+  .txn-btn--primary:hover { background: #292524; }
+  .txn-btn--primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .txn-linked-selector { position: relative; }
+
+  .txn-linked-btn {
+    width: 100%; height: 40px; padding: 0 2.2rem 0 0.8rem;
+    font-size: 14px; text-align: left; cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%23a8a29e' d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.75rem center;
+    color: #a8a29e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+  }
+  .txn-linked-btn.has-value { color: #1c1917; }
+
+  .txn-linked-dropdown {
+    position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+    z-index: 1060; background: #ffffff; border: 1px solid #e7e5e4;
+    border-radius: 10px; box-shadow: 0 8px 24px rgba(28,25,23,0.12);
+    overflow-y: auto; max-height: 280px;
   }
 
-  .txn-btn--ghost {
-    background: #ffffff;
-    border-color: #e7e5e4;
-    color: #57534e;
+  .txn-linked-item {
+    display: flex; align-items: center; gap: 0.65rem;
+    padding: 0.55rem 0.8rem; cursor: pointer;
+    border-bottom: 1px solid #f5f5f4; transition: background .1s ease;
+  }
+  .txn-linked-item:last-child { border-bottom: none; }
+  .txn-linked-item:hover { background: #fafaf9; }
+
+  .txn-linked-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex-shrink: 0;
+  }
+  .txn-linked-icon--sub { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+  .txn-linked-icon--order { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+
+  .txn-linked-info { flex: 1; min-width: 0; }
+  .txn-linked-title { font-size: 13px; font-weight: 600; color: #1c1917; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .txn-linked-sub { font-size: 11px; color: #a8a29e; margin-top: 1px; }
+
+  .txn-linked-meta { text-align: right; flex-shrink: 0; }
+  .txn-linked-price { font-size: 12.5px; font-weight: 600; color: #1c1917; white-space: nowrap; }
+  .txn-linked-date { font-size: 11px; color: #a8a29e; margin-top: 1px; }
+
+  .txn-auto-badge {
+    display: inline-flex; align-items: center;
+    padding: 0.1rem 0.45rem; border-radius: 999px;
+    background: #fef3c7; border: 1px solid #fde68a;
+    color: #92400e; font-size: 10px; font-weight: 600;
+    margin-left: 0.35rem; text-transform: none; letter-spacing: 0;
   }
 
-  .txn-btn--ghost:hover {
-    background: #fafaf9;
-    border-color: #d6d3d1;
+  /* Breakdown panel styles */
+  .txn-bd-section-label {
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #a8a29e;
+    margin: 0 0 0.5rem; display: flex; align-items: center; gap: 0.35rem;
   }
-
-  .txn-btn--primary {
-    background: #1c1917;
-    color: #ffffff;
+  .txn-bd-info-card {
+    background: #fff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 0.75rem;
   }
-
-  .txn-btn--primary:hover {
-    background: #292524;
+  .txn-bd-card-title { font-size: 13.5px; font-weight: 600; color: #1c1917; }
+  .txn-bd-card-meta {
+    font-size: 12px; color: #78716c; margin-top: 3px;
+    display: flex; justify-content: space-between;
   }
-
-  .txn-btn--primary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  .txn-bd-deliveries { display: flex; flex-direction: column; gap: 0.4rem; }
+  .txn-bd-delivery-row {
+    display: flex; align-items: center; gap: 0.55rem;
+    background: #fff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 0.55rem 0.7rem;
   }
+  .txn-bd-num-circle {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a;
+    font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .txn-bd-delivery-info { flex: 1; min-width: 0; }
+  .txn-bd-delivery-title { font-size: 12.5px; font-weight: 600; color: #1c1917; display: block; }
+  .txn-bd-delivery-date { font-size: 11px; color: #a8a29e; }
+  .txn-bd-amount-wrap { display: flex; align-items: center; gap: 0.25rem; }
+  .txn-bd-amount-input {
+    width: 76px; height: 30px; border: 1px solid #d6d3d1; border-radius: 8px;
+    padding: 0 0.4rem; font-size: 12.5px; font-weight: 600; text-align: right;
+    color: #1c1917; background: #fafaf9;
+  }
+  .txn-bd-amount-input:focus {
+    outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(251,191,36,0.15);
+    background: #fff;
+  }
+  .txn-bd-amount-currency { font-size: 11px; color: #78716c; white-space: nowrap; }
+  .txn-bd-total-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid #e7e5e4; border-radius: 10px; padding: 0.75rem;
+  }
+  .txn-bd-total-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #57534e; }
+  .txn-bd-total-value { font-size: 15px; font-weight: 700; color: #16a34a; }
+  .txn-bd-note { font-size: 11px; color: #a8a29e; display: flex; align-items: flex-start; gap: 0.35rem; line-height: 1.4; }
 </style>
 
 <div class="modal fade" id="createTxnModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-  <div class="modal-dialog modal-dialog-centered txn-modal-dialog">
+  <div class="modal-dialog modal-dialog-centered txn-modal-dialog" id="createTxnModalDialog">
     <div class="modal-content txn-modal-content">
 
+      <!-- Header spans full width -->
       <div class="txn-modal-header">
         <div class="txn-modal-header-left">
           <div class="txn-modal-icon">
@@ -239,56 +256,82 @@
         </button>
       </div>
 
-      <form id="createTxnForm" novalidate autocomplete="off">
-        <div class="txn-modal-body">
-          <div id="txnErrors" class="hidden rounded-3 border border-danger-subtle bg-danger-subtle px-3 py-2 text-danger small"></div>
+      <!-- Two-column body -->
+      <div class="txn-cols-body">
 
-          <div class="txn-field" id="txnClientField">
-            <label class="txn-label">Клієнт</label>
-            <input type="text" id="txnClientSearch" placeholder="Введіть нік клієнта" class="txn-input" autocomplete="off">
-            <input type="hidden" id="txnClientId" name="client_id">
-            <div id="txnClientDropdown" class="txn-client-dropdown" style="display:none;"></div>
-          </div>
+        <!-- LEFT: form -->
+        <div class="txn-form-col">
+          <form id="createTxnForm" novalidate autocomplete="off">
+            <div class="txn-modal-body">
+              <div id="txnErrors" class="hidden rounded-3 border border-danger-subtle bg-danger-subtle px-3 py-2 text-danger small"></div>
 
-          <div class="txn-field">
-            <label class="txn-label">Сума (грн)</label>
-            <input type="number" id="txnAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 500.50" class="txn-input">
-          </div>
+              <div class="txn-field" id="txnClientField">
+                <label class="txn-label">Клієнт</label>
+                <input type="text" id="txnClientSearch" placeholder="Введіть нік клієнта" class="txn-input" autocomplete="off">
+                <input type="hidden" id="txnClientId" name="client_id">
+                <div id="txnClientDropdown" class="txn-client-dropdown" style="display:none;"></div>
+              </div>
 
-          <div class="txn-field" style="display:none;">
-            <select id="txnPaymentType" name="payment_type" class="txn-select">
-              <option value="monobank" selected>Monobank</option>
-              <option value="cash">Готівка</option>
-            </select>
-          </div>
+              <div class="txn-field" id="txnLinkedField" style="display:none;">
+                <label class="txn-label">
+                  Замовлення / підписка
+                  <span id="txnAutoFillBadge" class="txn-auto-badge" style="display:none;">Автопідтягнуто</span>
+                </label>
+                <div class="txn-linked-selector">
+                  <button type="button" id="txnLinkedBtn" class="txn-input txn-linked-btn">
+                    — Оберіть замовлення або підписку —
+                  </button>
+                  <input type="hidden" id="txnLinkedOrderId">
+                  <div id="txnLinkedDropdown" class="txn-linked-dropdown" style="display:none;"></div>
+                </div>
+              </div>
 
-          <div class="txn-field">
-            <label class="txn-label">Рахунок оплати</label>
-            <select id="txnPaymentAccountId" name="payment_account_id" required class="txn-select">
-              <option value="">— Оберіть рахунок —</option>
-            </select>
-          </div>
+              <div class="txn-field">
+                <label class="txn-label">Сума (грн)</label>
+                <input type="number" id="txnAmount" name="amount" min="0.01" step="0.01" required placeholder="Наприклад: 500.50" class="txn-input">
+              </div>
 
-          <div class="txn-field">
-            <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
-            <input type="text" id="txnComment" name="comment" placeholder="Опис" class="txn-input">
-          </div>
+              <div class="txn-field" style="display:none;">
+                <select id="txnPaymentType" name="payment_type" class="txn-select">
+                  <option value="monobank" selected>Monobank</option>
+                  <option value="cash">Готівка</option>
+                </select>
+              </div>
 
-          <div class="txn-field">
-            <label class="txn-label">Дата</label>
-            <input type="date" id="txnDate" name="date" required class="txn-input">
-          </div>
+              <div class="txn-field">
+                <label class="txn-label">Рахунок оплати</label>
+                <select id="txnPaymentAccountId" name="payment_account_id" required class="txn-select">
+                  <option value="">— Оберіть рахунок —</option>
+                </select>
+              </div>
+
+              <div class="txn-field">
+                <label class="txn-label">Коментар <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
+                <input type="text" id="txnComment" name="comment" placeholder="Опис транзакції" class="txn-input">
+              </div>
+
+              <div class="txn-field">
+                <label class="txn-label">Дата</label>
+                <input type="date" id="txnDate" name="date" required class="txn-input">
+              </div>
+            </div>
+
+            <div class="txn-modal-footer">
+              <button type="button" data-bs-dismiss="modal" class="txn-btn txn-btn--ghost">Скасувати</button>
+              <button type="submit" id="saveTxnBtn" class="txn-btn txn-btn--primary">
+                <i class="bi bi-plus-circle"></i>
+                <span>Зберегти</span>
+              </button>
+            </div>
+          </form>
         </div>
 
-        <div class="txn-modal-footer">
-          <button type="button" data-bs-dismiss="modal" class="txn-btn txn-btn--ghost">Скасувати</button>
-          <button type="submit" id="saveTxnBtn" class="txn-btn txn-btn--primary">
-            <i class="bi bi-plus-circle"></i>
-            <span>Зберегти</span>
-          </button>
+        <!-- RIGHT: breakdown panel -->
+        <div class="txn-breakdown-col" id="txnBreakdownCol">
+          <div class="txn-bd-inner" id="txnBreakdownInner"></div>
         </div>
-      </form>
 
+      </div>
     </div>
   </div>
 </div>
@@ -297,6 +340,7 @@
 document.addEventListener('DOMContentLoaded', function () {
   const openBtn = document.getElementById('openCreateTxnModal');
   const modalEl = document.getElementById('createTxnModal');
+  const modalDialog = document.getElementById('createTxnModalDialog');
   const form = document.getElementById('createTxnForm');
   const saveBtn = document.getElementById('saveTxnBtn');
   const saveBtnLabel = saveBtn ? saveBtn.querySelector('span') : null;
@@ -305,12 +349,21 @@ document.addEventListener('DOMContentLoaded', function () {
   const clientSearch = document.getElementById('txnClientSearch');
   const clientIdInput = document.getElementById('txnClientId');
   const clientDropdown = document.getElementById('txnClientDropdown');
+  const amountInput = document.getElementById('txnAmount');
+  const linkedField = document.getElementById('txnLinkedField');
+  const linkedBtn = document.getElementById('txnLinkedBtn');
+  const linkedDropdown = document.getElementById('txnLinkedDropdown');
+  const linkedOrderId = document.getElementById('txnLinkedOrderId');
+  const autoFillBadge = document.getElementById('txnAutoFillBadge');
+  const breakdownInner = document.getElementById('txnBreakdownInner');
 
   if (!openBtn || !modalEl || !form) return;
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   const paymentAccountSelect = document.getElementById('txnPaymentAccountId');
   let paymentAccountsLoaded = false;
+  let amountAutoFilled = false;
+  let currentOrders = [];
 
   async function loadPaymentAccounts() {
     if (paymentAccountsLoaded) return;
@@ -327,9 +380,7 @@ document.addEventListener('DOMContentLoaded', function () {
     } catch (_) {}
   }
 
-  function todayISO() {
-    return new Date().toISOString().slice(0, 10);
-  }
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
 
   function setLoading(isLoading) {
     saveBtn.disabled = isLoading;
@@ -347,57 +398,259 @@ document.addEventListener('DOMContentLoaded', function () {
     errorsEl.classList.add('hidden');
   }
 
-  function hideDropdown() {
+  function hideClientDropdown() {
     clientDropdown.style.display = 'none';
     clientDropdown.innerHTML = '';
   }
 
+  function hideLinkedDropdown() {
+    linkedDropdown.style.display = 'none';
+  }
+
+  function collapseBreakdown() {
+    modalDialog.classList.remove('is-expanded');
+    breakdownInner.innerHTML = '';
+  }
+
+  function resetLinked() {
+    linkedOrderId.value = '';
+    linkedBtn.textContent = '— Оберіть замовлення або підписку —';
+    linkedBtn.classList.remove('has-value');
+    linkedDropdown.innerHTML = '';
+    hideLinkedDropdown();
+    linkedField.style.display = 'none';
+    autoFillBadge.style.display = 'none';
+    collapseBreakdown();
+    currentOrders = [];
+  }
+
+  function fmtAmount(val) {
+    if (val == null) return '';
+    return parseFloat(val).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function recalcBreakdownTotal() {
+    const inputs = breakdownInner.querySelectorAll('.txn-bd-amount-input');
+    if (!inputs.length) return;
+    let sum = 0;
+    inputs.forEach(inp => { sum += parseFloat(inp.value) || 0; });
+    const totalEl = breakdownInner.querySelector('#txnBdTotal');
+    if (totalEl) totalEl.textContent = fmtAmount(sum) + ' грн';
+    amountInput.value = sum > 0 ? sum.toFixed(2) : '';
+  }
+
+  function renderSubscriptionBreakdown(order) {
+    const sub = order.subscription;
+    const deliveriesHtml = (sub.deliveries || []).map((d, i) => {
+      const amt = d.amount != null ? d.amount : '';
+      return `
+        <div class="txn-bd-delivery-row">
+          <div class="txn-bd-num-circle">${d.number || (i + 1)}</div>
+          <div class="txn-bd-delivery-info">
+            <span class="txn-bd-delivery-title">Доставка №${d.number || (i + 1)}</span>
+            <span class="txn-bd-delivery-date">${d.date}</span>
+          </div>
+          <div class="txn-bd-amount-wrap">
+            <input type="number" class="txn-bd-amount-input" value="${amt}" min="0" step="0.01">
+            <span class="txn-bd-amount-currency">грн</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    const total = sub.total != null ? fmtAmount(sub.total) + ' грн' : '—';
+
+    breakdownInner.innerHTML = `
+      <div>
+        <p class="txn-bd-section-label"><i class="bi bi-calendar3"></i> ДЕТАЛІ ПІДПИСКИ</p>
+        <div class="txn-bd-info-card">
+          <div class="txn-bd-card-title">Підписка — ${sub.size} — ${sub.recipient_name} (отримувач)</div>
+          <div class="txn-bd-card-meta">
+            <span>${sub.type_display}</span>
+            <span>від ${sub.date_from}</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="txn-bd-section-label">РОЗБИТТЯ ПО ДОСТАВКАХ</p>
+        <div class="txn-bd-deliveries">${deliveriesHtml}</div>
+      </div>
+      <div class="txn-bd-total-row">
+        <span class="txn-bd-total-label">РАЗОМ</span>
+        <span class="txn-bd-total-value" id="txnBdTotal">${total}</span>
+      </div>
+      <p class="txn-bd-note">
+        <i class="bi bi-info-circle" style="flex-shrink:0;margin-top:1px"></i>
+        Сума підтягнута з підписки. Можна змінити вручну за потреби.
+      </p>`;
+
+    breakdownInner.querySelectorAll('.txn-bd-amount-input').forEach(inp => {
+      inp.addEventListener('input', recalcBreakdownTotal);
+    });
+  }
+
+  function renderOrderBreakdown(order) {
+    const recipient = order.label.replace('Одноразове замовлення — ', '');
+    const amt = order.amount != null ? fmtAmount(order.amount) + ' грн' : '—';
+    breakdownInner.innerHTML = `
+      <div>
+        <p class="txn-bd-section-label"><i class="bi bi-bag"></i> ДЕТАЛІ ЗАМОВЛЕННЯ</p>
+        <div class="txn-bd-info-card">
+          <div class="txn-bd-card-title">Одноразове замовлення</div>
+          <div class="txn-bd-card-meta"><span>Отримувач</span><span>${recipient}</span></div>
+          <div class="txn-bd-card-meta"><span>Дата</span><span>${order.date_display}</span></div>
+          ${order.delivery_type ? `<div class="txn-bd-card-meta"><span>Тип</span><span>${order.delivery_type}</span></div>` : ''}
+        </div>
+      </div>
+      <div class="txn-bd-total-row">
+        <span class="txn-bd-total-label">Сума замовлення</span>
+        <span class="txn-bd-total-value">${amt}</span>
+      </div>
+      <p class="txn-bd-note">
+        <i class="bi bi-info-circle" style="flex-shrink:0;margin-top:1px"></i>
+        Сума підтягнута із замовлення. Можна змінити вручну за потреби.
+      </p>`;
+  }
+
+  function selectOrderItem(order) {
+    linkedOrderId.value = order.id;
+    linkedBtn.textContent = order.label + '   ' + order.date_display;
+    linkedBtn.classList.add('has-value');
+    hideLinkedDropdown();
+
+    if (order.is_subscription && order.subscription) {
+      const total = order.subscription.total;
+      if (total != null) {
+        amountInput.value = total.toFixed(2);
+        amountAutoFilled = true;
+        autoFillBadge.style.display = '';
+      }
+      renderSubscriptionBreakdown(order);
+    } else {
+      if (order.amount != null) {
+        amountInput.value = order.amount.toFixed(2);
+        amountAutoFilled = true;
+        autoFillBadge.style.display = '';
+      }
+      renderOrderBreakdown(order);
+    }
+    modalDialog.classList.add('is-expanded');
+  }
+
+  async function loadClientOrders(clientId) {
+    resetLinked();
+    if (!clientId) return;
+    try {
+      const res = await fetch(`/transactions/clients/${clientId}/orders`);
+      const orders = await res.json();
+      currentOrders = orders;
+
+      if (!orders.length) {
+        linkedDropdown.innerHTML = '<div style="padding:0.75rem 0.8rem;font-size:13px;color:#a8a29e;">У клієнта немає замовлень</div>';
+        linkedField.style.display = '';
+        return;
+      }
+
+      linkedDropdown.innerHTML = orders.map((o, idx) => {
+        const isSub = o.is_subscription;
+        const iconClass = isSub ? 'txn-linked-icon--sub' : 'txn-linked-icon--order';
+        const icon = isSub ? 'bi-calendar3' : 'bi-bag';
+        const subtitle = isSub
+          ? (o.subscription ? o.subscription.type_display : 'Підписка')
+          : (o.delivery_type || 'Одноразове замовлення');
+        const priceVal = isSub && o.subscription && o.subscription.total != null
+          ? o.subscription.total
+          : o.amount;
+        const priceHtml = priceVal != null
+          ? `<div class="txn-linked-price">${fmtAmount(priceVal)} грн</div>`
+          : '';
+        return `<div class="txn-linked-item" data-idx="${idx}">
+          <div class="txn-linked-icon ${iconClass}"><i class="bi ${icon}"></i></div>
+          <div class="txn-linked-info">
+            <div class="txn-linked-title">${o.label}</div>
+            <div class="txn-linked-sub">${subtitle}</div>
+          </div>
+          <div class="txn-linked-meta">
+            ${priceHtml}
+            <div class="txn-linked-date">${o.date_display}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      linkedDropdown.querySelectorAll('.txn-linked-item').forEach(el => {
+        el.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          const order = currentOrders[parseInt(this.dataset.idx)];
+          if (order) selectOrderItem(order);
+        });
+      });
+
+      linkedField.style.display = '';
+    } catch (_) {
+      linkedField.style.display = '';
+    }
+  }
+
+  linkedBtn.addEventListener('click', function () {
+    if (!linkedDropdown.innerHTML) return;
+    const isOpen = linkedDropdown.style.display !== 'none';
+    linkedDropdown.style.display = isOpen ? 'none' : 'block';
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#txnLinkedField')) hideLinkedDropdown();
+  });
+
+  amountInput.addEventListener('input', function () {
+    if (amountAutoFilled) {
+      amountAutoFilled = false;
+      autoFillBadge.style.display = 'none';
+    }
+  });
+
   function selectClient(id, name) {
     clientIdInput.value = id;
     clientSearch.value = name;
-    hideDropdown();
+    hideClientDropdown();
+    loadClientOrders(id);
   }
 
   clientSearch.addEventListener('input', async function () {
     const query = this.value.trim();
     clientIdInput.value = '';
-    if (query.length < 2) { hideDropdown(); return; }
-
+    resetLinked();
+    if (query.length < 2) { hideClientDropdown(); return; }
     try {
       const res = await fetch(`/transactions/clients/search?q=${encodeURIComponent(query)}`);
       const clients = await res.json();
-      if (!clients.length) { hideDropdown(); return; }
-
+      if (!clients.length) { hideClientDropdown(); return; }
       clientDropdown.innerHTML = clients.map(c => {
         const displayName = c.instagram || c.telegram || c.phone;
-        return `
-        <button type="button" data-id="${c.id}" data-name="${displayName}">
+        return `<button type="button" data-id="${c.id}" data-name="${displayName}">
           ${displayName}
           ${c.phone && c.phone !== displayName ? `<span class="txn-dd-phone">${c.phone}</span>` : ''}
         </button>`;
       }).join('');
       clientDropdown.style.display = 'block';
-
       clientDropdown.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('mousedown', function (e) {
           e.preventDefault();
           selectClient(this.dataset.id, this.dataset.name);
         });
       });
-    } catch (err) {
-      hideDropdown();
-    }
+    } catch (_) { hideClientDropdown(); }
   });
 
   clientSearch.addEventListener('blur', function () {
-    setTimeout(hideDropdown, 180);
+    setTimeout(hideClientDropdown, 180);
   });
 
   openBtn.addEventListener('click', async function () {
     form.reset();
     clientSearch.value = '';
     clientIdInput.value = '';
-    hideDropdown();
+    hideClientDropdown();
+    resetLinked();
+    amountAutoFilled = false;
     clearErrors();
     setLoading(false);
     txnDate.value = todayISO();
@@ -406,7 +659,9 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   modalEl.addEventListener('hidden.bs.modal', function () {
-    hideDropdown();
+    hideClientDropdown();
+    hideLinkedDropdown();
+    collapseBreakdown();
     clearErrors();
     setLoading(false);
   });
@@ -414,27 +669,18 @@ document.addEventListener('DOMContentLoaded', function () {
   form.addEventListener('submit', async function (e) {
     e.preventDefault();
     clearErrors();
-
-    if (!clientIdInput.value) {
-      showErrors('Оберіть клієнта зі списку');
-      return;
-    }
-    if (!paymentAccountSelect.value) {
-      showErrors('Оберіть рахунок оплати');
-      return;
-    }
-
+    if (!clientIdInput.value) { showErrors('Оберіть клієнта зі списку'); return; }
+    if (!paymentAccountSelect.value) { showErrors('Оберіть рахунок оплати'); return; }
     setLoading(true);
-
     const payload = {
       client_id: clientIdInput.value,
-      amount: document.getElementById('txnAmount').value,
+      amount: amountInput.value,
       payment_type: document.getElementById('txnPaymentType').value,
       payment_account_id: paymentAccountSelect.value,
       comment: document.getElementById('txnComment').value.trim(),
       date: txnDate.value,
+      order_id: linkedOrderId.value || null,
     };
-
     try {
       const res = await fetch('/transactions/create', {
         method: 'POST',
@@ -448,7 +694,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
       }
       softReloadWithToast('Транзакцію збережено', 'success');
-    } catch (err) {
+    } catch (_) {
       showErrors('Не вдалося зберегти транзакцію. Спробуйте ще раз.');
       setLoading(false);
     }

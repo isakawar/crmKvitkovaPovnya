@@ -2,7 +2,7 @@ import io
 from decimal import Decimal
 from datetime import date, datetime
 from flask import render_template, request, jsonify, send_file, abort
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 from flask_login import login_required, current_user
 
@@ -12,6 +12,8 @@ from app.models.transaction import Transaction
 from app.models.client import Client
 from app.models.settings import Settings
 from app.models.user import User, Role, user_roles
+from app.models.order import Order
+from app.models.subscription import Subscription
 
 
 @transactions_bp.route('/transactions', methods=['GET'])
@@ -216,6 +218,107 @@ def search_clients():
     return jsonify([{'id': c.id, 'instagram': c.instagram, 'telegram': c.telegram, 'phone': c.phone or ''} for c in clients])
 
 
+@transactions_bp.route('/transactions/clients/<int:client_id>/orders', methods=['GET'])
+@login_required
+def get_client_orders_for_txn(client_id):
+    client = Client.query.get_or_404(client_id)
+
+    all_orders = (Order.query
+                  .filter(Order.client_id == client_id)
+                  .order_by(Order.delivery_date.desc())
+                  .limit(60)
+                  .all())
+
+    sub_ids = {o.subscription_id for o in all_orders if o.subscription_id}
+    sub_map = {}
+    sub_orders_map = {}
+    if sub_ids:
+        subs = Subscription.query.filter(Subscription.id.in_(sub_ids)).all()
+        sub_map = {s.id: s for s in subs}
+        sub_order_rows = (Order.query
+                          .filter(Order.subscription_id.in_(sub_ids))
+                          .order_by(Order.delivery_date.asc())
+                          .all())
+        for o in sub_order_rows:
+            sub_orders_map.setdefault(o.subscription_id, []).append(o)
+
+    sub_type_map = {'Weekly': 'Щотижнева підписка', 'Monthly': 'Щомісячна підписка', 'Bi-weekly': 'Раз на 2 тижні'}
+    method_map = {'courier': 'Доставка', 'nova_poshta': 'Нова пошта'}
+
+    from app.services.billing_service import get_order_price
+
+    def order_amount(o):
+        if o.charged_amount is not None:
+            return float(o.charged_amount)
+        if o.custom_amount is not None:
+            return float(o.custom_amount)
+        # fallback: calculate from active price preset
+        calculated = get_order_price(o)
+        return float(calculated) if calculated is not None else None
+
+    result = []
+    seen_subscription_ids = set()
+
+    for o in all_orders:
+        date = o.delivery_date
+        date_display = date.strftime('%d.%m.%Y') if date else '—'
+        amount = order_amount(o)
+
+        if o.subscription_id:
+            # show each subscription only once (most recent order comes first due to DESC sort)
+            if o.subscription_id in seen_subscription_ids:
+                continue
+            seen_subscription_ids.add(o.subscription_id)
+
+            sub = sub_map.get(o.subscription_id)
+            type_display = sub_type_map.get(sub.type, sub.type) if sub else ''
+            deliveries = []
+            total = 0.0
+            for i, so in enumerate(sub_orders_map.get(o.subscription_id, []), 1):
+                a = order_amount(so)
+                deliveries.append({
+                    'order_id': so.id,
+                    'number': so.sequence_number or i,
+                    'date': so.delivery_date.strftime('%d.%m.%Y') if so.delivery_date else '—',
+                    'amount': a,
+                })
+                if a:
+                    total += a
+            result.append({
+                'id': o.id,
+                'is_subscription': True,
+                'subscription_id': o.subscription_id,
+                'label': f'Підписка — {sub.size if sub else ""} — {o.recipient_name or "—"} (отримувач)',
+                'date_display': date_display,
+                'date': date.isoformat() if date else '0000-00-00',
+                'amount': amount,
+                'subscription': {
+                    'id': o.subscription_id,
+                    'type_display': type_display,
+                    'size': sub.size if sub else '',
+                    'recipient_name': sub.recipient_name if sub else (o.recipient_name or ''),
+                    'date_from': date_display,
+                    'deliveries': deliveries,
+                    'total': round(total, 2) if total else None,
+                },
+            })
+        else:
+            method = 'Самовивіз' if o.is_pickup else method_map.get(o.delivery_method, 'Доставка')
+            result.append({
+                'id': o.id,
+                'is_subscription': False,
+                'subscription_id': None,
+                'label': f'Одноразове замовлення — {o.recipient_name or "—"}',
+                'delivery_type': method,
+                'date_display': date_display,
+                'date': date.isoformat() if date else '0000-00-00',
+                'amount': amount,
+                'subscription': None,
+            })
+
+    return jsonify(result)
+
+
 @transactions_bp.route('/transactions/create', methods=['POST'])
 @login_required
 def create_transaction():
@@ -255,6 +358,17 @@ def create_transaction():
     except ValueError:
         return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
 
+    order_id = data.get('order_id')
+
+    linked_order_id = None
+    linked_subscription_id = None
+    if order_id:
+        order = Order.query.get(int(order_id))
+        if not order or order.client_id != client.id:
+            return jsonify({'success': False, 'errors': ['Замовлення не належить цьому клієнту']}), 400
+        linked_order_id = order.id
+        linked_subscription_id = order.subscription_id
+
     txn = Transaction(
         transaction_type='credit',
         client_id=client.id,
@@ -263,6 +377,8 @@ def create_transaction():
         payment_account_id=int(payment_account_id),
         date=txn_date,
         created_by_id=current_user.id,
+        order_id=linked_order_id,
+        subscription_id=linked_subscription_id,
     )
     client.credits = (client.credits or Decimal(0)) + Decimal(str(amount_val))
 
@@ -294,6 +410,8 @@ def get_transaction(txn_id):
         'date': txn.date.isoformat(),
         'client_id': txn.client_id,
         'client_name': txn.client.instagram if txn.client else None,
+        'order_id': txn.order_id,
+        'subscription_id': txn.subscription_id,
     })
 
 
@@ -355,6 +473,16 @@ def update_transaction(txn_id):
         txn.expense_type = data.get('expense_type', '').strip()
         expense_type_id = data.get('expense_type_id')
         txn.expense_type_id = int(expense_type_id) if expense_type_id else None
+
+    order_id = data.get('order_id')
+    if order_id:
+        linked_order = Order.query.get(int(order_id))
+        txn.order_id = linked_order.id if linked_order else None
+        txn.subscription_id = linked_order.subscription_id if linked_order else None
+    else:
+        txn.order_id = None
+        subscription_id = data.get('subscription_id')
+        txn.subscription_id = int(subscription_id) if subscription_id else None
 
     db.session.commit()
     return jsonify({'success': True})

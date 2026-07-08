@@ -150,10 +150,10 @@
         <col style="width:110px">
         <col style="width:150px">
         <col style="width:100px">
-        <col style="width:160px">
+        <col style="width:150px">
+        <col style="width:120px">
         <col style="width:130px">
         <col style="width:90px">
-        <col style="width:110px">
       </colgroup>
       <thead>
         <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
@@ -162,6 +162,7 @@
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Клієнт / Витрата</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Сума</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Рахунок</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Прив'язка</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Хто вніс</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap text-center">Дія</th>
         </tr>
@@ -203,6 +204,19 @@
             {% if txn.payment_account_setting %}
             <span class="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 font-medium whitespace-nowrap">
               <i class="bi bi-bank"></i> {{ txn.payment_account_setting.value }}
+            </span>
+            {% else %}
+            <span class="text-stone-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-3 text-xs whitespace-nowrap">
+            {% if txn.order_id %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+              <i class="bi bi-bag"></i> Замовл. #{{ txn.order_id }}
+            </span>
+            {% elif txn.subscription_id %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
+              <i class="bi bi-arrow-repeat"></i> Підпис. #{{ txn.subscription_id }}
             </span>
             {% else %}
             <span class="text-stone-300">—</span>
