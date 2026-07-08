@@ -583,12 +583,43 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
         delivery.status = 'Очікує'
 
 
-def extend_subscription(subscription, overrides=None):
-    """Add another cycle of 4 orders/deliveries to the subscription.
+def _chain_depth(subscription):
+    """Count how many parents this subscription has (0 = original, no parent)."""
+    depth = 0
+    current = subscription
+    while current.parent_subscription_id:
+        depth += 1
+        current = Subscription.query.get(current.parent_subscription_id)
+        if current is None:
+            break
+    return depth
 
-    overrides: optional dict with fields to apply to the new cycle's orders
-    (e.g. city, street, comment, first_delivery_date). Fields not present in
-    overrides are copied from the subscription as usual.
+
+def _renewal_discount(old_sub, client):
+    """Calculate the auto discount for the renewed subscription.
+
+    Rules:
+    - If client.discount >= 10: don't auto-change (manager may have set higher)
+    - First renewal (chain depth = 0): set 5%
+    - Second+ renewal: set 10%
+    Auto logic never exceeds 10%.
+    """
+    current = client.discount or 0
+    if current >= 10:
+        return current
+    depth = _chain_depth(old_sub)
+    return 5 if depth == 0 else 10
+
+
+def extend_subscription(subscription, overrides=None):
+    """Create a new Subscription as a continuation of the given one.
+
+    The new subscription is linked via parent_subscription_id and gets
+    auto-escalated loyalty discount (0%→5%→10%). The old subscription is
+    marked is_extended=True.
+
+    overrides: optional dict with fields to apply to the new subscription/orders
+    (e.g. city, street, comment, first_delivery_date, discount).
     """
     if subscription.is_stopped:
         raise ValueError('Неможливо продовжити зупинену підписку')
@@ -621,56 +652,95 @@ def extend_subscription(subscription, overrides=None):
     delivery_day = overrides.get('delivery_day') or subscription.delivery_day
     dates = build_delivery_dates(first_next, subscription.type, delivery_day)
 
-    max_seq = (
-        db.session.query(db.func.max(Order.sequence_number))
-        .filter_by(subscription_id=subscription.id)
-        .scalar()
-    ) or 0
+    # determine discount for the new subscription
+    client = subscription.client
+    if 'discount' in overrides:
+        new_discount = overrides['discount']
+    else:
+        new_discount = _renewal_discount(subscription, client)
 
-    max_cycle = (
-        db.session.query(db.func.max(Order.cycle_number))
-        .filter_by(subscription_id=subscription.id)
-        .scalar()
-    ) or 1
-    next_cycle = max_cycle + 1
+    # create the new subscription (copy all fields, override key renewal fields)
+    new_sub = Subscription(
+        client_id=subscription.client_id,
+        parent_subscription_id=subscription.id,
+        type=overrides.get('type') or subscription.type,
+        status='active',
+        delivery_day=delivery_day,
+        time_from=overrides.get('time_from') or subscription.time_from,
+        time_to=overrides.get('time_to') or subscription.time_to,
+        recipient_name=overrides.get('recipient_name') or subscription.recipient_name,
+        recipient_phone=overrides.get('recipient_phone') or subscription.recipient_phone,
+        recipient_social=overrides.get('recipient_social') or subscription.recipient_social,
+        city=overrides.get('city') or subscription.city,
+        street=overrides.get('street') or subscription.street,
+        building_number=overrides.get('building_number') or subscription.building_number,
+        floor=overrides.get('floor') or subscription.floor,
+        entrance=overrides.get('entrance') or subscription.entrance,
+        is_pickup=overrides.get('is_pickup', subscription.is_pickup),
+        address_comment=overrides.get('address_comment') or subscription.address_comment,
+        delivery_method=overrides.get('delivery_method') or subscription.delivery_method,
+        size=overrides.get('size') or subscription.size,
+        custom_amount=overrides.get('custom_amount') or subscription.custom_amount,
+        bouquet_type=overrides.get('bouquet_type') or subscription.bouquet_type,
+        composition_type=overrides.get('composition_type') or subscription.composition_type,
+        for_whom=overrides.get('for_whom') or subscription.for_whom,
+        comment=overrides.get('comment') or subscription.comment,
+        preferences=overrides.get('preferences') or subscription.preferences,
+        is_wedding=subscription.is_wedding,
+        discount=new_discount,
+        is_extended=False,
+        followup_status=None,
+        is_stopped=False,
+        delivery_count=subscription.delivery_count or 4,
+        created_at=datetime.datetime.utcnow(),
+    )
+    db.session.add(new_sub)
+    db.session.flush()
+
+    from app.services.billing_service import get_order_price
 
     for i, d_date in enumerate(dates):
         order = Order(
             client_id=subscription.client_id,
-            subscription_id=subscription.id,
-            sequence_number=max_seq + i + 1,
-            cycle_number=next_cycle,
-            recipient_name=overrides.get('recipient_name') or subscription.recipient_name,
-            recipient_phone=overrides.get('recipient_phone') or subscription.recipient_phone,
-            recipient_social=overrides.get('recipient_social') or subscription.recipient_social,
-            city=overrides.get('city') or subscription.city,
-            street=overrides.get('street') or subscription.street,
-            building_number=overrides.get('building_number') or subscription.building_number,
-            floor=overrides.get('floor') or subscription.floor,
-            entrance=overrides.get('entrance') or subscription.entrance,
-            is_pickup=overrides.get('is_pickup', subscription.is_pickup),
-            address_comment=overrides.get('address_comment') or subscription.address_comment,
-            delivery_method=overrides.get('delivery_method') or subscription.delivery_method,
-            size=overrides.get('size') or subscription.size,
-            custom_amount=overrides.get('custom_amount') or subscription.custom_amount,
+            subscription_id=new_sub.id,
+            sequence_number=i + 1,
+            cycle_number=1,
+            recipient_name=new_sub.recipient_name,
+            recipient_phone=new_sub.recipient_phone,
+            recipient_social=new_sub.recipient_social,
+            city=new_sub.city,
+            street=new_sub.street,
+            building_number=new_sub.building_number,
+            floor=new_sub.floor,
+            entrance=new_sub.entrance,
+            is_pickup=new_sub.is_pickup,
+            address_comment=new_sub.address_comment,
+            delivery_method=new_sub.delivery_method,
+            size=new_sub.size,
+            custom_amount=new_sub.custom_amount,
             delivery_date=d_date,
-            time_from=overrides.get('time_from') or (subscription.time_from if i == 0 else None),
-            time_to=overrides.get('time_to') or (subscription.time_to if i == 0 else None),
-            bouquet_type=overrides.get('bouquet_type') or subscription.bouquet_type,
-            composition_type=overrides.get('composition_type') or subscription.composition_type,
-            for_whom=overrides.get('for_whom') or subscription.for_whom,
-            comment=overrides.get('comment') or (subscription.comment if i == 0 else None),
-            preferences=overrides.get('preferences') or subscription.preferences,
-            discount=overrides.get('discount') if 'discount' in overrides else subscription.discount,
+            time_from=new_sub.time_from if i == 0 else None,
+            time_to=new_sub.time_to if i == 0 else None,
+            bouquet_type=new_sub.bouquet_type,
+            composition_type=new_sub.composition_type,
+            for_whom=new_sub.for_whom,
+            comment=new_sub.comment if i == 0 else None,
+            preferences=new_sub.preferences,
+            discount=new_discount,
         )
         db.session.add(order)
         db.session.flush()
-
-        from app.services.billing_service import get_order_price
         order.charged_amount = get_order_price(order)
 
         delivery = _create_delivery_for_order(order, subscription.client_id, is_first=(i == 0))
         db.session.add(delivery)
+
+    # mark old subscription as extended
+    subscription.is_extended = True
+
+    # update client's loyalty discount
+    if 'discount' not in overrides:
+        client.discount = new_discount
 
     db.session.commit()
 
@@ -679,10 +749,10 @@ def extend_subscription(subscription, overrides=None):
     _log(
         current_user._get_current_object() if current_user.is_authenticated else None,
         'extend', 'subscription', subscription.id,
-        f'Продовжено підписку #{subscription.id} (цикл {next_cycle})',
-        after_data=_subscription_snapshot(subscription),
+        f'Продовжено підписку #{subscription.id} → нова підписка #{new_sub.id} (знижка {new_discount}%)',
+        after_data=_subscription_snapshot(new_sub),
     )
-    return subscription
+    return new_sub
 
 
 def delete_subscription(subscription):
