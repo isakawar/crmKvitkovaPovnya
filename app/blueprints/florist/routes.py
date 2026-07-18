@@ -225,6 +225,19 @@ def florist_routes():
     )
 
 
+@florist_bp.route('/florist/check-new-deliveries')
+@login_required
+def check_new_deliveries():
+    date_str = request.args.get('date', '')
+    known_count = request.args.get('count', type=int, default=0)
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'has_new': False})
+    current_count = Delivery.query.filter(Delivery.delivery_date == selected_date).count()
+    return jsonify({'has_new': current_count > known_count, 'total': current_count})
+
+
 def _parse_month(month_raw):
     today = datetime.utcnow()
     default = datetime(today.year, today.month, 1)

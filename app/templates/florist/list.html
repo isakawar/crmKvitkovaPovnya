@@ -1187,5 +1187,48 @@
   });
 })();
 </script>
+<div id="new-delivery-banner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-black px-6 py-3 rounded-xl shadow-lg flex items-center gap-4 whitespace-nowrap">
+  🌸 Додано нові доставки!
+  <button onclick="location.reload()" class="bg-black text-white px-3 py-1 rounded-lg text-sm font-medium">Оновити</button>
+</div>
+<script>
+(function () {
+  var knownCount = {{ total_deliveries }};
+  var selectedDate = '{{ selected_date.isoformat() }}';
+  var intervalId = null;
+
+  function playNotificationSound() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.25].forEach(function (delay) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.4);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.4);
+      });
+    } catch (e) {}
+  }
+
+  function checkNewDeliveries() {
+    fetch('/florist/check-new-deliveries?date=' + selectedDate + '&count=' + knownCount)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.has_new) {
+          clearInterval(intervalId);
+          playNotificationSound();
+          document.getElementById('new-delivery-banner').classList.remove('hidden');
+        }
+      })
+      .catch(function () {});
+  }
+
+  intervalId = setInterval(checkNewDeliveries, 60000);
+})();
+</script>
 {% endblock %}
 
