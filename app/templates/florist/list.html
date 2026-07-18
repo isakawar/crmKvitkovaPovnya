@@ -877,6 +877,11 @@
     </section>
   {% endif %}
 </div>
+
+<div id="new-delivery-banner" style="display:none;position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:9999;background:#fbbf24;color:#111;padding:0.75rem 1.5rem;border-radius:0.75rem;box-shadow:0 4px 24px rgba(0,0,0,0.18);align-items:center;gap:1rem;white-space:nowrap;font-weight:600;font-size:1rem;">
+  🌸 Додано нові доставки!
+  <button onclick="location.reload()" style="background:#111;color:#fff;padding:0.3rem 0.9rem;border-radius:0.5rem;font-size:0.875rem;border:none;cursor:pointer;font-weight:600;">Оновити</button>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1187,19 +1192,25 @@
   });
 })();
 </script>
-<div id="new-delivery-banner" class="hidden fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-amber-400 text-black px-6 py-3 rounded-xl shadow-lg flex items-center gap-4 whitespace-nowrap">
-  🌸 Додано нові доставки!
-  <button onclick="location.reload()" class="bg-black text-white px-3 py-1 rounded-lg text-sm font-medium">Оновити</button>
-</div>
 <script>
 (function () {
   var knownCount = {{ initial_route_stops }};
   var selectedDate = '{{ selected_date.isoformat() }}';
   var intervalId = null;
+  var audioCtx = null;
+
+  document.addEventListener('click', function unlockAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } else if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    document.removeEventListener('click', unlockAudio);
+  }, { once: true });
 
   function playNotificationSound() {
     try {
-      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       [0, 0.25].forEach(function (delay) {
         var osc = ctx.createOscillator();
         var gain = ctx.createGain();
@@ -1214,14 +1225,19 @@
     } catch (e) {}
   }
 
+  function showBanner() {
+    var el = document.getElementById('new-delivery-banner');
+    if (el) el.style.display = 'flex';
+  }
+
   function checkNewDeliveries() {
     fetch('/florist/check-new-deliveries?date=' + selectedDate + '&count=' + knownCount)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.has_new) {
           clearInterval(intervalId);
+          showBanner();
           playNotificationSound();
-          document.getElementById('new-delivery-banner').classList.remove('hidden');
         }
       })
       .catch(function () {});
