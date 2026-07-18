@@ -222,7 +222,29 @@ def florist_routes():
         florist_status_options=FLORIST_STATUS_OPTIONS,
         subscription_delivery_index=subscription_delivery_index,
         overdue_florist_count=overdue_florist_count,
+        initial_route_stops=sum(len(r.stops) for r in routes),
     )
+
+
+@florist_bp.route('/florist/check-new-deliveries')
+@login_required
+def check_new_deliveries():
+    date_str = request.args.get('date', '')
+    known_count = request.args.get('count', type=int, default=0)
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'has_new': False})
+    current_count = (
+        RouteDelivery.query
+        .join(DeliveryRoute, RouteDelivery.route_id == DeliveryRoute.id)
+        .filter(
+            DeliveryRoute.route_date == selected_date,
+            DeliveryRoute.status != 'rejected',
+        )
+        .count()
+    )
+    return jsonify({'has_new': current_count > known_count, 'total': current_count})
 
 
 def _parse_month(month_raw):
