@@ -393,7 +393,7 @@ def route_message_text(route_id):
     if gmaps_parts:
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
         try:
-            r = http_requests.get('https://tinyurl.com/api-create.php', params={'url': gmaps_url}, timeout=5)
+            r = http_requests.get('https://is.gd/create.php', params={'format': 'simple', 'url': gmaps_url}, timeout=5)
             if r.status_code == 200 and r.text.startswith('http'):
                 gmaps_url = r.text.strip()
         except Exception:
@@ -477,7 +477,7 @@ def route_delivery_text(route_id):
     if gmaps_parts:
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
         try:
-            r = http_requests.get('https://tinyurl.com/api-create.php', params={'url': gmaps_url}, timeout=5)
+            r = http_requests.get('https://is.gd/create.php', params={'format': 'simple', 'url': gmaps_url}, timeout=5)
             if r.status_code == 200 and r.text.startswith('http'):
                 gmaps_url = r.text.strip()
         except Exception:

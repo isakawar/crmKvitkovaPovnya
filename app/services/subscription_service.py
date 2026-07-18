@@ -632,22 +632,24 @@ def extend_subscription(subscription, overrides=None):
         .order_by(Order.delivery_date.desc())
         .first()
     )
-    if not last_order:
-        raise ValueError('No orders found for subscription')
-
-    last_delivery = (
-        Delivery.query
-        .filter_by(order_id=last_order.id)
-        .order_by(Delivery.delivery_date.desc())
-        .first()
-    )
-    last_date = last_delivery.delivery_date if last_delivery else last_order.delivery_date
 
     if 'first_delivery_date' in overrides and overrides['first_delivery_date']:
         first_next = overrides['first_delivery_date']
-    else:
+    elif last_order:
+        last_delivery = (
+            Delivery.query
+            .filter_by(order_id=last_order.id)
+            .order_by(Delivery.delivery_date.desc())
+            .first()
+        )
+        last_date = last_delivery.delivery_date if last_delivery else last_order.delivery_date
         desired_weekday = WEEKDAY_MAP.get(subscription.delivery_day, last_date.weekday())
         first_next = calculate_next_delivery_date(last_date, subscription.type, desired_weekday)
+    else:
+        # Imported subscription with no linked orders — use today as base
+        today = datetime.date.today()
+        desired_weekday = WEEKDAY_MAP.get(subscription.delivery_day, today.weekday())
+        first_next = calculate_next_delivery_date(today, subscription.type, desired_weekday)
 
     delivery_day = overrides.get('delivery_day') or subscription.delivery_day
     dates = build_delivery_dates(first_next, subscription.type, delivery_day)
