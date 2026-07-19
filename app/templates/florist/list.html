@@ -1195,7 +1195,7 @@
 </script>
 <script>
 (function () {
-  var knownCount = {{ initial_route_stops }};
+  var lastSeen = '{{ initial_last_updated }}';
   var selectedDate = '{{ selected_date.isoformat() }}';
   var intervalId = null;
   var audioCtx = null;
@@ -1256,9 +1256,10 @@
   }
 
   function checkNewDeliveries() {
-    fetch('/florist/check-new-deliveries?date=' + selectedDate + '&count=' + knownCount)
+    fetch('/florist/check-new-deliveries?date=' + selectedDate + '&since=' + encodeURIComponent(lastSeen))
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        if (data.latest) { lastSeen = data.latest; }
         if (data.has_new) {
           clearInterval(intervalId);
           showBanner();
