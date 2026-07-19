@@ -541,9 +541,9 @@
                 <div id="user-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg py-1 min-w-36 z-50">
                     {% if current_user.user_type == 'florist' and request.path.startswith('/florist') %}
                     <button id="sound-toggle-btn" onclick="toggleFloristSound()"
-                            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
-                        <i id="sound-toggle-icon" class="bi bi-bell-fill"></i>
-                        <span id="sound-toggle-label">Вимкнути звук</span>
+                            class="w-full flex items-center justify-between px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
+                        <span class="flex items-center gap-2"><i id="sound-toggle-icon" class="bi bi-bell-fill"></i> Звук</span>
+                        <span id="sound-toggle-label" class="text-xs font-medium"></span>
                     </button>
                     <div class="border-t border-stone-100 my-1"></div>
                     {% endif %}
@@ -622,10 +622,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!icon || !label) return;
         if (window._floristSoundEnabled) {
             icon.className = 'bi bi-bell-fill';
-            label.textContent = 'Вимкнути звук';
+            label.textContent = 'Вкл';
+            label.style.color = '#16a34a';
         } else {
             icon.className = 'bi bi-bell-slash';
-            label.textContent = 'Увімкнути звук';
+            label.textContent = 'Викл';
+            label.style.color = '#9ca3af';
         }
     }
     window.toggleFloristSound = function() {
