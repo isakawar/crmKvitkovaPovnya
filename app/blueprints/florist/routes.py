@@ -223,7 +223,7 @@ def florist_routes():
         subscription_delivery_index=subscription_delivery_index,
         overdue_florist_count=overdue_florist_count,
         initial_last_updated=(
-            db.session.query(func.max(DeliveryRoute.updated_at))
+            db.session.query(func.max(func.coalesce(DeliveryRoute.content_changed_at, DeliveryRoute.created_at)))
             .filter(DeliveryRoute.route_date == selected_date, DeliveryRoute.status != 'rejected')
             .scalar() or datetime.utcfromtimestamp(0)
         ).isoformat(),
@@ -240,7 +240,7 @@ def check_new_deliveries():
     except ValueError:
         return jsonify({'has_new': False})
     latest = (
-        db.session.query(func.max(DeliveryRoute.updated_at))
+        db.session.query(func.max(func.coalesce(DeliveryRoute.content_changed_at, DeliveryRoute.created_at)))
         .filter(DeliveryRoute.route_date == selected_date, DeliveryRoute.status != 'rejected')
         .scalar()
     )
