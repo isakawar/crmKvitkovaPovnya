@@ -450,21 +450,22 @@
   })();
 </script>
 
-<!-- Balance Breakdown Modal -->
-<div id="balanceBreakdownOverlay" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm hidden"></div>
-<div id="balanceBreakdownModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-  <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-    <div class="flex items-center justify-between border-b border-stone-100 px-5 py-4">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><i class="bi bi-wallet2 text-sm"></i></span>
-        <h2 class="text-base font-semibold text-stone-900">Баланс по рахунках</h2>
+<!-- Balance Breakdown Modal (Bootstrap) -->
+<div class="modal fade" id="balanceBreakdownModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <div style="border-radius:20px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 48px rgba(28,25,23,0.14);background:#fff;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f5f5f4;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:10px;background:#fef9c3;color:#d97706;"><i class="bi bi-wallet2" style="font-size:14px;"></i></span>
+          <span style="font-size:15px;font-weight:600;color:#1c1917;">Баланс по рахунках</span>
+        </div>
+        <button type="button" data-bs-dismiss="modal" style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:8px;border:none;background:transparent;color:#a8a29e;cursor:pointer;" onmouseover="this.style.background='#f5f5f4'" onmouseout="this.style.background='transparent'">
+          <i class="bi bi-x-lg" style="font-size:13px;"></i>
+        </button>
       </div>
-      <button id="closeBalanceBreakdown" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors">
-        <i class="bi bi-x-lg text-sm"></i>
-      </button>
-    </div>
-    <div id="balanceBreakdownBody" class="px-5 py-4">
-      <p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>
+      <div id="balanceBreakdownBody" style="padding:16px 20px;">
+        <p style="font-size:13px;color:#a8a29e;text-align:center;padding:16px 0;">Завантаження…</p>
+      </div>
     </div>
   </div>
 </div>
@@ -474,47 +475,35 @@
     const trigger = document.getElementById('openBalanceBreakdown');
     if (!trigger) return;
 
-    const modal = document.getElementById('balanceBreakdownModal');
-    const overlay = document.getElementById('balanceBreakdownOverlay');
-    const closeBtn = document.getElementById('closeBalanceBreakdown');
     const body = document.getElementById('balanceBreakdownBody');
+    const bsModal = new bootstrap.Modal(document.getElementById('balanceBreakdownModal'));
 
-    function openModal() {
-      body.innerHTML = '<p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>';
-      modal.classList.remove('hidden');
-      overlay.classList.remove('hidden');
+    trigger.addEventListener('click', function () {
+      body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:16px 0;">Завантаження…</p>';
+      bsModal.show();
 
       fetch('/transactions/balance-breakdown')
         .then(r => r.json())
         .then(data => {
           const rows = data.accounts.map(acc => {
-            const color = acc.balance >= 0 ? 'text-stone-900' : 'text-rose-600';
-            return `<div class="flex items-center justify-between py-2.5 border-b border-stone-100 last:border-0">
-              <span class="text-sm text-stone-700">${acc.name}</span>
-              <span class="text-sm font-semibold ${color}">${acc.balance.toFixed(2)} грн</span>
+            const color = acc.balance >= 0 ? '#1c1917' : '#e11d48';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f4;">
+              <span style="font-size:13px;color:#57534e;">${acc.name}</span>
+              <span style="font-size:13px;font-weight:600;color:${color};">${acc.balance.toFixed(2)} грн</span>
             </div>`;
           }).join('');
 
-          const totalColor = data.total >= 0 ? 'text-stone-900' : 'text-rose-600';
-          body.innerHTML = rows + `<div class="flex items-center justify-between pt-3 mt-1">
-            <span class="text-sm font-semibold text-stone-500 uppercase tracking-wide">Разом</span>
-            <span class="text-base font-bold ${totalColor}">${data.total.toFixed(2)} грн</span>
-          </div>`;
+          const totalColor = data.total >= 0 ? '#1c1917' : '#e11d48';
+          body.innerHTML = `<div style="border-bottom:1px solid #e7e5e4;">${rows}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px;">
+              <span style="font-size:11px;font-weight:600;color:#a8a29e;text-transform:uppercase;letter-spacing:0.1em;">Разом</span>
+              <span style="font-size:15px;font-weight:700;color:${totalColor};">${data.total.toFixed(2)} грн</span>
+            </div>`;
         })
         .catch(() => {
-          body.innerHTML = '<p class="text-sm text-rose-500 text-center py-4">Помилка завантаження</p>';
+          body.innerHTML = '<p style="font-size:13px;color:#e11d48;text-align:center;padding:16px 0;">Помилка завантаження</p>';
         });
-    }
-
-    function closeModal() {
-      modal.classList.add('hidden');
-      overlay.classList.add('hidden');
-    }
-
-    trigger.addEventListener('click', openModal);
-    closeBtn.addEventListener('click', closeModal);
-    overlay.addEventListener('click', closeModal);
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    });
   })();
 </script>
 
