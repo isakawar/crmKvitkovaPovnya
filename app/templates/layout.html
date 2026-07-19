@@ -539,6 +539,14 @@
                     <i class="bi bi-chevron-down text-xs"></i>
                 </button>
                 <div id="user-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg py-1 min-w-36 z-50">
+                    {% if current_user.user_type == 'florist' and request.path.startswith('/florist') %}
+                    <button id="sound-toggle-btn" onclick="toggleFloristSound()"
+                            class="w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
+                        <i id="sound-toggle-icon" class="bi bi-bell-fill"></i>
+                        <span id="sound-toggle-label">Вимкнути звук</span>
+                    </button>
+                    <div class="border-t border-stone-100 my-1"></div>
+                    {% endif %}
                     <a href="{{ url_for('auth.logout') }}"
                        class="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
                         <i class="bi bi-box-arrow-right"></i> Вийти
@@ -605,6 +613,28 @@ document.addEventListener('DOMContentLoaded', function() {
             if (menu) menu.classList.add('hidden');
         }
     });
+
+    // Florist sound toggle (shared between layout and florist page JS)
+    window._floristSoundEnabled = localStorage.getItem('floristSoundEnabled') !== 'false';
+    function updateSoundToggleUI() {
+        var icon = document.getElementById('sound-toggle-icon');
+        var label = document.getElementById('sound-toggle-label');
+        if (!icon || !label) return;
+        if (window._floristSoundEnabled) {
+            icon.className = 'bi bi-bell-fill';
+            label.textContent = 'Вимкнути звук';
+        } else {
+            icon.className = 'bi bi-bell-slash';
+            label.textContent = 'Увімкнути звук';
+        }
+    }
+    window.toggleFloristSound = function() {
+        window._floristSoundEnabled = !window._floristSoundEnabled;
+        localStorage.setItem('floristSoundEnabled', window._floristSoundEnabled);
+        updateSoundToggleUI();
+        document.getElementById('user-menu').classList.add('hidden');
+    };
+    updateSoundToggleUI();
 
     // Close notification dropdown on outside click
     document.addEventListener('click', function(e) {
