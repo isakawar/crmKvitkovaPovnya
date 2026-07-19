@@ -1200,19 +1200,22 @@
   var intervalId = null;
   var audioCtx = null;
 
-  // Unlock AudioContext on first user interaction (required by browser autoplay policy)
-  function ensureAudioCtx() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
+  // Create AudioContext immediately — it starts in 'suspended' state but is not null
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {}
+
+  // Resume on any user interaction so it's ready when notification fires
+  function resumeCtx() {
+    if (audioCtx && audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
   }
-  document.addEventListener('click', function () { try { ensureAudioCtx(); } catch(e) {} }, { once: true });
+  document.addEventListener('click', resumeCtx);
+  document.addEventListener('touchstart', resumeCtx);
+  document.addEventListener('keydown', resumeCtx);
 
   function playBeep(freq, delay, duration) {
-    if (!audioCtx) return;
     var osc = audioCtx.createOscillator();
     var gain = audioCtx.createGain();
     osc.connect(gain);
@@ -1224,12 +1227,22 @@
     osc.stop(audioCtx.currentTime + delay + duration);
   }
 
+  function doPlayBeeps() {
+    try {
+      playBeep(880, 0,   0.4);
+      playBeep(880, 0.5, 0.4);
+      playBeep(1046, 1.0, 0.5);
+    } catch (e) {}
+  }
+
   function playNotificationSound() {
     if (!window._floristSoundEnabled || !audioCtx) return;
     try {
-      playBeep(880, 0, 0.4);
-      playBeep(880, 0.5, 0.4);
-      playBeep(1046, 1.0, 0.5);
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(doPlayBeeps);
+      } else {
+        doPlayBeeps();
+      }
     } catch (e) {}
   }
 
