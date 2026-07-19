@@ -448,8 +448,28 @@
     if (cached.account)    p.set('account',    cached.account);
     window.location.replace('/transactions?' + p.toString());
   })();
+</script>
 
-  // Balance breakdown modal
+<!-- Balance Breakdown Modal -->
+<div id="balanceBreakdownOverlay" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm hidden"></div>
+<div id="balanceBreakdownModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+  <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+    <div class="flex items-center justify-between border-b border-stone-100 px-5 py-4">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><i class="bi bi-wallet2 text-sm"></i></span>
+        <h2 class="text-base font-semibold text-stone-900">Баланс по рахунках</h2>
+      </div>
+      <button id="closeBalanceBreakdown" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors">
+        <i class="bi bi-x-lg text-sm"></i>
+      </button>
+    </div>
+    <div id="balanceBreakdownBody" class="px-5 py-4">
+      <p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>
+    </div>
+  </div>
+</div>
+
+<script>
   (function () {
     const trigger = document.getElementById('openBalanceBreakdown');
     if (!trigger) return;
@@ -497,24 +517,5 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
   })();
 </script>
-
-<!-- Balance Breakdown Modal -->
-<div id="balanceBreakdownOverlay" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm hidden"></div>
-<div id="balanceBreakdownModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-  <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl">
-    <div class="flex items-center justify-between border-b border-stone-100 px-5 py-4">
-      <div class="flex items-center gap-2">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><i class="bi bi-wallet2 text-sm"></i></span>
-        <h2 class="text-base font-semibold text-stone-900">Баланс по рахунках</h2>
-      </div>
-      <button id="closeBalanceBreakdown" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors">
-        <i class="bi bi-x-lg text-sm"></i>
-      </button>
-    </div>
-    <div id="balanceBreakdownBody" class="px-5 py-4">
-      <p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>
-    </div>
-  </div>
-</div>
 
 {% endblock %}
