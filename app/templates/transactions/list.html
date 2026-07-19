@@ -38,13 +38,14 @@
 
 <section class="mb-5 grid grid-cols-2 gap-3">
   {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
-  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+  <article id="openBalanceBreakdown" class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm cursor-pointer transition-colors hover:bg-amber-50 hover:border-amber-200">
     <div class="flex items-center gap-3">
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><i class="bi bi-wallet2"></i></span>
-      <div>
+      <div class="flex-1 min-w-0">
         <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Загальний баланс</p>
         <p class="text-2xl font-semibold text-stone-900">{{ "%.2f"|format(total_balance | float) }} грн</p>
       </div>
+      <i class="bi bi-chevron-right text-stone-300"></i>
     </div>
   </article>
   {% endif %}
@@ -447,5 +448,73 @@
     if (cached.account)    p.set('account',    cached.account);
     window.location.replace('/transactions?' + p.toString());
   })();
+
+  // Balance breakdown modal
+  (function () {
+    const trigger = document.getElementById('openBalanceBreakdown');
+    if (!trigger) return;
+
+    const modal = document.getElementById('balanceBreakdownModal');
+    const overlay = document.getElementById('balanceBreakdownOverlay');
+    const closeBtn = document.getElementById('closeBalanceBreakdown');
+    const body = document.getElementById('balanceBreakdownBody');
+
+    function openModal() {
+      body.innerHTML = '<p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>';
+      modal.classList.remove('hidden');
+      overlay.classList.remove('hidden');
+
+      fetch('/transactions/balance-breakdown')
+        .then(r => r.json())
+        .then(data => {
+          const rows = data.accounts.map(acc => {
+            const color = acc.balance >= 0 ? 'text-stone-900' : 'text-rose-600';
+            return `<div class="flex items-center justify-between py-2.5 border-b border-stone-100 last:border-0">
+              <span class="text-sm text-stone-700">${acc.name}</span>
+              <span class="text-sm font-semibold ${color}">${acc.balance.toFixed(2)} грн</span>
+            </div>`;
+          }).join('');
+
+          const totalColor = data.total >= 0 ? 'text-stone-900' : 'text-rose-600';
+          body.innerHTML = rows + `<div class="flex items-center justify-between pt-3 mt-1">
+            <span class="text-sm font-semibold text-stone-500 uppercase tracking-wide">Разом</span>
+            <span class="text-base font-bold ${totalColor}">${data.total.toFixed(2)} грн</span>
+          </div>`;
+        })
+        .catch(() => {
+          body.innerHTML = '<p class="text-sm text-rose-500 text-center py-4">Помилка завантаження</p>';
+        });
+    }
+
+    function closeModal() {
+      modal.classList.add('hidden');
+      overlay.classList.add('hidden');
+    }
+
+    trigger.addEventListener('click', openModal);
+    closeBtn.addEventListener('click', closeModal);
+    overlay.addEventListener('click', closeModal);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  })();
 </script>
+
+<!-- Balance Breakdown Modal -->
+<div id="balanceBreakdownOverlay" class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm hidden"></div>
+<div id="balanceBreakdownModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+  <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl">
+    <div class="flex items-center justify-between border-b border-stone-100 px-5 py-4">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><i class="bi bi-wallet2 text-sm"></i></span>
+        <h2 class="text-base font-semibold text-stone-900">Баланс по рахунках</h2>
+      </div>
+      <button id="closeBalanceBreakdown" class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-600 transition-colors">
+        <i class="bi bi-x-lg text-sm"></i>
+      </button>
+    </div>
+    <div id="balanceBreakdownBody" class="px-5 py-4">
+      <p class="text-sm text-stone-400 text-center py-4">Завантаження…</p>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

@@ -2,7 +2,7 @@ import io
 from decimal import Decimal
 from datetime import date, datetime
 from flask import render_template, request, jsonify, send_file, abort
-from sqlalchemy import or_, func
+from sqlalchemy import or_, func, case
 from sqlalchemy.orm import joinedload
 from flask_login import login_required, current_user
 
@@ -106,6 +106,43 @@ def transactions_list():
         account_filter=account_filter,
         payment_accounts=payment_accounts,
     )
+
+
+@transactions_bp.route('/transactions/balance-breakdown', methods=['GET'])
+@login_required
+def balance_breakdown():
+    if not current_user.has_role('admin'):
+        abort(403)
+
+    accounts = Settings.query.filter_by(type='payment_account').order_by(Settings.sort_order, Settings.value).all()
+
+    rows = (
+        db.session.query(
+            Transaction.payment_account_id,
+            func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('credits'),
+            func.sum(case((Transaction.transaction_type == 'debit', Transaction.amount), else_=0)).label('debits'),
+        )
+        .filter(Transaction.transaction_type != 'delivery_charge')
+        .group_by(Transaction.payment_account_id)
+        .all()
+    )
+
+    balances = {r.payment_account_id: float(r.credits) - float(r.debits) for r in rows}
+
+    result = []
+    for acc in accounts:
+        result.append({
+            'name': acc.value,
+            'balance': round(balances.get(acc.id, 0.0), 2),
+        })
+
+    unassigned = balances.get(None, 0.0)
+    if unassigned:
+        result.append({'name': 'Без рахунку', 'balance': round(unassigned, 2)})
+
+    total = round(sum(item['balance'] for item in result), 2)
+
+    return jsonify({'accounts': result, 'total': total})
 
 
 @transactions_bp.route('/transactions/export', methods=['GET'])
