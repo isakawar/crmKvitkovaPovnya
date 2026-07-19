@@ -404,7 +404,14 @@
     </td>
     {% if show_time %}<td class="whitespace-nowrap text-sm">{{ time_slot }}</td>{% endif %}
     <td class="w-10">
-      {% if delivery.florist_status in ('Затверджено', 'Зібрано', "Передано кур'єру") %}
+      {% if delivery.status == 'Доставлено' %}
+      <button type="button"
+              class="florist-quick-reset-btn inline-flex h-8 w-8 items-center justify-center rounded-xl border border-amber-200 bg-white text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300"
+              data-delivery-id="{{ delivery.id }}"
+              title="Повернути в очікування">
+        <i class="bi bi-arrow-counterclockwise text-base"></i>
+      </button>
+      {% elif delivery.florist_status in ('Затверджено', 'Зібрано', "Передано кур'єру") %}
       <button type="button"
               class="florist-quick-done-btn inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
               data-delivery-id="{{ delivery.id }}"
@@ -573,6 +580,7 @@
         {% for key, label in florist_status_options.items() %}
           <option value="{{ key }}">{{ label }}</option>
         {% endfor %}
+        <option value="reset">↩ Повернути в очікування</option>
       </select>
       <button id="apply-florist-status" type="button" disabled
               class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-stone-700">
@@ -1173,6 +1181,30 @@
     } catch(err) {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-check-circle-fill text-base"></i>';
+      if (typeof showToast === 'function') showToast(err.message || 'Помилка', 'error');
+    }
+  });
+
+  // Quick "Повернути в очікування" button per delivery row
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.florist-quick-reset-btn');
+    if (!btn) return;
+    const deliveryId = btn.dataset.deliveryId;
+    if (!deliveryId) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split text-base"></i>';
+    try {
+      const res = await fetch('/florist/deliveries/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivery_ids: [parseInt(deliveryId)], status_key: 'reset' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      softReload();
+    } catch(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-counterclockwise text-base"></i>';
       if (typeof showToast === 'function') showToast(err.message || 'Помилка', 'error');
     }
   });
