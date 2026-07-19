@@ -495,8 +495,13 @@
     const body = document.getElementById('balanceBreakdownBody');
 
     trigger.addEventListener('click', function () {
+      const modalEl = document.getElementById('balanceBreakdownModal');
+      const dialogEl = modalEl.querySelector('.modal-dialog');
+      dialogEl.style.setProperty('max-width', '680px', 'important');
+      dialogEl.style.setProperty('width', '680px', 'important');
+      dialogEl.style.setProperty('margin', '1.75rem auto', 'important');
       body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:24px 0;">Завантаження…</p>';
-      bootstrap.Modal.getOrCreateInstance(document.getElementById('balanceBreakdownModal')).show();
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
       fetch('/transactions/balance-breakdown')
         .then(r => r.json())
