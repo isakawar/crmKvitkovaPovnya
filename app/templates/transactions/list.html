@@ -450,22 +450,34 @@
   })();
 </script>
 
-<!-- Balance Breakdown Modal (Bootstrap) -->
+<!-- Balance Breakdown Modal -->
 <div class="modal fade" id="balanceBreakdownModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
-    <div style="border-radius:20px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 20px 48px rgba(28,25,23,0.14);background:#fff;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f5f5f4;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:10px;background:#fef9c3;color:#d97706;"><i class="bi bi-wallet2" style="font-size:14px;"></i></span>
-          <span style="font-size:15px;font-weight:600;color:#1c1917;">Баланс по рахунках</span>
+  <div class="modal-dialog modal-dialog-centered" style="max-width:400px">
+    <div style="border-radius:24px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 24px 64px rgba(28,25,23,0.18);background:#fff;">
+
+      <!-- Header -->
+      <div style="padding:20px 20px 16px;border-bottom:1px solid #f5f5f4;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,#fef9c3,#fde68a);color:#d97706;flex-shrink:0;">
+            <i class="bi bi-wallet2" style="font-size:17px;"></i>
+          </span>
+          <div>
+            <p style="margin:0;font-size:15px;font-weight:700;color:#1c1917;line-height:1.2;">Баланс по рахунках</p>
+            <p style="margin:0;font-size:11px;color:#a8a29e;margin-top:1px;">Усі транзакції · загальний підсумок</p>
+          </div>
         </div>
-        <button type="button" data-bs-dismiss="modal" style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:8px;border:none;background:transparent;color:#a8a29e;cursor:pointer;" onmouseover="this.style.background='#f5f5f4'" onmouseout="this.style.background='transparent'">
-          <i class="bi bi-x-lg" style="font-size:13px;"></i>
+        <button type="button" data-bs-dismiss="modal"
+          style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:10px;border:1px solid #e7e5e4;background:#fafaf9;color:#78716c;cursor:pointer;transition:background 0.15s;"
+          onmouseover="this.style.background='#f5f5f4'" onmouseout="this.style.background='#fafaf9'">
+          <i class="bi bi-x-lg" style="font-size:12px;"></i>
         </button>
       </div>
-      <div id="balanceBreakdownBody" style="padding:16px 20px;">
-        <p style="font-size:13px;color:#a8a29e;text-align:center;padding:16px 0;">Завантаження…</p>
+
+      <!-- Body -->
+      <div id="balanceBreakdownBody" style="padding:8px 0 0;">
+        <p style="font-size:13px;color:#a8a29e;text-align:center;padding:24px 0;">Завантаження…</p>
       </div>
+
     </div>
   </div>
 </div>
@@ -478,29 +490,41 @@
     const body = document.getElementById('balanceBreakdownBody');
 
     trigger.addEventListener('click', function () {
-      body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:16px 0;">Завантаження…</p>';
+      body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:24px 0;">Завантаження…</p>';
       bootstrap.Modal.getOrCreateInstance(document.getElementById('balanceBreakdownModal')).show();
 
       fetch('/transactions/balance-breakdown')
         .then(r => r.json())
         .then(data => {
-          const rows = data.accounts.map(acc => {
-            const color = acc.balance >= 0 ? '#1c1917' : '#e11d48';
-            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f5f5f4;">
-              <span style="font-size:13px;color:#57534e;">${acc.name}</span>
-              <span style="font-size:13px;font-weight:600;color:${color};">${acc.balance.toFixed(2)} грн</span>
+          const rows = data.accounts.map((acc, i) => {
+            const isNeg = acc.balance < 0;
+            const amountColor = isNeg ? '#e11d48' : '#1c1917';
+            const amountBg = isNeg ? 'rgba(225,29,72,0.06)' : 'rgba(16,185,129,0.07)';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 20px;${i > 0 ? 'border-top:1px solid #fafaf9;' : ''}transition:background 0.12s;" onmouseover="this.style.background='#fafaf9'" onmouseout="this.style.background='transparent'">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:#f5f5f4;color:#78716c;flex-shrink:0;">
+                  <i class="bi bi-bank" style="font-size:12px;"></i>
+                </span>
+                <span style="font-size:13px;color:#44403c;font-weight:500;">${acc.name}</span>
+              </div>
+              <span style="font-size:13px;font-weight:700;color:${amountColor};background:${amountBg};padding:3px 8px;border-radius:8px;">${acc.balance.toFixed(2)} грн</span>
             </div>`;
           }).join('');
 
-          const totalColor = data.total >= 0 ? '#1c1917' : '#e11d48';
-          body.innerHTML = `<div style="border-bottom:1px solid #e7e5e4;">${rows}</div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0 4px;">
-              <span style="font-size:11px;font-weight:600;color:#a8a29e;text-transform:uppercase;letter-spacing:0.1em;">Разом</span>
-              <span style="font-size:15px;font-weight:700;color:${totalColor};">${data.total.toFixed(2)} грн</span>
+          const isNegTotal = data.total < 0;
+          const totalColor = isNegTotal ? '#e11d48' : '#1c1917';
+          body.innerHTML = `
+            <div style="padding-bottom:8px;">${rows}</div>
+            <div style="margin:0 12px 12px;border-radius:14px;background:linear-gradient(135deg,#1c1917,#44403c);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-calculator" style="color:#a8a29e;font-size:14px;"></i>
+                <span style="font-size:11px;font-weight:600;color:#a8a29e;text-transform:uppercase;letter-spacing:0.12em;">Разом</span>
+              </div>
+              <span style="font-size:16px;font-weight:800;color:${isNegTotal ? '#fca5a5' : '#ffffff'};">${data.total.toFixed(2)} грн</span>
             </div>`;
         })
         .catch(() => {
-          body.innerHTML = '<p style="font-size:13px;color:#e11d48;text-align:center;padding:16px 0;">Помилка завантаження</p>';
+          body.innerHTML = '<p style="font-size:13px;color:#e11d48;text-align:center;padding:24px 0;">Помилка завантаження</p>';
         });
     });
   })();
