@@ -883,12 +883,6 @@
   <button onclick="location.reload()" style="background:#111;color:#fff;padding:0.3rem 0.9rem;border-radius:0.5rem;font-size:0.875rem;border:none;cursor:pointer;font-weight:600;">Оновити</button>
 </div>
 
-<div id="sound-enable-btn" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9998;background:#fff;border:2px solid #d1d5db;border-radius:2rem;padding:0.5rem 1rem;box-shadow:0 2px 12px rgba(0,0,0,0.12);cursor:pointer;font-size:0.875rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:0.5rem;" onclick="enableSound()">
-  🔔 Увімкнути звук
-</div>
-<div id="sound-enabled-indicator" style="display:none;position:fixed;bottom:1.5rem;right:1.5rem;z-index:9998;background:#d1fae5;border:2px solid #6ee7b7;border-radius:2rem;padding:0.5rem 1rem;font-size:0.875rem;font-weight:600;color:#065f46;">
-  🔔 Звук увімкнено
-</div>
 {% endblock %}
 
 {% block scripts %}
@@ -1205,22 +1199,17 @@
   var selectedDate = '{{ selected_date.isoformat() }}';
   var intervalId = null;
   var audioCtx = null;
-  var soundEnabled = false;
 
-  window.enableSound = function () {
-    try {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-      soundEnabled = true;
-      playBeep(880, 0, 0.15);
-      document.getElementById('sound-enable-btn').style.display = 'none';
-      document.getElementById('sound-enabled-indicator').style.display = 'flex';
-    } catch (e) {}
-  };
+  // Unlock AudioContext on first user interaction (required by browser autoplay policy)
+  function ensureAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+  document.addEventListener('click', function () { try { ensureAudioCtx(); } catch(e) {} }, { once: true });
 
   function playBeep(freq, delay, duration) {
     if (!audioCtx) return;
@@ -1236,7 +1225,7 @@
   }
 
   function playNotificationSound() {
-    if (!soundEnabled || !audioCtx) return;
+    if (!window._floristSoundEnabled || !audioCtx) return;
     try {
       playBeep(880, 0, 0.4);
       playBeep(880, 0.5, 0.4);
