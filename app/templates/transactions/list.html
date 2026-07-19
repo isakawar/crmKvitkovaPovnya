@@ -476,11 +476,10 @@
     if (!trigger) return;
 
     const body = document.getElementById('balanceBreakdownBody');
-    const bsModal = new bootstrap.Modal(document.getElementById('balanceBreakdownModal'));
 
     trigger.addEventListener('click', function () {
       body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:16px 0;">Завантаження…</p>';
-      bsModal.show();
+      bootstrap.Modal.getOrCreateInstance(document.getElementById('balanceBreakdownModal')).show();
 
       fetch('/transactions/balance-breakdown')
         .then(r => r.json())
