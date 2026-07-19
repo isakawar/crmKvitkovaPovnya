@@ -122,7 +122,10 @@ def balance_breakdown():
             func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('credits'),
             func.sum(case((Transaction.transaction_type == 'debit', Transaction.amount), else_=0)).label('debits'),
         )
-        .filter(Transaction.transaction_type != 'delivery_charge')
+        .filter(
+            Transaction.transaction_type != 'delivery_charge',
+            Transaction.payment_account_id.isnot(None),
+        )
         .group_by(Transaction.payment_account_id)
         .all()
     )
@@ -135,10 +138,6 @@ def balance_breakdown():
             'name': acc.value,
             'balance': round(balances.get(acc.id, 0.0), 2),
         })
-
-    unassigned = balances.get(None, 0.0)
-    if unassigned:
-        result.append({'name': 'Без рахунку', 'balance': round(unassigned, 2)})
 
     total = round(sum(item['balance'] for item in result), 2)
 
