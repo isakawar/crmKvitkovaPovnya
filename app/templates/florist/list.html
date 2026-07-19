@@ -1229,9 +1229,13 @@
 
   function doPlayBeeps() {
     try {
-      playBeep(523, 0,    0.25);
-      playBeep(659, 0.3,  0.25);
-      playBeep(784, 0.6,  0.4);
+      // 3 repetitions of до-ре-мі + final high note ≈ 7s
+      [0, 2.0, 4.0].forEach(function (offset) {
+        playBeep(523, offset + 0.0,  0.4);
+        playBeep(659, offset + 0.55, 0.4);
+        playBeep(784, offset + 1.1,  0.6);
+      });
+      playBeep(1046, 6.3, 0.8);
     } catch (e) {}
   }
 
