@@ -159,6 +159,19 @@
       </div>
     </button>
 
+    <button type="button" class="settings-grid-card" data-bs-toggle="modal" data-bs-target="#saleOptionsModal">
+      <span class="settings-grid-card__icon"><i class="bi bi-calculator"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Флорист</p>
+        <h2 class="settings-grid-card__title">Опції продажу</h2>
+        <p class="settings-grid-card__text">Налаштуйте типи продажу з коефіцієнтами для калькулятора вартості букету.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Керування опціями</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </button>
+
     <button type="button" class="settings-grid-card settings-grid-card--accent" data-bs-toggle="modal" data-bs-target="#pricesModal">
       <span class="settings-grid-card__icon"><i class="bi bi-cash-stack"></i></span>
       <div>
@@ -173,6 +186,407 @@
     </button>
   </section>
 </div>
+
+<!-- Sale Options Modal -->
+<div class="modal fade settings-modal settings-modal--wide" id="saleOptionsModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:680px;">
+    <div class="modal-content" style="max-height:90vh;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="settings-modal__header" style="flex-shrink:0;">
+        <div>
+          <span class="settings-modal__eyebrow">Довідник</span>
+          <h2 class="settings-modal__title">Опції продажу</h2>
+          <p class="settings-modal__subtitle">Канали продажу з правилами націнки для калькулятора флориста.</p>
+        </div>
+        <button type="button" class="settings-modal__close" data-bs-dismiss="modal" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div class="settings-modal__body" style="overflow-y:auto;flex:1;">
+
+        <!-- Existing options list -->
+        <div class="settings-modal__section">
+          <div class="settings-modal__section-head">
+            <span class="settings-modal__section-label">Поточні опції</span>
+          </div>
+          <ul class="settings-modal__list" id="saleOptionsList">
+            <li class="settings-modal__placeholder">Завантаження...</li>
+          </ul>
+        </div>
+
+        <!-- Divider -->
+        <div style="height:1px;background:#e7e5e4;margin:1.25rem 0;"></div>
+
+        <!-- Form -->
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+            <h3 style="font-size:0.9375rem;font-weight:700;color:#1c1917;margin:0;" id="saleOptionsFormTitle">Нова опція</h3>
+            <button type="button" id="cancelSaleOptionBtn" style="font-size:0.8rem;color:#78716c;background:none;border:none;cursor:pointer;display:none;padding:0.25rem 0.5rem;border-radius:0.5rem;border:1px solid #e7e5e4;">
+              <i class="bi bi-x"></i> Скасувати
+            </button>
+          </div>
+
+          <!-- Name -->
+          <div style="margin-bottom:1.25rem;">
+            <label style="display:block;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#78716c;margin-bottom:0.375rem;">Назва каналу продажу</label>
+            <input type="hidden" id="saleOptionEditId">
+            <input type="text" id="saleOptionName" class="settings-modal__input" placeholder="Наприклад: Маркет плейс Уклон" maxlength="100">
+          </div>
+
+          <!-- Icon upload -->
+          <div style="margin-bottom:1.25rem;">
+            <label style="display:block;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#78716c;margin-bottom:0.5rem;">Іконка (необов'язково)</label>
+            <div style="display:flex;align-items:center;gap:0.875rem;">
+              <div id="saleIconPreview" style="width:52px;height:52px;border-radius:50%;border:2px dashed #e7e5e4;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fafaf9;cursor:pointer;transition:border-color .15s;" title="Клікни щоб вибрати іконку" onclick="document.getElementById('saleIconInput').click()">
+                <i class="bi bi-image" style="font-size:1.25rem;color:#d6d3d1;" id="saleIconPlaceholderIcon"></i>
+                <img id="saleIconImg" style="width:100%;height:100%;object-fit:cover;display:none;" alt="">
+              </div>
+              <div style="flex:1;">
+                <input type="file" id="saleIconInput" accept="image/*" style="display:none;">
+                <button type="button" onclick="document.getElementById('saleIconInput').click()" style="font-size:0.8125rem;font-weight:500;color:#d97706;background:none;border:1px solid #fde68a;border-radius:8px;padding:0.35rem 0.75rem;cursor:pointer;">
+                  <i class="bi bi-upload"></i> Завантажити
+                </button>
+                <button type="button" id="saleIconRemoveBtn" style="font-size:0.8125rem;color:#ef4444;background:none;border:none;cursor:pointer;margin-left:0.375rem;display:none;">
+                  <i class="bi bi-x"></i> Видалити
+                </button>
+                <p style="font-size:0.72rem;color:#a8a29e;margin:0.3rem 0 0;">JPG, PNG, WebP, SVG — до 2 МБ</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rules -->
+          <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.75rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#78716c;margin-bottom:0.5rem;">Правила розрахунку</label>
+            <div style="background:#fafaf9;border:1px solid #e7e5e4;border-radius:12px;padding:0.75rem;margin-bottom:0.5rem;">
+              <p style="font-size:0.75rem;color:#78716c;margin:0 0 0.625rem;">
+                <i class="bi bi-info-circle" style="color:#d97706;"></i>
+                Умовні правила мають пріоритет. Базовий коефіцієнт (знизу) спрацьовує, якщо жодне правило не підійшло.
+              </p>
+              <div id="saleTiersContainer"></div>
+              <button type="button" id="addTierBtn" style="margin-top:0.5rem;font-size:0.8125rem;color:#d97706;background:none;border:none;cursor:pointer;padding:0.25rem 0;display:flex;align-items:center;gap:0.3rem;font-weight:500;">
+                <i class="bi bi-plus-circle-fill" style="font-size:0.875rem;"></i> Додати правило
+              </button>
+            </div>
+          </div>
+
+          <!-- Live preview -->
+          <div id="salePreviewBlock" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:0.75rem 1rem;margin-bottom:1rem;display:none;">
+            <p style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#92400e;margin:0 0 0.5rem;">Приклад розрахунку</p>
+            <div id="salePreviewRows" style="display:flex;flex-direction:column;gap:0.25rem;font-size:0.8125rem;color:#78350f;"></div>
+          </div>
+
+          <div style="display:flex;gap:0.5rem;align-items:center;">
+            <button type="button" id="saveSaleOptionBtn" class="settings-modal__submit">Зберегти опцію</button>
+          </div>
+          <div id="saleOptionsError" class="settings-error" role="alert" hidden style="margin-top:0.5rem;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.sale-tier-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  margin-bottom: 0.375rem;
+  font-size: 0.875rem;
+  color: #44403c;
+}
+.sale-tier-row .tier-label {
+  color: #78716c;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sale-tier-row .tier-input {
+  border: 1px solid #d6d3d1;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  background: #fafaf9;
+  color: #1c1917;
+  outline: none;
+  width: 90px;
+  text-align: center;
+}
+.sale-tier-row .tier-input:focus {
+  border-color: #d97706;
+  background: #fff;
+}
+.sale-tier-row.tier-row--default {
+  background: #fefce8;
+  border-color: #fde68a;
+}
+.sale-tier-remove {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #d1cbc6;
+  cursor: pointer;
+  padding: 0.1rem 0.2rem;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sale-tier-remove:hover { color: #ef4444; }
+</style>
+
+<script>
+(function () {
+  const modal = document.getElementById('saleOptionsModal');
+  if (!modal) return;
+
+  const listEl     = document.getElementById('saleOptionsList');
+  const nameEl     = document.getElementById('saleOptionName');
+  const editIdEl   = document.getElementById('saleOptionEditId');
+  const tiersEl    = document.getElementById('saleTiersContainer');
+  const errorEl    = document.getElementById('saleOptionsError');
+  const formTitle  = document.getElementById('saleOptionsFormTitle');
+  const cancelBtn  = document.getElementById('cancelSaleOptionBtn');
+  const previewBl  = document.getElementById('salePreviewBlock');
+  const previewRws = document.getElementById('salePreviewRows');
+
+  // Icon refs
+  const iconInput      = document.getElementById('saleIconInput');
+  const iconImg        = document.getElementById('saleIconImg');
+  const iconPlaceholder= document.getElementById('saleIconPlaceholderIcon');
+  const iconPreview    = document.getElementById('saleIconPreview');
+  const iconRemoveBtn  = document.getElementById('saleIconRemoveBtn');
+
+  let pendingIconFile  = null;  // File object waiting to be uploaded
+  let existingIconUrl  = null;  // URL of already-saved icon (edit mode)
+  let removeIconFlag   = false; // user clicked "delete" on existing icon
+
+  function showIconPreview(src) {
+    iconImg.src = src;
+    iconImg.style.display = 'block';
+    iconPlaceholder.style.display = 'none';
+    iconPreview.style.borderStyle = 'solid';
+    iconRemoveBtn.style.display = 'inline';
+  }
+  function clearIconPreview() {
+    iconImg.src = '';
+    iconImg.style.display = 'none';
+    iconPlaceholder.style.display = '';
+    iconPreview.style.borderStyle = 'dashed';
+    iconRemoveBtn.style.display = 'none';
+  }
+
+  iconInput.addEventListener('change', () => {
+    const file = iconInput.files[0];
+    if (!file) return;
+    pendingIconFile = file;
+    removeIconFlag  = false;
+    showIconPreview(URL.createObjectURL(file));
+    iconInput.value = '';
+  });
+
+  iconRemoveBtn.addEventListener('click', () => {
+    pendingIconFile = null;
+    if (existingIconUrl) removeIconFlag = true;
+    existingIconUrl = null;
+    clearIconPreview();
+  });
+
+  function resetIconState() {
+    pendingIconFile = null;
+    existingIconUrl = null;
+    removeIconFlag  = false;
+    clearIconPreview();
+  }
+
+  function showError(msg) { errorEl.textContent = msg; errorEl.hidden = false; }
+  function clearError()   { errorEl.hidden = true; }
+
+  function updatePreview() {
+    const tiers = getTiers().filter(t => t.coefficient > 0);
+    if (!tiers.length) { previewBl.style.display = 'none'; return; }
+    const sorted = [...tiers].sort((a,b) => b.min_amount - a.min_amount);
+    const examples = [500, 1500, 2500, 5000];
+    const rows = examples.map(cost => {
+      const tier = sorted.find(t => cost >= t.min_amount) ?? sorted[sorted.length-1];
+      const price = (cost * tier.coefficient).toFixed(0);
+      return `<div style="display:flex;justify-content:space-between;"><span>Собівартість ${cost} грн</span><span style="font-weight:600;">→ ${Number(price).toLocaleString('uk-UA')} грн <span style="color:#b45309;font-weight:400;">(×${tier.coefficient})</span></span></div>`;
+    });
+    previewRws.innerHTML = rows.join('');
+    previewBl.style.display = 'block';
+  }
+
+  function addTierRow(minAmount = '', coefficient = '', isDefault = false) {
+    const row = document.createElement('div');
+    row.className = 'sale-tier-row' + (isDefault ? ' tier-row--default' : '');
+
+    if (isDefault) {
+      row.innerHTML = `
+        <span class="tier-label" style="color:#92400e;"><i class="bi bi-arrow-return-right" style="color:#d97706;margin-right:0.2rem;"></i>В усіх інших випадках →</span>
+        <span class="tier-label">множити на</span>
+        <input type="number" class="tier-input tier-coef" placeholder="2" min="0.01" step="0.01" value="${coefficient}">
+        <input type="hidden" class="tier-min" value="0">
+      `;
+    } else {
+      row.innerHTML = `
+        <span class="tier-label">Якщо сума від</span>
+        <input type="number" class="tier-input tier-min" placeholder="2000" min="1" step="1" value="${minAmount !== '' && minAmount !== 0 ? minAmount : ''}">
+        <span class="tier-label">грн → множити на</span>
+        <input type="number" class="tier-input tier-coef" placeholder="3" min="0.01" step="0.01" value="${coefficient}">
+        <button type="button" class="sale-tier-remove" title="Видалити правило"><i class="bi bi-x-lg" style="font-size:0.75rem;"></i></button>
+      `;
+      row.querySelector('.sale-tier-remove').addEventListener('click', () => {
+        row.remove();
+        updatePreview();
+      });
+    }
+
+    row.querySelectorAll('.tier-input').forEach(inp => inp.addEventListener('input', updatePreview));
+
+    // default row always stays last — insert conditional rows before it
+    const defaultRow = tiersEl.querySelector('.tier-row--default');
+    if (!isDefault && defaultRow) {
+      tiersEl.insertBefore(row, defaultRow);
+    } else {
+      tiersEl.appendChild(row);
+    }
+  }
+
+  function resetForm() {
+    editIdEl.value = '';
+    nameEl.value = '';
+    tiersEl.innerHTML = '';
+    addTierRow('', '', true);
+    formTitle.textContent = 'Нова опція';
+    cancelBtn.style.display = 'none';
+    previewBl.style.display = 'none';
+    resetIconState();
+    clearError();
+  }
+
+  function getTiers() {
+    const tiers = [];
+    tiersEl.querySelectorAll('.sale-tier-row').forEach(row => {
+      const minInput = row.querySelector('.tier-min');
+      const coefInput = row.querySelector('.tier-coef');
+      tiers.push({
+        min_amount: parseFloat(minInput.value) || 0,
+        coefficient: parseFloat(coefInput.value) || 0,
+      });
+    });
+    return tiers;
+  }
+
+  function renderList(items) {
+    if (!items.length) {
+      listEl.innerHTML = '<li class="settings-modal__placeholder">Немає опцій — створіть першу нижче</li>';
+      return;
+    }
+    listEl.innerHTML = items.map(item => {
+      const tiers = JSON.parse(item.tiers_json || '[]').sort((a,b) => b.min_amount - a.min_amount);
+      const badges = tiers.map(t => {
+        const label = t.min_amount === 0 ? 'решта' : `від ${t.min_amount} грн`;
+        return `<span style="display:inline-flex;align-items:center;gap:0.2rem;background:${t.min_amount===0?'#fef9c3':'#f5f5f4'};border:1px solid ${t.min_amount===0?'#fde047':'#e7e5e4'};border-radius:6px;padding:0.1rem 0.45rem;font-size:0.72rem;color:#44403c;">${label} <strong>×${t.coefficient}</strong></span>`;
+      }).join('');
+      return `<li class="settings-modal__item" data-id="${item.id}" style="cursor:default;flex-direction:column;align-items:flex-start;gap:0.375rem;padding:0.75rem;">
+        <div style="display:flex;width:100%;align-items:center;justify-content:space-between;">
+          <strong style="font-size:0.9375rem;">${item.name}</strong>
+          <div style="display:flex;gap:0.25rem;">
+            <button type="button" class="edit-option-btn" data-id="${item.id}" style="background:none;border:1px solid #e7e5e4;color:#d97706;cursor:pointer;padding:0.25rem 0.5rem;border-radius:6px;font-size:0.8rem;" title="Редагувати"><i class="bi bi-pencil"></i></button>
+            <button type="button" class="delete-option-btn" data-id="${item.id}" style="background:none;border:1px solid #e7e5e4;color:#ef4444;cursor:pointer;padding:0.25rem 0.5rem;border-radius:6px;font-size:0.8rem;" title="Видалити"><i class="bi bi-trash3"></i></button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.3rem;">${badges}</div>
+      </li>`;
+    }).join('');
+
+    listEl.querySelectorAll('.edit-option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = items.find(i => String(i.id) === btn.dataset.id);
+        if (!item) return;
+        editIdEl.value = item.id;
+        nameEl.value = item.name;
+        tiersEl.innerHTML = '';
+        const tiers = JSON.parse(item.tiers_json || '[]');
+        const defaultTier = tiers.find(t => t.min_amount === 0);
+        const condTiers = tiers.filter(t => t.min_amount !== 0).sort((a,b) => b.min_amount - a.min_amount);
+        addTierRow(0, defaultTier ? defaultTier.coefficient : '', true);
+        condTiers.forEach(t => addTierRow(t.min_amount, t.coefficient, false));
+        // icon
+        resetIconState();
+        if (item.icon_url) {
+          existingIconUrl = item.icon_url;
+          showIconPreview(item.icon_url);
+        }
+        formTitle.textContent = 'Редагувати опцію';
+        cancelBtn.style.display = 'inline-flex';
+        clearError();
+        updatePreview();
+        document.getElementById('saleOptionsFormTitle').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+
+    listEl.querySelectorAll('.delete-option-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Видалити цю опцію?')) return;
+        const res = await fetch(`/settings/sale_options/${btn.dataset.id}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.success) loadOptions();
+        else showError(json.error || 'Помилка');
+      });
+    });
+  }
+
+  async function loadOptions() {
+    listEl.innerHTML = '<li class="settings-modal__placeholder">Завантаження...</li>';
+    const res = await fetch('/settings/sale_options');
+    const items = await res.json();
+    renderList(items);
+  }
+
+  modal.addEventListener('shown.bs.modal', () => { resetForm(); loadOptions(); });
+
+  document.getElementById('addTierBtn').addEventListener('click', () => { addTierRow('', '', false); });
+
+  cancelBtn.addEventListener('click', resetForm);
+
+  document.getElementById('saveSaleOptionBtn').addEventListener('click', async () => {
+    clearError();
+    const name = nameEl.value.trim();
+    if (!name) { showError('Введіть назву каналу продажу'); return; }
+    const tiers = getTiers();
+    if (tiers.some(t => t.coefficient <= 0)) { showError('Коефіцієнт має бути більше 0 у всіх правилах'); return; }
+    const hasDefault = tiers.some(t => t.min_amount === 0);
+    if (!hasDefault) { showError('Потрібен базовий коефіцієнт (поріг від 0 грн)'); return; }
+
+    const id = editIdEl.value;
+    const url = id ? `/settings/sale_options/${id}` : '/settings/sale_options';
+    const method = id ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, tiers }),
+    });
+    const json = await res.json();
+    if (!json.success) { showError(json.error || 'Помилка'); return; }
+
+    const savedId = json.item ? json.item.id : id;
+
+    // handle icon after saving option
+    if (pendingIconFile && savedId) {
+      const fd = new FormData();
+      fd.append('icon', pendingIconFile);
+      await fetch(`/settings/sale_options/${savedId}/icon`, { method: 'POST', body: fd });
+    } else if (removeIconFlag && savedId) {
+      await fetch(`/settings/sale_options/${savedId}/icon`, { method: 'DELETE' });
+    }
+
+    resetForm();
+    loadOptions();
+  });
+})();
+</script>
 
 {{ render_toast() }}
 

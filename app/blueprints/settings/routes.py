@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify
+import os
+import uuid
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app
 from flask_login import login_required, current_user
 from app.models import Settings, Price
 from app.models.price_preset import PricePreset
@@ -640,3 +642,167 @@ def change_user_password(user_id):
     user.set_password(password)
     db.session.commit()
     return jsonify({'success': True})
+
+
+# ---------------------------------------------------------------------------
+# Sale Options (florist pricing calculator)
+# ---------------------------------------------------------------------------
+
+@bp.route('/settings/sale_options', methods=['GET'])
+@login_required
+@permission_required('view_settings')
+def get_sale_options():
+    from app.models.sale_option import SaleOption
+    items = SaleOption.query.order_by(SaleOption.sort_order.nullslast(), SaleOption.name).all()
+    return jsonify([{
+        'id': i.id,
+        'name': i.name,
+        'tiers_json': i.tiers_json,
+        'is_active': i.is_active,
+        'sort_order': i.sort_order,
+        'icon_url': f'/settings/sale_option_icons/{i.icon_filename}' if i.icon_filename else None,
+    } for i in items])
+
+
+@bp.route('/settings/sale_options', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def add_sale_option():
+    import json
+    from app.models.sale_option import SaleOption
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    tiers = data.get('tiers') or []
+    if not tiers:
+        return jsonify({'success': False, 'error': 'Потрібен хоча б один поріг'}), 400
+    try:
+        tiers_validated = [
+            {'min_amount': float(t['min_amount']), 'coefficient': float(t['coefficient'])}
+            for t in tiers
+        ]
+    except (KeyError, ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Невірний формат порогів'}), 400
+    tiers_validated.sort(key=lambda t: t['min_amount'], reverse=True)
+    if tiers_validated[-1]['min_amount'] != 0:
+        return jsonify({'success': False, 'error': 'Потрібен дефолтний поріг із мінімальною сумою 0'}), 400
+    item = SaleOption(
+        name=name,
+        tiers_json=json.dumps(tiers_validated),
+        is_active=data.get('is_active', True),
+        sort_order=data.get('sort_order'),
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({'success': True, 'item': {
+        'id': item.id, 'name': item.name,
+        'tiers_json': item.tiers_json, 'is_active': item.is_active,
+    }})
+
+
+@bp.route('/settings/sale_options/<int:option_id>', methods=['PUT'])
+@login_required
+@permission_required('edit_settings')
+def update_sale_option(option_id):
+    import json
+    from app.models.sale_option import SaleOption
+    item = SaleOption.query.get_or_404(option_id)
+    data = request.get_json()
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Назва не може бути порожньою'}), 400
+    tiers = data.get('tiers') or []
+    if not tiers:
+        return jsonify({'success': False, 'error': 'Потрібен хоча б один поріг'}), 400
+    try:
+        tiers_validated = [
+            {'min_amount': float(t['min_amount']), 'coefficient': float(t['coefficient'])}
+            for t in tiers
+        ]
+    except (KeyError, ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Невірний формат порогів'}), 400
+    tiers_validated.sort(key=lambda t: t['min_amount'], reverse=True)
+    if tiers_validated[-1]['min_amount'] != 0:
+        return jsonify({'success': False, 'error': 'Потрібен дефолтний поріг із мінімальною сумою 0'}), 400
+    item.name = name
+    item.tiers_json = json.dumps(tiers_validated)
+    item.is_active = data.get('is_active', item.is_active)
+    if 'sort_order' in data:
+        item.sort_order = data['sort_order']
+    db.session.commit()
+    return jsonify({'success': True, 'item': {
+        'id': item.id, 'name': item.name,
+        'tiers_json': item.tiers_json, 'is_active': item.is_active,
+    }})
+
+
+@bp.route('/settings/sale_options/<int:option_id>', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_sale_option(option_id):
+    from app.models.sale_option import SaleOption
+    item = SaleOption.query.get_or_404(option_id)
+    _delete_icon_file(item.icon_filename)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+def _icon_folder():
+    base = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+    folder = os.path.join(base, 'uploads', 'sale_option_icons')
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _delete_icon_file(filename):
+    if not filename:
+        return
+    try:
+        path = os.path.join(_icon_folder(), filename)
+        if os.path.exists(path):
+            os.remove(path)
+    except OSError:
+        pass
+
+
+_ALLOWED_ICON_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'}
+
+
+@bp.route('/settings/sale_options/<int:option_id>/icon', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def upload_sale_option_icon(option_id):
+    from app.models.sale_option import SaleOption
+    item = SaleOption.query.get_or_404(option_id)
+    file = request.files.get('icon')
+    if not file or not file.filename:
+        return jsonify({'success': False, 'error': 'Файл не вибрано'}), 400
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in _ALLOWED_ICON_EXTENSIONS:
+        return jsonify({'success': False, 'error': 'Недозволений формат. Дозволено: jpg, png, webp, svg'}), 400
+    _delete_icon_file(item.icon_filename)
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file.save(os.path.join(_icon_folder(), filename))
+    item.icon_filename = filename
+    db.session.commit()
+    return jsonify({'success': True, 'icon_url': f'/settings/sale_option_icons/{filename}'})
+
+
+@bp.route('/settings/sale_options/<int:option_id>/icon', methods=['DELETE'])
+@login_required
+@permission_required('edit_settings')
+def delete_sale_option_icon(option_id):
+    from app.models.sale_option import SaleOption
+    item = SaleOption.query.get_or_404(option_id)
+    _delete_icon_file(item.icon_filename)
+    item.icon_filename = None
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/sale_option_icons/<path:filename>')
+def serve_sale_option_icon(filename):
+    folder = _icon_folder()
+    return send_from_directory(folder, filename)

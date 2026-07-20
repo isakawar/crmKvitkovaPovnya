@@ -195,6 +195,12 @@
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span>Офлайн продажі</span>
         </a>
+        <a href="/florist/calculator" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/calculator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-calculator text-lg flex-shrink-0"></i>
+            <span>Калькулятор</span>
+        </a>
         {% else %}
         <a href="/dashboard" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
@@ -319,6 +325,13 @@
            title="Офлайн продажі">
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span class="nav-label">Офлайн продажі</span>
+        </a>
+        <a href="/florist/calculator"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/calculator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Калькулятор">
+            <i class="bi bi-calculator text-lg flex-shrink-0"></i>
+            <span class="nav-label">Калькулятор</span>
         </a>
         {% else %}
         <a href="/dashboard"

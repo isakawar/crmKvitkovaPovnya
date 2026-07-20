@@ -18,5 +18,6 @@ from .route_dispatch_log import RouteDispatchLog
 from .expense_category import ExpenseCategory
 from .revenue_adjustment import RevenueAdjustment
 from .action_item import ActionItem, ActionItemRecipient
+from .sale_option import SaleOption
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient', 'SaleOption']

@@ -474,3 +474,13 @@ def florist_sales_edit(sale_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
     return jsonify({'success': True})
+
+
+@florist_bp.route('/florist/calculator')
+@login_required
+def florist_calculator():
+    from app.models.sale_option import SaleOption
+    options = SaleOption.query.filter_by(is_active=True).order_by(
+        SaleOption.sort_order.nullslast(), SaleOption.name
+    ).all()
+    return render_template('florist/calculator.html', options=options)
