@@ -484,3 +484,32 @@ def florist_calculator():
         SaleOption.sort_order.nullslast(), SaleOption.name
     ).all()
     return render_template('florist/calculator.html', options=options)
+
+
+@florist_bp.route('/florist/calculator/prefs', methods=['GET'])
+@login_required
+def calculator_prefs_get():
+    import json
+    raw = current_user.calculator_prefs
+    if raw:
+        try:
+            return jsonify(json.loads(raw))
+        except Exception:
+            pass
+    return jsonify({})
+
+
+@florist_bp.route('/florist/calculator/prefs', methods=['POST'])
+@login_required
+def calculator_prefs_save():
+    import json
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'success': False, 'error': 'invalid json'}), 400
+    current_user.calculator_prefs = json.dumps(data)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    return jsonify({'success': True})
