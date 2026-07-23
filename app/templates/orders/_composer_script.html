@@ -1503,27 +1503,37 @@ document.addEventListener('DOMContentLoaded', function() {
             promoValidateBtn.disabled = true;
             promoValidateBtn.textContent = '...';
             try {
+                const clientIdForPromo = orderClientIdInput ? orderClientIdInput.value : '';
+                const currentDiscountForPromo = clientDiscountInput ? clientDiscountInput.value : '';
                 const resp = await fetch('/certificates/promo/validate', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({code}),
+                    body: JSON.stringify({
+                        code,
+                        client_id: clientIdForPromo,
+                        current_discount: currentDiscountForPromo,
+                    }),
                 });
                 const data = await resp.json();
                 if (data.valid) {
                     promoHiddenInput.value = data.code;
 
-                    // Знижка від промокоду не сумується з наявною — застосовуємо більшу
+                    // Знижка від промокоду не сумується з наявною — застосовується більша
+                    // (сервер порахував максимум із лояльності клієнта, ручного вводу й промокоду)
                     if (clientDiscountInput) {
-                        const current = parseInt(clientDiscountInput.value, 10) || 0;
-                        clientDiscountInput.value = Math.max(current, data.discount_percent);
+                        clientDiscountInput.value = data.effective_discount;
                     }
+
+                    const appliedNote = data.effective_discount > data.discount_percent
+                        ? `Знижка клієнта (${data.effective_discount}%) більша за промокод — застосовано її`
+                        : 'Застосовано більшу зі знижок клієнта й промокоду';
 
                     promoResult.className = 'rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm';
                     promoResult.innerHTML = `<div class="flex items-start gap-2">
                       <i class="bi bi-check-circle-fill text-emerald-500 mt-0.5"></i>
                       <div>
-                        <span class="font-semibold">${data.name}</span>: знижка ${data.discount_percent}%
-                        <p class="text-xs text-emerald-700 mt-0.5 opacity-75">Застосовано більшу зі знижок клієнта й промокоду</p>
+                        <span class="font-semibold">${data.name}</span>: застосовано знижку ${data.effective_discount}%
+                        <p class="text-xs text-emerald-700 mt-0.5 opacity-75">${appliedNote}</p>
                       </div>
                     </div>`;
                 } else {

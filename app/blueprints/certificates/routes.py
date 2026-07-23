@@ -383,10 +383,26 @@ def validate_promo_code():
     if not promo.is_active:
         return jsonify({'valid': False, 'error': 'Промокод неактивний'})
 
+    client_id_raw = str(data.get('client_id') or '').strip()
+    current_discount_raw = str(data.get('current_discount') or '').strip()
+    try:
+        current_discount = int(current_discount_raw) if current_discount_raw else 0
+    except ValueError:
+        current_discount = 0
+
+    client_discount = 0
+    if client_id_raw.isdigit():
+        client = Client.query.get(int(client_id_raw))
+        if client:
+            client_discount = client.discount or 0
+
+    effective_discount = max(client_discount, current_discount, promo.discount_percent)
+
     return jsonify({
         'valid': True,
         'id': promo.id,
         'code': promo.code,
         'name': promo.name,
         'discount_percent': promo.discount_percent,
+        'effective_discount': effective_discount,
     })
