@@ -1427,10 +1427,130 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Clear certificate when form resets
+    // ── Promo code validation ───────────────────────────────────────────
+    const promoCodeInput = document.getElementById('order-promo-code-input');
+    const promoValidateBtn = document.getElementById('promo-validate-btn');
+    const promoResult = document.getElementById('promo-result');
+    const promoHiddenInput = document.getElementById('order-promo-code');
+    const discountModeCertBtn = document.getElementById('discount-mode-certificate');
+    const discountModePromoBtn = document.getElementById('discount-mode-promo');
+    const certificateModeBlock = document.getElementById('certificate-mode-block');
+    const promoModeBlock = document.getElementById('promo-mode-block');
+
+    function clearPromoCode() {
+        if (promoCodeInput) promoCodeInput.value = '';
+        if (promoHiddenInput) promoHiddenInput.value = '';
+        if (promoResult) {
+            promoResult.classList.add('hidden');
+            promoResult.className = 'hidden rounded-2xl border px-4 py-3 text-sm';
+            promoResult.innerHTML = '';
+        }
+    }
+
+    function setDiscountMode(mode) {
+        const isPromo = mode === 'promo';
+        if (certificateModeBlock) certificateModeBlock.classList.toggle('hidden', isPromo);
+        if (promoModeBlock) promoModeBlock.classList.toggle('hidden', !isPromo);
+        if (discountModeCertBtn) {
+            discountModeCertBtn.classList.toggle('border-stone-900', !isPromo);
+            discountModeCertBtn.classList.toggle('bg-stone-900', !isPromo);
+            discountModeCertBtn.classList.toggle('text-white', !isPromo);
+            discountModeCertBtn.classList.toggle('border-stone-200', isPromo);
+            discountModeCertBtn.classList.toggle('bg-white', isPromo);
+            discountModeCertBtn.classList.toggle('text-stone-600', isPromo);
+        }
+        if (discountModePromoBtn) {
+            discountModePromoBtn.classList.toggle('border-stone-900', isPromo);
+            discountModePromoBtn.classList.toggle('bg-stone-900', isPromo);
+            discountModePromoBtn.classList.toggle('text-white', isPromo);
+            discountModePromoBtn.classList.toggle('border-stone-200', !isPromo);
+            discountModePromoBtn.classList.toggle('bg-white', !isPromo);
+            discountModePromoBtn.classList.toggle('text-stone-600', !isPromo);
+        }
+        if (isPromo) {
+            clearCertificate();
+        } else {
+            clearPromoCode();
+        }
+    }
+
+    if (discountModeCertBtn) {
+        discountModeCertBtn.addEventListener('click', function() { setDiscountMode('certificate'); });
+    }
+    if (discountModePromoBtn) {
+        discountModePromoBtn.addEventListener('click', function() { setDiscountMode('promo'); });
+    }
+
+    if (promoCodeInput) {
+        promoCodeInput.addEventListener('input', function() {
+            if (promoHiddenInput) promoHiddenInput.value = '';
+            if (promoResult) promoResult.classList.add('hidden');
+        });
+        promoCodeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); promoValidateBtn && promoValidateBtn.click(); }
+        });
+    }
+
+    if (promoValidateBtn) {
+        promoValidateBtn.addEventListener('click', async function() {
+            const code = (promoCodeInput ? promoCodeInput.value : '').trim();
+            if (!code) {
+                promoResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                promoResult.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Введіть код промокоду';
+                promoResult.classList.remove('hidden');
+                return;
+            }
+            promoValidateBtn.disabled = true;
+            promoValidateBtn.textContent = '...';
+            try {
+                const resp = await fetch('/certificates/promo/validate', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code}),
+                });
+                const data = await resp.json();
+                if (data.valid) {
+                    promoHiddenInput.value = data.code;
+
+                    // Знижка від промокоду не сумується з наявною — застосовуємо більшу
+                    if (clientDiscountInput) {
+                        const current = parseInt(clientDiscountInput.value, 10) || 0;
+                        clientDiscountInput.value = Math.max(current, data.discount_percent);
+                    }
+
+                    promoResult.className = 'rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm';
+                    promoResult.innerHTML = `<div class="flex items-start gap-2">
+                      <i class="bi bi-check-circle-fill text-emerald-500 mt-0.5"></i>
+                      <div>
+                        <span class="font-semibold">${data.name}</span>: знижка ${data.discount_percent}%
+                        <p class="text-xs text-emerald-700 mt-0.5 opacity-75">Застосовано більшу зі знижок клієнта й промокоду</p>
+                      </div>
+                    </div>`;
+                } else {
+                    promoHiddenInput.value = '';
+                    promoResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                    promoResult.innerHTML = `<i class="bi bi-x-circle me-1"></i>${data.error}`;
+                }
+                promoResult.classList.remove('hidden');
+            } catch(e) {
+                promoResult.className = 'rounded-2xl border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-sm';
+                promoResult.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Помилка з\'єднання';
+                promoResult.classList.remove('hidden');
+            } finally {
+                promoValidateBtn.disabled = false;
+                promoValidateBtn.textContent = 'Перевірити';
+            }
+        });
+    }
+
+    // Clear certificate/promo code when form resets
     const origReset = resetComposerForm;
-    // Patch: clear cert on every reset
-    addOrderModalElement.addEventListener('hidden.bs.modal', clearCertificate);
+    // Patch: clear cert/promo on every reset
+    addOrderModalElement.addEventListener('hidden.bs.modal', function() {
+        clearCertificate();
+        clearPromoCode();
+        setDiscountMode('certificate');
+    });
 
     addOrderModalElement.addEventListener('shown.bs.modal', function() {
         if (addressCommentInput) {

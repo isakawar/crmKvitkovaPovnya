@@ -5,19 +5,37 @@
 <section class="mb-6 rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_26%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
   <div class="flex flex-wrap items-end justify-between gap-4">
     <div>
-      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Сертифікати</h1>
+      <h1 class="text-3xl font-semibold tracking-tight text-stone-900">Сертифікати та промокоди</h1>
     </div>
     <div class="flex flex-wrap items-center gap-3">
-      <div class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
-        Всього: {{ counts.all }}
+      <div id="pageCountBadge" class="inline-flex items-center rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-medium text-stone-600 shadow-sm">
+        Всього: {{ counts.all if active_tab == 'certificates' else promo_counts.all }}
       </div>
-      <button type="button" id="openCreateCertModal" class="inline-flex min-w-[220px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700">
+      <button type="button" id="openCreateCertModal" class="inline-flex min-w-[220px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 {% if active_tab != 'certificates' %}hidden{% endif %}">
         <i class="bi bi-plus-circle"></i>
         Додати сертифікат
+      </button>
+      <button type="button" id="openCreatePromoModal" class="inline-flex min-w-[220px] items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700 {% if active_tab != 'promo' %}hidden{% endif %}">
+        <i class="bi bi-plus-circle"></i>
+        Додати промокод
       </button>
     </div>
   </div>
 </section>
+
+<section class="mb-5 rounded-2xl border border-stone-200 bg-white p-3 shadow-sm">
+  <div class="flex flex-wrap items-center gap-2">
+    {% set page_tabs = [('certificates', 'Сертифікати'), ('promo', 'Промокоди')] %}
+    {% for val, label in page_tabs %}
+    <a href="{{ url_for('certificates.certificates_list', tab=val) }}"
+       class="inline-flex items-center rounded-xl border px-4 py-2 text-sm font-semibold transition-colors {% if active_tab == val %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<div id="tab-certificates" class="{% if active_tab != 'certificates' %}hidden{% endif %}">
 
 <section class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
   <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
@@ -62,7 +80,7 @@
   <div class="flex flex-wrap items-center gap-2">
     {% set tabs = [('all', 'Всі'), ('active', 'Активні'), ('used', 'Використані'), ('expired', 'Прострочені')] %}
     {% for val, label in tabs %}
-    <a href="{{ url_for('certificates.certificates_list', status=val) }}"
+    <a href="{{ url_for('certificates.certificates_list', status=val, tab='certificates') }}"
        class="inline-flex items-center rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors {% if status_filter == val %}border-stone-900 bg-stone-900 text-white{% else %}border-stone-200 bg-white text-stone-600 hover:bg-stone-50{% endif %}">
       {{ label }}
     </a>
@@ -140,8 +158,103 @@
   {% endif %}
 </section>
 
+</div>
+
+<div id="tab-promo" class="{% if active_tab != 'promo' %}hidden{% endif %}">
+
+<section class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-600"><i class="bi bi-tags"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Всього</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ promo_counts.all }}</p>
+      </div>
+    </div>
+  </article>
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><i class="bi bi-check-circle"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Активні</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ promo_counts.active }}</p>
+      </div>
+    </div>
+  </article>
+  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-500"><i class="bi bi-slash-circle"></i></span>
+      <div>
+        <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Вимкнені</p>
+        <p class="text-2xl font-semibold text-stone-900">{{ promo_counts.inactive }}</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-sm">
+  {% if promo_codes %}
+  <div class="w-full overflow-x-auto">
+    <table class="w-full table-fixed text-sm">
+      <thead>
+        <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
+          <th class="w-[120px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Код</th>
+          <th class="w-[160px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Назва</th>
+          <th class="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Опис</th>
+          <th class="w-[90px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Знижка</th>
+          <th class="w-[100px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Використано</th>
+          <th class="w-[110px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Статус</th>
+          <th class="w-[90px] px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">Дії</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-stone-100">
+        {% for promo in promo_codes %}
+        <tr class="cursor-pointer transition-colors hover:bg-stone-50/70" data-promo-detail="{{ promo.id }}">
+          <td class="px-4 py-3 font-mono font-semibold tracking-wider text-stone-900">{{ promo.code }}</td>
+          <td class="px-4 py-3 text-stone-700">{{ promo.name }}</td>
+          <td class="px-4 py-3 text-xs text-stone-500">
+            <div class="max-w-full truncate">{{ promo.description or '—' }}</div>
+          </td>
+          <td class="px-4 py-3 font-semibold text-stone-900">{{ promo.discount_percent }}%</td>
+          <td class="px-4 py-3 text-stone-600">{{ promo.usage_count() }}</td>
+          <td class="px-4 py-3">
+            {% if promo.is_active %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+              <i class="bi bi-check2-circle"></i>
+              Активний
+            </span>
+            {% else %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-stone-300 bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-700">
+              <i class="bi bi-slash-circle"></i>
+              Вимкнений
+            </span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <button type="button" class="promo-toggle-btn text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900"
+                    data-promo-id="{{ promo.id }}" onclick="event.stopPropagation()">
+              {{ 'Вимкнути' if promo.is_active else 'Увімкнути' }}
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="flex flex-col items-center justify-center py-20 text-stone-400">
+    <i class="bi bi-tags mb-3 text-5xl"></i>
+    <p class="text-base font-medium">Промокоди не знайдено</p>
+    <p class="mt-1 text-sm">Створіть перший промокод, щоб почати роботу.</p>
+  </div>
+  {% endif %}
+</section>
+
+</div>
+
 {% include 'certificates/_create_modal.html' %}
 {% include 'certificates/_detail_modal.html' %}
+{% include 'certificates/_promo_create_modal.html' %}
 
 {{ render_toast() }}
 
@@ -355,6 +468,183 @@ document.addEventListener('DOMContentLoaded', function() {
       renderErrors('Не вдалося зберегти сертифікат. Спробуйте ще раз.');
       setSubmitLoading(false);
     }
+  });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const openBtn = document.getElementById('openCreatePromoModal');
+  const modalEl = document.getElementById('createPromoModal');
+  const form = document.getElementById('createPromoForm');
+  const promoName = document.getElementById('promoName');
+  const promoDescription = document.getElementById('promoDescription');
+  const promoDiscount = document.getElementById('promoDiscount');
+  const promoCode = document.getElementById('promoCode');
+  const regenCodeBtn = document.getElementById('regenPromoCodeBtn');
+  const createBtn = document.getElementById('createPromoBtn');
+  const createBtnLabel = createBtn ? createBtn.querySelector('span') : null;
+  const errorsEl = document.getElementById('promoErrors');
+  const modalTitle = modalEl ? modalEl.querySelector('.cert-modal-title') : null;
+
+  if (!openBtn || !modalEl || !form || !createBtn || !errorsEl) {
+    return;
+  }
+
+  const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+  let editPromoId = null;
+
+  function setSubmitLoading(isLoading) {
+    createBtn.disabled = isLoading;
+    if (createBtnLabel) {
+      createBtnLabel.textContent = isLoading ? 'Збереження...' : (editPromoId ? 'Зберегти зміни' : 'Зберегти');
+    }
+  }
+
+  function renderErrors(messages) {
+    const normalized = Array.isArray(messages) ? messages : [messages];
+    errorsEl.innerHTML = normalized
+      .filter(Boolean)
+      .map(message => `<p class="leading-relaxed">${message}</p>`)
+      .join('');
+    errorsEl.classList.remove('hidden');
+  }
+
+  function clearErrors() {
+    errorsEl.innerHTML = '';
+    errorsEl.classList.add('hidden');
+  }
+
+  async function generatePromoCode() {
+    try {
+      const response = await fetch('/certificates/promo/generate-code');
+      const data = await response.json();
+      if (response.ok && data.code) {
+        promoCode.value = data.code;
+      }
+    } catch (error) {
+      console.error('Не вдалося згенерувати код промокоду:', error);
+    }
+  }
+
+  function setEditMode(promoData) {
+    editPromoId = promoData.id;
+    if (modalTitle) modalTitle.textContent = 'Редагувати промокод';
+    if (createBtnLabel) createBtnLabel.textContent = 'Зберегти зміни';
+
+    promoCode.value = promoData.code;
+    promoCode.readOnly = true;
+    promoCode.style.opacity = '0.6';
+    if (regenCodeBtn) regenCodeBtn.style.display = 'none';
+
+    promoName.value = promoData.name || '';
+    promoDescription.value = promoData.description || '';
+    promoDiscount.value = promoData.discount_percent != null ? promoData.discount_percent : '';
+  }
+
+  function clearEditMode() {
+    editPromoId = null;
+    if (modalTitle) modalTitle.textContent = 'Новий промокод';
+    if (createBtnLabel) createBtnLabel.textContent = 'Зберегти';
+    promoCode.readOnly = false;
+    promoCode.style.opacity = '';
+    if (regenCodeBtn) regenCodeBtn.style.display = '';
+  }
+
+  async function resetModalState() {
+    clearEditMode();
+    form.reset();
+    clearErrors();
+    setSubmitLoading(false);
+    await generatePromoCode();
+  }
+
+  window.openPromoEdit = function(promoData) {
+    clearErrors();
+    setSubmitLoading(false);
+    setEditMode(promoData);
+    modal.show();
+  };
+
+  openBtn.addEventListener('click', async function() {
+    await resetModalState();
+    modal.show();
+  });
+
+  if (regenCodeBtn) regenCodeBtn.addEventListener('click', generatePromoCode);
+
+  modalEl.addEventListener('hidden.bs.modal', function() {
+    clearErrors();
+    setSubmitLoading(false);
+  });
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    clearErrors();
+    setSubmitLoading(true);
+
+    const payload = {
+      name: promoName.value.trim(),
+      description: promoDescription.value.trim(),
+      discount_percent: promoDiscount.value,
+    };
+
+    try {
+      let response;
+      if (editPromoId) {
+        response = await fetch(`/certificates/promo/${editPromoId}/update`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+      } else {
+        payload.code = promoCode.value.trim();
+        response = await fetch('/certificates/promo/create', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+      }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.success) {
+        renderErrors(data.errors || data.error || 'Помилка збереження промокоду');
+        setSubmitLoading(false);
+        return;
+      }
+      softReloadWithToast(editPromoId ? 'Промокод оновлено' : 'Промокод створено', 'success');
+    } catch (error) {
+      console.error('Помилка збереження промокоду:', error);
+      renderErrors('Не вдалося зберегти промокод. Спробуйте ще раз.');
+      setSubmitLoading(false);
+    }
+  });
+
+  document.querySelectorAll('[data-promo-detail]').forEach(function(row) {
+    row.addEventListener('click', async function() {
+      const promoId = row.getAttribute('data-promo-detail');
+      try {
+        const response = await fetch(`/certificates/promo/${promoId}/detail`);
+        const data = await response.json();
+        if (response.ok) {
+          window.openPromoEdit(data);
+        }
+      } catch (error) {
+        console.error('Не вдалося завантажити промокод:', error);
+      }
+    });
+  });
+
+  document.querySelectorAll('.promo-toggle-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      const promoId = btn.getAttribute('data-promo-id');
+      try {
+        const response = await fetch(`/certificates/promo/${promoId}/toggle`, {method: 'POST'});
+        const data = await response.json();
+        if (response.ok && data.success) {
+          softReloadWithToast('Статус промокоду оновлено', 'success');
+        }
+      } catch (error) {
+        console.error('Не вдалося перемкнути промокод:', error);
+      }
+    });
   });
 });
 </script>

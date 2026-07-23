@@ -1,0 +1,62 @@
+<div class="modal fade" id="createPromoModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered cert-modal-dialog">
+    <div class="modal-content cert-modal-content">
+
+      <div class="cert-modal-header">
+        <div class="cert-modal-header-left">
+          <div class="cert-modal-icon">
+            <i class="bi bi-tags"></i>
+          </div>
+          <div>
+            <h2 class="cert-modal-title">Новий промокод</h2>
+            <p class="cert-modal-subtitle">Заповніть поля та збережіть</p>
+          </div>
+        </div>
+        <button type="button" class="cert-close-btn" data-bs-dismiss="modal" aria-label="Закрити">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <form id="createPromoForm" novalidate autocomplete="off">
+        <div class="cert-modal-body">
+          <div id="promoErrors" class="hidden rounded-3 border border-danger-subtle bg-danger-subtle px-3 py-2 text-danger small"></div>
+
+          <div class="cert-field">
+            <label class="cert-label">Назва</label>
+            <input type="text" id="promoName" name="name" required placeholder="Наприклад: Літня знижка" class="cert-input">
+          </div>
+
+          <div class="cert-field">
+            <label class="cert-label">Опис <span style="font-weight:400;text-transform:none;letter-spacing:0">(необов'язково)</span></label>
+            <textarea id="promoDescription" name="description" class="cert-textarea" placeholder="Короткий опис акції"></textarea>
+          </div>
+
+          <div class="cert-field">
+            <label class="cert-label">Знижка (%)</label>
+            <input type="number" id="promoDiscount" name="discount_percent" min="1" max="100" step="1" required placeholder="Наприклад: 10" class="cert-input">
+          </div>
+
+          <div class="cert-field">
+            <label class="cert-label">Код промокоду</label>
+            <div class="cert-code-row">
+              <input type="text" id="promoCode" name="code" required placeholder="PROMO0001" class="cert-input font-monospace fw-semibold">
+              <button type="button" id="regenPromoCodeBtn" class="cert-code-regenerate" title="Згенерувати новий код">
+                <i class="bi bi-arrow-repeat"></i>
+              </button>
+            </div>
+            <p class="cert-help">Або введіть свій код.</p>
+          </div>
+        </div>
+
+        <div class="cert-modal-footer">
+          <button type="button" data-bs-dismiss="modal" class="cert-btn cert-btn--ghost">Скасувати</button>
+          <button type="submit" id="createPromoBtn" class="cert-btn cert-btn--primary">
+            <i class="bi bi-plus-circle"></i>
+            <span>Зберегти</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
