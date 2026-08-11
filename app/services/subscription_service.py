@@ -645,6 +645,11 @@ def extend_subscription(subscription, overrides=None):
         last_date = last_delivery.delivery_date if last_delivery else last_order.delivery_date
         desired_weekday = WEEKDAY_MAP.get(subscription.delivery_day, last_date.weekday())
         first_next = calculate_next_delivery_date(last_date, subscription.type, desired_weekday)
+        today = datetime.date.today()
+        if first_next < today:
+            # Extended late (after the interval already elapsed) — schedule from today instead
+            # of continuing the old cadence, which would otherwise land in the past.
+            first_next = calculate_next_delivery_date(today, subscription.type, desired_weekday)
     else:
         # Imported subscription with no linked orders — use today as base
         today = datetime.date.today()
