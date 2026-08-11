@@ -222,7 +222,31 @@ def florist_routes():
         florist_status_options=FLORIST_STATUS_OPTIONS,
         subscription_delivery_index=subscription_delivery_index,
         overdue_florist_count=overdue_florist_count,
+        initial_last_updated=(
+            db.session.query(func.max(func.coalesce(DeliveryRoute.content_changed_at, DeliveryRoute.created_at)))
+            .filter(DeliveryRoute.route_date == selected_date, DeliveryRoute.status != 'rejected')
+            .scalar() or datetime.utcfromtimestamp(0)
+        ).isoformat(),
     )
+
+
+@florist_bp.route('/florist/check-new-deliveries')
+@login_required
+def check_new_deliveries():
+    date_str = request.args.get('date', '')
+    since_str = request.args.get('since', '')
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'has_new': False})
+    latest = (
+        db.session.query(func.max(func.coalesce(DeliveryRoute.content_changed_at, DeliveryRoute.created_at)))
+        .filter(DeliveryRoute.route_date == selected_date, DeliveryRoute.status != 'rejected')
+        .scalar()
+    )
+    latest_str = latest.isoformat() if latest else ''
+    has_new = bool(latest_str and since_str and latest_str > since_str)
+    return jsonify({'has_new': has_new, 'latest': latest_str})
 
 
 def _parse_month(month_raw):
@@ -449,4 +473,43 @@ def florist_sales_edit(sale_id):
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
+    return jsonify({'success': True})
+
+
+@florist_bp.route('/florist/calculator')
+@login_required
+def florist_calculator():
+    from app.models.sale_option import SaleOption
+    options = SaleOption.query.filter_by(is_active=True).order_by(
+        SaleOption.sort_order.nullslast(), SaleOption.name
+    ).all()
+    return render_template('florist/calculator.html', options=options)
+
+
+@florist_bp.route('/florist/calculator/prefs', methods=['GET'])
+@login_required
+def calculator_prefs_get():
+    import json
+    raw = current_user.calculator_prefs
+    if raw:
+        try:
+            return jsonify(json.loads(raw))
+        except Exception:
+            pass
+    return jsonify({})
+
+
+@florist_bp.route('/florist/calculator/prefs', methods=['POST'])
+@login_required
+def calculator_prefs_save():
+    import json
+    data = request.get_json(silent=True)
+    if data is None:
+        return jsonify({'success': False, 'error': 'invalid json'}), 400
+    current_user.calculator_prefs = json.dumps(data)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
     return jsonify({'success': True})

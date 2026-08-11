@@ -304,12 +304,12 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     in_progress_pct = round(in_progress / total * 100, 1) if total else 0.0
     cancelled_pct = round(cancelled / total * 100, 1) if total else 0.0
 
-    # % change vs previous period
+    # % change vs previous full calendar month
     total_change_pct = None
-    if d_from and d_to:
-        duration = (d_to - d_from).days + 1
-        prev_to = d_from - timedelta(days=1)
-        prev_from = prev_to - timedelta(days=duration - 1)
+    if d_from:
+        prev_month_last_day = d_from.replace(day=1) - timedelta(days=1)
+        prev_from = prev_month_last_day.replace(day=1)
+        prev_to = prev_month_last_day
         prev_total = db.session.query(func.count(Delivery.id)).filter(
             Delivery.delivery_date >= prev_from,
             Delivery.delivery_date <= prev_to,
@@ -356,11 +356,11 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
 
     new_clients = _new_clients_in_range(nc_from, nc_to)
 
-    # Compare with the equivalent previous period
-    if nc_from and nc_to:
-        duration = (nc_to - nc_from).days + 1
-        prev_nc_to = nc_from - timedelta(days=1)
-        prev_nc_from = prev_nc_to - timedelta(days=duration - 1)
+    # Compare with the previous full calendar month
+    if nc_from:
+        prev_month_last_day = nc_from.replace(day=1) - timedelta(days=1)
+        prev_nc_from = prev_month_last_day.replace(day=1)
+        prev_nc_to = prev_month_last_day
         prev_new_clients = _new_clients_in_range(prev_nc_from, prev_nc_to)
     else:
         prev_new_clients = 0
@@ -632,16 +632,6 @@ def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
             func.max(Delivery.delivery_date).label('last_date'),
         )
         .join(Delivery, Delivery.order_id == Order.id)
-        .filter(Order.subscription_id.isnot(None), Order.cycle_number == 1)
-        .group_by(Order.subscription_id)
-        .subquery()
-    )
-
-    max_cycle_subq = (
-        db.session.query(
-            Order.subscription_id,
-            func.max(Order.cycle_number).label('max_cycle'),
-        )
         .filter(Order.subscription_id.isnot(None))
         .group_by(Order.subscription_id)
         .subquery()
@@ -650,12 +640,11 @@ def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
     q = (
         db.session.query(
             func.count(Subscription.id).label('total'),
-            func.count(case((max_cycle_subq.c.max_cycle > 1, Subscription.id))).label('renewed'),
+            func.count(case((Subscription.is_extended == True, Subscription.id))).label('renewed'),  # noqa: E712
             func.count(case((Subscription.followup_status == 'declined', Subscription.id))).label('declined'),
             func.count(case((Subscription.followup_status == 'pending', Subscription.id))).label('pending'),
         )
         .join(last_delivery_subq, last_delivery_subq.c.subscription_id == Subscription.id)
-        .outerjoin(max_cycle_subq, max_cycle_subq.c.subscription_id == Subscription.id)
         .filter(Subscription.is_renewal_reminder == False)  # noqa: E712
     )
 

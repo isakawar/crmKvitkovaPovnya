@@ -123,7 +123,7 @@ def create_app(config_class=DevelopmentConfig):
     def require_login():
         if app.config.get('LOGIN_DISABLED'):
             return
-        public_endpoints = ['auth.login', 'static', 'changelog']
+        public_endpoints = ['auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon']
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
                 return redirect(url_for('auth.login'))
@@ -135,7 +135,8 @@ def create_app(config_class=DevelopmentConfig):
                 and not request.endpoint.startswith('photos.')
                 and not request.endpoint.startswith('auth.')
                 and request.endpoint != 'static'
-                and request.endpoint != 'notifications.florist_pending_api'):
+                and request.endpoint != 'notifications.florist_pending_api'
+                and request.endpoint != 'settings.serve_sale_option_icon'):
             return redirect(url_for('florist.florist_routes'))
 
     # Головна сторінка перенаправляє на список замовлень

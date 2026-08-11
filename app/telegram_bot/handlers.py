@@ -1114,22 +1114,18 @@ class CourierHandlers:
         gmaps_stops = []
         if depot_address:
             gmaps_stops.append(urllib.parse.quote(depot_address))
-        for i, stop in enumerate(stops):
-            cached_stop = cached_stops[i] if i < len(cached_stops) else {}
-            if cached_stop.get('lat') and cached_stop.get('lng'):
-                gmaps_stops.append(f"{cached_stop['lat']},{cached_stop['lng']}")
-            else:
-                d = stop.delivery
-                order = d.order if d else None
-                parts = []
-                city = (order.city if order else '') or ''
-                street = (d.street or (order.street if order else '')) or ''
-                building = (d.building_number or (order.building_number if order else '')) or ''
-                if city: parts.append(city)
-                if street: parts.append(street)
-                if building: parts.append(building)
-                if parts:
-                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+        for stop in stops:
+            d = stop.delivery
+            order = d.order if d else None
+            parts = []
+            city = (order.city if order else '') or ''
+            street = (d.street or (order.street if order else '')) or ''
+            building = (d.building_number or (order.building_number if order else '')) or ''
+            if city: parts.append(city)
+            if street: parts.append(street)
+            if building: parts.append(building)
+            if parts:
+                gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
 
         await query.edit_message_text(
@@ -1245,22 +1241,18 @@ class CourierHandlers:
             gmaps_stops = []
             if depot_address:
                 gmaps_stops.append(urllib.parse.quote(depot_address))
-            for i, stop in enumerate(stops):
-                cached_stop = cached_stops[i] if i < len(cached_stops) else {}
-                if cached_stop.get('lat') and cached_stop.get('lng'):
-                    gmaps_stops.append(f"{cached_stop['lat']},{cached_stop['lng']}")
-                else:
-                    d = stop.delivery
-                    order = d.order if d else None
-                    parts = []
-                    city = (order.city if order else '') or ''
-                    street = (d.street or (order.street if order else '')) or ''
-                    building = (d.building_number or (order.building_number if order else '')) or ''
-                    if city: parts.append(city)
-                    if street: parts.append(street)
-                    if building: parts.append(building)
-                    if parts:
-                        gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+            for stop in stops:
+                d = stop.delivery
+                order = d.order if d else None
+                parts = []
+                city = (order.city if order else '') or ''
+                street = (d.street or (order.street if order else '')) or ''
+                building = (d.building_number or (order.building_number if order else '')) or ''
+                if city: parts.append(city)
+                if street: parts.append(street)
+                if building: parts.append(building)
+                if parts:
+                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
             gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
         else:
             route.status = 'rejected'

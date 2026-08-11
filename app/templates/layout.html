@@ -195,6 +195,12 @@
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span>Офлайн продажі</span>
         </a>
+        <a href="/florist/calculator" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/calculator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-calculator text-lg flex-shrink-0"></i>
+            <span>Калькулятор</span>
+        </a>
         {% else %}
         <a href="/dashboard" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
@@ -319,6 +325,13 @@
            title="Офлайн продажі">
             <i class="bi bi-cash-coin text-lg flex-shrink-0"></i>
             <span class="nav-label">Офлайн продажі</span>
+        </a>
+        <a href="/florist/calculator"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/florist/calculator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Калькулятор">
+            <i class="bi bi-calculator text-lg flex-shrink-0"></i>
+            <span class="nav-label">Калькулятор</span>
         </a>
         {% else %}
         <a href="/dashboard"
@@ -539,6 +552,14 @@
                     <i class="bi bi-chevron-down text-xs"></i>
                 </button>
                 <div id="user-menu" class="hidden absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg py-1 min-w-36 z-50">
+                    {% if current_user.user_type == 'florist' and request.path.startswith('/florist') %}
+                    <button id="sound-toggle-btn" onclick="toggleFloristSound()"
+                            class="w-full flex items-center justify-between px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
+                        <span class="flex items-center gap-2"><i id="sound-toggle-icon" class="bi bi-bell-fill"></i> Звук</span>
+                        <span id="sound-toggle-label" class="text-xs font-medium"></span>
+                    </button>
+                    <div class="border-t border-stone-100 my-1"></div>
+                    {% endif %}
                     <a href="{{ url_for('auth.logout') }}"
                        class="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 transition-colors">
                         <i class="bi bi-box-arrow-right"></i> Вийти
@@ -546,9 +567,6 @@
                 </div>
             </div>
             {% endif %}
-            <a href="/" class="p-1.5 rounded-lg border border-stone-200 text-stone-500 hover:bg-stone-50 transition-colors">
-                <i class="bi bi-house"></i>
-            </a>
         </div>
     </div>
 
@@ -605,6 +623,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (menu) menu.classList.add('hidden');
         }
     });
+
+    // Florist sound toggle (shared between layout and florist page JS)
+    window._floristSoundEnabled = localStorage.getItem('floristSoundEnabled') !== 'false';
+    function updateSoundToggleUI() {
+        var icon = document.getElementById('sound-toggle-icon');
+        var label = document.getElementById('sound-toggle-label');
+        if (!icon || !label) return;
+        if (window._floristSoundEnabled) {
+            icon.className = 'bi bi-bell-fill';
+            label.textContent = 'Вкл';
+            label.style.color = '#16a34a';
+        } else {
+            icon.className = 'bi bi-bell-slash';
+            label.textContent = 'Викл';
+            label.style.color = '#9ca3af';
+        }
+    }
+    window.toggleFloristSound = function() {
+        window._floristSoundEnabled = !window._floristSoundEnabled;
+        localStorage.setItem('floristSoundEnabled', window._floristSoundEnabled);
+        updateSoundToggleUI();
+        document.getElementById('user-menu').classList.add('hidden');
+    };
+    updateSoundToggleUI();
 
     // Close notification dropdown on outside click
     document.addEventListener('click', function(e) {

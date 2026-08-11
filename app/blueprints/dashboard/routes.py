@@ -77,11 +77,10 @@ def dashboard_page():
         func.date(Subscription.created_at) == today
     ).scalar() or 0
     extended_today = (
-        db.session.query(func.count(func.distinct(Order.subscription_id)))
+        db.session.query(func.count(Subscription.id))
         .filter(
-            Order.subscription_id.isnot(None),
-            Order.cycle_number > 1,
-            func.date(Order.created_at) == today,
+            Subscription.parent_subscription_id.isnot(None),
+            func.date(Subscription.created_at) == today,
         )
         .scalar() or 0
     )

@@ -48,6 +48,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     last_seen = db.Column(db.DateTime, nullable=True)
     user_type = db.Column(db.String(20))  # 'courier', 'client', 'admin', 'manager'
+    calculator_prefs = db.Column(db.Text, nullable=True)
     
     # Relationships
     roles = db.relationship('Role', secondary=user_roles, lazy='subquery',

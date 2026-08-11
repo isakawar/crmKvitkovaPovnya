@@ -14,6 +14,7 @@ class Client(db.Model):
     credits = db.Column(db.Numeric(10, 2), default=0)
     marketing_source = db.Column(db.String(64), nullable=True)
     personal_discount = db.Column(db.String(16), nullable=True)
+    discount = db.Column(db.Integer, nullable=True)  # loyalty discount %, auto-escalated on renewal
     created_at = db.Column(db.Date, nullable=True, default=datetime.date.today)
     orders = db.relationship('Order', backref='client', lazy=True)
 

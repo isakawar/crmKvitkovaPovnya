@@ -1,0 +1,797 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+<style>
+/* ── Page ── */
+.clc-page { display:flex; flex-direction:column; gap:1.25rem; }
+
+/* ── Hero header ── */
+.clc-hero {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  padding:1.25rem 1.5rem;
+}
+.clc-hero h1 { font-size:1.5rem; font-weight:700; color:#111827; margin:0 0 0.25rem; }
+.clc-hero p  { font-size:0.875rem; color:#6b7280; margin:0; }
+
+/* ── Two-column main block ── */
+.clc-main {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1rem;
+}
+@media(max-width:640px){ .clc-main{ grid-template-columns:1fr; } }
+
+.clc-panel {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  padding:1.5rem;
+}
+.clc-panel__step {
+  font-size:0.7rem;
+  font-weight:700;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:#9ca3af;
+  margin-bottom:1rem;
+}
+
+/* ── Input ── */
+.clc-field { margin-bottom:1.25rem; }
+.clc-field label {
+  display:block;
+  font-size:0.8125rem;
+  font-weight:600;
+  color:#374151;
+  margin-bottom:0.375rem;
+}
+.clc-input-wrap { position:relative; }
+.clc-input {
+  width:100%;
+  border:1.5px solid #d1d5db;
+  border-radius:12px;
+  padding:0.75rem 3rem 0.75rem 1rem;
+  font-size:1.125rem;
+  font-weight:600;
+  color:#111827;
+  background:#f9fafb;
+  outline:none;
+  box-sizing:border-box;
+  transition:border-color .15s, background .15s;
+  -moz-appearance:textfield;
+}
+.clc-input::-webkit-outer-spin-button,
+.clc-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.clc-input::placeholder { color:#d1d5db; font-weight:400; }
+.clc-input:focus { border-color:#16a34a; background:#fff; }
+.clc-input-suffix {
+  position:absolute; right:0.875rem; top:50%; transform:translateY(-50%);
+  font-size:0.875rem; color:#9ca3af; font-weight:500; pointer-events:none;
+}
+
+/* ── Select ── */
+.clc-select-wrap { position:relative; }
+.clc-select {
+  width:100%;
+  border:1.5px solid #d1d5db;
+  border-radius:12px;
+  padding:0.75rem 2.5rem 0.75rem 1rem;
+  font-size:0.9375rem;
+  font-weight:500;
+  color:#111827;
+  background:#f9fafb;
+  outline:none;
+  appearance:none;
+  cursor:pointer;
+  transition:border-color .15s;
+  box-sizing:border-box;
+}
+.clc-select:focus { border-color:#16a34a; background:#fff; }
+.clc-select-arrow {
+  position:absolute; right:0.875rem; top:50%; transform:translateY(-50%);
+  color:#9ca3af; pointer-events:none; font-size:0.75rem;
+}
+
+/* ── Rules info box ── */
+.clc-rules {
+  margin-top:0.875rem;
+  background:#eff6ff;
+  border:1px solid #bfdbfe;
+  border-radius:10px;
+  padding:0.75rem 1rem;
+  font-size:0.8125rem;
+  color:#1e40af;
+  display:none;
+}
+.clc-rules__title { font-weight:700; margin-bottom:0.375rem; }
+.clc-rules__item { display:flex; align-items:flex-start; gap:0.375rem; padding:0.125rem 0; }
+.clc-rules__item.is-active { font-weight:700; color:#15803d; }
+.clc-rules__item.is-active::before { content:'→'; color:#16a34a; flex-shrink:0; }
+.clc-rules__item:not(.is-active)::before { content:'•'; flex-shrink:0; }
+
+/* ── Result panel ── */
+.clc-result-empty {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:200px;
+  text-align:center;
+  color:#d1d5db;
+  gap:0.5rem;
+}
+.clc-result-empty i { font-size:2.5rem; }
+.clc-result-empty p { font-size:0.875rem; margin:0; }
+
+.clc-result { display:none; flex-direction:column; gap:0; }
+
+.clc-result__label { font-size:0.75rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:#6b7280; margin-bottom:0.375rem; }
+
+.clc-result__price-row { display:flex; align-items:center; gap:0.75rem; margin-bottom:0.875rem; }
+.clc-result__price {
+  font-size:2.25rem; font-weight:800; color:#16a34a; line-height:1;
+  letter-spacing:-0.02em;
+}
+.clc-result__currency { font-size:1.25rem; font-weight:600; color:#16a34a; }
+.clc-result__coef-badge {
+  background:#dcfce7; border:1px solid #86efac; border-radius:8px;
+  padding:0.2rem 0.6rem; font-size:0.875rem; font-weight:700; color:#15803d;
+  white-space:nowrap;
+}
+
+.clc-result__details { display:flex; flex-direction:column; gap:0.375rem; margin-bottom:1rem; }
+.clc-result__row { display:flex; justify-content:space-between; font-size:0.8125rem; }
+.clc-result__row-key { color:#6b7280; }
+.clc-result__row-val { font-weight:600; color:#374151; }
+
+/* ── Result bouquet image ── */
+.clc-result-panel {
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(135deg, #f0fdf4 0%, #fff 55%);
+}
+.clc-result-panel__bouquet {
+  position:absolute;
+  bottom:-8px; right:-8px;
+  width:55%;
+  pointer-events:none;
+  user-select:none;
+}
+.clc-result-panel .clc-panel__step,
+.clc-result-panel #clcEmpty,
+.clc-result-panel #clcResult { max-width:52%; }
+
+/* ── Quick buttons ── */
+.clc-quick {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  padding:1.25rem 1.5rem;
+}
+.clc-quick__top { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.75rem; }
+.clc-quick__label { font-size:0.8125rem; font-weight:600; color:#374151; }
+.clc-quick__btns { display:flex; flex-wrap:wrap; gap:0.5rem; }
+.clc-quick__btn {
+  border:1.5px solid #e5e7eb;
+  border-radius:10px;
+  padding:0.4rem 0.875rem;
+  font-size:0.875rem;
+  font-weight:500;
+  color:#374151;
+  background:#f9fafb;
+  cursor:pointer;
+  transition:all .12s;
+}
+.clc-quick__btn:hover { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
+.clc-quick__btn.is-active { border-color:#16a34a; color:#16a34a; background:#dcfce7; font-weight:700; }
+
+/* ── Customize button ── */
+.clc-customize-btn {
+  display:flex; align-items:center; gap:0.3rem;
+  background:none; border:1px solid #e5e7eb; border-radius:8px;
+  padding:0.3rem 0.75rem; font-size:0.8125rem; color:#6b7280;
+  cursor:pointer; transition:all .12s;
+}
+.clc-customize-btn:hover { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
+.clc-customize-btn.is-active { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
+
+/* ── Settings panel ── */
+.clc-settings {
+  background:#fff;
+  border:1.5px solid #d1fae5;
+  border-radius:20px;
+  padding:1.5rem;
+  display:none;
+}
+.clc-settings.is-open { display:block; }
+.clc-settings__head {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:1.5rem;
+}
+.clc-settings__head-title { font-size:0.9375rem; font-weight:700; color:#111827; }
+.clc-settings__section { margin-bottom:1.25rem; }
+.clc-settings__section-label {
+  font-size:0.7rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.1em; color:#9ca3af; margin-bottom:0.625rem;
+}
+
+/* Amount tags */
+.clc-amt-tags { display:flex; flex-wrap:wrap; gap:0.375rem; margin-bottom:0.625rem; min-height:1.5rem; }
+.clc-amt-tag {
+  display:inline-flex; align-items:center; gap:0.3rem;
+  background:#f3f4f6; border:1px solid #e5e7eb; border-radius:8px;
+  padding:0.25rem 0.375rem 0.25rem 0.625rem;
+  font-size:0.8125rem; font-weight:500; color:#374151;
+}
+.clc-amt-tag__del {
+  background:none; border:none; padding:0; cursor:pointer;
+  color:#9ca3af; font-size:0.875rem; line-height:1; display:flex; align-items:center;
+}
+.clc-amt-tag__del:hover { color:#ef4444; }
+.clc-amt-add { display:flex; gap:0.5rem; align-items:center; }
+.clc-amt-add__input {
+  border:1.5px solid #d1d5db; border-radius:8px;
+  padding:0.4rem 0.625rem; font-size:0.875rem; width:110px;
+  outline:none; -moz-appearance:textfield;
+}
+.clc-amt-add__input::-webkit-outer-spin-button,
+.clc-amt-add__input::-webkit-inner-spin-button { -webkit-appearance:none; }
+.clc-amt-add__input:focus { border-color:#16a34a; }
+.clc-amt-add__btn {
+  background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px;
+  padding:0.4rem 0.875rem; font-size:0.8125rem; font-weight:600;
+  color:#15803d; cursor:pointer; white-space:nowrap;
+}
+.clc-amt-add__btn:hover { background:#dcfce7; }
+
+/* Channel order list */
+.clc-ch-list { display:flex; flex-direction:column; gap:0.375rem; }
+.clc-ch-row {
+  display:flex; align-items:center; gap:0.75rem;
+  background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:10px;
+  padding:0.5rem 0.75rem;
+  cursor:grab; user-select:none; transition:box-shadow .12s, border-color .12s, opacity .12s;
+}
+.clc-ch-row:active { cursor:grabbing; }
+.clc-ch-row.drag-over { border-color:#16a34a; background:#f0fdf4; box-shadow:0 0 0 2px #86efac; }
+.clc-ch-row.dragging { opacity:0.4; }
+.clc-ch-row__drag { color:#d1d5db; font-size:1rem; pointer-events:none; }
+.clc-ch-row__name { flex:1; font-size:0.875rem; font-weight:500; color:#374151; pointer-events:none; }
+
+/* Settings actions */
+.clc-settings__actions { display:flex; gap:0.75rem; padding-top:0.5rem; }
+.clc-settings__save {
+  background:#16a34a; color:#fff; border:none; border-radius:10px;
+  padding:0.5rem 1.375rem; font-size:0.875rem; font-weight:600; cursor:pointer;
+  transition:background .12s;
+}
+.clc-settings__save:hover { background:#15803d; }
+.clc-settings__cancel-btn {
+  background:none; color:#6b7280; border:1px solid #e5e7eb; border-radius:10px;
+  padding:0.5rem 1rem; font-size:0.875rem; cursor:pointer; transition:all .12s;
+}
+.clc-settings__cancel-btn:hover { border-color:#9ca3af; color:#374151; }
+
+/* ── Comparison ── */
+.clc-compare {
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:20px;
+  padding:1.25rem 1.5rem;
+}
+.clc-compare__label { font-size:0.875rem; font-weight:700; color:#111827; margin-bottom:0.875rem; }
+.clc-compare__grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:0.75rem; }
+
+.clc-cmp-card {
+  border:1.5px solid #e5e7eb;
+  border-radius:14px;
+  padding:0.875rem 1rem;
+  cursor:pointer;
+  transition:all .12s;
+  background:#fafafa;
+}
+.clc-cmp-card:hover { border-color:#16a34a; background:#f0fdf4; }
+.clc-cmp-card.is-active { border-color:#16a34a; background:#f0fdf4; }
+
+.clc-cmp-card__head { display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem; }
+.clc-cmp-card__avatar {
+  width:48px; height:48px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem; font-weight:800; color:#fff; flex-shrink:0;
+}
+.clc-cmp-card__check { color:#16a34a; font-size:0.875rem; }
+.clc-cmp-card__name { font-size:0.875rem; font-weight:600; color:#374151; margin-bottom:0.2rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.clc-cmp-card__coef { font-size:0.75rem; color:#6b7280; }
+.clc-cmp-card__price { font-size:1rem; font-weight:700; color:#16a34a; margin-top:0.375rem; }
+.clc-cmp-card__price.is-empty { color:#d1d5db; font-weight:400; font-size:0.875rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# Pass options data to JS #}
+<script>
+const CLC_OPTIONS = [{% for opt in options %}{"id":"{{ opt.id }}","name":{{ opt.name | tojson }},"tiers":{{ opt.tiers_json | safe }},"icon":{{ opt.icon_filename | tojson }}},{% endfor %}];
+const CLC_USER_ID = {{ current_user.id }};
+</script>
+
+<div class="clc-page">
+
+  <!-- Hero -->
+  <div class="clc-hero">
+    <h1>Калькулятор собівартості 🌸</h1>
+    <p>Швидкий розрахунок ціни продажу букету для різних каналів продажу</p>
+  </div>
+
+  {% if not options %}
+  <div style="background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:3rem;text-align:center;color:#9ca3af;">
+    <i class="bi bi-sliders2" style="font-size:2rem;display:block;margin-bottom:0.75rem;"></i>
+    <p style="margin:0;font-size:0.9375rem;">Адмін ще не налаштував опції продажу.</p>
+    <p style="margin:0.25rem 0 0;font-size:0.8125rem;">Зверніться до адміністратора.</p>
+  </div>
+  {% else %}
+
+  <!-- Main two-column -->
+  <div class="clc-main">
+
+    <!-- Left: inputs -->
+    <div class="clc-panel">
+      <div class="clc-panel__step">1. Введіть дані</div>
+
+      <div class="clc-field">
+        <label for="clcCost">Собівартість букета</label>
+        <div class="clc-input-wrap">
+          <input type="number" id="clcCost" class="clc-input" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+          <span class="clc-input-suffix">грн</span>
+        </div>
+      </div>
+
+      <div class="clc-field" style="margin-bottom:0;">
+        <label for="clcSelect">Оберіть маркетплейс</label>
+        <div class="clc-select-wrap">
+          <select id="clcSelect" class="clc-select">
+            <option value="">— Обери канал —</option>
+            {% for opt in options %}
+            <option value="{{ opt.id }}" data-tiers="{{ opt.tiers_json | e }}" data-name="{{ opt.name | e }}">{{ opt.name }}</option>
+            {% endfor %}
+          </select>
+          <span class="clc-select-arrow"><i class="bi bi-chevron-down"></i></span>
+        </div>
+
+        <!-- Rules -->
+        <div class="clc-rules" id="clcRules">
+          <div class="clc-rules__title" id="clcRulesTitle"></div>
+          <div id="clcRulesList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: result -->
+    <div class="clc-panel clc-result-panel">
+      <img src="{{ url_for('static', filename='img/calculator_bouquet.png') }}"
+           class="clc-result-panel__bouquet" alt="">
+      <div class="clc-panel__step">2. Результат</div>
+
+      <div class="clc-result-empty" id="clcEmpty">
+        <i class="bi bi-calculator"></i>
+        <p>Введи собівартість<br>та обери канал</p>
+      </div>
+
+      <div class="clc-result" id="clcResult">
+        <div class="clc-result__label">Ціна продажу</div>
+        <div class="clc-result__price-row">
+          <span class="clc-result__price" id="clcPrice">—</span>
+          <span class="clc-result__currency">грн</span>
+          <span class="clc-result__coef-badge" id="clcCoefBadge">×—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick buttons -->
+  <div class="clc-quick">
+    <div class="clc-quick__top">
+      <div class="clc-quick__label">Швидкі кнопки</div>
+      <button class="clc-customize-btn" id="clcCustomizeBtn">
+        <i class="bi bi-sliders2"></i> Налаштувати
+      </button>
+    </div>
+    <div class="clc-quick__btns" id="clcQuickBtns"></div>
+  </div>
+
+  <!-- Settings panel -->
+  <div class="clc-settings" id="clcSettings">
+    <div class="clc-settings__head">
+      <div class="clc-settings__head-title"><i class="bi bi-sliders2" style="margin-right:0.375rem;"></i>Налаштування калькулятора</div>
+    </div>
+
+    <div class="clc-settings__section">
+      <div class="clc-settings__section-label">Швидкі кнопки (грн)</div>
+      <div class="clc-amt-tags" id="clcAmtTags"></div>
+      <div class="clc-amt-add">
+        <input type="number" class="clc-amt-add__input" id="clcAmtInput" placeholder="напр. 1200" min="1" step="1" inputmode="numeric">
+        <button class="clc-amt-add__btn" id="clcAmtAddBtn">+ Додати</button>
+      </div>
+    </div>
+
+    <div class="clc-settings__section">
+      <div class="clc-settings__section-label">Порядок каналів</div>
+      <div class="clc-ch-list" id="clcChList"></div>
+    </div>
+
+    <div class="clc-settings__actions">
+      <button class="clc-settings__save" id="clcSettingsSave">Зберегти</button>
+      <button class="clc-settings__cancel-btn" id="clcSettingsCancel">Скасувати</button>
+    </div>
+  </div>
+
+  <!-- Comparison -->
+  <div class="clc-compare">
+    <div class="clc-compare__label">Порівняння всіх каналів</div>
+    <div class="clc-compare__grid" id="clcCompareGrid"></div>
+  </div>
+
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  if (!CLC_OPTIONS.length) return;
+
+  /* ── Avatar helpers ── */
+  const AVATAR_COLORS = ['#16a34a','#7c3aed','#d97706','#2563eb','#db2777','#0d9488','#ea580c','#9333ea'];
+  function avatarColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+    return AVATAR_COLORS[h % AVATAR_COLORS.length];
+  }
+  function initAvatar(el) {
+    const name = el.dataset.avatar || '';
+    el.style.background = avatarColor(name);
+    el.textContent = name.charAt(0).toUpperCase();
+  }
+  window._initAvatar = initAvatar;
+
+  /* ── Prefs (server-side, localStorage as cache) ── */
+  const PREFS_KEY = 'clc_prefs_' + CLC_USER_ID;
+  const DEFAULT_AMOUNTS = [500, 800, 1000, 1500, 2000, 2500, 3000, 4000];
+
+  function mergePrefs(saved) {
+    const defaultOrder = CLC_OPTIONS.map(o => o.id);
+    if (!saved) return { amounts: [...DEFAULT_AMOUNTS], order: [...defaultOrder] };
+    const order = [...(saved.order || defaultOrder)];
+    defaultOrder.forEach(id => { if (!order.includes(id)) order.push(id); });
+    return { amounts: saved.amounts || [...DEFAULT_AMOUNTS], order };
+  }
+
+  async function fetchPrefs() {
+    try {
+      const r = await fetch('/florist/calculator/prefs');
+      if (r.ok) {
+        const data = await r.json();
+        if (data && Object.keys(data).length) {
+          const p = mergePrefs(data);
+          try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch(e) {}
+          return p;
+        }
+      }
+    } catch(e) {}
+    // fallback: localStorage
+    try { const c = localStorage.getItem(PREFS_KEY); if (c) return mergePrefs(JSON.parse(c)); } catch(e) {}
+    return mergePrefs(null);
+  }
+
+  async function savePrefs(p) {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch(e) {}
+    try {
+      await fetch('/florist/calculator/prefs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(p),
+      });
+    } catch(e) {}
+  }
+
+  let prefs = mergePrefs(null); // populated after fetchPrefs()
+
+  /* ── DOM refs ── */
+  const costEl       = document.getElementById('clcCost');
+  const selectEl     = document.getElementById('clcSelect');
+  const rulesEl      = document.getElementById('clcRules');
+  const rulesTitleEl = document.getElementById('clcRulesTitle');
+  const rulesListEl  = document.getElementById('clcRulesList');
+  const emptyEl      = document.getElementById('clcEmpty');
+  const resultEl     = document.getElementById('clcResult');
+  const priceEl      = document.getElementById('clcPrice');
+  const coefBadgeEl  = document.getElementById('clcCoefBadge');
+  const quickBtnsEl  = document.getElementById('clcQuickBtns');
+  const compareGrid  = document.getElementById('clcCompareGrid');
+  const settingsEl   = document.getElementById('clcSettings');
+  const customizeBtn = document.getElementById('clcCustomizeBtn');
+
+  if (!costEl) return;
+
+  /* ── Formatting ── */
+  function fmt(n) {
+    return Number(n).toLocaleString('uk-UA', { minimumFractionDigits:0, maximumFractionDigits:2 });
+  }
+
+  /* ── Tier logic ── */
+  function applyTier(cost, tiers) {
+    const sorted = [...tiers].sort((a,b) => b.min_amount - a.min_amount);
+    return sorted.find(t => cost >= t.min_amount) ?? sorted[sorted.length - 1];
+  }
+  function tierRuleLabel(tier, tiers) {
+    const sorted = [...tiers].sort((a,b) => b.min_amount - a.min_amount);
+    const idx = sorted.findIndex(t => t.min_amount === tier.min_amount);
+    if (tier.min_amount === 0) return 'Решта випадків';
+    const next = sorted[idx - 1];
+    if (next) return `Сума від ${fmt(tier.min_amount)} до ${fmt(next.min_amount - 1)} грн`;
+    return `Сума від ${fmt(tier.min_amount)} грн`;
+  }
+
+  /* ── Rules box ── */
+  function renderRules(tiers, activeTier) {
+    const sorted = [...tiers].sort((a,b) => b.min_amount - a.min_amount);
+    rulesListEl.innerHTML = sorted.map(t => {
+      const label = t.min_amount === 0
+        ? `Сума менше ${sorted.length > 1 ? fmt(sorted[sorted.length-2].min_amount) : '∞'} грн — коефіцієнт ×${t.coefficient}`
+        : `Сума ${fmt(t.min_amount)} грн і більше — коефіцієнт ×${t.coefficient}`;
+      const active = activeTier && t.min_amount === activeTier.min_amount;
+      return `<div class="clc-rules__item${active?' is-active':''}">${label}</div>`;
+    }).join('');
+  }
+
+  /* ── Quick buttons ── */
+  function renderQuickBtns() {
+    const cost = parseFloat(costEl.value);
+    quickBtnsEl.innerHTML = prefs.amounts.map(amt =>
+      `<button type="button" class="clc-quick__btn${parseFloat(amt)===cost?' is-active':''}" data-amt="${amt}">${fmt(amt)}</button>`
+    ).join('');
+    quickBtnsEl.querySelectorAll('.clc-quick__btn').forEach(btn => {
+      btn.addEventListener('click', () => { costEl.value = btn.dataset.amt; calculate(); });
+    });
+  }
+
+  /* ── Compare grid ── */
+  function orderedOptions() {
+    return [...CLC_OPTIONS].sort((a,b) => {
+      const ai = prefs.order.indexOf(a.id), bi = prefs.order.indexOf(b.id);
+      return (ai<0?999:ai) - (bi<0?999:bi);
+    });
+  }
+
+  function renderCompareGrid() {
+    compareGrid.innerHTML = orderedOptions().map(opt => {
+      const avatarHtml = opt.icon
+        ? `<div class="clc-cmp-card__avatar" style="position:relative;overflow:hidden;" data-name="${opt.name}">
+             <img src="/settings/sale_option_icons/${opt.icon}?v=${opt.id}" alt=""
+                  style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">
+           </div>`
+        : `<div class="clc-cmp-card__avatar" data-avatar="${opt.name}"></div>`;
+      return `<div class="clc-cmp-card" data-id="${opt.id}" data-name="${opt.name}">
+        <div class="clc-cmp-card__head">
+          ${avatarHtml}
+          <i class="bi bi-check-circle-fill clc-cmp-card__check" style="display:none;"></i>
+        </div>
+        <div class="clc-cmp-card__name">${opt.name}</div>
+        <div class="clc-cmp-card__coef" id="cmpCoef-${opt.id}">×—</div>
+        <div class="clc-cmp-card__price is-empty" id="cmpPrice-${opt.id}">—</div>
+      </div>`;
+    }).join('');
+
+    // Avatar initials fallback
+    compareGrid.querySelectorAll('[data-avatar]').forEach(initAvatar);
+
+    // Image onerror: fall back to initials
+    compareGrid.querySelectorAll('.clc-cmp-card__avatar img').forEach(img => {
+      img.addEventListener('error', function() {
+        const p = this.parentNode;
+        p.dataset.avatar = p.dataset.name || '';
+        this.remove();
+        initAvatar(p);
+      });
+    });
+
+    // Click = select channel
+    compareGrid.querySelectorAll('.clc-cmp-card').forEach(card => {
+      card.addEventListener('click', () => { selectEl.value = card.dataset.id; calculate(); });
+    });
+
+    updateCompare(parseFloat(costEl.value));
+  }
+
+  /* ── Update compare prices ── */
+  function updateCompare(cost) {
+    const hasCost = !isNaN(cost) && cost > 0;
+    const activeId = selectEl.value;
+
+    compareGrid.querySelectorAll('.clc-cmp-card').forEach(card => {
+      const id = card.dataset.id;
+      const opt = CLC_OPTIONS.find(o => o.id === id);
+      if (!opt) return;
+      const coefEl   = document.getElementById('cmpCoef-' + id);
+      const priceDiv = document.getElementById('cmpPrice-' + id);
+      const checkEl  = card.querySelector('.clc-cmp-card__check');
+
+      const isActive = id === activeId;
+      card.classList.toggle('is-active', isActive);
+      if (checkEl) checkEl.style.display = isActive ? 'inline' : 'none';
+
+      if (hasCost) {
+        const tier = applyTier(cost, opt.tiers);
+        coefEl.textContent = '×' + tier.coefficient;
+        priceDiv.textContent = fmt(cost * tier.coefficient) + ' грн';
+        priceDiv.className = 'clc-cmp-card__price';
+      } else {
+        const def = [...opt.tiers].sort((a,b) => a.min_amount - b.min_amount)[0];
+        coefEl.textContent = def ? '×' + def.coefficient : '×—';
+        priceDiv.textContent = '—';
+        priceDiv.className = 'clc-cmp-card__price is-empty';
+      }
+    });
+  }
+
+  /* ── Calculate ── */
+  function calculate() {
+    const cost      = parseFloat(costEl.value);
+    const selOpt    = selectEl.options[selectEl.selectedIndex];
+    const hasCost   = !isNaN(cost) && cost > 0;
+    const hasChan   = selOpt && !!selOpt.dataset.tiers;
+    const optData   = hasChan ? CLC_OPTIONS.find(o => o.id === selectEl.value) : null;
+
+    renderQuickBtns();
+    updateCompare(hasCost ? cost : NaN);
+
+    if (hasChan && optData) {
+      const activeTier = hasCost ? applyTier(cost, optData.tiers) : null;
+      renderRules(optData.tiers, activeTier);
+      rulesTitleEl.textContent = 'Правила для ' + optData.name + ':';
+      rulesEl.style.display = 'block';
+    } else {
+      rulesEl.style.display = 'none';
+    }
+
+    if (hasCost && hasChan && optData) {
+      const tier     = applyTier(cost, optData.tiers);
+      const price    = cost * tier.coefficient;
+
+      priceEl.textContent     = fmt(price);
+      coefBadgeEl.textContent = '×' + tier.coefficient;
+
+      emptyEl.style.display  = 'none';
+      resultEl.style.display = 'flex';
+    } else {
+      emptyEl.style.display  = 'flex';
+      resultEl.style.display = 'none';
+    }
+  }
+
+  costEl.addEventListener('input', calculate);
+  selectEl.addEventListener('change', calculate);
+
+  /* ── Settings panel ── */
+  let draft = null;
+
+  function openSettings() {
+    draft = { amounts: [...prefs.amounts], order: [...prefs.order] };
+    renderSettingsPanel();
+    settingsEl.classList.add('is-open');
+    customizeBtn.classList.add('is-active');
+    settingsEl.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+  function closeSettings() {
+    settingsEl.classList.remove('is-open');
+    customizeBtn.classList.remove('is-active');
+    draft = null;
+  }
+
+  function renderSettingsPanel() {
+    if (!draft) return;
+
+    /* Amounts */
+    const tagsEl = document.getElementById('clcAmtTags');
+    tagsEl.innerHTML = draft.amounts.map((amt, i) =>
+      `<div class="clc-amt-tag">${fmt(amt)} грн
+        <button class="clc-amt-tag__del" data-i="${i}" title="Видалити">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>`
+    ).join('');
+    tagsEl.querySelectorAll('.clc-amt-tag__del').forEach(btn => {
+      btn.addEventListener('click', () => {
+        draft.amounts.splice(parseInt(btn.dataset.i), 1);
+        renderSettingsPanel();
+      });
+    });
+
+    /* Channel order — drag & drop */
+    const chEl = document.getElementById('clcChList');
+    const ordered = [...CLC_OPTIONS].sort((a,b) => {
+      const ai = draft.order.indexOf(a.id), bi = draft.order.indexOf(b.id);
+      return (ai<0?999:ai) - (bi<0?999:bi);
+    });
+    chEl.innerHTML = ordered.map(opt =>
+      `<div class="clc-ch-row" draggable="true" data-id="${opt.id}">
+        <i class="bi bi-grip-vertical clc-ch-row__drag"></i>
+        <span class="clc-ch-row__name">${opt.name}</span>
+      </div>`
+    ).join('');
+
+    let dragSrc = null;
+    chEl.querySelectorAll('.clc-ch-row').forEach(row => {
+      row.addEventListener('dragstart', e => {
+        dragSrc = row;
+        row.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      row.addEventListener('dragend', () => {
+        row.classList.remove('dragging');
+        chEl.querySelectorAll('.clc-ch-row').forEach(r => r.classList.remove('drag-over'));
+      });
+      row.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        chEl.querySelectorAll('.clc-ch-row').forEach(r => r.classList.remove('drag-over'));
+        if (row !== dragSrc) row.classList.add('drag-over');
+      });
+      row.addEventListener('drop', e => {
+        e.preventDefault();
+        if (!dragSrc || dragSrc === row) return;
+        const rows = [...chEl.querySelectorAll('.clc-ch-row')];
+        const from = rows.indexOf(dragSrc);
+        const to   = rows.indexOf(row);
+        const newOrder = rows.map(r => r.dataset.id);
+        newOrder.splice(from, 1);
+        newOrder.splice(to, 0, dragSrc.dataset.id);
+        draft.order = newOrder;
+        renderSettingsPanel();
+      });
+    });
+  }
+
+  customizeBtn.addEventListener('click', () => {
+    settingsEl.classList.contains('is-open') ? closeSettings() : openSettings();
+  });
+
+  document.getElementById('clcSettingsCancel').addEventListener('click', closeSettings);
+
+  document.getElementById('clcSettingsSave').addEventListener('click', async () => {
+    if (!draft) return;
+    prefs = { amounts: [...draft.amounts], order: [...draft.order] };
+    await savePrefs(prefs);
+    closeSettings();
+    renderQuickBtns();
+    renderCompareGrid();
+    calculate();
+  });
+
+  /* Add amount button */
+  document.getElementById('clcAmtAddBtn').addEventListener('click', () => {
+    const input = document.getElementById('clcAmtInput');
+    const val = parseInt(input.value);
+    if (!val || val <= 0) return;
+    if (!draft.amounts.includes(val)) {
+      draft.amounts.push(val);
+      draft.amounts.sort((a,b) => a-b);
+    }
+    input.value = '';
+    renderSettingsPanel();
+  });
+  document.getElementById('clcAmtInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('clcAmtAddBtn').click();
+  });
+
+  /* ── Init ── */
+  fetchPrefs().then(p => {
+    prefs = p;
+    renderQuickBtns();
+    renderCompareGrid();
+    calculate();
+  });
+})();
+</script>
+{% endblock %}

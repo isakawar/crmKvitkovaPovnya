@@ -13,10 +13,12 @@ from .delivery_route import DeliveryRoute, RouteDelivery
 from .price_preset import PricePreset
 from .price import Price
 from .certificate import Certificate
+from .promo_code import PromoCode
 from .order_photo import OrderPhoto
 from .route_dispatch_log import RouteDispatchLog
 from .expense_category import ExpenseCategory
 from .revenue_adjustment import RevenueAdjustment
 from .action_item import ActionItem, ActionItemRecipient
+from .sale_option import SaleOption
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'PromoCode', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient', 'SaleOption']

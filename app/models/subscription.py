@@ -70,6 +70,17 @@ class Subscription(db.Model):
 
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
+    promo_code_id = db.Column(db.Integer, db.ForeignKey('promo_codes.id'), nullable=True)
+
+    # Продовження: посилання на попередню підписку
+    parent_subscription_id = db.Column(
+        db.Integer, db.ForeignKey('subscription.id', ondelete='SET NULL'), nullable=True
+    )
+    parent_subscription = db.relationship(
+        'Subscription', remote_side='Subscription.id',
+        foreign_keys='Subscription.parent_subscription_id',
+        backref='child_subscriptions',
+    )
 
     # Тимчасова зупинка підписки
     is_stopped = db.Column(db.Boolean, default=False, nullable=False)

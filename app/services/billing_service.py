@@ -44,7 +44,11 @@ def get_order_price(order: Order) -> int | None:
         if order.subscription_id:
             base = base / 4
 
-    discount = order.discount or 0
+    if order.discount is not None:
+        discount = order.discount
+    else:
+        client = Client.query.get(order.client_id)
+        discount = (client.discount or 0) if client else 0
     return int(base * (1 - discount / 100))
 
 

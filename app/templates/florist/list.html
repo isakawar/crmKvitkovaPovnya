@@ -404,7 +404,14 @@
     </td>
     {% if show_time %}<td class="whitespace-nowrap text-sm">{{ time_slot }}</td>{% endif %}
     <td class="w-10">
-      {% if delivery.florist_status in ('Затверджено', 'Зібрано', "Передано кур'єру") %}
+      {% if delivery.status == 'Доставлено' %}
+      <button type="button"
+              class="florist-quick-reset-btn inline-flex h-8 w-8 items-center justify-center rounded-xl border border-amber-200 bg-white text-amber-500 transition-colors hover:bg-amber-50 hover:text-amber-700 hover:border-amber-300"
+              data-delivery-id="{{ delivery.id }}"
+              title="Повернути в очікування">
+        <i class="bi bi-arrow-counterclockwise text-base"></i>
+      </button>
+      {% elif delivery.florist_status in ('Затверджено', 'Зібрано', "Передано кур'єру") %}
       <button type="button"
               class="florist-quick-done-btn inline-flex h-8 w-8 items-center justify-center rounded-xl border border-emerald-200 bg-white text-emerald-500 transition-colors hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300"
               data-delivery-id="{{ delivery.id }}"
@@ -573,6 +580,7 @@
         {% for key, label in florist_status_options.items() %}
           <option value="{{ key }}">{{ label }}</option>
         {% endfor %}
+        <option value="reset">↩ Повернути в очікування</option>
       </select>
       <button id="apply-florist-status" type="button" disabled
               class="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-40 hover:bg-stone-700">
@@ -877,6 +885,12 @@
     </section>
   {% endif %}
 </div>
+
+<div id="new-delivery-banner" style="display:none;position:fixed;top:1rem;left:50%;transform:translateX(-50%);z-index:9999;background:#fbbf24;color:#111;padding:0.75rem 1.5rem;border-radius:0.75rem;box-shadow:0 4px 24px rgba(0,0,0,0.18);align-items:center;gap:1rem;white-space:nowrap;font-weight:600;font-size:1rem;">
+  🌸 Додано нові доставки!
+  <button onclick="location.reload()" style="background:#111;color:#fff;padding:0.3rem 0.9rem;border-radius:0.5rem;font-size:0.875rem;border:none;cursor:pointer;font-weight:600;">Оновити</button>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -1170,6 +1184,30 @@
       if (typeof showToast === 'function') showToast(err.message || 'Помилка', 'error');
     }
   });
+
+  // Quick "Повернути в очікування" button per delivery row
+  document.addEventListener('click', async function(e) {
+    const btn = e.target.closest('.florist-quick-reset-btn');
+    if (!btn) return;
+    const deliveryId = btn.dataset.deliveryId;
+    if (!deliveryId) return;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="bi bi-hourglass-split text-base"></i>';
+    try {
+      const res = await fetch('/florist/deliveries/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ delivery_ids: [parseInt(deliveryId)], status_key: 'reset' }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Помилка');
+      softReload();
+    } catch(err) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-arrow-counterclockwise text-base"></i>';
+      if (typeof showToast === 'function') showToast(err.message || 'Помилка', 'error');
+    }
+  });
 </script>
 <script>
 (function() {
@@ -1185,6 +1223,85 @@
       row.style.background = '';
     }, 2500);
   });
+})();
+</script>
+<script>
+(function () {
+  var lastSeen = '{{ initial_last_updated }}';
+  var selectedDate = '{{ selected_date.isoformat() }}';
+  var intervalId = null;
+  var audioCtx = null;
+
+  // Create AudioContext immediately — it starts in 'suspended' state but is not null
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  } catch (e) {}
+
+  // Resume on any user interaction so it's ready when notification fires
+  function resumeCtx() {
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+  document.addEventListener('click', resumeCtx);
+  document.addEventListener('touchstart', resumeCtx);
+  document.addEventListener('keydown', resumeCtx);
+
+  function playBeep(freq, delay, duration) {
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + duration);
+    osc.start(audioCtx.currentTime + delay);
+    osc.stop(audioCtx.currentTime + delay + duration);
+  }
+
+  function doPlayBeeps() {
+    try {
+      // 3 repetitions of до-ре-мі + final high note ≈ 7s
+      [0, 2.0, 4.0].forEach(function (offset) {
+        playBeep(523, offset + 0.0,  0.4);
+        playBeep(659, offset + 0.55, 0.4);
+        playBeep(784, offset + 1.1,  0.6);
+      });
+      playBeep(1046, 6.3, 0.8);
+    } catch (e) {}
+  }
+
+  function playNotificationSound() {
+    if (!window._floristSoundEnabled || !audioCtx) return;
+    try {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume().then(doPlayBeeps);
+      } else {
+        doPlayBeeps();
+      }
+    } catch (e) {}
+  }
+
+  function showBanner() {
+    var el = document.getElementById('new-delivery-banner');
+    if (el) el.style.display = 'flex';
+  }
+
+  function checkNewDeliveries() {
+    fetch('/florist/check-new-deliveries?date=' + selectedDate + '&since=' + encodeURIComponent(lastSeen))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.latest) { lastSeen = data.latest; }
+        if (data.has_new) {
+          clearInterval(intervalId);
+          showBanner();
+          playNotificationSound();
+        }
+      })
+      .catch(function () {});
+  }
+
+  intervalId = setInterval(checkNewDeliveries, 60000);
 })();
 </script>
 {% endblock %}

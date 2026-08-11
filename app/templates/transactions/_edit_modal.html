@@ -68,6 +68,18 @@
             <label class="txn-label">Дата</label>
             <input type="date" id="editTxnDate" name="date" required class="txn-input">
           </div>
+
+          <div class="txn-field" id="editLinkedField" style="display:none;">
+            <label class="txn-label">Замовлення / підписка</label>
+            <div class="txn-linked-selector">
+              <button type="button" id="editLinkedBtn" class="txn-input txn-linked-btn">
+                — Оберіть замовлення або підписку —
+              </button>
+              <input type="hidden" id="editLinkedOrderId">
+              <input type="hidden" id="editLinkedSubscriptionId">
+              <div id="editLinkedDropdown" class="txn-linked-dropdown" style="display:none;"></div>
+            </div>
+          </div>
         </div>
 
         <div class="txn-modal-footer">
@@ -108,9 +120,98 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
   const paymentAccountSelect = document.getElementById('editTxnPaymentAccountId');
+  const editLinkedField = document.getElementById('editLinkedField');
+  const editLinkedBtn = document.getElementById('editLinkedBtn');
+  const editLinkedDropdown = document.getElementById('editLinkedDropdown');
+  const editLinkedOrderId = document.getElementById('editLinkedOrderId');
+  const editLinkedSubscriptionId = document.getElementById('editLinkedSubscriptionId');
   let expenseTypes = [];
   let activeIndex = -1;
   let paymentAccountsLoaded = false;
+  let editClientId = null;
+
+  function hideEditLinkedDropdown() { editLinkedDropdown.style.display = 'none'; }
+
+  let editOrders = [];
+
+  function fmtEditAmount(val) {
+    if (val == null) return '';
+    return parseFloat(val).toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function selectEditLinkedItem(order) {
+    editLinkedOrderId.value = order.id || '';
+    editLinkedSubscriptionId.value = (order.subscription && order.subscription.id) || '';
+    editLinkedBtn.textContent = order.label + '   ' + order.date_display;
+    editLinkedBtn.classList.add('has-value');
+    hideEditLinkedDropdown();
+  }
+
+  async function loadEditClientLinks(clientId, currentOrderId, currentSubscriptionId) {
+    editLinkedOrderId.value = '';
+    editLinkedSubscriptionId.value = '';
+    editLinkedBtn.textContent = '— Оберіть замовлення або підписку —';
+    editLinkedBtn.classList.remove('has-value');
+    editLinkedDropdown.innerHTML = '';
+    hideEditLinkedDropdown();
+    editOrders = [];
+
+    try {
+      const res = await fetch(`/transactions/clients/${clientId}/orders`);
+      const orders = await res.json();
+      editOrders = orders;
+
+      editLinkedDropdown.innerHTML = (orders.length ? orders : []).map((o, idx) => {
+        const isSub = o.is_subscription;
+        const iconClass = isSub ? 'txn-linked-icon--sub' : 'txn-linked-icon--order';
+        const icon = isSub ? 'bi-calendar3' : 'bi-bag';
+        const subtitle = isSub
+          ? (o.subscription ? o.subscription.type_display : 'Підписка')
+          : (o.delivery_type || 'Одноразове замовлення');
+        const priceVal = isSub && o.subscription && o.subscription.total != null
+          ? o.subscription.total : o.amount;
+        const priceHtml = priceVal != null
+          ? `<div class="txn-linked-price">${fmtEditAmount(priceVal)} грн</div>` : '';
+        return `<div class="txn-linked-item" data-idx="${idx}">
+          <div class="txn-linked-icon ${iconClass}"><i class="bi ${icon}"></i></div>
+          <div class="txn-linked-info">
+            <div class="txn-linked-title">${o.label}</div>
+            <div class="txn-linked-sub">${subtitle}</div>
+          </div>
+          <div class="txn-linked-meta">
+            ${priceHtml}
+            <div class="txn-linked-date">${o.date_display}</div>
+          </div>
+        </div>`;
+      }).join('') || '<div style="padding:0.75rem 0.8rem;font-size:13px;color:#a8a29e;">У клієнта немає замовлень</div>';
+
+      editLinkedDropdown.querySelectorAll('.txn-linked-item').forEach(el => {
+        el.addEventListener('mousedown', function (e) {
+          e.preventDefault();
+          const order = editOrders[parseInt(this.dataset.idx)];
+          if (order) selectEditLinkedItem(order);
+        });
+      });
+
+      // pre-select current value
+      if (currentOrderId) {
+        const match = orders.find(o => String(o.id) === String(currentOrderId));
+        if (match) {
+          selectEditLinkedItem(match);
+        } else {
+          editLinkedOrderId.value = currentOrderId;
+          editLinkedBtn.textContent = `Замовлення #${currentOrderId}`;
+          editLinkedBtn.classList.add('has-value');
+        }
+      } else if (currentSubscriptionId) {
+        editLinkedSubscriptionId.value = currentSubscriptionId;
+        editLinkedBtn.textContent = `Підписка #${currentSubscriptionId}`;
+        editLinkedBtn.classList.add('has-value');
+      }
+    } catch (_) {}
+
+    editLinkedField.style.display = '';
+  }
 
   async function loadPaymentAccounts() {
     if (paymentAccountsLoaded) return;
@@ -201,8 +302,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
+  editLinkedBtn.addEventListener('click', function () {
+    if (!editLinkedDropdown.innerHTML) return;
+    const isOpen = editLinkedDropdown.style.display !== 'none';
+    editLinkedDropdown.style.display = isOpen ? 'none' : 'block';
+  });
+
   document.addEventListener('click', function (e) {
     if (!e.target.closest('#editExpenseCombobox')) expenseDropdown.hidden = true;
+    if (!e.target.closest('#editLinkedField')) hideEditLinkedDropdown();
   });
 
   function setLoading(isLoading) {
@@ -251,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function () {
       amountInput.value = txn.amount;
       commentInput.value = txn.comment || '';
       dateInput.value = txn.date;
+      editClientId = txn.client_id;
 
       applyType(txn.transaction_type);
 
@@ -264,6 +373,12 @@ document.addEventListener('DOMContentLoaded', function () {
         selectExpenseType(txn.expense_type || '', txn.expense_type_id || '');
       }
 
+      if (txn.client_id) {
+        await loadEditClientLinks(txn.client_id, txn.order_id, txn.subscription_id);
+      } else {
+        editLinkedField.style.display = 'none';
+      }
+
       modal.show();
     } catch (err) {
       showErrors('Помилка завантаження даних');
@@ -274,6 +389,8 @@ document.addEventListener('DOMContentLoaded', function () {
     clearErrors();
     setLoading(false);
     expenseDropdown.hidden = true;
+    hideEditLinkedDropdown();
+    editLinkedField.style.display = 'none';
   });
 
   form.addEventListener('submit', async function (e) {
@@ -297,6 +414,8 @@ document.addEventListener('DOMContentLoaded', function () {
       date: dateInput.value,
       comment: commentInput.value,
       payment_account_id: paymentAccountSelect.value,
+      order_id: editLinkedOrderId.value || null,
+      subscription_id: editLinkedSubscriptionId.value || null,
     };
 
     if (type === 'credit') {

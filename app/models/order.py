@@ -11,13 +11,13 @@ class Order(db.Model):
     cycle_number = db.Column(db.Integer, nullable=True)     # номер циклу: 1 = перший, 2 = перше продовження
 
     # Отримувач
-    recipient_name = db.Column(db.String(128), nullable=False)
+    recipient_name = db.Column(db.String(255), nullable=False)
     recipient_phone = db.Column(db.String(32), nullable=False)
-    recipient_social = db.Column(db.String(128))
+    recipient_social = db.Column(db.String(500))
 
     # Адреса
     city = db.Column(db.String(64), nullable=False)
-    street = db.Column(db.String(128), nullable=False)
+    street = db.Column(db.String(500), nullable=False)
     building_number = db.Column(db.String(32))
     floor = db.Column(db.String(16))
     entrance = db.Column(db.String(16))
@@ -48,6 +48,7 @@ class Order(db.Model):
 
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
+    promo_code_id = db.Column(db.Integer, db.ForeignKey('promo_codes.id'), nullable=True)
 
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())

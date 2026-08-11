@@ -8,6 +8,11 @@
   .flatpickr-day.selected, .flatpickr-day.startRange, .flatpickr-day.endRange { background: #1c1917; border-color: #1c1917; }
   .flatpickr-day.inRange { background: #f5f5f4; border-color: #f5f5f4; box-shadow: -5px 0 0 #f5f5f4, 5px 0 0 #f5f5f4; }
   .flatpickr-day.selected:hover, .flatpickr-day.startRange:hover, .flatpickr-day.endRange:hover { background: #44403c; border-color: #44403c; }
+  .balance-modal-dialog {
+    max-width: 680px;
+    width: 680px;
+    margin: 1.75rem auto;
+  }
 </style>
 {% endblock %}
 
@@ -38,13 +43,14 @@
 
 <section class="mb-5 grid grid-cols-2 gap-3">
   {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
-  <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
+  <article id="openBalanceBreakdown" class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm cursor-pointer transition-colors hover:bg-amber-50 hover:border-amber-200">
     <div class="flex items-center gap-3">
       <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><i class="bi bi-wallet2"></i></span>
-      <div>
+      <div class="flex-1 min-w-0">
         <p class="text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400">Загальний баланс</p>
         <p class="text-2xl font-semibold text-stone-900">{{ "%.2f"|format(total_balance | float) }} грн</p>
       </div>
+      <i class="bi bi-chevron-right text-stone-300"></i>
     </div>
   </article>
   {% endif %}
@@ -150,10 +156,10 @@
         <col style="width:110px">
         <col style="width:150px">
         <col style="width:100px">
-        <col style="width:160px">
+        <col style="width:150px">
+        <col style="width:120px">
         <col style="width:130px">
         <col style="width:90px">
-        <col style="width:110px">
       </colgroup>
       <thead>
         <tr class="border-b border-stone-100 bg-stone-50/80 text-left">
@@ -162,6 +168,7 @@
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Клієнт / Витрата</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Сума</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Рахунок</th>
+          <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Прив'язка</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap">Хто вніс</th>
           <th class="px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400 whitespace-nowrap text-center">Дія</th>
         </tr>
@@ -203,6 +210,19 @@
             {% if txn.payment_account_setting %}
             <span class="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 font-medium whitespace-nowrap">
               <i class="bi bi-bank"></i> {{ txn.payment_account_setting.value }}
+            </span>
+            {% else %}
+            <span class="text-stone-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-3 py-3 text-xs whitespace-nowrap">
+            {% if txn.order_id %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+              <i class="bi bi-bag"></i> Замовл. #{{ txn.order_id }}
+            </span>
+            {% elif txn.subscription_id %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 font-medium text-blue-700">
+              <i class="bi bi-arrow-repeat"></i> Підпис. #{{ txn.subscription_id }}
             </span>
             {% else %}
             <span class="text-stone-300">—</span>
@@ -434,4 +454,90 @@
     window.location.replace('/transactions?' + p.toString());
   })();
 </script>
+
+<!-- Balance Breakdown Modal -->
+<div class="modal fade" id="balanceBreakdownModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered balance-modal-dialog">
+    <div style="width:100%;border-radius:24px;overflow:hidden;border:1px solid #e7e5e4;box-shadow:0 24px 64px rgba(28,25,23,0.18);background:#fff;">
+
+      <!-- Header -->
+      <div style="padding:20px 20px 16px;border-bottom:1px solid #f5f5f4;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;border-radius:12px;background:linear-gradient(135deg,#fef9c3,#fde68a);color:#d97706;flex-shrink:0;">
+            <i class="bi bi-wallet2" style="font-size:17px;"></i>
+          </span>
+          <div>
+            <p style="margin:0;font-size:15px;font-weight:700;color:#1c1917;line-height:1.2;">Баланс по рахунках</p>
+            <p style="margin:0;font-size:11px;color:#a8a29e;margin-top:1px;">Усі транзакції · загальний підсумок</p>
+          </div>
+        </div>
+        <button type="button" data-bs-dismiss="modal"
+          style="display:inline-flex;width:32px;height:32px;align-items:center;justify-content:center;border-radius:10px;border:1px solid #e7e5e4;background:#fafaf9;color:#78716c;cursor:pointer;transition:background 0.15s;"
+          onmouseover="this.style.background='#f5f5f4'" onmouseout="this.style.background='#fafaf9'">
+          <i class="bi bi-x-lg" style="font-size:12px;"></i>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div id="balanceBreakdownBody" style="padding:8px 0 0;">
+        <p style="font-size:13px;color:#a8a29e;text-align:center;padding:24px 0;">Завантаження…</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const trigger = document.getElementById('openBalanceBreakdown');
+    if (!trigger) return;
+
+    const body = document.getElementById('balanceBreakdownBody');
+
+    trigger.addEventListener('click', function () {
+      const modalEl = document.getElementById('balanceBreakdownModal');
+      const dialogEl = modalEl.querySelector('.modal-dialog');
+      dialogEl.style.setProperty('max-width', '680px', 'important');
+      dialogEl.style.setProperty('width', '680px', 'important');
+      dialogEl.style.setProperty('margin', '1.75rem auto', 'important');
+      body.innerHTML = '<p style="font-size:13px;color:#a8a29e;text-align:center;padding:24px 0;">Завантаження…</p>';
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+
+      fetch('/transactions/balance-breakdown')
+        .then(r => r.json())
+        .then(data => {
+          const rows = data.accounts.map((acc, i) => {
+            const isNeg = acc.balance < 0;
+            const amountColor = isNeg ? '#e11d48' : '#1c1917';
+            const amountBg = isNeg ? 'rgba(225,29,72,0.06)' : 'rgba(16,185,129,0.07)';
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 20px;${i > 0 ? 'border-top:1px solid #fafaf9;' : ''}transition:background 0.12s;" onmouseover="this.style.background='#fafaf9'" onmouseout="this.style.background='transparent'">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="display:inline-flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:8px;background:#f5f5f4;color:#78716c;flex-shrink:0;">
+                  <i class="bi bi-bank" style="font-size:12px;"></i>
+                </span>
+                <span style="font-size:13px;color:#44403c;font-weight:500;">${acc.name}</span>
+              </div>
+              <span style="font-size:13px;font-weight:700;color:${amountColor};background:${amountBg};padding:3px 8px;border-radius:8px;">${acc.balance.toFixed(2)} грн</span>
+            </div>`;
+          }).join('');
+
+          const isNegTotal = data.total < 0;
+          const totalColor = isNegTotal ? '#e11d48' : '#1c1917';
+          body.innerHTML = `
+            <div style="padding-bottom:8px;">${rows}</div>
+            <div style="margin:0 12px 12px;border-radius:14px;background:linear-gradient(135deg,#1c1917,#44403c);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="bi bi-calculator" style="color:#a8a29e;font-size:14px;"></i>
+                <span style="font-size:11px;font-weight:600;color:#a8a29e;text-transform:uppercase;letter-spacing:0.12em;">Разом</span>
+              </div>
+              <span style="font-size:16px;font-weight:800;color:${isNegTotal ? '#fca5a5' : '#ffffff'};">${data.total.toFixed(2)} грн</span>
+            </div>`;
+        })
+        .catch(() => {
+          body.innerHTML = '<p style="font-size:13px;color:#e11d48;text-align:center;padding:24px 0;">Помилка завантаження</p>';
+        });
+    });
+  })();
+</script>
+
 {% endblock %}
