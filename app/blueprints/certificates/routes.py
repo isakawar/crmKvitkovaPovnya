@@ -7,13 +7,16 @@ from sqlalchemy.orm import joinedload
 from app.blueprints.certificates import certificates_bp
 from app.extensions import db
 from app.models.certificate import Certificate, generate_certificate_code
+from app.models.promo_code import PromoCode, generate_promo_code
 from app.models.order import Order
+from app.models.subscription import Subscription
 from app.models.client import Client
 
 
 @certificates_bp.route('/certificates', methods=['GET'])
 @login_required
 def certificates_list():
+    active_tab = request.args.get('tab', 'certificates')
     status_filter = request.args.get('status', 'all')
 
     query = Certificate.query.order_by(Certificate.created_at.desc())
@@ -44,11 +47,21 @@ def certificates_list():
         ).count(),
     }
 
+    promo_codes = PromoCode.query.order_by(PromoCode.created_at.desc()).all()
+    promo_counts = {
+        'all': PromoCode.query.count(),
+        'active': PromoCode.query.filter_by(is_active=True).count(),
+        'inactive': PromoCode.query.filter_by(is_active=False).count(),
+    }
+
     return render_template(
         'certificates/list.html',
         certificates=certificates,
         status_filter=status_filter,
         counts=counts,
+        active_tab=active_tab,
+        promo_codes=promo_codes,
+        promo_counts=promo_counts,
     )
 
 
@@ -238,4 +251,158 @@ def validate_certificate():
         'value_amount': str(cert.value_amount) if cert.value_amount else None,
         'value_size': cert.value_size,
         'expires_at': cert.expires_at.strftime('%d.%m.%Y'),
+    })
+
+
+@certificates_bp.route('/certificates/promo/generate-code', methods=['GET'])
+@login_required
+def generate_promo_code_route():
+    code = generate_promo_code()
+    while PromoCode.query.filter_by(code=code).first():
+        existing = PromoCode.query.filter_by(code=code).first()
+        num = int(existing.code[len('PROMO'):]) + 1
+        code = f'PROMO{num:04d}'
+    return jsonify({'code': code})
+
+
+@certificates_bp.route('/certificates/promo/create', methods=['POST'])
+@login_required
+def create_promo_code():
+    data = request.get_json()
+
+    code = (data.get('code') or '').strip().upper()
+    name = (data.get('name') or '').strip()
+    description = (data.get('description') or '').strip() or None
+
+    errors = []
+    if not code:
+        errors.append('Код промокоду обов\'язковий')
+    elif PromoCode.query.filter_by(code=code).first():
+        errors.append('Промокод з таким кодом вже існує')
+
+    if not name:
+        errors.append('Назва промокоду обов\'язкова')
+
+    try:
+        discount_percent = int(data.get('discount_percent'))
+        if not (1 <= discount_percent <= 100):
+            errors.append('Знижка повинна бути від 1 до 100')
+    except (ValueError, TypeError):
+        discount_percent = None
+        errors.append('Невірне значення знижки')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    promo = PromoCode(
+        code=code,
+        name=name,
+        description=description,
+        discount_percent=discount_percent,
+        created_by_user_id=current_user.id,
+    )
+    db.session.add(promo)
+    db.session.commit()
+
+    return jsonify({'success': True, 'id': promo.id})
+
+
+@certificates_bp.route('/certificates/promo/<int:promo_id>/update', methods=['POST'])
+@login_required
+def update_promo_code(promo_id):
+    promo = PromoCode.query.get_or_404(promo_id)
+    data = request.get_json()
+
+    name = (data.get('name') or '').strip()
+    description = (data.get('description') or '').strip() or None
+
+    errors = []
+    if not name:
+        errors.append('Назва промокоду обов\'язкова')
+
+    try:
+        discount_percent = int(data.get('discount_percent'))
+        if not (1 <= discount_percent <= 100):
+            errors.append('Знижка повинна бути від 1 до 100')
+    except (ValueError, TypeError):
+        discount_percent = None
+        errors.append('Невірне значення знижки')
+
+    if errors:
+        return jsonify({'success': False, 'errors': errors}), 400
+
+    promo.name = name
+    promo.description = description
+    promo.discount_percent = discount_percent
+    db.session.commit()
+
+    return jsonify({'success': True})
+
+
+@certificates_bp.route('/certificates/promo/<int:promo_id>/toggle', methods=['POST'])
+@login_required
+def toggle_promo_code(promo_id):
+    promo = PromoCode.query.get_or_404(promo_id)
+    promo.is_active = not promo.is_active
+    db.session.commit()
+    return jsonify({'success': True, 'is_active': promo.is_active})
+
+
+@certificates_bp.route('/certificates/promo/<int:promo_id>/detail', methods=['GET'])
+@login_required
+def promo_code_detail(promo_id):
+    promo = PromoCode.query.get_or_404(promo_id)
+    return jsonify({
+        'id': promo.id,
+        'code': promo.code,
+        'name': promo.name,
+        'description': promo.description or '',
+        'discount_percent': promo.discount_percent,
+        'is_active': promo.is_active,
+        'status_display': promo.status_display(),
+        'usage_count': promo.usage_count(),
+        'created_at': promo.created_at.strftime('%d.%m.%Y %H:%M') if promo.created_at else None,
+        'created_by': promo.created_by.username if promo.created_by else None,
+    })
+
+
+@certificates_bp.route('/certificates/promo/validate', methods=['POST'])
+@login_required
+def validate_promo_code():
+    data = request.get_json()
+    code = (data.get('code') or '').strip().upper()
+
+    if not code:
+        return jsonify({'valid': False, 'error': 'Введіть код промокоду'})
+
+    promo = PromoCode.query.filter_by(code=code).first()
+
+    if not promo:
+        return jsonify({'valid': False, 'error': 'Промокод не знайдено'})
+
+    if not promo.is_active:
+        return jsonify({'valid': False, 'error': 'Промокод неактивний'})
+
+    client_id_raw = str(data.get('client_id') or '').strip()
+    current_discount_raw = str(data.get('current_discount') or '').strip()
+    try:
+        current_discount = int(current_discount_raw) if current_discount_raw else 0
+    except ValueError:
+        current_discount = 0
+
+    client_discount = 0
+    if client_id_raw.isdigit():
+        client = Client.query.get(int(client_id_raw))
+        if client:
+            client_discount = client.discount or 0
+
+    effective_discount = max(client_discount, current_discount, promo.discount_percent)
+
+    return jsonify({
+        'valid': True,
+        'id': promo.id,
+        'code': promo.code,
+        'name': promo.name,
+        'discount_percent': promo.discount_percent,
+        'effective_discount': effective_discount,
     })

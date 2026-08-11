@@ -48,6 +48,7 @@ class Order(db.Model):
 
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
+    promo_code_id = db.Column(db.Integer, db.ForeignKey('promo_codes.id'), nullable=True)
 
     # Системні поля
     created_at = db.Column(db.DateTime, default=db.func.now())

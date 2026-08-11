@@ -301,6 +301,19 @@ def order_create():
             flash(error_msg, 'danger')
             return redirect('/orders/new')
 
+    # Promo code check
+    promo_code_str = (request.form.get('promo_code') or '').strip().upper()
+    promo = None
+    if promo_code_str:
+        from app.models.promo_code import PromoCode
+        promo = PromoCode.query.filter_by(code=promo_code_str, is_active=True).first()
+        if not promo:
+            error_msg = f'Промокод з кодом "{promo_code_str}" не знайдено або неактивний'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': error_msg}), 400
+            flash(error_msg, 'danger')
+            return redirect('/orders/new')
+
     client_id_raw = request.form.get('client_id', '').strip()
     if client_id_raw and client_id_raw.isdigit():
         client = Client.query.get(int(client_id_raw))
@@ -318,6 +331,15 @@ def order_create():
                 return jsonify({'success': False, 'error': error}), 400
             flash(error, 'danger')
             return redirect('/orders/new')
+
+    # Промокод не сумується з персональною знижкою клієнта — застосовується більша.
+    # Джерела: знижка лояльності клієнта, вручну введене менеджером значення, знижка промокоду.
+    if promo:
+        client_discount = client.discount or 0
+        manual_discount = int(request.form.get('discount') or 0)
+        effective_discount = max(client_discount, manual_discount, promo.discount_percent)
+        request.form = request.form.copy()
+        request.form['discount'] = str(effective_discount)
 
     if is_subscription:
         extend_from_order_id = (request.form.get('extend_from_order_id') or '').strip()
@@ -380,6 +402,10 @@ def order_create():
         certificate.status = 'used'
         certificate.used_at = _dt.utcnow()
         certificate.order_id = entity_id
+        db.session.commit()
+
+    if promo:
+        entity.promo_code_id = promo.id
         db.session.commit()
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':

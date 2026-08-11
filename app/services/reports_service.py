@@ -304,12 +304,12 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     in_progress_pct = round(in_progress / total * 100, 1) if total else 0.0
     cancelled_pct = round(cancelled / total * 100, 1) if total else 0.0
 
-    # % change vs previous period
+    # % change vs previous full calendar month
     total_change_pct = None
-    if d_from and d_to:
-        duration = (d_to - d_from).days + 1
-        prev_to = d_from - timedelta(days=1)
-        prev_from = prev_to - timedelta(days=duration - 1)
+    if d_from:
+        prev_month_last_day = d_from.replace(day=1) - timedelta(days=1)
+        prev_from = prev_month_last_day.replace(day=1)
+        prev_to = prev_month_last_day
         prev_total = db.session.query(func.count(Delivery.id)).filter(
             Delivery.delivery_date >= prev_from,
             Delivery.delivery_date <= prev_to,
@@ -356,11 +356,11 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
 
     new_clients = _new_clients_in_range(nc_from, nc_to)
 
-    # Compare with the equivalent previous period
-    if nc_from and nc_to:
-        duration = (nc_to - nc_from).days + 1
-        prev_nc_to = nc_from - timedelta(days=1)
-        prev_nc_from = prev_nc_to - timedelta(days=duration - 1)
+    # Compare with the previous full calendar month
+    if nc_from:
+        prev_month_last_day = nc_from.replace(day=1) - timedelta(days=1)
+        prev_nc_from = prev_month_last_day.replace(day=1)
+        prev_nc_to = prev_month_last_day
         prev_new_clients = _new_clients_in_range(prev_nc_from, prev_nc_to)
     else:
         prev_new_clients = 0

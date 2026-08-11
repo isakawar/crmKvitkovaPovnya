@@ -70,6 +70,7 @@ class Subscription(db.Model):
 
     # Знижка (%)
     discount = db.Column(db.Integer, nullable=True)
+    promo_code_id = db.Column(db.Integer, db.ForeignKey('promo_codes.id'), nullable=True)
 
     # Продовження: посилання на попередню підписку
     parent_subscription_id = db.Column(
