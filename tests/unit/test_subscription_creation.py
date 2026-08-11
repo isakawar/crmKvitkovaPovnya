@@ -9,8 +9,11 @@ Covers:
 - create_subscription: is_pickup=True → all deliveries have no street
 - create_subscription: time_from/time_to only on first order
 - create_subscription: comment only on first order
-- extend_subscription: adds another 4 orders/deliveries
-- extend_subscription: sets is_extended=True and followup_status='extended'
+- extend_subscription: creates a new Subscription (not more orders on the old one)
+- extend_subscription: links new sub via parent_subscription_id, marks old is_extended=True
+- extend_subscription: loyalty discount escalates 0%→5%→10%, never lowers a manual >=10%
+- extend_subscription: raises for a stopped subscription
+- extend_subscription: first delivery date never lands in the past
 - create_subscription_from_import: delivery_number=1 → 4 deliveries
 - create_subscription_from_import: delivery_number=2 → 3 deliveries
 - create_subscription_from_import: delivery_number=3 → 2 deliveries
@@ -209,61 +212,91 @@ def test_create_subscription_comment_only_on_first_order(session):
 
 # ── extend_subscription ──────────────────────────────────────────────────────
 
-def test_extend_subscription_adds_4_more_orders(session):
+def test_extend_subscription_creates_new_subscription_not_more_orders(session):
     client = _make_client(session, 'extend_sub')
     form = _base_subscription_form()
     sub = create_subscription(client, form)
 
-    initial_orders = Order.query.filter_by(subscription_id=sub.id).count()
-    assert initial_orders == 4
+    new_sub = extend_subscription(sub)
 
-    extend_subscription(sub)
-
-    total_orders = Order.query.filter_by(subscription_id=sub.id).count()
-    assert total_orders == 8
-
-
-def test_extend_subscription_adds_4_more_deliveries(session):
-    client = _make_client(session, 'extend_del_sub')
-    form = _base_subscription_form()
-    sub = create_subscription(client, form)
-
-    initial_deliveries = Delivery.query.filter_by(client_id=client.id).count()
-    assert initial_deliveries == 4
-
-    extend_subscription(sub)
-
-    total_deliveries = Delivery.query.filter_by(client_id=client.id).count()
-    assert total_deliveries == 8
+    assert new_sub.id != sub.id
+    assert Order.query.filter_by(subscription_id=sub.id).count() == 4
+    assert Order.query.filter_by(subscription_id=new_sub.id).count() == 4
+    assert Delivery.query.filter_by(client_id=client.id).count() == 8
 
 
-def test_extend_subscription_new_orders_have_cycle_number_2(session):
+def test_extend_subscription_links_parent_and_marks_old_extended(session):
     client = _make_client(session, 'extend_flags')
     form = _base_subscription_form()
     sub = create_subscription(client, form)
 
-    extend_subscription(sub)
+    new_sub = extend_subscription(sub)
 
-    new_orders = Order.query.filter_by(subscription_id=sub.id, cycle_number=2).all()
-    assert len(new_orders) == 4
+    assert new_sub.parent_subscription_id == sub.id
+    assert sub.is_extended is True
+    assert new_sub.is_extended is False
 
 
-def test_extend_subscription_new_orders_have_correct_sequence(session):
+def test_extend_subscription_new_orders_sequence_starts_at_1(session):
     client = _make_client(session, 'extend_seq')
     form = _base_subscription_form()
     sub = create_subscription(client, form)
 
-    extend_subscription(sub)
-    orders = Order.query.filter_by(subscription_id=sub.id).order_by(Order.sequence_number).all()
+    new_sub = extend_subscription(sub)
+    orders = Order.query.filter_by(subscription_id=new_sub.id).order_by(Order.sequence_number).all()
 
-    assert len(orders) == 8
+    assert len(orders) == 4
     for i, order in enumerate(orders):
         assert order.sequence_number == i + 1
 
 
-def test_extend_subscription_no_orders_raises_error(session):
+def test_extend_subscription_first_renewal_sets_5_percent(session):
+    client = _make_client(session, 'extend_5pct')
+    assert (client.discount or 0) == 0
+    sub = create_subscription(client, _base_subscription_form())
+
+    new_sub = extend_subscription(sub)
+
+    assert new_sub.discount == 5
+    assert client.discount == 5
+
+
+def test_extend_subscription_second_renewal_sets_10_percent(session):
+    client = _make_client(session, 'extend_10pct')
+    sub = create_subscription(client, _base_subscription_form())
+    first_renewal = extend_subscription(sub)
+
+    second_renewal = extend_subscription(first_renewal)
+
+    assert second_renewal.discount == 10
+    assert client.discount == 10
+
+
+def test_extend_subscription_never_lowers_manual_discount_above_10(session):
+    client = _make_client(session, 'extend_manual')
+    client.discount = 15
+    sub = create_subscription(client, _base_subscription_form())
+
+    new_sub = extend_subscription(sub)
+
+    assert new_sub.discount == 15
+    assert client.discount == 15
+
+
+def test_extend_stopped_subscription_raises_error(session):
+    client = _make_client(session, 'extend_stopped')
+    sub = create_subscription(client, _base_subscription_form())
+    sub.is_stopped = True
+    session.commit()
+
+    with pytest.raises(ValueError, match='Неможливо продовжити зупинену підписку'):
+        extend_subscription(sub)
+
+
+def test_extend_subscription_no_orders_uses_today_as_base(session):
+    client = _make_client(session, 'extend_no_orders')
     sub = Subscription(
-        client_id=1,
+        client_id=client.id,
         type='Weekly',
         status='active',
         delivery_day='ПН',
@@ -277,8 +310,30 @@ def test_extend_subscription_no_orders_raises_error(session):
     session.add(sub)
     session.commit()
 
-    with pytest.raises(ValueError, match='No orders found'):
-        extend_subscription(sub)
+    new_sub = extend_subscription(sub)
+    first_order = Order.query.filter_by(subscription_id=new_sub.id).order_by(Order.sequence_number).first()
+
+    assert first_order.delivery_date >= datetime.date.today()
+
+
+def test_extend_subscription_late_renewal_does_not_land_in_the_past(session):
+    """Regression: extending a Weekly subscription long after its last
+    delivery used to keep stepping from that stale date (last_date + 7 days),
+    landing in the past. It must now fall back to scheduling from today."""
+    client = _make_client(session, 'extend_late')
+    sub = create_subscription(client, _base_subscription_form())
+
+    last_order = Order.query.filter_by(subscription_id=sub.id).order_by(Order.sequence_number.desc()).first()
+    stale_date = datetime.date.today() - datetime.timedelta(days=30)
+    last_order.delivery_date = stale_date
+    for d in Delivery.query.filter_by(order_id=last_order.id).all():
+        d.delivery_date = stale_date
+    session.commit()
+
+    new_sub = extend_subscription(sub)
+    first_order = Order.query.filter_by(subscription_id=new_sub.id).order_by(Order.sequence_number).first()
+
+    assert first_order.delivery_date >= datetime.date.today()
 
 
 # ── create_subscription_from_import ──────────────────────────────────────────
