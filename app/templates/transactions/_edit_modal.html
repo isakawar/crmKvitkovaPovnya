@@ -53,8 +53,16 @@
           </div>
 
           <div class="txn-field">
-            <label class="txn-label">Рахунок оплати</label>
+            <label class="txn-label" id="editPaymentAccountLabel">Рахунок оплати</label>
             <select id="editTxnPaymentAccountId" name="payment_account_id" required class="txn-select">
+              <option value="">— Оберіть рахунок —</option>
+            </select>
+          </div>
+
+          <!-- transfer fields -->
+          <div class="txn-field" id="editTransferTargetField" style="display:none;">
+            <label class="txn-label">Рахунок-призначення</label>
+            <select id="editTxnTargetPaymentAccountId" name="target_payment_account_id" class="txn-select">
               <option value="">— Оберіть рахунок —</option>
             </select>
           </div>
@@ -114,6 +122,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const expenseHidden = document.getElementById('editTxnExpenseType');
   const expenseHiddenId = document.getElementById('editTxnExpenseTypeId');
   const expenseDropdown = document.getElementById('editExpenseTypeDropdown');
+  const targetPaymentAccountSelect = document.getElementById('editTxnTargetPaymentAccountId');
+  const editTransferTargetField = document.getElementById('editTransferTargetField');
+  const editPaymentAccountLabel = document.getElementById('editPaymentAccountLabel');
   const iconEl = document.getElementById('editTxnIcon');
   const titleEl = document.getElementById('editTxnTitle');
   const subtitleEl = document.getElementById('editTxnSubtitle');
@@ -219,10 +230,12 @@ document.addEventListener('DOMContentLoaded', function () {
       const res = await fetch('/settings/payment_accounts');
       const accounts = await res.json();
       accounts.forEach(a => {
-        const opt = document.createElement('option');
-        opt.value = a.id;
-        opt.textContent = a.value;
-        paymentAccountSelect.appendChild(opt);
+        [paymentAccountSelect, targetPaymentAccountSelect].forEach(select => {
+          const opt = document.createElement('option');
+          opt.value = a.id;
+          opt.textContent = a.value;
+          select.appendChild(opt);
+        });
       });
       paymentAccountsLoaded = true;
     } catch (_) {}
@@ -330,12 +343,21 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function applyType(type) {
+    editTransferTargetField.style.display = type === 'transfer' ? '' : 'none';
+    editPaymentAccountLabel.textContent = type === 'transfer' ? 'Рахунок-джерело' : 'Рахунок оплати';
+
     if (type === 'credit') {
       creditFields.style.display = '';
       debitFields.style.display = 'none';
       iconEl.style.cssText = 'background:#f0fdf4;border-color:#bbf7d0;color:#16a34a;';
       titleEl.textContent = 'Редагувати поповнення';
       subtitleEl.textContent = 'Змініть деталі транзакції';
+    } else if (type === 'transfer') {
+      creditFields.style.display = 'none';
+      debitFields.style.display = 'none';
+      iconEl.style.cssText = 'background:#f0f9ff;border-color:#bae6fd;color:#0284c7;';
+      titleEl.textContent = 'Редагувати переказ';
+      subtitleEl.textContent = 'Змініть деталі переказу між рахунками';
     } else {
       creditFields.style.display = 'none';
       debitFields.style.display = '';
@@ -368,6 +390,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
       if (txn.transaction_type === 'credit') {
         paymentTypeSelect.value = txn.payment_type || 'monobank';
+      } else if (txn.transaction_type === 'transfer') {
+        targetPaymentAccountSelect.value = txn.target_payment_account_id || '';
       } else {
         await loadExpenseTypes();
         selectExpenseType(txn.expense_type || '', txn.expense_type_id || '');
@@ -406,6 +430,16 @@ document.addEventListener('DOMContentLoaded', function () {
       showErrors('Оберіть рахунок оплати');
       return;
     }
+    if (type === 'transfer') {
+      if (!targetPaymentAccountSelect.value) {
+        showErrors('Оберіть рахунок-призначення');
+        return;
+      }
+      if (paymentAccountSelect.value === targetPaymentAccountSelect.value) {
+        showErrors('Рахунок-джерело і рахунок-призначення мають відрізнятись');
+        return;
+      }
+    }
 
     setLoading(true);
 
@@ -420,6 +454,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (type === 'credit') {
       payload.payment_type = paymentTypeSelect.value;
+    } else if (type === 'transfer') {
+      payload.target_payment_account_id = targetPaymentAccountSelect.value;
     } else {
       payload.expense_type = expenseHidden.value;
       payload.expense_type_id = expenseHiddenId.value || null;
