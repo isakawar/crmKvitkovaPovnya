@@ -1,13 +1,13 @@
 """Add target_payment_account_id to transaction for card-to-card transfers
 
-Revision ID: add_transaction_target_payment_account
+Revision ID: add_txn_target_account
 Revises: add_promo_codes
 Create Date: 2026-08-22
 """
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'add_transaction_target_payment_account'
+revision = 'add_txn_target_account'
 down_revision = 'add_promo_codes'
 branch_labels = None
 depends_on = None
