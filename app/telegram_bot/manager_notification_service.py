@@ -84,3 +84,51 @@ async def _send_to_all(bot, recipients, lead_id, text, keyboard) -> int:
         success_count += 1
     db.session.commit()
     return success_count
+
+
+def notify_lead_processed(lead) -> int:
+    """Edit every sent Telegram notification for this lead to show it's processed.
+
+    Returns the number of successfully edited messages.
+    """
+    if not hasattr(current_app, 'telegram_bot') or not current_app.telegram_bot.is_initialized():
+        return 0
+
+    notifications = WixLeadNotification.query.filter_by(wix_lead_id=lead.id).all()
+    if not notifications:
+        return 0
+
+    base_url = current_app.config.get('CRM_PUBLIC_URL')
+    if not base_url:
+        return 0
+
+    order_id = lead.processed_order_id
+    url = f'{base_url}/orders/{order_id}/edit' if order_id else f'{base_url}/orders'
+
+    text = _format_lead_message(lead) + '\n\n✅ Оброблено'
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton('✅ Оброблено — переглянути замовлення', url=url)
+    ]])
+
+    bot = current_app.telegram_bot
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        success_count = loop.run_until_complete(_edit_all(bot, notifications, text, keyboard))
+    finally:
+        loop.close()
+    return success_count
+
+
+async def _edit_all(bot, notifications, text, keyboard) -> int:
+    success_count = 0
+    for notification in notifications:
+        ok = await bot.edit_message(
+            chat_id=notification.telegram_chat_id,
+            message_id=notification.telegram_message_id,
+            text=text,
+            reply_markup=keyboard,
+        )
+        if ok:
+            success_count += 1
+    return success_count

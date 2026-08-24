@@ -139,3 +139,53 @@ def test_send_new_lead_notification_noop_when_public_url_missing(app, session):
 
     assert count == 0
     assert len(app.telegram_bot.sent) == 0
+
+
+def test_notify_lead_processed_edits_all_sent_messages(app, session):
+    from app.telegram_bot.manager_notification_service import notify_lead_processed
+
+    app.config['CRM_PUBLIC_URL'] = 'https://crm.example.com'
+    app.telegram_bot = FakeTelegramBot()
+
+    mgr1 = User(username='mgr7', email='mgr7@example.com', user_type='manager', telegram_chat_id=666)
+    mgr1.set_password('x')
+    mgr2 = User(username='mgr8', email='mgr8@example.com', user_type='manager', telegram_chat_id=777)
+    mgr2.set_password('x')
+    session.add_all([mgr1, mgr2])
+    session.commit()
+
+    lead = _make_lead(session, wix_order_id='order-notify-4')
+    lead.status = 'processed'
+    lead.processed_order_id = 999
+    session.add_all([
+        WixLeadNotification(wix_lead_id=lead.id, user_id=mgr1.id, telegram_chat_id=666, telegram_message_id=1),
+        WixLeadNotification(wix_lead_id=lead.id, user_id=mgr2.id, telegram_chat_id=777, telegram_message_id=2),
+    ])
+    session.commit()
+
+    count = notify_lead_processed(lead)
+
+    assert count == 2
+    assert len(app.telegram_bot.edited) == 2
+    edited_chat_ids = {e['chat_id'] for e in app.telegram_bot.edited}
+    assert edited_chat_ids == {666, 777}
+    for edit in app.telegram_bot.edited:
+        assert edit['reply_markup'].inline_keyboard[0][0].url == 'https://crm.example.com/orders/999/edit'
+        assert 'Оброблено' in edit['reply_markup'].inline_keyboard[0][0].text
+
+
+def test_notify_lead_processed_noop_when_no_notifications_sent(app, session):
+    from app.telegram_bot.manager_notification_service import notify_lead_processed
+
+    app.config['CRM_PUBLIC_URL'] = 'https://crm.example.com'
+    app.telegram_bot = FakeTelegramBot()
+
+    lead = _make_lead(session, wix_order_id='order-notify-5')
+    lead.status = 'processed'
+    lead.processed_order_id = 111
+    session.commit()
+
+    count = notify_lead_processed(lead)
+
+    assert count == 0
+    assert len(app.telegram_bot.edited) == 0
