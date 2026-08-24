@@ -299,3 +299,58 @@ def test_mark_lead_processed_with_subscription(session, subscription_fixture):
 
     assert lead.status == 'processed'
     assert lead.processed_subscription_id == subscription_fixture.id
+    assert lead.processed_order_id is None  # subscription_fixture has no orders yet
+    assert lead.processed_by_user_id == user.id
+    assert lead.processed_at is not None
+
+
+def test_mark_lead_processed_with_subscription_with_orders(session, client_fixture):
+    from app.services.wix_integration_service import mark_lead_processed
+    from app.models.user import User
+    from app.models.subscription import Subscription
+    from app.models.order import Order
+    import datetime as _dt
+
+    # Create subscription with an order
+    subscription = Subscription(
+        client_id=client_fixture.id,
+        type='Weekly',
+        status='active',
+        delivery_day='ПН',
+        recipient_name='Отримувач',
+        recipient_phone='+380991234567',
+        city='Київ',
+        street='Хрещатик 1',
+        size='M',
+        for_whom='Дружина',
+    )
+    order = Order(
+        client_id=client_fixture.id,
+        subscription_id=None,  # will be set after subscription is committed
+        recipient_name='Х',
+        recipient_phone='+380000000000',
+        city='Київ',
+        street='вул.',
+        size='M',
+        delivery_date=_dt.date.today(),
+        for_whom='Дружина',
+    )
+    session.add(subscription)
+    session.flush()  # get subscription.id
+    order.subscription_id = subscription.id
+    session.add(order)
+    session.commit()
+
+    lead = WixLead(wix_order_id='order-3', raw_payload={}, status='new')
+    user = User(username='mgr3', email='mgr3@example.com', user_type='admin')
+    user.set_password('x')
+    session.add_all([lead, user])
+    session.commit()
+
+    mark_lead_processed(lead, subscription, user)
+
+    assert lead.status == 'processed'
+    assert lead.processed_subscription_id == subscription.id
+    assert lead.processed_order_id == order.id  # subscription has an order
+    assert lead.processed_by_user_id == user.id
+    assert lead.processed_at is not None
