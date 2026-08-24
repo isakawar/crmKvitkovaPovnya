@@ -91,3 +91,40 @@ def test_order_create_marks_lead_processed(app, session):
     assert updated.status == 'processed'
     assert updated.processed_order_id is not None
     assert updated.processed_by_user_id == manager.id
+
+
+def test_order_create_does_not_reprocess_already_processed_lead(app, session):
+    manager = _make_manager(session)
+    client_obj = Client(instagram='vlad_flowers', phone='+380666746225')
+    lead = WixLead(
+        wix_order_id='o-21', raw_payload={}, status='processed',
+        processed_order_id=None,
+    )
+    session.add_all([client_obj, lead])
+    session.commit()
+    lead_id = lead.id
+
+    web_client = app.test_client()
+    _login(app, web_client, manager)
+
+    resp = web_client.post('/orders/new', data={
+        'lead_id': str(lead_id),
+        'client_id': str(client_obj.id),
+        'recipient_name': 'Влад Білобров',
+        'recipient_phone': '+380666746225',
+        'city': 'Київ',
+        'street': 'вул. Зарічна, 1Г',
+        'delivery_type': 'Разова',
+        'delivery_method': 'courier',
+        'size': 'M',
+        'first_delivery_date': '2026-09-01',
+        'for_whom': 'Дружина',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+    updated = WixLead.query.get(lead_id)
+    # Lead was already 'processed' (not 'new'), so order_create()'s
+    # `if lead and lead.status == 'new'` guard must no-op - it must not get
+    # reassigned to this new order.
+    assert updated.status == 'processed'
+    assert updated.processed_order_id is None

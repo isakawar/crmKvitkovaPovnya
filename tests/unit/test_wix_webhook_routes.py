@@ -55,16 +55,23 @@ def test_webhook_rejects_invalid_json_body(app):
 
 
 def test_webhook_is_public_no_login_required(app):
-    """The require_login before_request hook must not redirect this endpoint."""
+    """The require_login before_request hook must not redirect this endpoint.
+
+    Posting an invalid JSON body and asserting a specific 400 (rather than a
+    weaker `!= 302`) proves the webhook's own validation logic actually ran -
+    a 302 (login redirect) or a 404 (broken route registration) would both
+    satisfy a merely-not-302 assertion without proving the endpoint is truly
+    public and reachable.
+    """
     app.config['WIX_ALLOWED_SITE_IDS'] = 'x'
     app.config['LOGIN_DISABLED'] = False
     client = app.test_client()
     resp = client.post(
         '/api/integrations/wix/order-placed',
-        data=json.dumps({}),
+        data='not json',
         content_type='application/json',
     )
-    assert resp.status_code != 302
+    assert resp.status_code == 400
 
 
 from app.models.user import User

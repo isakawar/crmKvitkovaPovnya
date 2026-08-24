@@ -1,4 +1,4 @@
-import hmac
+import logging
 
 from flask import abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -25,19 +25,29 @@ def wix_order_webhook():
     if not isinstance(payload, dict):
         return jsonify({'ok': False, 'error': 'invalid json body'}), 400
 
-    parsed = wix_service.parse_wix_payload(payload)
-    meta_site_id = parsed.get('meta_site_id')
-    is_allowed = bool(meta_site_id) and any(
-        hmac.compare_digest(meta_site_id, allowed) for allowed in allowed_ids
-    )
-    if not is_allowed:
+    # metaSiteId is not secret (it's visible in every public Wix site's page
+    # source), so a plain membership check is fine here - no need for
+    # constant-time comparison, and it avoids hmac.compare_digest's TypeError
+    # on non-str input.
+    data = payload.get('data')
+    data = data if isinstance(data, dict) else {}
+    context = data.get('context')
+    context = context if isinstance(context, dict) else {}
+    meta_site_id = context.get('metaSiteId')
+    if not isinstance(meta_site_id, str) or meta_site_id not in allowed_ids:
+        logging.warning(f'Wix webhook rejected: unknown/invalid metaSiteId={meta_site_id!r}')
         return jsonify({'ok': False, 'error': 'unknown site'}), 403
 
     try:
+        parsed = wix_service.parse_wix_payload(payload)
         lead = wix_service.create_or_update_lead(payload, parsed)
     except ValueError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 400
+    except Exception:
+        logging.warning('Wix webhook: failed to parse/process payload', exc_info=True)
+        return jsonify({'ok': False, 'error': 'malformed payload'}), 400
 
+    logging.info(f'Wix webhook: lead {lead.id} (wix_order_id={lead.wix_order_id}) accepted')
     return jsonify({'ok': True, 'lead_id': lead.id}), 200
 
 
@@ -91,6 +101,10 @@ def wix_product_mapping_create():
     size = request.form.get('size') or ''
     if not catalog_item_id or order_scenario not in ('order', 'subscription') or not size:
         flash('Заповніть catalog_item_id, сценарій і розмір', 'danger')
+        return redirect(url_for('integrations.wix_product_mappings_list'))
+
+    if WixProductMapping.query.filter_by(catalog_item_id=catalog_item_id).first():
+        flash(f'Мапінг для catalog_item_id "{catalog_item_id}" вже існує', 'danger')
         return redirect(url_for('integrations.wix_product_mappings_list'))
 
     mapping = WixProductMapping(

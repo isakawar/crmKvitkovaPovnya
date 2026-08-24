@@ -15,29 +15,35 @@ def parse_wix_payload(payload: dict) -> dict:
     Accepts either the raw Wix Automations body ({"data": {...}}) or the
     unwrapped order object directly, for easier testing.
     """
-    if isinstance(payload, dict) and 'data' in payload:
-        order_data = payload.get('data') or {}
-    else:
-        order_data = payload or {}
+    def _as_dict(value):
+        return value if isinstance(value, dict) else {}
 
-    contact = order_data.get('contact') or {}
-    name = contact.get('name') or {}
+    def _as_list(value):
+        return value if isinstance(value, list) else []
+
+    if isinstance(payload, dict) and 'data' in payload:
+        order_data = _as_dict(payload.get('data'))
+    else:
+        order_data = _as_dict(payload)
+
+    contact = _as_dict(order_data.get('contact'))
+    name = _as_dict(contact.get('name'))
     contact_name = ' '.join(p for p in [name.get('first'), name.get('last')] if p).strip() or None
 
     contact_phone = None
-    phones = contact.get('phones') or []
-    primary_phone = next((p for p in phones if p.get('primary')), None)
-    phone_source = primary_phone or (phones[0] if phones else None)
+    phones = _as_list(contact.get('phones'))
+    primary_phone = next((p for p in phones if isinstance(p, dict) and p.get('primary')), None)
+    phone_source = primary_phone or next((p for p in phones if isinstance(p, dict)), None)
     if phone_source and phone_source.get('e164Phone'):
         contact_phone = normalize_phone(phone_source['e164Phone'])
 
     contact_email = contact.get('email') or order_data.get('buyerEmail')
 
-    shipping_dest = (
-        (order_data.get('shippingInfo') or {}).get('logistics') or {}
-    ).get('shippingDestination') or {}
-    address = shipping_dest.get('address') or contact.get('address') or {}
-    shipping_contact = shipping_dest.get('contactDetails') or {}
+    shipping_dest = _as_dict(
+        _as_dict(_as_dict(order_data.get('shippingInfo')).get('logistics')).get('shippingDestination')
+    )
+    address = _as_dict(shipping_dest.get('address')) or _as_dict(contact.get('address'))
+    shipping_contact = _as_dict(shipping_dest.get('contactDetails'))
 
     if not contact_phone and shipping_contact.get('phone'):
         contact_phone = normalize_phone(shipping_contact['phone'])
@@ -47,17 +53,17 @@ def parse_wix_payload(payload: dict) -> dict:
             p for p in [shipping_contact.get('firstName'), shipping_contact.get('lastName')] if p
         ).strip() or None
 
-    line_items = order_data.get('lineItems') or []
-    first_item = line_items[0] if line_items else {}
+    line_items = _as_list(order_data.get('lineItems'))
+    first_item = _as_dict(line_items[0]) if line_items else {}
 
-    price_summary = order_data.get('priceSummary') or {}
-    total = price_summary.get('total') or {}
-    total_price = first_item.get('totalPrice') or {}
+    price_summary = _as_dict(order_data.get('priceSummary'))
+    total = _as_dict(price_summary.get('total'))
+    total_price = _as_dict(first_item.get('totalPrice'))
 
     return {
         'wix_order_id': order_data.get('id'),
         'wix_order_number': order_data.get('orderNumber'),
-        'meta_site_id': (order_data.get('context') or {}).get('metaSiteId'),
+        'meta_site_id': _as_dict(order_data.get('context')).get('metaSiteId'),
         'contact_name': contact_name,
         'contact_phone': contact_phone,
         'contact_email': contact_email,

@@ -324,7 +324,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const customAmountInput = document.querySelector('input[name="custom_amount"]');
     
     // Автопоиск клієнтів
+    const clientIdHidden = document.querySelector('input[name="client_id"]');
     clientSearch.addEventListener('input', async function() {
+        if (clientIdHidden) {
+            clientIdHidden.value = '';
+        }
         const query = this.value.trim();
         if (query.length < 2) {
             clientResults.classList.add('d-none');
