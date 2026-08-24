@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Заявки з сайту</h2>
+
+    <div class="mb-3">
+        <a href="?status=new" class="btn btn-sm {% if status_filter == 'new' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Нові</a>
+        <a href="?status=processed" class="btn btn-sm {% if status_filter == 'processed' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Оброблені</a>
+        <a href="?status=ignored" class="btn btn-sm {% if status_filter == 'ignored' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Ігноровані</a>
+    </div>
+
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Отримано</th>
+                <th>№ замовлення</th>
+                <th>Товар</th>
+                <th>Сума</th>
+                <th>Контакт</th>
+                <th>Клієнт</th>
+                <th>Мапінг</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for lead in leads %}
+            <tr>
+                <td>{{ lead.received_at | kyiv_time }}</td>
+                <td>{{ lead.wix_order_number or '—' }}</td>
+                <td>
+                    {{ lead.item_name or '—' }}
+                    {% if lead.line_items_count and lead.line_items_count > 1 %}
+                        <span class="badge bg-warning text-dark">кілька позицій — перевірте вручну</span>
+                    {% endif %}
+                </td>
+                <td>{{ lead.amount or '—' }} {{ lead.currency or '' }}</td>
+                <td>{{ lead.contact_name or '—' }}<br><small class="text-muted">{{ lead.contact_phone or lead.contact_email or '' }}</small></td>
+                <td>
+                    {% if lead.matched_client_id %}
+                        <span class="badge bg-success">знайдено</span>
+                    {% else %}
+                        <span class="badge bg-secondary">не знайдено</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if lead.mapping_matched %}
+                        <span class="badge bg-success">є</span>
+                    {% else %}
+                        <span class="badge bg-secondary">немає</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if status_filter == 'new' %}
+                    <a href="{{ url_for('orders.order_form', lead_id=lead.id) }}" class="btn btn-sm btn-primary">Обробити</a>
+                    <form method="post" action="{{ url_for('integrations.wix_lead_ignore', lead_id=lead.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">Ігнорувати</button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted">Немає заявок</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
