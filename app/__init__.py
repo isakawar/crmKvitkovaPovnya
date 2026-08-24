@@ -55,6 +55,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.photos.routes import photos_bp
     from app.blueprints.activity_log import activity_log_bp
     from app.blueprints.notifications import notifications_bp
+    from app.blueprints.integrations import integrations_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -73,6 +74,7 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(photos_bp)
     app.register_blueprint(activity_log_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(integrations_bp)
 
     # Ensure upload folder exists
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads/order_photos'), exist_ok=True)
@@ -123,7 +125,10 @@ def create_app(config_class=DevelopmentConfig):
     def require_login():
         if app.config.get('LOGIN_DISABLED'):
             return
-        public_endpoints = ['auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon']
+        public_endpoints = [
+            'auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon',
+            'integrations.wix_order_webhook',
+        ]
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
                 return redirect(url_for('auth.login'))
