@@ -9,14 +9,14 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-here'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'postgresql://kvitkova_user:kvitkova_password@localhost:5432/kvitkova_crm'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
+
     # Telegram Bot settings
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN')
-    
+
     # Session configuration
     SESSION_TYPE = 'filesystem'
     PERMANENT_SESSION_LIFETIME = 86400  # 24 hours in seconds
-    
+
     # Login configuration
     LOGIN_DISABLED = False
     REMEMBER_COOKIE_DURATION = 86400  # 24 hours in seconds
@@ -25,6 +25,10 @@ class Config:
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
+
+    # Base URL used to build links inside Telegram notifications (localhost
+    # is unreachable from a manager's phone) — e.g. https://crm.example.com
+    CRM_PUBLIC_URL = os.environ.get('CRM_PUBLIC_URL', '')
 
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')
@@ -41,16 +45,16 @@ class DevelopmentConfig:
     DEBUG = True
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_secret')
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-    
+
     # Database configuration
     DATABASE_URL = os.environ.get('DATABASE_URL')
     if DATABASE_URL:
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
     else:
         SQLALCHEMY_DATABASE_URI = 'postgresql://kvitkova_user:kvitkova_password@localhost:5432/kvitkova_crm'
-    
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
+
     # Telegram Bot настройки
     TELEGRAM_BOT_TOKEN = os.environ.get('TELEGRAM_BOT_TOKEN', '')
     TELEGRAM_WEBHOOK_URL = os.environ.get('TELEGRAM_WEBHOOK_URL', '')
@@ -61,6 +65,10 @@ class DevelopmentConfig:
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
+
+    # Base URL used to build links inside Telegram notifications (localhost
+    # is unreachable from a manager's phone) — e.g. https://crm.example.com
+    CRM_PUBLIC_URL = os.environ.get('CRM_PUBLIC_URL', '')
 
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')
