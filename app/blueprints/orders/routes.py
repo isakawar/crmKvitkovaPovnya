@@ -202,9 +202,22 @@ def order_form():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+
+    wix_lead = None
+    wix_mapping = None
+    lead_id = request.args.get('lead_id', type=int)
+    if lead_id:
+        from app.models.wix_lead import WixLead
+        from app.services.wix_integration_service import find_product_mapping
+        candidate = WixLead.query.get(lead_id)
+        if candidate and candidate.status == 'new':
+            wix_lead = candidate
+            wix_mapping = find_product_mapping(candidate.catalog_item_id)
+
     return render_template(
         'orders/form.html',
-        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom
+        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom,
+        wix_lead=wix_lead, wix_mapping=wix_mapping,
     )
 
 
