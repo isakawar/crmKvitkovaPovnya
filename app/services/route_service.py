@@ -2,6 +2,7 @@ from datetime import date, datetime
 import json
 import logging
 import re
+import urllib.parse
 
 from sqlalchemy.orm import joinedload
 
@@ -10,6 +11,41 @@ from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 
 logger = logging.getLogger(__name__)
+
+# A pin shared from Google Maps renders as e.g. 50°22'36.1"N 30°35'43.7"E —
+# operators sometimes paste this straight into the street field instead of a
+# real address when the client shares a location instead of typing one out.
+# Combined with a city prefix ("Київ, 50°22'36.1"N ...") this text is not a
+# valid Google Maps waypoint and silently breaks the courier's route link.
+_DMS_PAIR_RE = re.compile(
+    r"(?P<lat_deg>\d{1,3})\s*°\s*(?P<lat_min>\d{1,2})\s*['′]\s*(?P<lat_sec>[\d.]+)\s*[\"″]\s*(?P<lat_dir>[NS])"
+    r"[,\s]+"
+    r"(?P<lng_deg>\d{1,3})\s*°\s*(?P<lng_min>\d{1,2})\s*['′]\s*(?P<lng_sec>[\d.]+)\s*[\"″]\s*(?P<lng_dir>[EW])",
+    re.IGNORECASE,
+)
+
+
+def _dms_to_decimal(deg: str, minutes: str, seconds: str, direction: str) -> float:
+    value = float(deg) + float(minutes) / 60 + float(seconds) / 3600
+    return -value if direction.upper() in ("S", "W") else value
+
+
+def format_gmaps_waypoint(city: str, street: str, building: str) -> str:
+    """Build one URL-encoded Google Maps directions waypoint from address parts.
+
+    If `street` is actually a Google Maps DMS coordinate pair, the city/street/
+    building text is not a valid waypoint (Google can't resolve "Київ, 50°22'..."),
+    so the decimal "lat,lng" pair is used directly instead.
+    """
+    match = _DMS_PAIR_RE.search(street or "")
+    if match:
+        g = match.groupdict()
+        lat = round(_dms_to_decimal(g["lat_deg"], g["lat_min"], g["lat_sec"], g["lat_dir"]), 6)
+        lng = round(_dms_to_decimal(g["lng_deg"], g["lng_min"], g["lng_sec"], g["lng_dir"]), 6)
+        return urllib.parse.quote(f"{lat},{lng}")
+
+    parts = [p for p in [city, street, building] if p]
+    return urllib.parse.quote(', '.join(parts)) if parts else ''
 
 
 def save_routes(

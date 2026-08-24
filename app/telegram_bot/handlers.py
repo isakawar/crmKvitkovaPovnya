@@ -17,6 +17,7 @@ from app.models.courier import Courier
 from app.models.delivery import Delivery
 from app.extensions import db
 from app.services.csv_import_service import normalize_phone
+from app.services.route_service import format_gmaps_waypoint
 from .keyboards import CourierKeyboards
 from .services import TelegramService
 
@@ -1117,15 +1118,13 @@ class CourierHandlers:
         for stop in stops:
             d = stop.delivery
             order = d.order if d else None
-            parts = []
-            city = (order.city if order else '') or ''
-            street = (d.street or (order.street if order else '')) or ''
-            building = (d.building_number or (order.building_number if order else '')) or ''
-            if city: parts.append(city)
-            if street: parts.append(street)
-            if building: parts.append(building)
-            if parts:
-                gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+            waypoint = format_gmaps_waypoint(
+                (order.city if order else '') or '',
+                (d.street or (order.street if order else '')) or '',
+                (d.building_number or (order.building_number if order else '')) or '',
+            )
+            if waypoint:
+                gmaps_stops.append(waypoint)
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
 
         await query.edit_message_text(
@@ -1244,15 +1243,13 @@ class CourierHandlers:
             for stop in stops:
                 d = stop.delivery
                 order = d.order if d else None
-                parts = []
-                city = (order.city if order else '') or ''
-                street = (d.street or (order.street if order else '')) or ''
-                building = (d.building_number or (order.building_number if order else '')) or ''
-                if city: parts.append(city)
-                if street: parts.append(street)
-                if building: parts.append(building)
-                if parts:
-                    gmaps_stops.append(urllib.parse.quote(', '.join(parts)))
+                waypoint = format_gmaps_waypoint(
+                    (order.city if order else '') or '',
+                    (d.street or (order.street if order else '')) or '',
+                    (d.building_number or (order.building_number if order else '')) or '',
+                )
+                if waypoint:
+                    gmaps_stops.append(waypoint)
             gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_stops)
         else:
             route.status = 'rejected'

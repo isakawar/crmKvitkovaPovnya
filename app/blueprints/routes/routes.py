@@ -5,6 +5,7 @@ from app.extensions import db
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.courier import Courier
 from app.models.route_dispatch_log import RouteDispatchLog
+from app.services.route_service import format_gmaps_waypoint
 from datetime import datetime, date as date_type
 import json
 import urllib.parse
@@ -293,13 +294,13 @@ def assign_and_send_route(route_id):
     for stop in stops:
         d = stop.delivery
         order = d.order if d else None
-        parts = [p for p in [
+        waypoint = format_gmaps_waypoint(
             (order.city if order else '') or '',
             (d.street or (order.street if order else '')) or '',
             (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+        )
+        if waypoint:
+            gmaps_parts.append(waypoint)
     gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts) if gmaps_parts else None
 
     inline_keyboard = []
@@ -379,13 +380,13 @@ def route_message_text(route_id):
     for stop in stops:
         d = stop.delivery
         order = d.order if d else None
-        parts = [p for p in [
+        waypoint = format_gmaps_waypoint(
             (order.city if order else '') or '',
             (d.street or (order.street if order else '')) or '',
             (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+        )
+        if waypoint:
+            gmaps_parts.append(waypoint)
     if gmaps_parts:
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
         try:
@@ -459,13 +460,13 @@ def route_delivery_text(route_id):
     for stop in stops:
         d = stop.delivery
         order = d.order if d else None
-        parts = [p for p in [
+        waypoint = format_gmaps_waypoint(
             (order.city if order else '') or '',
             (d.street or (order.street if order else '')) or '',
             (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
+        )
+        if waypoint:
+            gmaps_parts.append(waypoint)
     if gmaps_parts:
         gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
         try:

@@ -13,10 +13,11 @@ Covers:
 - delete_route endpoint: resets delivery statuses to Очікує on delete
 """
 import datetime
+import urllib.parse
 
 from app.models import Client, Order, Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
-from app.services.route_service import save_routes
+from app.services.route_service import save_routes, format_gmaps_waypoint
 
 
 TODAY = datetime.date.today()
@@ -385,3 +386,28 @@ def test_delete_route_endpoint_removes_route_and_stops(app, session):
     session.expire_all()
     assert DeliveryRoute.query.filter_by(id=route_id).first() is None
     assert RouteDelivery.query.filter_by(route_id=route_id).count() == 0
+
+
+# ── format_gmaps_waypoint ────────────────────────────────────────────────────
+# A pin shared from Google Maps renders as street text like
+# 50°22'36.1"N 30°35'43.7"E. Google Maps directions can't resolve that
+# combined with a city prefix, so it must become a bare "lat,lng" waypoint.
+
+def test_format_gmaps_waypoint_regular_address():
+    result = format_gmaps_waypoint('Київ', 'Хрещатик', '1')
+    assert result == urllib.parse.quote('Київ, Хрещатик, 1')
+
+
+def test_format_gmaps_waypoint_dms_coordinates_become_decimal_lat_lng():
+    result = format_gmaps_waypoint('Київ', '''50°22'36.1"N 30°35'43.7"E''', '')
+    assert result == urllib.parse.quote('50.376694,30.595472')
+
+
+def test_format_gmaps_waypoint_dms_ignores_city_prefix():
+    with_city = format_gmaps_waypoint('Київ', '''50°22'36.1"N 30°35'43.7"E''', '')
+    without_city = format_gmaps_waypoint('', '''50°22'36.1"N 30°35'43.7"E''', '')
+    assert with_city == without_city
+
+
+def test_format_gmaps_waypoint_empty_parts_returns_empty_string():
+    assert format_gmaps_waypoint('', '', '') == ''
