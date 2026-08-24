@@ -114,12 +114,108 @@
       background: #f7fafd;
       color: #222;
     }
+    .wix-lead-card {
+      position: sticky;
+      top: 1.25rem;
+      background: #fff;
+      border: 1px solid #e0e7ef;
+      border-radius: 0.9rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 1.25rem 1.4rem;
+    }
+    .wix-lead-card h5 {
+      font-weight: 700;
+      color: #2a2a2a;
+      margin-bottom: 0.9rem;
+    }
+    .wix-lead-card .badge {
+      font-weight: 500;
+    }
+    .wix-lead-field {
+      margin-bottom: 0.85rem;
+    }
+    .wix-lead-field .label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: #8a94a6;
+      margin-bottom: 0.15rem;
+    }
+    .wix-lead-field .value {
+      font-size: 0.98rem;
+      color: #2a2a2a;
+      word-break: break-word;
+    }
   </style>
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
     <h2 class="mb-4">Створення замовлення</h2>
-    
+
+    <div class="row g-4">
+    {% if wix_lead %}
+    <div class="col-lg-4">
+        <div class="wix-lead-card">
+            <h5><i class="bi bi-cloud-arrow-down"></i> Заявка з сайту #{{ wix_lead.wix_order_number or wix_lead.id }}</h5>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if wix_lead.matched_client_id %}
+                    <span class="badge bg-success">Клієнта знайдено</span>
+                {% else %}
+                    <span class="badge bg-secondary">Клієнта не знайдено</span>
+                {% endif %}
+                {% if wix_lead.mapping_matched %}
+                    <span class="badge bg-success">Мапінг товару є</span>
+                {% else %}
+                    <span class="badge bg-secondary">Мапінгу немає</span>
+                {% endif %}
+                {% if wix_lead.line_items_count and wix_lead.line_items_count > 1 %}
+                    <span class="badge bg-warning text-dark">Кілька позицій — перевірте вручну</span>
+                {% endif %}
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Контакт</div>
+                <div class="value">
+                    {{ wix_lead.contact_name or '—' }}<br>
+                    {% if wix_lead.contact_phone %}{{ wix_lead.contact_phone }}<br>{% endif %}
+                    {% if wix_lead.contact_email %}{{ wix_lead.contact_email }}{% endif %}
+                </div>
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Адреса</div>
+                <div class="value">
+                    {{ wix_lead.city or '—' }}{% if wix_lead.street %}, {{ wix_lead.street }}{% endif %}
+                    {% if wix_lead.postal_code %}<br>{{ wix_lead.postal_code }}{% endif %}
+                </div>
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Товар</div>
+                <div class="value">
+                    {{ wix_lead.item_name or '—' }}
+                    {% if wix_lead.quantity %}× {{ wix_lead.quantity }}{% endif %}
+                    <br><code>{{ wix_lead.catalog_item_id or '—' }}</code>
+                </div>
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Сума</div>
+                <div class="value">
+                    {{ wix_lead.amount or '—' }} {{ wix_lead.currency or '' }}
+                    {% if wix_lead.payment_status %}<br><span class="text-muted">Оплата: {{ wix_lead.payment_status }}</span>{% endif %}
+                </div>
+            </div>
+
+            <div class="wix-lead-field mb-0">
+                <div class="label">Отримано</div>
+                <div class="value">{{ wix_lead.received_at | kyiv_time }}</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="{% if wix_lead %}col-lg-8{% else %}col-12{% endif %}">
     <form method="post" class="row g-3" id="orderForm">
         {% if wix_lead %}
         <input type="hidden" name="lead_id" value="{{ wix_lead.id }}">
@@ -302,6 +398,8 @@
             <a href="/orders" class="btn btn-secondary">Скасувати</a>
         </div>
     </form>
+    </div>
+    </div>
 </div>
 
 {{ render_toast() }}
