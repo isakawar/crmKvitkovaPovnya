@@ -256,3 +256,46 @@ def test_create_or_update_lead_raises_without_order_id(session):
 
     with pytest.raises(ValueError):
         create_or_update_lead({}, {'wix_order_id': None})
+
+
+def test_mark_lead_processed_with_order(session, client_fixture):
+    from app.services.wix_integration_service import mark_lead_processed
+    from app.models.user import User
+    from app.models.order import Order
+    import datetime as _dt
+
+    lead = WixLead(
+        wix_order_id='order-1', raw_payload={}, status='new',
+    )
+    order = Order(
+        client_id=client_fixture.id, recipient_name='Х', recipient_phone='+380000000000',
+        city='Київ', street='вул.', size='M', delivery_date=_dt.date.today(), for_whom='Дружина',
+    )
+    user = User(username='mgr', email='mgr@example.com', user_type='manager')
+    user.set_password('x')
+    session.add_all([lead, order, user])
+    session.commit()
+
+    mark_lead_processed(lead, order, user)
+
+    assert lead.status == 'processed'
+    assert lead.processed_order_id == order.id
+    assert lead.processed_subscription_id is None
+    assert lead.processed_by_user_id == user.id
+    assert lead.processed_at is not None
+
+
+def test_mark_lead_processed_with_subscription(session, subscription_fixture):
+    from app.services.wix_integration_service import mark_lead_processed
+    from app.models.user import User
+
+    lead = WixLead(wix_order_id='order-2', raw_payload={}, status='new')
+    user = User(username='mgr2', email='mgr2@example.com', user_type='admin')
+    user.set_password('x')
+    session.add_all([lead, user])
+    session.commit()
+
+    mark_lead_processed(lead, subscription_fixture, user)
+
+    assert lead.status == 'processed'
+    assert lead.processed_subscription_id == subscription_fixture.id

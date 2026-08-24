@@ -5,6 +5,8 @@ from app.services.csv_import_service import normalize_phone
 from app.models import Client
 from app.models.wix_product_mapping import WixProductMapping
 from app.models.wix_lead import WixLead
+from app.models.order import Order
+from app.models.subscription import Subscription
 
 
 def parse_wix_payload(payload: dict) -> dict:
@@ -148,3 +150,17 @@ def create_or_update_lead(payload: dict, parsed: dict) -> WixLead:
     db.session.add(lead)
     db.session.commit()
     return lead
+
+
+def mark_lead_processed(lead: WixLead, entity, user) -> None:
+    lead.status = 'processed'
+    lead.processed_at = datetime.utcnow()
+    lead.processed_by_user_id = getattr(user, 'id', None)
+
+    if isinstance(entity, Subscription):
+        lead.processed_subscription_id = entity.id
+        lead.processed_order_id = entity.orders[0].id if entity.orders else None
+    elif isinstance(entity, Order):
+        lead.processed_order_id = entity.id
+
+    db.session.commit()
