@@ -6,6 +6,7 @@ from flask_login import current_user, login_required
 from app.blueprints.integrations import integrations_bp
 from app.extensions import db
 from app.models.wix_lead import WixLead
+from app.models.wix_product_mapping import WixProductMapping
 from app.services import wix_integration_service as wix_service
 
 
@@ -69,3 +70,67 @@ def wix_lead_ignore(lead_id):
     db.session.commit()
     flash('Заявку проігноровано', 'success')
     return redirect(url_for('integrations.wix_leads_list'))
+
+
+@integrations_bp.route('/integrations/wix-product-mappings', methods=['GET'])
+@login_required
+def wix_product_mappings_list():
+    if not _is_admin_or_manager():
+        abort(403)
+    mappings = WixProductMapping.query.order_by(WixProductMapping.id.desc()).all()
+    return render_template('integrations/product_mappings.html', mappings=mappings)
+
+
+@integrations_bp.route('/integrations/wix-product-mappings/new', methods=['POST'])
+@login_required
+def wix_product_mapping_create():
+    if not _is_admin_or_manager():
+        abort(403)
+    catalog_item_id = (request.form.get('catalog_item_id') or '').strip()
+    order_scenario = request.form.get('order_scenario') or ''
+    size = request.form.get('size') or ''
+    if not catalog_item_id or order_scenario not in ('order', 'subscription') or not size:
+        flash('Заповніть catalog_item_id, сценарій і розмір', 'danger')
+        return redirect(url_for('integrations.wix_product_mappings_list'))
+
+    mapping = WixProductMapping(
+        catalog_item_id=catalog_item_id,
+        wix_item_name=(request.form.get('wix_item_name') or '').strip() or None,
+        order_scenario=order_scenario,
+        delivery_type=(request.form.get('delivery_type') or '').strip() or None,
+        size=size,
+        for_whom=(request.form.get('for_whom') or '').strip() or None,
+    )
+    db.session.add(mapping)
+    db.session.commit()
+    flash('Мапінг додано', 'success')
+    return redirect(url_for('integrations.wix_product_mappings_list'))
+
+
+@integrations_bp.route('/integrations/wix-product-mappings/<int:mapping_id>/edit', methods=['POST'])
+@login_required
+def wix_product_mapping_edit(mapping_id):
+    if not _is_admin_or_manager():
+        abort(403)
+    mapping = WixProductMapping.query.get_or_404(mapping_id)
+    mapping.wix_item_name = (request.form.get('wix_item_name') or '').strip() or None
+    mapping.order_scenario = request.form.get('order_scenario') or mapping.order_scenario
+    mapping.delivery_type = (request.form.get('delivery_type') or '').strip() or None
+    mapping.size = request.form.get('size') or mapping.size
+    mapping.for_whom = (request.form.get('for_whom') or '').strip() or None
+    mapping.is_active = request.form.get('is_active') == 'on'
+    db.session.commit()
+    flash('Мапінг оновлено', 'success')
+    return redirect(url_for('integrations.wix_product_mappings_list'))
+
+
+@integrations_bp.route('/integrations/wix-product-mappings/<int:mapping_id>/delete', methods=['POST'])
+@login_required
+def wix_product_mapping_delete(mapping_id):
+    if not _is_admin_or_manager():
+        abort(403)
+    mapping = WixProductMapping.query.get_or_404(mapping_id)
+    db.session.delete(mapping)
+    db.session.commit()
+    flash('Мапінг видалено', 'success')
+    return redirect(url_for('integrations.wix_product_mappings_list'))

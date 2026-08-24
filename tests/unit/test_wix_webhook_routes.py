@@ -126,3 +126,64 @@ def test_ignore_lead_changes_status(app, session):
 
     assert resp.status_code == 200
     assert WixLead.query.get(lead.id).status == 'ignored'
+
+
+from app.models.wix_product_mapping import WixProductMapping
+
+
+def test_create_product_mapping(app, session):
+    manager = _make_manager(session)
+    client = app.test_client()
+    _login(app, client, manager)
+
+    resp = client.post('/integrations/wix-product-mappings/new', data={
+        'catalog_item_id': 'cat-abc',
+        'wix_item_name': 'Букет S',
+        'order_scenario': 'order',
+        'size': 'S',
+        'for_whom': 'Дружина',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+    mapping = WixProductMapping.query.filter_by(catalog_item_id='cat-abc').first()
+    assert mapping is not None
+    assert mapping.size == 'S'
+
+
+def test_edit_product_mapping(app, session):
+    manager = _make_manager(session)
+    mapping = WixProductMapping(catalog_item_id='cat-xyz', order_scenario='order', size='M')
+    session.add(mapping)
+    session.commit()
+
+    client = app.test_client()
+    _login(app, client, manager)
+    resp = client.post(f'/integrations/wix-product-mappings/{mapping.id}/edit', data={
+        'wix_item_name': 'Оновлена назва',
+        'order_scenario': 'subscription',
+        'delivery_type': 'Weekly',
+        'size': 'L',
+        'for_whom': '',
+        'is_active': 'on',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+    updated = WixProductMapping.query.get(mapping.id)
+    assert updated.order_scenario == 'subscription'
+    assert updated.delivery_type == 'Weekly'
+    assert updated.size == 'L'
+
+
+def test_delete_product_mapping(app, session):
+    manager = _make_manager(session)
+    mapping = WixProductMapping(catalog_item_id='cat-del', order_scenario='order', size='M')
+    session.add(mapping)
+    session.commit()
+    mapping_id = mapping.id
+
+    client = app.test_client()
+    _login(app, client, manager)
+    resp = client.post(f'/integrations/wix-product-mappings/{mapping_id}/delete', follow_redirects=True)
+
+    assert resp.status_code == 200
+    assert WixProductMapping.query.get(mapping_id) is None
