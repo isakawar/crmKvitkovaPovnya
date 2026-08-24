@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models.wix_lead import WixLead
 from app.models.wix_product_mapping import WixProductMapping
 from app.services import wix_integration_service as wix_service
+from app.telegram_bot.manager_notification_service import send_new_lead_notification
 
 
 def _allowed_site_ids():
@@ -40,6 +41,10 @@ def wix_order_webhook():
 
     try:
         parsed = wix_service.parse_wix_payload(payload)
+        wix_order_id = parsed.get('wix_order_id')
+        existing_before = (
+            WixLead.query.filter_by(wix_order_id=wix_order_id).first() if wix_order_id else None
+        )
         lead = wix_service.create_or_update_lead(payload, parsed)
     except ValueError as exc:
         return jsonify({'ok': False, 'error': str(exc)}), 400
@@ -48,6 +53,16 @@ def wix_order_webhook():
         return jsonify({'ok': False, 'error': 'malformed payload'}), 400
 
     logging.info(f'Wix webhook: lead {lead.id} (wix_order_id={lead.wix_order_id}) accepted')
+
+    if existing_before is None:
+        try:
+            send_new_lead_notification(lead)
+        except Exception:
+            logging.warning(
+                f'Wix webhook: failed to send new-lead Telegram notification for lead {lead.id}',
+                exc_info=True,
+            )
+
     return jsonify({'ok': True, 'lead_id': lead.id}), 200
 
 

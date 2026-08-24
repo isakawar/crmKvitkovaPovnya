@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from app.extensions import db
@@ -7,6 +8,7 @@ from app.models.wix_product_mapping import WixProductMapping
 from app.models.wix_lead import WixLead
 from app.models.order import Order
 from app.models.subscription import Subscription
+from app.telegram_bot.manager_notification_service import notify_lead_processed
 
 
 def parse_wix_payload(payload: dict) -> dict:
@@ -170,3 +172,10 @@ def mark_lead_processed(lead: WixLead, entity, user) -> None:
         lead.processed_order_id = entity.id
 
     db.session.commit()
+
+    try:
+        notify_lead_processed(lead)
+    except Exception:
+        logging.warning(
+            f'Wix lead {lead.id}: failed to send processed Telegram notification', exc_info=True
+        )
