@@ -1,0 +1,86 @@
+import asyncio
+import logging
+
+from flask import current_app
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+from app.extensions import db
+from app.models.user import User
+from app.models.wix_lead_notification import WixLeadNotification
+
+logger = logging.getLogger(__name__)
+
+
+def _format_lead_message(lead) -> str:
+    lines = [f"🆕 Нова заявка з сайту #{lead.wix_order_number or lead.id}", ""]
+    if lead.contact_name:
+        lines.append(lead.contact_name)
+    if lead.contact_phone:
+        lines.append(lead.contact_phone)
+    lines.append("")
+    if lead.item_name:
+        lines.append(lead.item_name)
+    if lead.amount is not None:
+        lines.append(f"{lead.amount} {lead.currency or ''}".strip())
+    return "\n".join(lines)
+
+
+def send_new_lead_notification(lead) -> int:
+    """Notify all Telegram-linked admin/manager users about a new Wix lead.
+
+    Returns the number of successfully sent notifications.
+    """
+    if not hasattr(current_app, 'telegram_bot') or not current_app.telegram_bot.is_initialized():
+        logger.warning('Telegram bot not initialized, skipping new lead notification')
+        return 0
+
+    base_url = current_app.config.get('CRM_PUBLIC_URL')
+    if not base_url:
+        logger.warning('CRM_PUBLIC_URL not configured, skipping new lead notification')
+        return 0
+
+    recipients = User.query.filter(
+        User.telegram_chat_id.isnot(None),
+        User.telegram_notifications_enabled.is_(True),
+        User.user_type.in_(('admin', 'manager')),
+    ).all()
+    if not recipients:
+        return 0
+
+    text = _format_lead_message(lead)
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            '🛒 Перейти до замовлення',
+            url=f'{base_url}/orders/new?lead_id={lead.id}',
+        )
+    ]])
+
+    bot = current_app.telegram_bot
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        success_count = loop.run_until_complete(
+            _send_to_all(bot, recipients, lead.id, text, keyboard)
+        )
+    finally:
+        loop.close()
+    return success_count
+
+
+async def _send_to_all(bot, recipients, lead_id, text, keyboard) -> int:
+    success_count = 0
+    for user in recipients:
+        message_id = await bot.send_message(
+            chat_id=user.telegram_chat_id, text=text, reply_markup=keyboard,
+        )
+        if not message_id:
+            continue
+        db.session.add(WixLeadNotification(
+            wix_lead_id=lead_id,
+            user_id=user.id,
+            telegram_chat_id=user.telegram_chat_id,
+            telegram_message_id=message_id,
+        ))
+        success_count += 1
+    db.session.commit()
+    return success_count
