@@ -1,4 +1,5 @@
 import asyncio
+import html
 import logging
 
 from flask import current_app
@@ -12,16 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 def _format_lead_message(lead) -> str:
-    lines = [f"🆕 Нова заявка з сайту #{lead.wix_order_number or lead.id}", ""]
+    order_ref = html.escape(str(lead.wix_order_number or lead.id))
+    lines = [f"🆕 Нова заявка з сайту #{order_ref}", ""]
     if lead.contact_name:
-        lines.append(lead.contact_name)
+        lines.append(html.escape(str(lead.contact_name)))
     if lead.contact_phone:
-        lines.append(lead.contact_phone)
+        lines.append(html.escape(str(lead.contact_phone)))
     lines.append("")
     if lead.item_name:
-        lines.append(lead.item_name)
+        lines.append(html.escape(str(lead.item_name)))
     if lead.amount is not None:
-        lines.append(f"{lead.amount} {lead.currency or ''}".strip())
+        amount_line = f"{lead.amount} {lead.currency or ''}".strip()
+        lines.append(html.escape(amount_line))
     return "\n".join(lines)
 
 
@@ -43,6 +46,7 @@ def send_new_lead_notification(lead) -> int:
         User.telegram_chat_id.isnot(None),
         User.telegram_notifications_enabled.is_(True),
         User.user_type.in_(('admin', 'manager')),
+        User.is_active.is_(True),
     ).all()
     if not recipients:
         return 0
@@ -105,7 +109,14 @@ def notify_lead_processed(lead) -> int:
     order_id = lead.processed_order_id
     url = f'{base_url}/orders/{order_id}/edit' if order_id else f'{base_url}/orders'
 
-    text = _format_lead_message(lead) + '\n\n✅ Оброблено'
+    processed_by = User.query.get(lead.processed_by_user_id) if lead.processed_by_user_id else None
+    if processed_by:
+        processed_by_name = html.escape(processed_by.display_name or processed_by.username)
+    else:
+        processed_by_name = 'менеджером'
+    processed_at_str = lead.processed_at.strftime('%d.%m.%Y %H:%M') if lead.processed_at else ''
+    suffix = f'\n\n✅ Оброблено {processed_by_name}, {processed_at_str}'.rstrip(', ')
+    text = _format_lead_message(lead) + suffix
     keyboard = InlineKeyboardMarkup([[
         InlineKeyboardButton('✅ Оброблено — переглянути замовлення', url=url)
     ]])

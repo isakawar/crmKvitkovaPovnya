@@ -141,6 +141,81 @@ def test_send_new_lead_notification_noop_when_public_url_missing(app, session):
     assert len(app.telegram_bot.sent) == 0
 
 
+def test_send_new_lead_notification_skips_deactivated_users(app, session):
+    from app.telegram_bot.manager_notification_service import send_new_lead_notification
+
+    app.config['CRM_PUBLIC_URL'] = 'https://crm.example.com'
+    app.telegram_bot = FakeTelegramBot()
+
+    active_mgr = User(username='mgr-active', email='mgr-active@example.com', user_type='manager',
+                       telegram_chat_id=888, telegram_notifications_enabled=True)
+    active_mgr.set_password('x')
+    inactive_mgr = User(username='mgr-inactive', email='mgr-inactive@example.com', user_type='manager',
+                         telegram_chat_id=999, telegram_notifications_enabled=True, is_active=False)
+    inactive_mgr.set_password('x')
+    session.add_all([active_mgr, inactive_mgr])
+    session.commit()
+
+    lead = _make_lead(session, wix_order_id='order-notify-8')
+
+    count = send_new_lead_notification(lead)
+
+    assert count == 1
+    sent_chat_ids = {m['chat_id'] for m in app.telegram_bot.sent}
+    assert sent_chat_ids == {888}
+
+
+def test_format_lead_message_escapes_html_metacharacters(session):
+    from app.telegram_bot.manager_notification_service import _format_lead_message
+
+    lead = _make_lead(
+        session, wix_order_id='order-notify-9',
+        contact_name='Букет <S> преміум', item_name='<script>alert(1)</script>',
+    )
+
+    text = _format_lead_message(lead)
+
+    assert '<script>' not in text
+    assert '<S>' not in text
+    assert '&lt;S&gt;' in text
+    assert '&lt;script&gt;' in text
+
+
+def test_notify_lead_processed_includes_processed_by_and_timestamp(app, session):
+    from app.telegram_bot.manager_notification_service import notify_lead_processed
+    import datetime as _dt
+
+    app.config['CRM_PUBLIC_URL'] = 'https://crm.example.com'
+    app.telegram_bot = FakeTelegramBot()
+
+    mgr = User(username='mgr-proc', email='mgr-proc@example.com', user_type='manager',
+               telegram_chat_id=1010, display_name='Оля Менеджер')
+    mgr.set_password('x')
+    recipient = User(username='mgr-recv', email='mgr-recv@example.com', user_type='manager',
+                      telegram_chat_id=1011)
+    recipient.set_password('x')
+    session.add_all([mgr, recipient])
+    session.commit()
+
+    lead = _make_lead(session, wix_order_id='order-notify-10')
+    lead.status = 'processed'
+    lead.processed_order_id = 222
+    lead.processed_by_user_id = mgr.id
+    lead.processed_at = _dt.datetime(2026, 8, 24, 12, 30)
+    session.add(WixLeadNotification(
+        wix_lead_id=lead.id, user_id=recipient.id,
+        telegram_chat_id=1011, telegram_message_id=5,
+    ))
+    session.commit()
+
+    count = notify_lead_processed(lead)
+
+    assert count == 1
+    edited_text = app.telegram_bot.edited[0]['text']
+    assert 'Оля Менеджер' in edited_text
+    assert '24.08.2026 12:30' in edited_text
+
+
 def test_notify_lead_processed_edits_all_sent_messages(app, session):
     from app.telegram_bot.manager_notification_service import notify_lead_processed
 

@@ -55,7 +55,7 @@
           </tr>
         </thead>
         <tbody id="users-tbody">
-          <tr><td colspan="5" style="text-align:center;color:#a8a29e;padding:2rem;">Завантаження...</td></tr>
+          <tr><td colspan="6" style="text-align:center;color:#a8a29e;padding:2rem;">Завантаження...</td></tr>
         </tbody>
       </table>
     </div>
@@ -353,7 +353,7 @@
       .then(renderUsers)
       .catch(() => {
         document.getElementById('users-tbody').innerHTML =
-          '<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:2rem;">Помилка завантаження</td></tr>';
+          '<tr><td colspan="6" style="text-align:center;color:#ef4444;padding:2rem;">Помилка завантаження</td></tr>';
       });
   }
 
