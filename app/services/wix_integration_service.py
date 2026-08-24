@@ -1,4 +1,6 @@
 from app.services.csv_import_service import normalize_phone
+from app.models import Client
+from app.models.wix_product_mapping import WixProductMapping
 
 
 def parse_wix_payload(payload: dict) -> dict:
@@ -65,3 +67,41 @@ def parse_wix_payload(payload: dict) -> dict:
         'payment_status': order_data.get('paymentStatus'),
         'line_items_count': len(line_items),
     }
+
+
+def find_matching_client(parsed: dict):
+    """Match a parsed Wix order to an existing client by phone (first) or email (fallback).
+
+    Args:
+        parsed: dict with 'contact_phone' and 'contact_email' keys
+
+    Returns:
+        Client object if found, None otherwise
+    """
+    phone = parsed.get('contact_phone')
+    if phone:
+        client = Client.query.filter_by(phone=phone).first()
+        if client:
+            return client
+    email = parsed.get('contact_email')
+    if email:
+        client = Client.query.filter_by(email=email).first()
+        if client:
+            return client
+    return None
+
+
+def find_product_mapping(catalog_item_id):
+    """Find an active product mapping by Wix catalog_item_id.
+
+    Args:
+        catalog_item_id: str or None - the Wix catalog item ID
+
+    Returns:
+        WixProductMapping object if found and active, None otherwise
+    """
+    if not catalog_item_id:
+        return None
+    return WixProductMapping.query.filter_by(
+        catalog_item_id=catalog_item_id, is_active=True
+    ).first()

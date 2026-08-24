@@ -126,3 +126,54 @@ def test_parse_wix_payload_handles_missing_data_wrapper():
 
     parsed = parse_wix_payload(copy.deepcopy(SAMPLE_WIX_PAYLOAD)['data'])
     assert parsed['wix_order_id'] == '3521b3e3-cf2d-4093-9b77-b562f6f03165'
+
+
+def test_find_matching_client_by_phone(session):
+    from app.models import Client
+    from app.services.wix_integration_service import find_matching_client
+
+    client = Client(instagram='vlad_flowers', phone='+380666746225')
+    session.add(client)
+    session.commit()
+
+    found = find_matching_client({'contact_phone': '+380666746225', 'contact_email': None})
+    assert found is not None
+    assert found.id == client.id
+
+
+def test_find_matching_client_by_email_when_phone_not_found(session):
+    from app.models import Client
+    from app.services.wix_integration_service import find_matching_client
+
+    client = Client(instagram='other_client', email='isakawar1@gmail.com')
+    session.add(client)
+    session.commit()
+
+    found = find_matching_client({'contact_phone': '+380000000000', 'contact_email': 'isakawar1@gmail.com'})
+    assert found is not None
+    assert found.id == client.id
+
+
+def test_find_matching_client_returns_none_when_no_match(session):
+    from app.services.wix_integration_service import find_matching_client
+
+    found = find_matching_client({'contact_phone': '+380000000000', 'contact_email': 'nobody@example.com'})
+    assert found is None
+
+
+def test_find_product_mapping_active_only(session):
+    from app.services.wix_integration_service import find_product_mapping
+
+    active = WixProductMapping(
+        catalog_item_id='cat-1', order_scenario='order', size='M', is_active=True
+    )
+    inactive = WixProductMapping(
+        catalog_item_id='cat-2', order_scenario='order', size='L', is_active=False
+    )
+    session.add_all([active, inactive])
+    session.commit()
+
+    assert find_product_mapping('cat-1').id == active.id
+    assert find_product_mapping('cat-2') is None
+    assert find_product_mapping(None) is None
+    assert find_product_mapping('unknown') is None
