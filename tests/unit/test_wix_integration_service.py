@@ -177,3 +177,82 @@ def test_find_product_mapping_active_only(session):
     assert find_product_mapping('cat-2') is None
     assert find_product_mapping(None) is None
     assert find_product_mapping('unknown') is None
+
+
+def test_create_or_update_lead_creates_new_lead(session):
+    from app.services.wix_integration_service import parse_wix_payload, create_or_update_lead
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    parsed = parse_wix_payload(payload)
+
+    lead = create_or_update_lead(payload, parsed)
+
+    assert lead.id is not None
+    assert lead.wix_order_id == '3521b3e3-cf2d-4093-9b77-b562f6f03165'
+    assert lead.status == 'new'
+    assert lead.contact_phone == '+380666746225'
+    assert lead.mapping_matched is False
+    assert lead.matched_client_id is None
+    assert WixLead.query.count() == 1
+
+
+def test_create_or_update_lead_is_idempotent_on_wix_order_id(session):
+    from app.services.wix_integration_service import parse_wix_payload, create_or_update_lead
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    parsed = parse_wix_payload(payload)
+
+    first = create_or_update_lead(payload, parsed)
+    second = create_or_update_lead(payload, parsed)
+
+    assert first.id == second.id
+    assert WixLead.query.count() == 1
+
+
+def test_create_or_update_lead_does_not_overwrite_processed_lead(session):
+    from app.services.wix_integration_service import parse_wix_payload, create_or_update_lead
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    parsed = parse_wix_payload(payload)
+
+    lead = create_or_update_lead(payload, parsed)
+    lead.status = 'processed'
+    session.commit()
+
+    payload['data']['contact']['name'] = {'first': 'Changed', 'last': 'Name'}
+    parsed2 = parse_wix_payload(payload)
+    result = create_or_update_lead(payload, parsed2)
+
+    assert result.id == lead.id
+    assert result.status == 'processed'
+    assert result.contact_name != 'Changed Name'
+
+
+def test_create_or_update_lead_sets_matched_client_and_mapping(session):
+    from app.services.wix_integration_service import parse_wix_payload, create_or_update_lead
+    from app.models import Client
+
+    client = Client(instagram='vlad', phone='+380666746225')
+    mapping = WixProductMapping(
+        catalog_item_id='977be4c1-a0f7-756d-7540-cf98f9208833',
+        order_scenario='subscription',
+        delivery_type='Monthly',
+        size='M',
+    )
+    session.add_all([client, mapping])
+    session.commit()
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    parsed = parse_wix_payload(payload)
+    lead = create_or_update_lead(payload, parsed)
+
+    assert lead.matched_client_id == client.id
+    assert lead.mapping_matched is True
+
+
+def test_create_or_update_lead_raises_without_order_id(session):
+    from app.services.wix_integration_service import create_or_update_lead
+    import pytest
+
+    with pytest.raises(ValueError):
+        create_or_update_lead({}, {'wix_order_id': None})

@@ -1,6 +1,10 @@
+from datetime import datetime
+
+from app.extensions import db
 from app.services.csv_import_service import normalize_phone
 from app.models import Client
 from app.models.wix_product_mapping import WixProductMapping
+from app.models.wix_lead import WixLead
 
 
 def parse_wix_payload(payload: dict) -> dict:
@@ -105,3 +109,42 @@ def find_product_mapping(catalog_item_id):
     return WixProductMapping.query.filter_by(
         catalog_item_id=catalog_item_id, is_active=True
     ).first()
+
+
+def create_or_update_lead(payload: dict, parsed: dict) -> WixLead:
+    wix_order_id = parsed.get('wix_order_id')
+    if not wix_order_id:
+        raise ValueError('Wix payload missing order id (data.id)')
+
+    existing = WixLead.query.filter_by(wix_order_id=wix_order_id).first()
+    if existing and existing.status != 'new':
+        return existing
+
+    client = find_matching_client(parsed)
+    mapping = find_product_mapping(parsed.get('catalog_item_id'))
+
+    lead = existing or WixLead(wix_order_id=wix_order_id)
+    lead.wix_order_number = parsed.get('wix_order_number')
+    lead.raw_payload = payload
+    lead.status = 'new'
+    lead.received_at = lead.received_at or datetime.utcnow()
+    lead.contact_name = parsed.get('contact_name')
+    lead.contact_phone = parsed.get('contact_phone')
+    lead.contact_email = parsed.get('contact_email')
+    lead.city = parsed.get('city')
+    lead.street = parsed.get('street')
+    lead.postal_code = parsed.get('postal_code')
+    lead.address_comment = parsed.get('address_comment')
+    lead.item_name = parsed.get('item_name')
+    lead.catalog_item_id = parsed.get('catalog_item_id')
+    lead.quantity = parsed.get('quantity')
+    lead.amount = parsed.get('amount')
+    lead.currency = parsed.get('currency')
+    lead.payment_status = parsed.get('payment_status')
+    lead.line_items_count = parsed.get('line_items_count')
+    lead.matched_client_id = client.id if client else None
+    lead.mapping_matched = mapping is not None
+
+    db.session.add(lead)
+    db.session.commit()
+    return lead
