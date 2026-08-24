@@ -459,7 +459,7 @@ def create_transaction():
 @transactions_bp.route('/transactions/transfer', methods=['POST'])
 @login_required
 def create_transfer():
-    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+    if not current_user.has_role('admin'):
         abort(403)
 
     data = request.get_json()
@@ -518,6 +518,8 @@ def update_transaction(txn_id):
     data = request.get_json()
 
     if txn.transaction_type == 'transfer':
+        if not current_user.has_role('admin'):
+            abort(403)
         try:
             txn_date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
         except (ValueError, TypeError):

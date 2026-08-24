@@ -33,10 +33,12 @@
         <i class="bi bi-dash-circle"></i>
         Списання
       </button>
+      {% if current_user.has_role('admin') %}
       <button type="button" id="openTransferModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100">
         <i class="bi bi-arrow-left-right"></i>
         Переказ
       </button>
+      {% endif %}
       <button type="button" id="openCreateTxnModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700">
         <i class="bi bi-plus-circle"></i>
         Додати транзакцію
@@ -180,8 +182,9 @@
       </thead>
       <tbody class="divide-y divide-stone-100">
         {% for txn in transactions %}
-        <tr class="transition-colors hover:bg-stone-50/70 {% if current_user.has_role('admin') or current_user.has_role('manager') %}cursor-pointer{% endif %}"
-            {% if current_user.has_role('admin') or current_user.has_role('manager') %}onclick="openEditTxnModal({{ txn.id }})"{% endif %}>
+        {% set can_edit_txn = current_user.has_role('admin') or (current_user.has_role('manager') and txn.transaction_type != 'transfer') %}
+        <tr class="transition-colors hover:bg-stone-50/70 {% if can_edit_txn %}cursor-pointer{% endif %}"
+            {% if can_edit_txn %}onclick="openEditTxnModal({{ txn.id }})"{% endif %}>
           <td class="px-3 py-3 text-stone-700 whitespace-nowrap">{{ txn.date.strftime('%d.%m.%Y') }}</td>
           <td class="px-3 py-3">
             {% if txn.transaction_type == 'credit' %}
