@@ -1,13 +1,17 @@
 """Add Telegram fields to User and wix_lead_notification table
 
-Revision ID: add_user_telegram_and_lead_notifications
+Revision ID: add_user_telegram_notifications
 Revises: add_wix_integration_tables
 Create Date: 2026-08-24
+
+Note: revision id kept <=32 chars to fit alembic_version.version_num
+(varchar(32)) — see prior incident "fix: shorten transfer migration
+revision id to fit varchar(32)" in this repo's history.
 """
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'add_user_telegram_and_lead_notifications'
+revision = 'add_user_telegram_notifications'
 down_revision = 'add_wix_integration_tables'
 branch_labels = None
 depends_on = None
