@@ -9,24 +9,28 @@
       font-family: 'Roboto', Arial, sans-serif;
     }
     .form-control, .form-select, textarea {
-      border-radius: 0.7rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      border: 1px solid #e0e0e0;
-      transition: box-shadow 0.3s, border-color 0.3s;
-      background: #fafbfc;
+      border-radius: 0.6rem;
+      border: 1px solid #e4e8ee;
+      box-shadow: none;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      background: #f8f9fb;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.92rem;
     }
     .form-control:focus, .form-select:focus, textarea:focus {
       border-color: #7abaff;
-      box-shadow: 0 4px 16px rgba(122,186,255,0.18);
+      box-shadow: 0 0 0 3px rgba(122,186,255,0.16);
       background: #fff;
       outline: none;
-      transition: box-shadow 0.3s, border-color 0.3s, background 0.3s;
+      transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
     }
     .btn, button {
-      border-radius: 0.7rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-radius: 0.6rem;
+      box-shadow: none;
       transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
       font-weight: 500;
+      font-size: 0.92rem;
+      padding: 0.55rem 1.3rem;
     }
     .btn-success, .btn-primary {
       background: linear-gradient(90deg, #7abaff 0%, #4e9fff 100%);
@@ -36,35 +40,60 @@
     .btn-success:hover, .btn-primary:hover {
       background: linear-gradient(90deg, #4e9fff 0%, #7abaff 100%);
       color: #fff;
-      box-shadow: 0 4px 16px rgba(122,186,255,0.18);
-      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 4px 12px rgba(122,186,255,0.28);
+      transform: translateY(-1px);
     }
     .btn-secondary {
-      background: #f3f6fa;
-      color: #222;
-      border: none;
+      background: transparent;
+      color: #6b7280;
+      border: 1px solid #e4e8ee;
     }
     .btn-secondary:hover {
-      background: #e0e7ef;
+      background: #f3f6fa;
       color: #222;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: none;
     }
     .form-label {
       font-weight: 500;
-      color: #2a2a2a;
+      font-size: 0.82rem;
+      color: #55606e;
       letter-spacing: 0.01em;
+      margin-bottom: 0.3rem;
     }
     h2 {
       font-family: 'Roboto', Arial, sans-serif;
       font-weight: 700;
-      color: #2a2a2a;
+      font-size: 1.35rem;
+      color: #1f2430;
       letter-spacing: 0.01em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.1rem;
     }
     .form-control::placeholder {
       color: #b0b8c1;
       opacity: 1;
-      font-size: 0.98em;
+      font-size: 0.9em;
+    }
+    .order-form-card {
+      background: #fff;
+      border: 1px solid #eef1f5;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+      padding: 1.6rem 1.8rem;
+    }
+    .form-section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9aa4b2;
+      margin: 1.4rem 0 0.6rem;
+      padding-top: 1.1rem;
+      border-top: 1px solid #f0f2f5;
+    }
+    .form-section-title:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
     }
     .form-select[multiple] option {
       transition: background 0.2s, color 0.2s;
@@ -118,31 +147,49 @@
       position: sticky;
       top: 1.25rem;
       background: #fff;
-      border: 1px solid #e0e7ef;
-      border-radius: 0.9rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-      padding: 1.25rem 1.4rem;
+      border: 1px solid #eef1f5;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+      padding: 1.1rem 1.3rem;
     }
     .wix-lead-card h5 {
+      font-size: 0.95rem;
       font-weight: 700;
-      color: #2a2a2a;
-      margin-bottom: 0.9rem;
+      color: #1f2430;
+      margin-bottom: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .wix-lead-card h5 i {
+      color: #4e9fff;
     }
     .wix-lead-card .badge {
       font-weight: 500;
+      font-size: 0.72rem;
+      padding: 0.35em 0.6em;
     }
     .wix-lead-field {
-      margin-bottom: 0.85rem;
+      margin-bottom: 0.65rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid #f5f6f8;
+    }
+    .wix-lead-field:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
     }
     .wix-lead-field .label {
-      font-size: 0.78rem;
+      font-size: 0.68rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.03em;
-      color: #8a94a6;
+      letter-spacing: 0.04em;
+      color: #9aa4b2;
       margin-bottom: 0.15rem;
     }
     .wix-lead-field .value {
-      font-size: 0.98rem;
+      font-size: 0.86rem;
+      line-height: 1.4;
       color: #2a2a2a;
       word-break: break-word;
     }
@@ -216,10 +263,12 @@
     </div>
     {% endif %}
     <div class="{% if wix_lead %}col-lg-8{% else %}col-12{% endif %}">
+    <div class="order-form-card">
     <form method="post" class="row g-3" id="orderForm">
         {% if wix_lead %}
         <input type="hidden" name="lead_id" value="{{ wix_lead.id }}">
         {% endif %}
+        <div class="col-12"><div class="form-section-title">Клієнт та отримувач</div></div>
         <!-- Клієнт -->
         <div class="col-md-6">
             <label class="form-label">Клієнт <span class="text-danger">*</span></label>
@@ -254,6 +303,7 @@
             <input type="text" name="recipient_social" class="form-control" placeholder="Необов'язково">
         </div>
         
+        <div class="col-12"><div class="form-section-title">Адреса доставки</div></div>
         <!-- Адреса -->
         <div class="col-md-6" style="position: relative;">
             <label class="form-label">Населений пункт <span class="text-danger">*</span></label>
@@ -292,6 +342,7 @@
             <input type="text" name="entrance" class="form-control">
         </div>
         
+        <div class="col-12"><div class="form-section-title">Деталі доставки</div></div>
         <!-- Тип доставки -->
         <div class="col-md-6">
             <label class="form-label">Тип доставки <span class="text-danger">*</span></label>
@@ -382,6 +433,7 @@
             </select>
         </div>
         
+        <div class="col-12"><div class="form-section-title">Примітки</div></div>
         <!-- Коментар та побажання -->
         <div class="col-md-6">
             <label class="form-label">Коментар</label>
@@ -398,6 +450,7 @@
             <a href="/orders" class="btn btn-secondary">Скасувати</a>
         </div>
     </form>
+    </div>
     </div>
     </div>
 </div>
