@@ -9,6 +9,7 @@ from app.models.user import User, Role, ROLE_PERMISSIONS
 from app.models.expense_category import ExpenseCategory
 from app.extensions import db
 from app.utils.decorators import permission_required
+from app.services.csv_import_service import normalize_phone
 
 bp = Blueprint('settings', __name__)
 
@@ -500,6 +501,9 @@ def get_users():
             'is_online': u.is_online,
             'last_seen': u.last_seen.isoformat() if u.last_seen else None,
             'last_login': u.last_login.isoformat() if u.last_login else None,
+            'phone': u.phone or '',
+            'telegram_registered': u.telegram_registered,
+            'telegram_username': u.telegram_username or '',
         })
     return jsonify(result)
 
@@ -514,6 +518,8 @@ def create_user():
     password = data.get('password') or ''
     password_confirm = data.get('password_confirm') or ''
     role_name = (data.get('role') or '').strip()
+    phone_raw = (data.get('phone') or '').strip()
+    phone = normalize_phone(phone_raw) if phone_raw else None
 
     errors = []
     if not username:
@@ -528,6 +534,10 @@ def create_user():
         errors.append('Роль має бути admin, manager або florist')
     if username and User.query.filter_by(username=username).first():
         errors.append('Користувач з таким логіном вже існує')
+    if phone_raw and not phone:
+        errors.append('Неправильний формат телефону')
+    if phone and User.query.filter_by(phone=phone).first():
+        errors.append('Користувач з таким телефоном вже існує')
 
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
@@ -539,7 +549,8 @@ def create_user():
         db.session.flush()
 
     email = f'{username}@crm.local'
-    user = User(username=username, display_name=display_name, email=email, user_type=role_name, is_active=True)
+    user = User(username=username, display_name=display_name, email=email, user_type=role_name,
+                is_active=True, phone=phone)
     user.set_password(password)
     user.roles.append(role)
     db.session.add(user)
@@ -552,6 +563,7 @@ def create_user():
         'user_type': user.user_type,
         'roles': [role_name],
         'is_active': user.is_active,
+        'phone': user.phone or '',
     }})
 
 
@@ -567,6 +579,8 @@ def update_user(user_id):
     role_name = (data.get('role') or '').strip()
     password = (data.get('password') or '').strip()
     password_confirm = (data.get('password_confirm') or '').strip()
+    phone_raw = (data.get('phone') or '').strip()
+    phone = normalize_phone(phone_raw) if phone_raw else None
 
     errors = []
     if not username:
@@ -579,6 +593,10 @@ def update_user(user_id):
         errors.append('Паролі не збігаються')
     if username and User.query.filter(User.username == username, User.id != user_id).first():
         errors.append('Користувач з таким логіном вже існує')
+    if phone_raw and not phone:
+        errors.append('Неправильний формат телефону')
+    if phone and User.query.filter(User.phone == phone, User.id != user_id).first():
+        errors.append('Користувач з таким телефоном вже існує')
 
     if errors:
         return jsonify({'success': False, 'errors': errors}), 400
@@ -586,6 +604,7 @@ def update_user(user_id):
     user.username = username
     user.display_name = display_name
     user.user_type = role_name
+    user.phone = phone
 
     role = Role.query.filter_by(name=role_name).first()
     if not role:
@@ -608,6 +627,7 @@ def update_user(user_id):
         'is_online': user.is_online,
         'last_seen': user.last_seen.isoformat() if user.last_seen else None,
         'last_login': user.last_login.isoformat() if user.last_login else None,
+        'phone': user.phone or '',
     }})
 
 
@@ -640,6 +660,20 @@ def change_user_password(user_id):
         return jsonify({'success': False, 'error': 'Паролі не збігаються'}), 400
 
     user.set_password(password)
+    db.session.commit()
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/users/<int:user_id>/reset-telegram', methods=['POST'])
+@login_required
+@permission_required('manage_users')
+def reset_user_telegram(user_id):
+    user = User.query.get_or_404(user_id)
+    user.telegram_chat_id = None
+    user.telegram_username = None
+    user.telegram_registered = False
+    user.telegram_notifications_enabled = True
+    user.last_telegram_activity = None
     db.session.commit()
     return jsonify({'success': True})
 

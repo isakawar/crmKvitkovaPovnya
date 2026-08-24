@@ -50,6 +50,7 @@
             <th>Роль</th>
             <th>Статус</th>
             <th>Онлайн</th>
+            <th>Telegram</th>
             <th>Дії</th>
           </tr>
         </thead>
@@ -94,6 +95,10 @@
               <option value="manager">Менеджер</option>
               <option value="florist">Флорист</option>
             </select>
+          </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Телефон (для Telegram-сповіщень)</span>
+            <input type="text" class="settings-modal__input" id="userCreatePhone" autocomplete="off" placeholder="+380501234567">
           </label>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Пароль *</span>
@@ -161,6 +166,11 @@
               <option value="florist">Флорист</option>
             </select>
           </label>
+          <label class="settings-modal__field">
+            <span class="settings-modal__field-label">Телефон (для Telegram-сповіщень)</span>
+            <input type="text" class="settings-modal__input" id="userEditPhone" autocomplete="off" placeholder="+380501234567">
+          </label>
+          <div class="settings-modal__field" id="userEditTelegramStatus" style="font-size:0.85rem;color:#a8a29e;"></div>
           <label class="settings-modal__field">
             <span class="settings-modal__field-label">Новий пароль</span>
             <div style="position:relative;">
@@ -290,7 +300,7 @@
   function renderUsers(users) {
     const tbody = document.getElementById('users-tbody');
     if (!users.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#a8a29e;padding:2rem;">Користувачів ще немає</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#a8a29e;padding:2rem;">Користувачів ще немає</td></tr>';
       return;
     }
     tbody.innerHTML = users.map(u => `
@@ -307,10 +317,21 @@
         </td>
         <td>${onlineLabel(u)}</td>
         <td>
+          ${u.telegram_registered
+            ? `<span style="display:inline-flex;align-items:center;gap:0.35rem;font-size:0.85rem;">${dot('#22c55e')}@${u.telegram_username || '—'}</span>
+               <button class="settings-couriers__action js-user-reset-telegram" data-user-id="${u.id}" title="Скинути Telegram" style="margin-left:0.4rem;">
+                 <i class="bi bi-x-circle"></i>
+               </button>`
+            : `<span style="color:#a8a29e;font-size:0.85rem;">Не прив'язано</span>`}
+        </td>
+        <td>
           <div class="settings-couriers__actions">
             <button class="settings-couriers__action js-user-edit"
                     data-user-id="${u.id}" data-username="${u.username}"
                     data-display-name="${u.display_name || ''}" data-role="${u.user_type}"
+                    data-phone="${u.phone || ''}"
+                    data-telegram-registered="${u.telegram_registered}"
+                    data-telegram-username="${u.telegram_username || ''}"
                     title="Редагувати">
               <i class="bi bi-pencil"></i>
             </button>
@@ -360,10 +381,32 @@
         document.getElementById('userEditUsername').value = this.dataset.username;
         document.getElementById('userEditDisplayName').value = this.dataset.displayName;
         document.getElementById('userEditRole').value = this.dataset.role;
+        document.getElementById('userEditPhone').value = this.dataset.phone || '';
         document.getElementById('userEditPassword').value = '';
         document.getElementById('userEditPasswordConfirm').value = '';
         document.getElementById('userEditError').hidden = true;
+        const statusEl = document.getElementById('userEditTelegramStatus');
+        statusEl.textContent = this.dataset.telegramRegistered === 'true'
+          ? `Telegram прив'язано: @${this.dataset.telegramUsername || '—'}`
+          : "Telegram не прив'язано";
         new bootstrap.Modal(document.getElementById('userEditModal')).show();
+      });
+    });
+
+    document.querySelectorAll('.js-user-reset-telegram').forEach(btn => {
+      btn.addEventListener('click', function() {
+        const userId = this.dataset.userId;
+        fetch(`/settings/users/${userId}/reset-telegram`, { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.success) {
+              showToast('Telegram-прив\'язку скинуто', 'success');
+              loadUsers();
+            } else {
+              showToast(data.error || 'Помилка', 'error');
+            }
+          })
+          .catch(() => showToast('Помилка мережі', 'error'));
       });
     });
   }
@@ -378,6 +421,7 @@
       role: document.getElementById('userCreateRole').value,
       password: document.getElementById('userCreatePassword').value,
       password_confirm: document.getElementById('userCreatePasswordConfirm').value,
+      phone: document.getElementById('userCreatePhone').value.trim(),
     };
     fetch('/settings/users', {
       method: 'POST',
@@ -410,6 +454,7 @@
       role: document.getElementById('userEditRole').value,
       password: document.getElementById('userEditPassword').value,
       password_confirm: document.getElementById('userEditPasswordConfirm').value,
+      phone: document.getElementById('userEditPhone').value.trim(),
     };
     fetch(`/settings/users/${userId}`, {
       method: 'PUT',
