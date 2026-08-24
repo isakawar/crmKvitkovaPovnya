@@ -49,7 +49,15 @@ class User(UserMixin, db.Model):
     last_seen = db.Column(db.DateTime, nullable=True)
     user_type = db.Column(db.String(20))  # 'courier', 'client', 'admin', 'manager'
     calculator_prefs = db.Column(db.Text, nullable=True)
-    
+
+    # Telegram integration (mirrors Courier's fields)
+    phone = db.Column(db.String(32), unique=True, nullable=True)
+    telegram_chat_id = db.Column(db.BigInteger, unique=True, nullable=True)
+    telegram_username = db.Column(db.String(64), nullable=True)
+    telegram_registered = db.Column(db.Boolean, default=False, nullable=False)
+    telegram_notifications_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    last_telegram_activity = db.Column(db.DateTime, nullable=True)
+
     # Relationships
     roles = db.relationship('Role', secondary=user_roles, lazy='subquery',
                           backref=db.backref('user', lazy=True))

@@ -22,5 +22,6 @@ from .action_item import ActionItem, ActionItemRecipient
 from .sale_option import SaleOption
 from .wix_lead import WixLead
 from .wix_product_mapping import WixProductMapping
+from .wix_lead_notification import WixLeadNotification
 
-__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'PromoCode', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient', 'SaleOption', 'WixLead', 'WixProductMapping']
+__all__ = ['Client', 'Courier', 'Subscription', 'Order', 'Delivery', 'Settings', 'User', 'Role', 'DeliveryRoute', 'RouteDelivery', 'PricePreset', 'Price', 'Certificate', 'PromoCode', 'OrderPhoto', 'RouteDispatchLog', 'ExpenseCategory', 'RevenueAdjustment', 'ActionItem', 'ActionItemRecipient', 'SaleOption', 'WixLead', 'WixProductMapping', 'WixLeadNotification']
