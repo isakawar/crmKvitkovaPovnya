@@ -410,6 +410,15 @@ def order_create():
         entity_id = entity.id
         logging.info(f'Order created: {entity_id}')
 
+    lead_id_raw = (request.form.get('lead_id') or '').strip()
+    if lead_id_raw.isdigit():
+        from flask_login import current_user
+        from app.models.wix_lead import WixLead
+        from app.services.wix_integration_service import mark_lead_processed
+        lead = WixLead.query.get(int(lead_id_raw))
+        if lead and lead.status == 'new':
+            mark_lead_processed(lead, entity, current_user)
+
     if certificate:
         from datetime import datetime as _dt
         certificate.status = 'used'

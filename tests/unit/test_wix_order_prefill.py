@@ -1,6 +1,7 @@
 from app.models.wix_lead import WixLead
 from app.models.wix_product_mapping import WixProductMapping
 from app.models.user import User
+from app.models import Client
 
 
 def _login(app, client, user):
@@ -59,3 +60,34 @@ def test_order_form_ignores_already_processed_lead(app, session):
 
     assert resp.status_code == 200
     assert 'Не Показувати' not in resp.get_data(as_text=True)
+
+
+def test_order_create_marks_lead_processed(app, session):
+    manager = _make_manager(session)
+    client_obj = Client(instagram='vlad_flowers', phone='+380666746225')
+    lead = WixLead(wix_order_id='o-20', raw_payload={}, status='new')
+    session.add_all([client_obj, lead])
+    session.commit()
+
+    web_client = app.test_client()
+    _login(app, web_client, manager)
+
+    resp = web_client.post('/orders/new', data={
+        'lead_id': str(lead.id),
+        'client_id': str(client_obj.id),
+        'recipient_name': 'Влад Білобров',
+        'recipient_phone': '+380666746225',
+        'city': 'Київ',
+        'street': 'вул. Зарічна, 1Г',
+        'delivery_type': 'Разова',
+        'delivery_method': 'courier',
+        'size': 'M',
+        'first_delivery_date': '2026-09-01',
+        'for_whom': 'Дружина',
+    }, follow_redirects=True)
+
+    assert resp.status_code == 200
+    updated = WixLead.query.get(lead.id)
+    assert updated.status == 'processed'
+    assert updated.processed_order_id is not None
+    assert updated.processed_by_user_id == manager.id
