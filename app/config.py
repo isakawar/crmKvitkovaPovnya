@@ -23,6 +23,9 @@ class Config:
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
 
+    # Wix site order integration — comma-separated allowed data.context.metaSiteId values
+    WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
+
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')
     AI_BASE_URL = os.environ.get('AI_BASE_URL', 'https://openrouter.ai/api/v1')
@@ -55,6 +58,9 @@ class DevelopmentConfig:
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+
+    # Wix site order integration — comma-separated allowed data.context.metaSiteId values
+    WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
     # AI Agent
     AI_API_KEY = os.environ.get('AI_API_KEY', '')
