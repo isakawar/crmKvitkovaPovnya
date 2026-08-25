@@ -427,7 +427,7 @@
         {{ contact_blocks(has_client_contact, client, instagram, has_recipient_contact, recipient_name, recipient_social, recipient_phone, inline=true) }}
       {% elif delivery.delivery_method == 'nova_poshta' %}
         <span class="florist-badge">Нова пошта</span>
-        {% if street %}<div class="mt-1 text-xs text-stone-500">{{ street }}{% if building %}, {{ building }}{% endif %}</div>{% endif %}
+        {% if city or street %}<div class="mt-1 text-xs text-stone-500">{{ (city ~ ', ' if city and street else city) }}{{ street }}{% if building %}, {{ building }}{% endif %}</div>{% endif %}
         {% if address_comment %}<div class="mt-1 text-sm text-amber-700 break-words">{{ address_comment }}</div>{% endif %}
         {{ contact_blocks(has_client_contact, client, instagram, has_recipient_contact, recipient_name, recipient_social, recipient_phone, inline=true) }}
       {% else %}
