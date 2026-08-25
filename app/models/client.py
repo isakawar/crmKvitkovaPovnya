@@ -19,6 +19,18 @@ class Client(db.Model):
     orders = db.relationship('Order', backref='client', lazy=True)
 
     @property
+    def effective_discount(self):
+        """Discount to use for pricing: the higher of the manually set
+        personal_discount (shown on the client card) and the auto-escalated
+        loyalty discount, so a manually raised personal_discount is never
+        undercut by the loyalty engine."""
+        try:
+            personal = int(self.personal_discount) if self.personal_discount else 0
+        except (TypeError, ValueError):
+            personal = 0
+        return max(personal, self.discount or 0)
+
+    @property
     def display_name(self):
         """Primary display identifier: instagram → telegram → phone → name → id"""
         if self.instagram:

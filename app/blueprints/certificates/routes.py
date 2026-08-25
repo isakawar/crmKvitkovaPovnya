@@ -394,7 +394,7 @@ def validate_promo_code():
     if client_id_raw.isdigit():
         client = Client.query.get(int(client_id_raw))
         if client:
-            client_discount = client.discount or 0
+            client_discount = client.effective_discount
 
     effective_discount = max(client_discount, current_discount, promo.discount_percent)
 

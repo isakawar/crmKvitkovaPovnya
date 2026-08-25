@@ -48,7 +48,7 @@ def get_order_price(order: Order) -> int | None:
         discount = order.discount
     else:
         client = Client.query.get(order.client_id)
-        discount = (client.discount or 0) if client else 0
+        discount = client.effective_discount if client else 0
     return int(base * (1 - discount / 100))
 
 
