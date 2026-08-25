@@ -29,6 +29,11 @@
             <input type="number" id="editTxnAmount" name="amount" min="0.01" step="0.01" required class="txn-input">
           </div>
 
+          <div class="txn-field" id="editClientField" style="display:none;">
+            <label class="txn-label">Клієнт</label>
+            <a id="editClientLink" href="#" class="txn-input" style="display:flex;align-items:center;text-decoration:none;color:#1c1917;background:#fafaf9;pointer-events:none;">—</a>
+          </div>
+
           <!-- credit fields -->
           <div id="editCreditFields">
             <div class="txn-field" style="display:none;">
@@ -125,6 +130,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const editLinkedDropdown = document.getElementById('editLinkedDropdown');
   const editLinkedOrderId = document.getElementById('editLinkedOrderId');
   const editLinkedSubscriptionId = document.getElementById('editLinkedSubscriptionId');
+  const editClientField = document.getElementById('editClientField');
+  const editClientLink = document.getElementById('editClientLink');
   let expenseTypes = [];
   let activeIndex = -1;
   let paymentAccountsLoaded = false;
@@ -360,6 +367,23 @@ document.addEventListener('DOMContentLoaded', function () {
       commentInput.value = txn.comment || '';
       dateInput.value = txn.date;
       editClientId = txn.client_id;
+
+      if (txn.transaction_type === 'credit') {
+        if (txn.client_id) {
+          editClientLink.textContent = txn.client_name || `Клієнт #${txn.client_id}`;
+          editClientLink.href = `/clients?open=${txn.client_id}`;
+          editClientLink.style.pointerEvents = 'auto';
+          editClientLink.style.color = '#1c1917';
+        } else {
+          editClientLink.textContent = 'Офлайн продаж (без клієнта)';
+          editClientLink.removeAttribute('href');
+          editClientLink.style.pointerEvents = 'none';
+          editClientLink.style.color = '#78716c';
+        }
+        editClientField.style.display = '';
+      } else {
+        editClientField.style.display = 'none';
+      }
 
       applyType(txn.transaction_type);
 
