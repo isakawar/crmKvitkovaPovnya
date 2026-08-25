@@ -14,6 +14,7 @@ from app.models.settings import Settings
 from app.models.user import User, Role, user_roles
 from app.models.order import Order
 from app.models.subscription import Subscription
+from app.services import transaction_service
 
 
 @transactions_bp.route('/transactions', methods=['GET'])
@@ -445,7 +446,7 @@ def get_transaction(txn_id):
         'comment': txn.comment or '',
         'date': txn.date.isoformat(),
         'client_id': txn.client_id,
-        'client_name': txn.client.instagram if txn.client else None,
+        'client_name': (txn.client.instagram or txn.client.telegram or txn.client.phone) if txn.client else None,
         'order_id': txn.order_id,
         'subscription_id': txn.subscription_id,
     })
@@ -521,6 +522,17 @@ def update_transaction(txn_id):
         txn.subscription_id = int(subscription_id) if subscription_id else None
 
     db.session.commit()
+    return jsonify({'success': True})
+
+
+@transactions_bp.route('/transactions/<int:txn_id>', methods=['DELETE'])
+@login_required
+def delete_transaction(txn_id):
+    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+        abort(403)
+
+    txn = Transaction.query.get_or_404(txn_id)
+    transaction_service.delete_transaction(txn)
     return jsonify({'success': True})
 
 
