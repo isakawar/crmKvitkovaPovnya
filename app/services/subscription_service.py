@@ -599,16 +599,19 @@ def _renewal_discount(old_sub, client):
     """Calculate the auto discount for the renewed subscription.
 
     Rules:
-    - If client.discount >= 10: don't auto-change (manager may have set higher)
+    - If client.effective_discount (max of personal_discount and loyalty
+      discount) >= 10: don't auto-change (manager may have set higher)
     - First renewal (chain depth = 0): set 5%
     - Second+ renewal: set 10%
-    Auto logic never exceeds 10%.
+    The result never goes below client.effective_discount, so a manually
+    raised personal_discount is never undercut by the auto-escalation.
     """
-    current = client.discount or 0
+    current = client.effective_discount
     if current >= 10:
         return current
     depth = _chain_depth(old_sub)
-    return 5 if depth == 0 else 10
+    auto = 5 if depth == 0 else 10
+    return max(auto, current)
 
 
 def extend_subscription(subscription, overrides=None):

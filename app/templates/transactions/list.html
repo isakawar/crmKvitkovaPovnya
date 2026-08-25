@@ -33,6 +33,10 @@
         <i class="bi bi-dash-circle"></i>
         Списання
       </button>
+      <button type="button" id="openTransferModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100">
+        <i class="bi bi-arrow-left-right"></i>
+        Переказ
+      </button>
       <button type="button" id="openCreateTxnModal" class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-stone-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700">
         <i class="bi bi-plus-circle"></i>
         Додати транзакцію
@@ -124,6 +128,7 @@
               <option value="" {% if not txn_type_filter %}selected{% endif %}>Всі</option>
               <option value="credit" {% if txn_type_filter == 'credit' %}selected{% endif %}>Поповнення</option>
               <option value="debit" {% if txn_type_filter == 'debit' %}selected{% endif %}>Списання</option>
+              <option value="transfer" {% if txn_type_filter == 'transfer' %}selected{% endif %}>Переказ</option>
             </select>
           </div>
           <div>
@@ -184,6 +189,11 @@
               <i class="bi bi-plus-circle"></i>
               Поповнення
             </span>
+            {% elif txn.transaction_type == 'transfer' %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 whitespace-nowrap">
+              <i class="bi bi-arrow-left-right"></i>
+              Переказ
+            </span>
             {% else %}
             <span class="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 whitespace-nowrap">
               <i class="bi bi-dash-circle"></i>
@@ -197,6 +207,8 @@
             <a href="/clients?open={{ txn.client_id }}" onclick="event.stopPropagation()" class="font-medium text-stone-900 hover:text-amber-700 hover:underline underline-offset-2 truncate block">{{ client_label }}</a>
             {% elif txn.transaction_type == 'credit' and not txn.client_id %}
             <span class="text-stone-500 italic text-xs">Офлайн продаж</span>
+            {% elif txn.transaction_type == 'transfer' %}
+            <span class="text-stone-500 italic text-xs">{{ txn.comment or 'Переказ між рахунками' }}</span>
             {% elif txn.expense_type %}
             <span class="text-stone-700 truncate block text-xs">{{ txn.expense_type }}</span>
             {% else %}
@@ -207,7 +219,13 @@
             {% if txn.transaction_type == 'debit' %}−{% endif %}{{ txn.amount }} грн
           </td>
           <td class="px-3 py-3 text-xs text-stone-700 truncate">
-            {% if txn.payment_account_setting %}
+            {% if txn.transaction_type == 'transfer' %}
+            <span class="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 font-medium whitespace-nowrap">
+              <i class="bi bi-bank"></i> {{ txn.payment_account_setting.value if txn.payment_account_setting else '—' }}
+              <i class="bi bi-arrow-right"></i>
+              {{ txn.target_payment_account_setting.value if txn.target_payment_account_setting else '—' }}
+            </span>
+            {% elif txn.payment_account_setting %}
             <span class="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2 py-0.5 font-medium whitespace-nowrap">
               <i class="bi bi-bank"></i> {{ txn.payment_account_setting.value }}
             </span>
@@ -244,18 +262,28 @@
             {% endif %}
           </td>
           <td class="px-2 py-3 text-center">
-            {% if txn.transaction_type == 'debit' %}
-            <button type="button"
-              class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1 text-xs font-medium text-stone-600 whitespace-nowrap transition-colors hover:border-stone-300 hover:bg-stone-100"
-              data-expense-type="{{ txn.expense_type or '' }}"
-              data-expense-type-id="{{ txn.expense_type_id or '' }}"
-              data-payment-account-id="{{ txn.payment_account_id or '' }}"
-              data-comment="{{ txn.comment or '' }}"
-              onclick="event.stopPropagation(); repeatWriteoff(this)">
-              <i class="bi bi-arrow-repeat"></i>
-              Повторити
-            </button>
-            {% endif %}
+            <div class="inline-flex items-center gap-1.5">
+              {% if txn.transaction_type == 'debit' %}
+              <button type="button"
+                class="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-stone-50 px-2 py-1 text-xs font-medium text-stone-600 whitespace-nowrap transition-colors hover:border-stone-300 hover:bg-stone-100"
+                data-expense-type="{{ txn.expense_type or '' }}"
+                data-expense-type-id="{{ txn.expense_type_id or '' }}"
+                data-payment-account-id="{{ txn.payment_account_id or '' }}"
+                data-comment="{{ txn.comment or '' }}"
+                onclick="event.stopPropagation(); repeatWriteoff(this)">
+                <i class="bi bi-arrow-repeat"></i>
+                Повторити
+              </button>
+              {% endif %}
+              {% if current_user.has_role('admin') or current_user.has_role('manager') %}
+              <button type="button"
+                class="inline-flex items-center justify-center rounded-lg border border-stone-200 bg-stone-50 p-1.5 text-stone-500 transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600"
+                title="Видалити транзакцію"
+                onclick="event.stopPropagation(); deleteTransaction({{ txn.id }})">
+                <i class="bi bi-trash"></i>
+              </button>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% endfor %}
@@ -305,6 +333,7 @@
 
 {% include 'transactions/_create_modal.html' %}
 {% include 'transactions/_writeoff_modal.html' %}
+{% include 'transactions/_transfer_modal.html' %}
 {% if current_user.has_role('admin') or current_user.has_role('manager') %}
 {% include 'transactions/_edit_modal.html' %}
 {% include 'transactions/_export_modal.html' %}
@@ -453,6 +482,22 @@
     if (cached.account)    p.set('account',    cached.account);
     window.location.replace('/transactions?' + p.toString());
   })();
+
+  window.deleteTransaction = async function (txnId) {
+    if (!confirm('Ви впевнені, що хочете видалити цю транзакцію?')) return;
+
+    try {
+      const res = await fetch(`/transactions/${txnId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showToast(data.errors || data.error || 'Не вдалося видалити транзакцію', 'error');
+        return;
+      }
+      softReloadWithToast('Транзакцію видалено', 'success');
+    } catch (err) {
+      showToast('Не вдалося видалити транзакцію', 'error');
+    }
+  };
 </script>
 
 <!-- Balance Breakdown Modal -->

@@ -335,7 +335,7 @@ def order_create():
     # Промокод не сумується з персональною знижкою клієнта — застосовується більша.
     # Джерела: знижка лояльності клієнта, вручну введене менеджером значення, знижка промокоду.
     if promo:
-        client_discount = client.discount or 0
+        client_discount = client.effective_discount
         manual_discount = int(request.form.get('discount') or 0)
         effective_discount = max(client_discount, manual_discount, promo.discount_percent)
         request.form = request.form.copy()
