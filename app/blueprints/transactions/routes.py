@@ -54,11 +54,15 @@ def transactions_list():
         Transaction.transaction_type != 'delivery_charge',
     )
 
-    if txn_type_filter in ('debit', 'credit'):
+    if txn_type_filter in ('debit', 'credit', 'transfer'):
         filtered_query = filtered_query.filter(Transaction.transaction_type == txn_type_filter)
 
     if account_filter and account_filter.isdigit():
-        filtered_query = filtered_query.filter(Transaction.payment_account_id == int(account_filter))
+        account_id = int(account_filter)
+        filtered_query = filtered_query.filter(or_(
+            Transaction.payment_account_id == account_id,
+            Transaction.target_payment_account_id == account_id,
+        ))
 
     if client_q:
         filtered_query = (filtered_query
@@ -83,7 +87,7 @@ def transactions_list():
                   .paginate(page=page, per_page=per_page, error_out=False))
 
     all_transactions = Transaction.query.filter(
-        Transaction.transaction_type != 'delivery_charge'
+        Transaction.transaction_type.in_(('credit', 'debit'))
     ).all()
     total_balance = sum(
         t.amount if t.transaction_type == 'credit' else -t.amount
@@ -121,7 +125,7 @@ def balance_breakdown():
         db.session.query(
             Transaction.payment_account_id,
             func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('credits'),
-            func.sum(case((Transaction.transaction_type == 'debit', Transaction.amount), else_=0)).label('debits'),
+            func.sum(case((Transaction.transaction_type.in_(('debit', 'transfer')), Transaction.amount), else_=0)).label('debits'),
         )
         .filter(
             Transaction.transaction_type != 'delivery_charge',
@@ -131,7 +135,22 @@ def balance_breakdown():
         .all()
     )
 
+    incoming_transfer_rows = (
+        db.session.query(
+            Transaction.target_payment_account_id,
+            func.sum(Transaction.amount).label('incoming'),
+        )
+        .filter(
+            Transaction.transaction_type == 'transfer',
+            Transaction.target_payment_account_id.isnot(None),
+        )
+        .group_by(Transaction.target_payment_account_id)
+        .all()
+    )
+
     balances = {r.payment_account_id: float(r.credits) - float(r.debits) for r in rows}
+    for r in incoming_transfer_rows:
+        balances[r.target_payment_account_id] = balances.get(r.target_payment_account_id, 0.0) + float(r.incoming)
 
     result = []
     for acc in accounts:
@@ -174,6 +193,7 @@ def export_transactions():
             joinedload(Transaction.client),
             joinedload(Transaction.created_by),
             joinedload(Transaction.payment_account_setting),
+            joinedload(Transaction.target_payment_account_setting),
         )
         .filter(
             Transaction.date >= date_from,
@@ -187,13 +207,20 @@ def export_transactions():
     headers_row = ['Дата', 'Тип', 'Клієнт', 'Телефон', 'Сума (грн)',
                    'Спосіб оплати', 'Рахунок оплати', 'Тип витрати', 'Коментар', 'Хто вніс']
 
+    type_labels = {'credit': 'Поповнення', 'debit': 'Списання', 'transfer': 'Переказ'}
+
     def make_row(t):
         creator = t.created_by.display_name if t.created_by and t.created_by.display_name else (
             t.created_by.username if t.created_by else '')
-        payment_account = t.payment_account_setting.value if t.payment_account_setting else ''
+        if t.transaction_type == 'transfer':
+            source = t.payment_account_setting.value if t.payment_account_setting else ''
+            target = t.target_payment_account_setting.value if t.target_payment_account_setting else ''
+            payment_account = f'{source} → {target}'
+        else:
+            payment_account = t.payment_account_setting.value if t.payment_account_setting else ''
         return [
             t.date.strftime('%d.%m.%Y'),
-            'Поповнення' if t.transaction_type == 'credit' else 'Списання',
+            type_labels.get(t.transaction_type, t.transaction_type),
             t.client.instagram if t.client else '',
             t.client.phone if t.client and t.client.phone else '',
             t.amount,
@@ -429,6 +456,34 @@ def create_transaction():
     return jsonify({'success': True, 'id': txn.id})
 
 
+@transactions_bp.route('/transactions/transfer', methods=['POST'])
+@login_required
+def create_transfer():
+    if not (current_user.has_role('admin') or current_user.has_role('manager')):
+        abort(403)
+
+    data = request.get_json()
+
+    try:
+        txn_date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
+
+    try:
+        txn = transaction_service.create_transfer(
+            amount=data.get('amount'),
+            txn_date=txn_date,
+            source_account_id=data.get('payment_account_id'),
+            target_account_id=data.get('target_payment_account_id'),
+            comment=(data.get('comment') or '').strip(),
+            created_by_id=current_user.id,
+        )
+    except transaction_service.TransactionValidationError as e:
+        return jsonify({'success': False, 'errors': e.errors}), 400
+
+    return jsonify({'success': True, 'id': txn.id})
+
+
 @transactions_bp.route('/transactions/<int:txn_id>', methods=['GET'])
 @login_required
 def get_transaction(txn_id):
@@ -443,6 +498,7 @@ def get_transaction(txn_id):
         'expense_type': txn.expense_type,
         'expense_type_id': txn.expense_type_id,
         'payment_account_id': txn.payment_account_id,
+        'target_payment_account_id': txn.target_payment_account_id,
         'comment': txn.comment or '',
         'date': txn.date.isoformat(),
         'client_id': txn.client_id,
@@ -460,6 +516,25 @@ def update_transaction(txn_id):
 
     txn = Transaction.query.get_or_404(txn_id)
     data = request.get_json()
+
+    if txn.transaction_type == 'transfer':
+        try:
+            txn_date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
+        try:
+            transaction_service.update_transfer(
+                txn,
+                amount=data.get('amount'),
+                txn_date=txn_date,
+                source_account_id=data.get('payment_account_id'),
+                target_account_id=data.get('target_payment_account_id'),
+                comment=(data.get('comment') or '').strip(),
+            )
+        except transaction_service.TransactionValidationError as e:
+            return jsonify({'success': False, 'errors': e.errors}), 400
+        return jsonify({'success': True})
+
     errors = []
 
     amount = data.get('amount')

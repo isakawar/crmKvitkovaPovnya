@@ -6,7 +6,7 @@ class Transaction(db.Model):
     __tablename__ = 'transaction'
 
     id = db.Column(db.Integer, primary_key=True)
-    transaction_type = db.Column(db.String(16), nullable=False, default='credit')  # 'credit' | 'debit' | 'delivery_charge'
+    transaction_type = db.Column(db.String(16), nullable=False, default='credit')  # 'credit' | 'debit' | 'delivery_charge' | 'transfer'
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     payment_type = db.Column(db.String(32), nullable=True)   # 'monobank' | 'cash' (credits only)
@@ -18,6 +18,7 @@ class Transaction(db.Model):
 
     expense_type_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
     payment_account_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
+    target_payment_account_id = db.Column(db.Integer, db.ForeignKey('settings.id'), nullable=True)
     delivery_id = db.Column(db.Integer, db.ForeignKey('delivery.id', ondelete='SET NULL'), nullable=True)
     order_id = db.Column(db.Integer, db.ForeignKey('order.id', ondelete='SET NULL'), nullable=True)
     subscription_id = db.Column(db.Integer, db.ForeignKey('subscription.id', ondelete='SET NULL'), nullable=True)
@@ -26,6 +27,7 @@ class Transaction(db.Model):
     created_by = db.relationship('User', foreign_keys=[created_by_id])
     expense_type_setting = db.relationship('Settings', foreign_keys=[expense_type_id])
     payment_account_setting = db.relationship('Settings', foreign_keys=[payment_account_id])
+    target_payment_account_setting = db.relationship('Settings', foreign_keys=[target_payment_account_id])
     delivery = db.relationship('Delivery', foreign_keys=[delivery_id])
     order = db.relationship('Order', foreign_keys=[order_id])
     subscription = db.relationship('Subscription', foreign_keys=[subscription_id])
