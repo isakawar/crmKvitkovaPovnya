@@ -170,44 +170,38 @@ def _monthly_orders_trend():
 # ── Public API ─────────────────────────────────────────────────────────────────
 # Each function returns a flat dict scoped to its domain.
 # Routes namespace them: orders=get_orders_data(...), deliveries=get_deliveries_analytics(...)
-# Template accesses: {{ orders.marketing_all_total }}, {{ deliveries.total }}, etc.
+# Template accesses: {{ orders.marketing_total }}, {{ deliveries.total }}, etc.
 
 def get_orders_data(date_from_str=None, date_to_str=None):
-    """Marketing, for-whom, delivery-type, size breakdowns + 365-day order trend."""
+    """Marketing, for-whom, delivery-type, size breakdowns + 365-day order trend.
+
+    All four breakdowns follow the selected date range (filtered by
+    ``Order.created_at``); with no range they are all-time. The 365-day trend
+    chart always ignores the range — it is a rolling sparkline.
+    """
     d_from = _parse_date(date_from_str)
     d_to = _parse_date(date_to_str)
     has_range = bool(d_from or d_to)
     range_filters = _build_date_filters(Order.created_at, d_from, d_to)
 
-    # Marketing source — all-time + selected range
-    marketing_all_rows = (
-        db.session.query(Client.marketing_source, func.count(Order.id))
-        .join(Order, Order.client_id == Client.id)
-        .group_by(Client.marketing_source)
-        .all()
-    )
-    marketing_range_rows = (
+    # Marketing source — follows selected range
+    marketing_rows = (
         db.session.query(Client.marketing_source, func.count(Order.id))
         .join(Order, Order.client_id == Client.id)
         .filter(*range_filters)
         .group_by(Client.marketing_source)
         .all()
-    ) if has_range else []
-
-    # For whom — all-time + selected range
-    for_whom_all_rows = (
-        db.session.query(Order.for_whom, func.count(Order.id))
-        .group_by(Order.for_whom)
-        .all()
     )
-    for_whom_range_rows = (
+
+    # For whom — follows selected range
+    for_whom_rows = (
         db.session.query(Order.for_whom, func.count(Order.id))
         .filter(*range_filters)
         .group_by(Order.for_whom)
         .all()
-    ) if has_range else []
+    )
 
-    # Delivery type / size — always all-time (structural breakdown)
+    # Delivery type / size — follow selected range
     sub_type_expr = case(
         (Order.subscription_id.isnot(None), Subscription.type),
         else_=literal('One-time')
@@ -215,11 +209,13 @@ def get_orders_data(date_from_str=None, date_to_str=None):
     delivery_type_rows = (
         db.session.query(sub_type_expr, func.count(Order.id))
         .outerjoin(Subscription, Subscription.id == Order.subscription_id)
+        .filter(*range_filters)
         .group_by(sub_type_expr)
         .all()
     )
     size_rows = (
         db.session.query(Order.size, func.count(Order.id))
+        .filter(*range_filters)
         .group_by(Order.size)
         .all()
     )
@@ -231,34 +227,27 @@ def get_orders_data(date_from_str=None, date_to_str=None):
         s.value for s in Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     ]
 
-    marketing_all = _rows_to_items(marketing_all_rows)
-    marketing_range = _rows_to_items(marketing_range_rows)
-    for_whom_all = _rows_to_items(for_whom_all_rows)
-    for_whom_range = _rows_to_items(for_whom_range_rows)
-    delivery_type_all = _ordered_items(_rows_to_items(delivery_type_rows), delivery_type_settings)
-    size_all = _ordered_items(_rows_to_items(size_rows), size_settings)
+    marketing = _rows_to_items(marketing_rows)
+    for_whom = _rows_to_items(for_whom_rows)
+    delivery_type = _ordered_items(_rows_to_items(delivery_type_rows), delivery_type_settings)
+    size = _ordered_items(_rows_to_items(size_rows), size_settings)
 
     trend = _monthly_orders_trend()
 
     return {
-        'marketing_all': marketing_all,
-        'marketing_range': marketing_range,
-        'for_whom_all': for_whom_all,
-        'for_whom_range': for_whom_range,
-        'delivery_type_all': delivery_type_all,
-        'size_all': size_all,
-        'marketing_all_total': _total(marketing_all),
-        'marketing_range_total': _total(marketing_range),
-        'for_whom_all_total': _total(for_whom_all),
-        'for_whom_range_total': _total(for_whom_range),
-        'delivery_type_total': _total(delivery_type_all),
-        'size_total': _total(size_all),
-        'marketing_all_chart': _items_to_chart(marketing_all),
-        'marketing_range_chart': _items_to_chart(marketing_range),
-        'for_whom_all_chart': _items_to_chart(for_whom_all),
-        'for_whom_range_chart': _items_to_chart(for_whom_range),
-        'delivery_type_chart': _items_to_chart(delivery_type_all),
-        'size_chart': _items_to_chart(size_all),
+        'has_range': has_range,
+        'marketing': marketing,
+        'for_whom': for_whom,
+        'delivery_type': delivery_type,
+        'size': size,
+        'marketing_total': _total(marketing),
+        'for_whom_total': _total(for_whom),
+        'delivery_type_total': _total(delivery_type),
+        'size_total': _total(size),
+        'marketing_chart': _items_to_chart(marketing),
+        'for_whom_chart': _items_to_chart(for_whom),
+        'delivery_type_chart': _items_to_chart(delivery_type),
+        'size_chart': _items_to_chart(size),
         'monthly_orders_total': sum(trend['orders_values']),
         'monthly_subscriptions_total': sum(trend['subscriptions_values']),
         'monthly_orders_trend_chart': trend,
