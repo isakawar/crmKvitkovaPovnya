@@ -282,8 +282,13 @@ def update_order(order, form):
     order.entrance = form.get('entrance') or None
     order.is_pickup = is_pickup
     order.address_comment = form.get('address_comment') or None
-    order.bouquet_type = form.get('bouquet_type') or None
-    order.composition_type = form.get('composition_type') or None
+    # Only touch these when the form actually carries the field — the order-edit
+    # modal has no inputs for them, so an unconditional write would wipe values
+    # set elsewhere (e.g. the inline "тип пакування" selector).
+    if 'bouquet_type' in form:
+        order.bouquet_type = form.get('bouquet_type') or None
+    if 'composition_type' in form:
+        order.composition_type = form.get('composition_type') or None
     order.size = form['size']
     order.custom_amount = (
         int(form.get('custom_amount'))

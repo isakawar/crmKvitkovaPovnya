@@ -139,6 +139,43 @@ def test_update_order_syncs_phone_to_active_delivery(session):
     assert delivery.phone == '+380671112233'
 
 
+def test_update_order_preserves_bouquet_and_composition_when_absent_from_form(session):
+    """The order-edit modal has no bouquet_type / composition_type inputs, so
+    editing an order must not wipe values set elsewhere (inline packaging select)."""
+    client = _make_client(session)
+    order, delivery = _make_order_with_delivery(session, client)
+    order.bouquet_type = 'Ваза'
+    order.composition_type = 'Класична'
+    delivery.bouquet_type = 'Ваза'
+    delivery.composition_type = 'Класична'
+    session.commit()
+
+    form = _base_edit_form()
+    assert 'bouquet_type' not in form
+    update_order(order, form)
+
+    session.refresh(order)
+    session.refresh(delivery)
+    assert order.bouquet_type == 'Ваза'
+    assert order.composition_type == 'Класична'
+    assert delivery.bouquet_type == 'Ваза'
+    assert delivery.composition_type == 'Класична'
+
+
+def test_update_order_updates_bouquet_type_when_present_in_form(session):
+    client = _make_client(session)
+    order, delivery = _make_order_with_delivery(session, client)
+    order.bouquet_type = 'Ваза'
+    session.commit()
+
+    form = _base_edit_form(bouquet_type='Крафт')
+    update_order(order, form)
+
+    session.refresh(delivery)
+    assert order.bouquet_type == 'Крафт'
+    assert delivery.bouquet_type == 'Крафт'
+
+
 def test_update_order_syncs_size_to_active_delivery(session):
     client = _make_client(session)
     order, delivery = _make_order_with_delivery(session, client)
