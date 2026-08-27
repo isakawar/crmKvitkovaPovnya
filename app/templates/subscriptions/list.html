@@ -475,6 +475,20 @@
           <i class="bi bi-arrow-repeat text-[20px]"></i>
           Продовжити підписку
         </button>
+        <div id="subscription-extend-panel" class="hidden mb-3 rounded-[14px] border border-green-200 bg-green-50 px-4 py-3">
+          <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-green-700 mb-1.5">Дата першої доставки</label>
+          <input type="date" id="subscription-extend-date" class="w-full rounded-[12px] border border-green-300 bg-white px-3 py-2 text-[15px] text-stone-800 focus:border-green-500 focus:outline-none">
+          <p class="mt-1.5 text-xs text-green-700/80">Наступні 3 доставки розставляться автоматично з кроком підписки.</p>
+          <div class="mt-3 flex gap-2">
+            <button type="button" id="subscription-extend-confirm-btn" class="inline-flex items-center gap-2 rounded-2xl bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700">
+              <i class="bi bi-check2"></i>
+              Продовжити
+            </button>
+            <button type="button" id="subscription-extend-cancel-btn" class="inline-flex items-center rounded-2xl border border-green-300 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-100">
+              Скасувати
+            </button>
+          </div>
+        </div>
         <button type="button" id="subscription-edit-btn" class="flex w-full min-h-[46px] items-center justify-center gap-2.5 rounded-[14px] border border-stone-200 bg-white px-4 py-3 text-[15px] font-semibold text-stone-700 transition-colors hover:bg-stone-50 mb-3">
           <i class="bi bi-pencil text-[18px]"></i>
           Редагувати
@@ -607,6 +621,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const typeEl = document.getElementById('subscription-type');
   const sizeEl = document.getElementById('subscription-size');
   const extendBtn = document.getElementById('subscription-extend-btn');
+  const extendPanel = document.getElementById('subscription-extend-panel');
+  const extendDateInput = document.getElementById('subscription-extend-date');
+  const extendConfirmBtn = document.getElementById('subscription-extend-confirm-btn');
+  const extendCancelBtn = document.getElementById('subscription-extend-cancel-btn');
   const stopBtn = document.getElementById('subscription-stop-btn');
   const resumeSection = document.getElementById('subscription-resume-section');
   const resumeConfirm = document.getElementById('subscription-resume-confirm');
@@ -624,6 +642,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
   let pendingResumePlan = null;
   let _currentSub = null;
+
+  const WEEKDAY_UA = { 'НД': 0, 'ПН': 1, 'ВТ': 2, 'СР': 3, 'ЧТ': 4, 'ПТ': 5, 'СБ': 6 };
+
+  function toISODate(d) {
+    const tz = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return tz.toISOString().slice(0, 10);
+  }
+
+  function defaultExtendDate(deliveryDay) {
+    const today = new Date();
+    const target = WEEKDAY_UA[deliveryDay];
+    if (target === undefined) return toISODate(today);
+    const diff = (target - today.getDay() + 7) % 7;
+    const result = new Date(today);
+    result.setDate(today.getDate() + diff);
+    return toISODate(result);
+  }
+
+  function hideExtendPanel() {
+    extendPanel.classList.add('hidden');
+  }
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -844,11 +883,25 @@ document.addEventListener('DOMContentLoaded', function() {
       const canExtend = !isStopped && data.stats.status !== 'draft';
       extendBtn.classList.toggle('hidden', !canExtend);
       extendBtn.classList.toggle('flex', canExtend);
+      hideExtendPanel();
 
-      extendBtn.onclick = async () => {
-        if (!confirm('Додати ще один цикл доставок до цієї підписки?')) return;
+      extendBtn.onclick = () => {
+        extendDateInput.value = defaultExtendDate(data.delivery.delivery_day);
+        extendDateInput.min = toISODate(new Date());
+        extendPanel.classList.remove('hidden');
+      };
+
+      extendCancelBtn.onclick = hideExtendPanel;
+
+      extendConfirmBtn.onclick = async () => {
+        if (!extendDateInput.value) {
+          showToast('Оберіть дату першої доставки', 'error');
+          return;
+        }
         try {
-          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST' });
+          const body = new FormData();
+          body.append('first_delivery_date', extendDateInput.value);
+          const resp = await fetch(`/subscriptions/${data.id}/extend`, { method: 'POST', body });
           const result = await resp.json();
           if (!resp.ok || !result.success) throw new Error(result.error || 'Помилка при продовженні');
           detailModal.hide();

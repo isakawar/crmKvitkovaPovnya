@@ -344,8 +344,20 @@ def subscription_edit(subscription_id):
 @login_required
 def subscription_extend(subscription_id):
     subscription = Subscription.query.get_or_404(subscription_id)
+
+    overrides = {}
+    raw_date = (request.form.get('first_delivery_date') or '').strip()
+    if raw_date:
+        try:
+            parsed = dt.datetime.strptime(raw_date, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Невірний формат дати'}), 400
+        if parsed < dt.date.today():
+            return jsonify({'success': False, 'error': 'Дата першої доставки не може бути в минулому'}), 400
+        overrides['first_delivery_date'] = parsed
+
     try:
-        extend_subscription(subscription)
+        extend_subscription(subscription, overrides=overrides)
         return jsonify({
             'success': True,
             'message': f'Підписку продовжено для клієнта {subscription.client.instagram}',
