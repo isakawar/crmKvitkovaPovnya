@@ -164,12 +164,14 @@ def calculate_reschedule_plan(delivery, old_date, new_date):
         pending = [d for d in o.deliveries if d.status not in ('Доставлено', 'Скасовано')]
         return pending[0].delivery_date if pending else o.delivery_date
 
-    threshold = WEEKLY_MIN_GAP_DAYS if subscription.type == 'Weekly' else BIWEEKLY_MIN_GAP_DAYS
+    interval = 7 if subscription.type == 'Weekly' else 14
     gap_days = (get_delivery_date(pending_next[0]) - new_date).days
-    if gap_days > threshold:
+    # Suggest a cascade whenever the rhythm to the next pending delivery is
+    # materially off in EITHER direction: moved forward → the gap shrinks or the
+    # dates overlap; moved backward (e.g. a week earlier) → a gap opens up.
+    if abs(gap_days - interval) <= 2:
         return None
 
-    interval = 7 if subscription.type == 'Weekly' else 14
     first_valid = _get_first_valid_date(new_date, subscription.type, subscription.delivery_day)
 
     # Determine skipped date for UX explanation
@@ -193,6 +195,8 @@ def calculate_reschedule_plan(delivery, old_date, new_date):
     return {
         'subscription_type': subscription.type,
         'gap_days': gap_days,
+        'interval_days': interval,
+        'gap_opened': gap_days > interval,
         'skipped_date': skipped_date,
         'desired_weekday': subscription.delivery_day,
         'count': len(suggested),
@@ -869,6 +873,7 @@ def update_draft_subscription(subscription, contact_date, draft_comment=None, dr
 def update_subscription(subscription, form):
     """Update editable fields on subscription + propagate to non-delivered orders/deliveries."""
     from app.services.billing_service import get_order_price
+    from app.services.order_service import sync_order_to_active_deliveries
 
     before = _subscription_snapshot(subscription)
 
@@ -931,23 +936,7 @@ def update_subscription(subscription, form):
         order.discount = subscription.discount
         order.charged_amount = get_order_price(order)
 
-        for delivery in order.deliveries:
-            if delivery.status in ('Доставлено', 'Скасовано'):
-                continue
-            delivery.phone = subscription.recipient_phone
-            delivery.is_pickup = subscription.is_pickup
-            delivery.street = subscription.street if not subscription.is_pickup else None
-            delivery.building_number = subscription.building_number if not subscription.is_pickup else None
-            delivery.floor = subscription.floor if not subscription.is_pickup else None
-            delivery.entrance = subscription.entrance if not subscription.is_pickup else None
-            delivery.address_comment = subscription.address_comment
-            delivery.delivery_method = subscription.delivery_method
-            delivery.time_from = subscription.time_from
-            delivery.time_to = subscription.time_to
-            delivery.bouquet_type = subscription.bouquet_type
-            delivery.composition_type = subscription.composition_type
-            delivery.preferences = subscription.preferences
-            delivery.comment = subscription.comment
+        sync_order_to_active_deliveries(order)
 
     db.session.commit()
 

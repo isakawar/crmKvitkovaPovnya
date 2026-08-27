@@ -130,22 +130,45 @@ def test_reschedule_plan_returns_none_when_no_pending_next(session):
     assert result is None
 
 
-def test_reschedule_plan_returns_none_when_gap_too_large(session):
+def test_reschedule_plan_triggers_on_backward_move(session):
     """
-    When the gap from new_date to the next pending delivery exceeds the threshold,
-    no reschedule plan is returned.
-
-    Uses a date change > 2 days (to pass the early return) but with a large
-    enough gap to the next delivery that rescheduling is unnecessary.
+    Moving a delivery earlier (e.g. a week back) opens a gap to the next pending
+    delivery, so a reschedule plan IS returned to pull the following deliveries
+    earlier and keep the cadence.
     """
     sub, orders, deliveries = _make_subscription_with_orders(session)
     delivery = deliveries[0]
     old_date = datetime.date(2026, 3, 30)  # Monday
-    new_date = datetime.date(2026, 3, 27)  # Friday, 3 days earlier (> 2 day threshold)
+    new_date = datetime.date(2026, 3, 23)  # Monday, one week earlier
 
     delivery.delivery_date = new_date
     session.commit()
 
+    result = calculate_reschedule_plan(delivery, old_date, new_date)
+    assert result is not None
+    assert result['gap_opened'] is True
+    # next delivery (originally 06.04) should be pulled to 30.03
+    assert result['deliveries'][0]['new_date'] == '30.03'
+
+
+def test_reschedule_plan_returns_none_when_cadence_unchanged(session):
+    """
+    When the gap from new_date to the next pending delivery stays within ~1
+    interval, the rhythm is intact and no plan is returned — even if the moved
+    delivery's own date changed by more than 2 days.
+    """
+    sub, orders, deliveries = _make_subscription_with_orders(session)
+    # make the schedule irregular: push delivery #2 out to Fri 10.04
+    deliveries[1].delivery_date = datetime.date(2026, 4, 10)
+    session.commit()
+
+    delivery = deliveries[0]
+    old_date = datetime.date(2026, 3, 30)  # Monday
+    new_date = datetime.date(2026, 4, 2)   # Thursday, 3 days later
+    delivery.delivery_date = new_date
+    session.commit()
+
+    # gap from 02.04 to 10.04 = 8 days ≈ weekly interval → no plan
     result = calculate_reschedule_plan(delivery, old_date, new_date)
     assert result is None
 

@@ -1286,9 +1286,14 @@
       : '';
 
     const isOverlap = suggestion.gap_days < 0;
-    const gapText = isOverlap
-      ? `<span class="reschedule-meta-pill is-overlap"><i class="bi bi-exclamation-octagon"></i>Перекриття дат</span>`
-      : `<span class="reschedule-meta-pill is-safe"><i class="bi bi-check2-circle"></i>До наступної доставки залишилось ${suggestion.gap_days} дн.</span>`;
+    let gapText;
+    if (isOverlap) {
+      gapText = `<span class="reschedule-meta-pill is-overlap"><i class="bi bi-exclamation-octagon"></i>Перекриття дат</span>`;
+    } else if (suggestion.gap_opened) {
+      gapText = `<span class="reschedule-meta-pill is-safe"><i class="bi bi-arrow-left-circle"></i>Наступна доставка за ${suggestion.gap_days} дн. — графік зсунеться раніше</span>`;
+    } else {
+      gapText = `<span class="reschedule-meta-pill is-safe"><i class="bi bi-check2-circle"></i>До наступної доставки залишилось ${suggestion.gap_days} дн.</span>`;
+    }
 
     const rows = suggestion.deliveries.map(d =>
       `<div class="reschedule-row">

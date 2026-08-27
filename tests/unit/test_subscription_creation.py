@@ -28,6 +28,7 @@ from app.models import Client, Order, Delivery
 from app.models.subscription import Subscription
 from app.services.subscription_service import (
     create_subscription,
+    update_subscription,
     extend_subscription,
     delete_subscription,
     create_subscription_from_import,
@@ -334,6 +335,32 @@ def test_extend_subscription_late_renewal_does_not_land_in_the_past(session):
     first_order = Order.query.filter_by(subscription_id=new_sub.id).order_by(Order.sequence_number).first()
 
     assert first_order.delivery_date >= datetime.date.today()
+
+
+def test_update_subscription_syncs_size_to_active_deliveries(session):
+    """Editing size on the subscription must propagate to the non-delivered
+    Delivery records (source of truth for the orders list / florist page)."""
+    client = _make_client(session, 'update_size_sub')
+    sub = create_subscription(client, _base_subscription_form(size='M'))
+
+    update_subscription(sub, _base_subscription_form(size='L'))
+
+    deliveries = Delivery.query.filter_by(client_id=client.id).all()
+    assert deliveries
+    assert all(d.size == 'L' for d in deliveries)
+
+
+def test_extend_subscription_honors_first_delivery_date_override(session):
+    """When a first_delivery_date is supplied (manager picked it in the UI),
+    the new cycle starts exactly on that date and the rest follow the interval."""
+    client = _make_client(session, 'extend_override')
+    sub = create_subscription(client, _base_subscription_form())
+
+    chosen = datetime.date.today() + datetime.timedelta(days=3)
+    new_sub = extend_subscription(sub, overrides={'first_delivery_date': chosen})
+
+    orders = Order.query.filter_by(subscription_id=new_sub.id).order_by(Order.sequence_number).all()
+    assert orders[0].delivery_date == chosen
 
 
 # ── create_subscription_from_import ──────────────────────────────────────────

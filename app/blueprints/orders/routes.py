@@ -528,8 +528,8 @@ def order_edit(order_id):
             else (order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '')
         ),
         'delivery_day': '',
-        'time_from': order.time_from,
-        'time_to': order.time_to,
+        'time_from': (first_pending.time_from if first_pending and first_pending.time_from else order.time_from),
+        'time_to': (first_pending.time_to if first_pending and first_pending.time_to else order.time_to),
         'comment': order.comment or delivery_comment,
         'preferences': order.preferences or delivery_preferences,
         'for_whom': order.for_whom,
