@@ -71,7 +71,7 @@ return render_template('reports/index.html',
 )
 ```
 
-Template accesses data via namespace: `{{ deliveries.total }}`, `{{ pl.revenue }}`, `{{ orders.marketing_all_total }}`.
+Template accesses data via namespace: `{{ deliveries.total }}`, `{{ pl.revenue }}`, `{{ orders.marketing_total }}`.
 
 ### Adding a new metric — checklist
 
@@ -91,7 +91,7 @@ Template accesses data via namespace: `{{ deliveries.total }}`, `{{ pl.revenue }
 ### Temporal semantics
 
 All public functions accept `date_from_str` / `date_to_str` (ISO `YYYY-MM-DD` strings or `None`).  
-`get_orders_data` returns **two variants** for marketing/for-whom charts: `*_all` (always all-time) and `*_range` (filtered by date range, empty list when no range selected).  
+`get_orders_data` — the marketing, for-whom, delivery-type and size breakdowns all follow the selected date range (filtered by `Order.created_at`); with no range they are all-time. One set of keys: `marketing_chart` / `marketing_total`, etc.  
 `_monthly_orders_trend()` always shows last 365 days regardless of filter — it is a trend sparkline, not a filtered metric.
 
 ### Expense categorization model

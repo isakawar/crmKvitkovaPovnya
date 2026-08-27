@@ -535,19 +535,13 @@
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-lg font-semibold text-stone-900">Звідки дізнались</h2>
-            <p id="marketing-period" class="text-sm text-stone-500">За весь час</p>
+            <p class="text-sm text-stone-500">{% if has_range %}За {{ range_label }}{% else %}За весь час{% endif %}</p>
           </div>
           <div class="flex items-center gap-2">
-            {% if has_range %}
-            <div class="report-switch" id="marketing-switch">
-              <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
-            </div>
-            {% endif %}
-            <span id="marketing-total" class="report-kpi">Всього: {{ orders.marketing_all_total }}</span>
+            <span class="report-kpi">Всього: {{ orders.marketing_total }}</span>
           </div>
         </div>
-        {% if orders.marketing_all_chart['labels'] or orders.marketing_range_chart['labels'] %}
+        {% if orders.marketing_chart['labels'] %}
         <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних для графіка</div>
@@ -558,19 +552,13 @@
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-lg font-semibold text-stone-900">Хто кому купує</h2>
-            <p id="for-whom-period" class="text-sm text-stone-500">За весь час</p>
+            <p class="text-sm text-stone-500">{% if has_range %}За {{ range_label }}{% else %}За весь час{% endif %}</p>
           </div>
           <div class="flex items-center gap-2">
-            {% if has_range %}
-            <div class="report-switch" id="for-whom-switch">
-              <button type="button" class="report-switch-btn is-active" data-mode="all">Весь час</button>
-              <button type="button" class="report-switch-btn" data-mode="range">Діапазон</button>
-            </div>
-            {% endif %}
-            <span id="for-whom-total" class="report-kpi">Всього: {{ orders.for_whom_all_total }}</span>
+            <span class="report-kpi">Всього: {{ orders.for_whom_total }}</span>
           </div>
         </div>
-        {% if orders.for_whom_all_chart['labels'] or orders.for_whom_range_chart['labels'] %}
+        {% if orders.for_whom_chart['labels'] %}
         <div class="report-chart-wrap report-chart-wrap--pie"><canvas id="forWhomChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних по полю "Для кого"</div>
@@ -583,7 +571,7 @@
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-lg font-semibold text-stone-900">Співвідношення типів підписок</h2>
-            <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші</p>
+            <p class="text-sm text-stone-500">Weekly, Monthly, Bi-weekly, One-time та інші · {% if has_range %}За {{ range_label }}{% else %}За весь час{% endif %}</p>
           </div>
           <span class="report-kpi">Всього: {{ orders.delivery_type_total }}</span>
         </div>
@@ -598,7 +586,7 @@
         <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 class="text-lg font-semibold text-stone-900">Співвідношення розмірів</h2>
-            <p class="text-sm text-stone-500">L, XL, XXL та інші</p>
+            <p class="text-sm text-stone-500">L, XL, XXL та інші · {% if has_range %}За {{ range_label }}{% else %}За весь час{% endif %}</p>
           </div>
           <span class="report-kpi">Всього: {{ orders.size_total }}</span>
         </div>
@@ -1513,10 +1501,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function createSwitchableChart(canvasId, datasets, color) {
+  function createSwitchableChart(canvasId, initial, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
-    const initial = datasets.all;
     return new Chart(canvas.getContext('2d'), {
       type: 'bar',
       data: {
@@ -1557,11 +1544,9 @@ document.addEventListener('DOMContentLoaded', function () {
     'rgba(161, 161, 170, 0.82)'
   ];
 
-  function createSwitchablePieChart(canvasId, datasets) {
+  function createSwitchablePieChart(canvasId, initial) {
     const canvas = document.getElementById(canvasId);
     if (!canvas) return null;
-    const initial = datasets.all;
-    const total = initial.values.reduce(function(s, v) { return s + v; }, 0);
     return new Chart(canvas.getContext('2d'), {
       type: 'doughnut',
       data: {
@@ -1622,44 +1607,12 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function bindSwitch(buttonWrapId, periodLabelId, totalLabelId, chart, datasets, rangeLabel) {
-    const wrap = document.getElementById(buttonWrapId);
-    if (!wrap || !chart) return;
-    const period = document.getElementById(periodLabelId);
-    const total  = document.getElementById(totalLabelId);
-    const buttons = Array.from(wrap.querySelectorAll('.report-switch-btn'));
-
-    function applyMode(mode) {
-      const data = mode === 'range' ? datasets.range : datasets.all;
-      chart.data.labels = data.labels;
-      chart.data.datasets[0].data = data.values;
-      chart.update();
-      if (period) period.textContent = mode === 'range' ? 'За ' + rangeLabel : 'За весь час';
-      if (total)  total.textContent  = 'Всього: ' + data.total;
-      buttons.forEach(function (btn) { btn.classList.toggle('is-active', btn.dataset.mode === mode); });
-    }
-
-    buttons.forEach(function (btn) { btn.addEventListener('click', function () { applyMode(btn.dataset.mode); }); });
-  }
-
   // ── Chart data ─────────────────────────────────────
-  const rangeLabel = {{ ((date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to or ''))|tojson }};
+  const marketingData = { labels: {{ orders.marketing_chart['labels']|tojson }}, values: {{ orders.marketing_chart['values']|tojson }} };
+  const forWhomData   = { labels: {{ orders.for_whom_chart['labels']|tojson }}, values: {{ orders.for_whom_chart['values']|tojson }} };
 
-  const marketingDatasets = {
-    all:   { labels: {{ orders.marketing_all_chart['labels']|tojson }},   values: {{ orders.marketing_all_chart['values']|tojson }},   total: {{ orders.marketing_all_total|tojson }} },
-    range: { labels: {{ orders.marketing_range_chart['labels']|tojson }}, values: {{ orders.marketing_range_chart['values']|tojson }}, total: {{ orders.marketing_range_total|tojson }} }
-  };
-
-  const forWhomDatasets = {
-    all:   { labels: {{ orders.for_whom_all_chart['labels']|tojson }},   values: {{ orders.for_whom_all_chart['values']|tojson }},   total: {{ orders.for_whom_all_total|tojson }} },
-    range: { labels: {{ orders.for_whom_range_chart['labels']|tojson }}, values: {{ orders.for_whom_range_chart['values']|tojson }}, total: {{ orders.for_whom_range_total|tojson }} }
-  };
-
-  const marketingChart = createSwitchableChart('marketingChart', marketingDatasets, 'rgba(245, 158, 11, 0.75)');
-  const forWhomChart   = createSwitchablePieChart('forWhomChart', forWhomDatasets);
-
-  bindSwitch('marketing-switch', 'marketing-period', 'marketing-total', marketingChart, marketingDatasets, rangeLabel);
-  bindSwitch('for-whom-switch',  'for-whom-period',  'for-whom-total',  forWhomChart,   forWhomDatasets,   rangeLabel);
+  createSwitchableChart('marketingChart', marketingData, 'rgba(245, 158, 11, 0.75)');
+  createSwitchablePieChart('forWhomChart', forWhomData);
 
   createLineTrendChart(
     'monthlyOrdersTrendChart',
