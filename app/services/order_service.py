@@ -219,6 +219,33 @@ def paginate_orders(orders, page=1, per_page=10):
     return orders[start:end], end < len(orders)
 
 
+def sync_order_to_active_deliveries(order):
+    """Propagate order-level fields onto the order's non-finalized deliveries.
+
+    Single choke point for the order → delivery fan-out, shared by update_order
+    and update_subscription so no edit path can silently forget a field.
+    Does NOT touch delivery_date — callers own their own date logic.
+    """
+    for delivery in order.deliveries:
+        if delivery.status in ('Доставлено', 'Скасовано'):
+            continue
+        delivery.comment = order.comment
+        delivery.preferences = order.preferences
+        delivery.address_comment = order.address_comment
+        delivery.street = order.street if not order.is_pickup else None
+        delivery.building_number = order.building_number if not order.is_pickup else None
+        delivery.floor = order.floor if not order.is_pickup else None
+        delivery.entrance = order.entrance if not order.is_pickup else None
+        delivery.is_pickup = order.is_pickup
+        delivery.phone = order.recipient_phone
+        delivery.delivery_method = order.delivery_method
+        delivery.size = order.size
+        delivery.bouquet_type = order.bouquet_type
+        delivery.composition_type = order.composition_type
+        delivery.time_from = order.time_from
+        delivery.time_to = order.time_to
+
+
 def update_order(order, form):
     before = _order_snapshot(order)
     new_client_id = form.get('client_id', '').strip()
@@ -273,23 +300,12 @@ def update_order(order, form):
         order.delivery_method = form.get('delivery_method')
 
     active_deliveries = [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']]
-    for i, delivery in enumerate(sorted(active_deliveries, key=lambda d: d.delivery_date or datetime.date.min)):
-        if i == 0:
-            delivery.delivery_date = delivery_date
-        delivery.comment = order.comment
-        delivery.preferences = order.preferences
-        delivery.address_comment = order.address_comment
-        delivery.street = order.street if not order.is_pickup else None
-        delivery.building_number = order.building_number if not order.is_pickup else None
-        delivery.floor = order.floor if not order.is_pickup else None
-        delivery.entrance = order.entrance if not order.is_pickup else None
-        delivery.is_pickup = order.is_pickup
-        delivery.phone = order.recipient_phone
-        delivery.delivery_method = order.delivery_method
-        delivery.bouquet_type = order.bouquet_type
-        delivery.composition_type = order.composition_type
-        delivery.time_from = order.time_from
-        delivery.time_to = order.time_to
+    earliest_active = min(
+        active_deliveries, key=lambda d: d.delivery_date or datetime.date.min, default=None
+    )
+    if earliest_active is not None:
+        earliest_active.delivery_date = delivery_date
+    sync_order_to_active_deliveries(order)
 
     db.session.commit()
 

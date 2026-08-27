@@ -139,6 +139,17 @@ def test_update_order_syncs_phone_to_active_delivery(session):
     assert delivery.phone == '+380671112233'
 
 
+def test_update_order_syncs_size_to_active_delivery(session):
+    client = _make_client(session)
+    order, delivery = _make_order_with_delivery(session, client)
+
+    form = _base_edit_form(size='L')
+    update_order(order, form)
+
+    session.refresh(delivery)
+    assert delivery.size == 'L'
+
+
 # ── update_order: is_pickup clears street on Delivery ────────────────────────
 
 def test_update_order_is_pickup_clears_delivery_street(session):
