@@ -973,6 +973,14 @@
         <div class="kpi-card__sub">Немає даних для порівняння</div>
       </div>
       {% endif %}
+
+      <div class="kpi-card">
+        <div class="kpi-card__label">Рекордний день</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(cash_flow.record_day_amount).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">
+          {{ cash_flow.record_day_date }}{% if cash_flow.record_day_clients %} · {{ cash_flow.record_day_clients }} клієнт(ів){% endif %} · за весь час
+        </div>
+      </div>
     </div>
 
     <!-- Chart -->

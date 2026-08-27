@@ -705,7 +705,38 @@ def get_florist_sales_data(date_from_str=None, date_to_str=None):
     }
 
 
+def _cash_flow_record_day():
+    """All-time record: the single day with the largest total incoming payments."""
+    from app.models.transaction import Transaction
+
+    row = (
+        db.session.query(
+            Transaction.date,
+            func.sum(Transaction.amount).label('s'),
+            func.count(func.distinct(Transaction.client_id)).label('c'),
+        )
+        .filter(Transaction.transaction_type == 'credit')
+        .group_by(Transaction.date)
+        .order_by(func.sum(Transaction.amount).desc(), Transaction.date.desc())
+        .first()
+    )
+    if row is None or not row.date:
+        return {'record_day_amount': 0, 'record_day_date': '—', 'record_day_clients': 0}
+    return {
+        'record_day_amount': int(row.s or 0),
+        'record_day_date': row.date.strftime('%d.%m.%Y'),
+        'record_day_clients': int(row.c or 0),
+    }
+
+
 def get_cash_flow_data(date_from_str=None, date_to_str=None):
+    """Cash flow data + all-time record day. See _get_cash_flow_data for the range logic."""
+    result = _get_cash_flow_data(date_from_str, date_to_str)
+    result.update(_cash_flow_record_day())
+    return result
+
+
+def _get_cash_flow_data(date_from_str=None, date_to_str=None):
     """Cash flow data. No filter → all-time monthly chart. Filter → daily chart for period."""
     import calendar
     from app.models.transaction import Transaction
