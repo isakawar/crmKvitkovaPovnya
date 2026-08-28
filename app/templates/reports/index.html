@@ -351,13 +351,72 @@
   /* Edit mode */
   .rv-input { width: 70px; text-align: right; border: 1px solid #d6d3d1; border-radius: 4px; padding: 1px 4px; font-size: 0.8rem; background: #fff; }
   .rv-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+
+  /* ══════════════ reports v2 — scoped palette & components ══════════════ */
+  .reports-v2 {
+    --r-bg:        #f7f9fc;
+    --r-surface:   #ffffff;
+    --r-ink:       #0f172a;
+    --r-muted:     #64748b;
+    --r-faint:     #94a3b8;
+    --r-line:      #e2e8f0;
+    --r-teal:      #0d9488;
+    --r-teal-soft: #ccfbf1;
+    --r-slate:     #475569;
+    --r-slate-soft:#e2e8f0;
+    --r-green:     #059669;
+    --r-red:       #dc2626;
+    --r-amber:     #d97706;
+  }
+
+  /* Hero grid — always visible above tabs */
+  .rv-hero-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+  .rv-hero {
+    border: 1px solid var(--r-line);
+    border-radius: 1rem;
+    background: var(--r-surface);
+    padding: 0.9rem 1.05rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .rv-hero__label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--r-faint); margin-bottom: 0.3rem;
+  }
+  .rv-hero__value { font-size: 1.7rem; font-weight: 700; line-height: 1.05; color: var(--r-ink); }
+  .rv-hero__sub { margin-top: 0.3rem; font-size: 0.76rem; color: var(--r-muted); }
+  .rv-delta--up   { color: var(--r-green); font-weight: 600; }
+  .rv-delta--down { color: var(--r-red);   font-weight: 600; }
+  .rv-delta--flat { color: var(--r-faint); }
+
+  /* Export dropdown */
+  .rv-export-wrap { position: relative; }
+  .rv-export-menu {
+    position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 40;
+    min-width: 15rem; padding: 0.35rem;
+    border: 1px solid var(--r-line); border-radius: 0.9rem;
+    background: #fff; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  }
+  .rv-export-menu a {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.5rem 0.7rem; border-radius: 0.6rem;
+    font-size: 0.85rem; color: var(--r-ink); text-decoration: none;
+  }
+  .rv-export-menu a:hover { background: var(--r-bg); }
+  .rv-export-menu__group { padding: 0.4rem 0.7rem 0.2rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--r-faint); }
+
+  @media (max-width: 1100px) { .rv-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px)  { .rv-hero-grid { grid-template-columns: 1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set has_range = date_from or date_to %}
 {% set range_label = (date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to) %}
-<div class="flex flex-col gap-5">
+<div class="reports-v2 flex flex-col gap-5">
 
   <!-- ── Header ── -->
   <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
@@ -407,43 +466,91 @@
                   class="inline-flex h-9 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700 hidden">
             Оновити
           </button>
+
+          <!-- Divider -->
+          <span class="text-stone-300 text-sm select-none">|</span>
+
+          <!-- Export dropdown -->
+          <div class="rv-export-wrap">
+            <button type="button" id="rv-export-btn"
+                    class="inline-flex h-9 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900">
+              <i class="bi bi-download"></i>
+              Експорт
+              <i class="bi bi-chevron-down text-xs"></i>
+            </button>
+            <div id="rv-export-menu" class="rv-export-menu hidden">
+              <div class="rv-export-menu__group">Замовлення</div>
+              <a id="export-orders-csv"  href="#"><i class="bi bi-filetype-csv"></i> CSV</a>
+              <a id="export-orders-xlsx" href="#"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+              <div class="rv-export-menu__group">Транзакції</div>
+              <a id="export-tx-csv"  href="#"><i class="bi bi-filetype-csv"></i> CSV</a>
+              <a id="export-tx-xlsx" href="#"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+            </div>
+          </div>
         </div>
       </form>
     </div>
   </section>
 
+  <!-- ── Hero summary grid (always visible) ── -->
+  {% set kpi_growth = kpis.revenue_growth_pct %}
+  <div class="rv-hero-grid">
+    <div class="rv-hero">
+      <div class="rv-hero__label">Загальний дохід</div>
+      <div class="rv-hero__value">₴{{ "{:,}".format(kpis.revenue).replace(",", " ") }}</div>
+      <div class="rv-hero__sub">
+        {% if kpi_growth is none %}
+          <span class="rv-delta--flat">—</span> за весь час
+        {% elif kpi_growth >= 0 %}
+          <span class="rv-delta--up">▲ {{ kpi_growth }}%</span> vs попередній період
+        {% else %}
+          <span class="rv-delta--down">▼ {{ kpi_growth | abs }}%</span> vs попередній період
+        {% endif %}
+      </div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Чистий прибуток</div>
+      <div class="rv-hero__value">₴{{ "{:,}".format(kpis.profit | round | int).replace(",", " ") }}</div>
+      <div class="rv-hero__sub">Рентабельність <strong>{{ kpis.margin }}%</strong></div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Виконано доставок</div>
+      <div class="rv-hero__value">{{ kpis.deliveries_done }}</div>
+      <div class="rv-hero__sub">В процесі: <strong>{{ kpis.deliveries_in_progress }}</strong></div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Активні підписки</div>
+      <div class="rv-hero__value">{{ kpis.active_subscriptions }}</div>
+      <div class="rv-hero__sub">
+        {% if has_range %}<span class="rv-delta--up">+{{ kpis.new_subscriptions }}</span> нових за період{% else %}усього активних{% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- ── Tab navigation ── -->
   <div class="reports-tab-nav">
-    <button type="button" class="reports-tab-btn {% if active_tab == 'deliveries' %}is-active{% endif %}" data-tab="deliveries">
-      <i class="bi bi-bar-chart-line"></i>
-      Доставки
-    </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'pl' %}is-active{% endif %}" data-tab="pl">
+    <button type="button" class="reports-tab-btn {% if active_tab == 'overview' %}is-active{% endif %}" data-tab="overview">
       <i class="bi bi-graph-up-arrow"></i>
-      P&L
+      Огляд / P&L
     </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'export' %}is-active{% endif %}" data-tab="export">
-      <i class="bi bi-download"></i>
-      Експорт
+    <button type="button" class="reports-tab-btn {% if active_tab == 'sales' %}is-active{% endif %}" data-tab="sales">
+      <i class="bi bi-bar-chart-line"></i>
+      Доставки та Продажі
     </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
-      <i class="bi bi-cash-stack"></i>
-      Cash Flow
-    </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'revenue' %}is-active{% endif %}" data-tab="revenue">
+    <button type="button" class="reports-tab-btn {% if active_tab == 'clients' %}is-active{% endif %}" data-tab="clients">
       <i class="bi bi-people"></i>
-      Баланс клієнтів
+      LTV та Клієнти
     </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'wedding_ltv' %}is-active{% endif %}" data-tab="wedding_ltv">
-      <i class="bi bi-heart"></i>
-      LTV / Весільні
+    <button type="button" class="reports-tab-btn {% if active_tab == 'balance' %}is-active{% endif %}" data-tab="balance">
+      <i class="bi bi-wallet2"></i>
+      Баланс клієнтів
     </button>
   </div>
 
   <!-- ════════════════════════════════════════════
-       TAB: DELIVERIES
+       TAB: SALES (Доставки та Продажі)
   ════════════════════════════════════════════ -->
-  <div id="tab-deliveries" class="reports-tab-content {% if active_tab == 'deliveries' %}is-active{% endif %}">
+  <div id="tab-sales" class="reports-tab-content {% if active_tab == 'sales' %}is-active{% endif %}">
 
     <!-- KPI cards -->
     <div class="kpi-grid">
@@ -643,12 +750,12 @@
       {% endif %}
     </section>
 
-  </div>{# /tab-deliveries #}
+  </div>{# /tab-sales #}
 
   <!-- ════════════════════════════════════════════
-       TAB: P&L
+       TAB: OVERVIEW (Огляд / P&L + Cash Flow)
   ════════════════════════════════════════════ -->
-  <div id="tab-pl" class="reports-tab-content {% if active_tab == 'pl' %}is-active{% endif %}">
+  <div id="tab-overview" class="reports-tab-content {% if active_tab == 'overview' %}is-active{% endif %}">
 
     <!-- Main KPI cards -->
     <div class="kpi-grid">
@@ -849,91 +956,11 @@
 
     </div>
 
-  </div>{# /tab-pl #}
-
-  <!-- ════════════════════════════════════════════
-       TAB: EXPORT
-  ════════════════════════════════════════════ -->
-  <div id="tab-export" class="reports-tab-content {% if active_tab == 'export' %}is-active{% endif %}">
-
-    <p class="text-sm text-stone-500">Оберіть діапазон дат та завантажте дані у потрібному форматі. Якщо дати не вказані — експортується весь доступний архів.</p>
-
-    <!-- Orders export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-box-seam text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Замовлення</h2>
-          </div>
-          <p class="text-sm text-stone-500">ID, клієнт, адреса, розмір, дата, статус, кур'єр, коментарі</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-orders-from" value="{{ date_from }}">
-            <input type="hidden" id="export-orders-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-orders-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-orders-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-orders-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
+    <!-- ── Cash Flow section (inside Огляд / P&L) ── -->
+    <div class="mt-3 mb-1 flex items-center gap-2">
+      <span class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Cash Flow</span>
+      <div class="flex-1 border-t border-slate-100"></div>
     </div>
-
-    <!-- Transactions export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-arrow-left-right text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Транзакції</h2>
-          </div>
-          <p class="text-sm text-stone-500">Дата, тип, клієнт, сума, спосіб оплати, тип витрати, коментар</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-tx-from" value="{{ date_from }}">
-            <input type="hidden" id="export-tx-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-tx-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-tx-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-tx-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>{# /tab-export #}
-
-  <!-- ════════════════════════════════════════════
-       TAB: CASH FLOW
-  ════════════════════════════════════════════ -->
-  <div id="tab-cash_flow" class="reports-tab-content {% if active_tab == 'cash_flow' %}is-active{% endif %}">
 
     <!-- KPI cards -->
     <div class="kpi-grid">
@@ -997,7 +1024,7 @@
           </span>
         </div>
         {% if cash_flow.mode == 'daily' %}
-        <a href="?tab=cash_flow"
+        <a href="?tab=overview"
            class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900">
           <i class="bi bi-arrow-left text-xs"></i>
           Весь час
@@ -1009,12 +1036,12 @@
       </div>
     </div>
 
-  </div>{# /tab-cash_flow #}
+  </div>{# /tab-overview #}
 
   <!-- ════════════════════════════════════════════
-       TAB: REVENUE — per-client monthly balance
+       TAB: BALANCE — per-client monthly balance
   ════════════════════════════════════════════ -->
-  <div id="tab-revenue" class="reports-tab-content {% if active_tab == 'revenue' %}is-active{% endif %}">
+  <div id="tab-balance" class="reports-tab-content {% if active_tab == 'balance' %}is-active{% endif %}">
 
     <div class="report-card p-4">
       <!-- Header + controls -->
@@ -1203,12 +1230,12 @@
       {% endif %}
     </div>
 
-  </div>{# /tab-revenue #}
+  </div>{# /tab-balance #}
 
   <!-- ════════════════════════════════════════════
-       TAB: WEDDING / LTV
+       TAB: CLIENTS (LTV та Клієнти)
   ════════════════════════════════════════════ -->
-  <div id="tab-wedding_ltv" class="reports-tab-content {% if active_tab == 'wedding_ltv' %}is-active{% endif %}">
+  <div id="tab-clients" class="reports-tab-content {% if active_tab == 'clients' %}is-active{% endif %}">
 
     <h2 class="text-base font-semibold text-stone-800 mb-1">Весільні підписки</h2>
     <p class="text-xs text-stone-400 mb-3">Дохід, доставки та замовлення — за обраний період. Активні підписки та рекорд доставок — за весь час.</p>
@@ -1337,7 +1364,7 @@
       </div>
     </div>
 
-  </div>{# /tab-wedding_ltv #}
+  </div>{# /tab-clients #}
 
 </div>{# /flex #}
 {% endblock %}
@@ -1355,38 +1382,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const tabPanes = document.querySelectorAll('.reports-tab-content');
   const filterTabInput = document.getElementById('filter-tab-input');
 
-  // Auto-navigate to current month when cash_flow tab opens without dates
-  (function () {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'cash_flow' && !params.get('date_from') && !params.get('date_to') && !params.get('all')) {
-      const today = new Date();
-      const yyyy  = today.getFullYear();
-      const mm    = String(today.getMonth() + 1).padStart(2, '0');
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-      params.set('date_from', yyyy + '-' + mm + '-01');
-      params.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
-      window.location.replace('/reports?' + params.toString());
-    }
-  })();
-
   tabBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = btn.dataset.tab;
-      const fromEl = document.getElementById('reports-date-from');
-      const toEl   = document.getElementById('reports-date-to');
-
-      if (target === 'cash_flow' && (!fromEl || !fromEl.value) && (!toEl || !toEl.value)) {
-        const today = new Date();
-        const yyyy  = today.getFullYear();
-        const mm    = String(today.getMonth() + 1).padStart(2, '0');
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const url   = new URL(window.location.href);
-        url.searchParams.set('tab', 'cash_flow');
-        url.searchParams.set('date_from', yyyy + '-' + mm + '-01');
-        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
-        window.location.href = url.toString();
-        return;
-      }
 
       tabBtns.forEach(function (b) { b.classList.remove('is-active'); });
       tabPanes.forEach(function (p) { p.classList.remove('is-active'); });
@@ -1513,17 +1511,7 @@ document.addEventListener('DOMContentLoaded', function () {
     allBtn.addEventListener('click', function () {
       fromInput.value = '';
       toInput.value   = '';
-      const tabVal = filterTabInput ? filterTabInput.value : '';
-      if (tabVal === 'cash_flow') {
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', 'cash_flow');
-        url.searchParams.delete('date_from');
-        url.searchParams.delete('date_to');
-        url.searchParams.set('all', '1');
-        window.location.href = url.toString();
-      } else {
-        form.submit();
-      }
+      form.submit();
     });
 
     // Custom flatpickr — show submit button when user picks dates
@@ -1548,24 +1536,32 @@ document.addEventListener('DOMContentLoaded', function () {
     return base + (p.toString() ? '?' + p.toString() : '');
   }
 
-  function updateOrdersLinks() {
-    const csv  = document.getElementById('export-orders-csv');
-    const xlsx = document.getElementById('export-orders-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/orders/export/csv',  'export-orders-from', 'export-orders-to', null);
-    if (xlsx) xlsx.href = buildExportUrl('/orders/export/xlsx', 'export-orders-from', 'export-orders-to', null);
+  // Export links use the main report date filter
+  function updateExportLinks() {
+    const oc = document.getElementById('export-orders-csv');
+    const ox = document.getElementById('export-orders-xlsx');
+    const tc = document.getElementById('export-tx-csv');
+    const tx = document.getElementById('export-tx-xlsx');
+    if (oc) oc.href = buildExportUrl('/orders/export/csv',  'reports-date-from', 'reports-date-to', null);
+    if (ox) ox.href = buildExportUrl('/orders/export/xlsx', 'reports-date-from', 'reports-date-to', null);
+    if (tc) tc.href = buildExportUrl('/transactions/export', 'reports-date-from', 'reports-date-to', 'csv');
+    if (tx) tx.href = buildExportUrl('/transactions/export', 'reports-date-from', 'reports-date-to', 'xlsx');
   }
+  updateExportLinks();
 
-  function updateTxLinks() {
-    const csv  = document.getElementById('export-tx-csv');
-    const xlsx = document.getElementById('export-tx-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'csv');
-    if (xlsx) xlsx.href = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'xlsx');
-  }
-
-  makeDatePicker('export-orders-picker', 'export-orders-from', 'export-orders-to', updateOrdersLinks);
-  makeDatePicker('export-tx-picker',     'export-tx-from',     'export-tx-to',     updateTxLinks);
-  updateOrdersLinks();
-  updateTxLinks();
+  // Export dropdown toggle
+  (function () {
+    const btn  = document.getElementById('rv-export-btn');
+    const menu = document.getElementById('rv-export-menu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      updateExportLinks();
+      menu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function () { menu.classList.add('hidden'); });
+    menu.addEventListener('click', function (e) { e.stopPropagation(); });
+  }());
 
   // ── Chart helpers ──────────────────────────────────
   function createBarChart(canvasId, labels, values, color) {
@@ -1886,7 +1882,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var lastDay = new Date(y, m, 0).getDate();
             var pad = function (n) { return String(n).padStart(2, '0'); };
             var url = new URL(window.location.href);
-            url.searchParams.set('tab', 'cash_flow');
+            url.searchParams.set('tab', 'overview');
             url.searchParams.set('date_from', yyyy + '-' + pad(m) + '-01');
             url.searchParams.set('date_to',   yyyy + '-' + pad(m) + '-' + pad(lastDay));
             window.location.href = url.toString();
@@ -1918,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterLabel = document.getElementById('revenue-filter-label');
     if (!searchInput || !filterBtn) return;
 
-    const allRows     = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+    const allRows     = Array.from(document.querySelectorAll('#tab-balance .revenue-table__row'));
     const tbody       = document.querySelector('.revenue-table tbody');
     const originalRows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
 
