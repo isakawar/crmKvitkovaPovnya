@@ -434,6 +434,10 @@
       <i class="bi bi-people"></i>
       Баланс клієнтів
     </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'wedding_ltv' %}is-active{% endif %}" data-tab="wedding_ltv">
+      <i class="bi bi-heart"></i>
+      LTV / Весільні
+    </button>
   </div>
 
   <!-- ════════════════════════════════════════════
@@ -1200,6 +1204,140 @@
     </div>
 
   </div>{# /tab-revenue #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: WEDDING / LTV
+  ════════════════════════════════════════════ -->
+  <div id="tab-wedding_ltv" class="reports-tab-content {% if active_tab == 'wedding_ltv' %}is-active{% endif %}">
+
+    <h2 class="text-base font-semibold text-stone-800 mb-1">Весільні підписки</h2>
+    <p class="text-xs text-stone-400 mb-3">Дохід, доставки та замовлення — за обраний період. Активні підписки та рекорд доставок — за весь час.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Активних весільних</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ wedding.active_count }}</div>
+        <div class="kpi-card__sub">Зараз, статус active</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Дохід (нараховано)</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ wedding.revenue_share }}% від загального revenue</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Оплат отримано</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.payments).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Платежі, привʼязані до весільної підписки</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Сер. сума зібрана / підписку</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.avg_collected_per_sub).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Серед весільних з ≥1 оплатою</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок здійснено</div>
+        <div class="kpi-card__value">{{ wedding.deliveries_done }}</div>
+        <div class="kpi-card__sub">Статус «Доставлено» за період</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Замовлень створено</div>
+        <div class="kpi-card__value">{{ wedding.orders_in_range }}</div>
+        <div class="kpi-card__sub">За обраний період</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Макс. доставок / підписку</div>
+        <div class="kpi-card__value">{{ wedding.max_deliveries_single_sub }}</div>
+        <div class="kpi-card__sub">Рекорд по одній весільній, за весь час</div>
+      </div>
+    </div>
+
+    <h2 class="text-base font-semibold text-stone-800 mt-8 mb-1">LTV клієнтів</h2>
+    <p class="text-xs text-stone-400 mb-3">Усі показники — за весь час, незалежно від фільтра дат. Враховуються лише доставки зі статусом «Доставлено».</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок / клієнта (підписки)</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ ltv.avg_sub_deliveries_per_client }}</div>
+        <div class="kpi-card__sub">Серед клієнтів з підписками</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок / клієнта (загалом)</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ ltv.avg_all_deliveries_per_client }}</div>
+        <div class="kpi-card__sub">Підписки + разові замовлення</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Сер. час з нами</div>
+        <div class="kpi-card__value">{{ ltv.avg_lifespan_days }} дн.</div>
+        <div class="kpi-card__sub">Від першої доставки до сьогодні</div>
+      </div>
+    </div>
+
+    {% if ltv.lifespan_by_type %}
+    <div class="report-card p-5 mt-4">
+      <h3 class="text-sm font-semibold text-stone-800 mb-3">Час з нами за періодичністю підписки</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-stone-400 border-b border-stone-100">
+            <th class="py-2 font-medium">Тип підписки</th>
+            <th class="py-2 font-medium text-right">Клієнтів</th>
+            <th class="py-2 font-medium text-right">Сер. час, днів</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in ltv.lifespan_by_type %}
+          <tr class="border-b border-stone-50">
+            <td class="py-2 text-stone-700">{{ row.type }}</td>
+            <td class="py-2 text-right text-stone-700">{{ row.clients }}</td>
+            <td class="py-2 text-right text-stone-700">{{ row.avg_days }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 md:grid-cols-2 mt-4">
+      <div class="report-card p-5">
+        <h3 class="text-sm font-semibold text-stone-800 mb-3">Топ-10 клієнтів за доставками</h3>
+        {% if ltv.top_by_deliveries %}
+        <table class="w-full text-sm">
+          <tbody>
+            {% for row in ltv.top_by_deliveries %}
+            <tr class="border-b border-stone-50">
+              <td class="py-2 text-stone-400 w-6">{{ loop.index }}</td>
+              <td class="py-2 text-stone-700">{{ row.client }}</td>
+              <td class="py-2 text-right text-stone-700 font-medium">{{ row.count }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-stone-400">Немає даних</p>
+        {% endif %}
+      </div>
+
+      <div class="report-card p-5">
+        <h3 class="text-sm font-semibold text-stone-800 mb-3">Топ-10 клієнтів за доходом</h3>
+        <p class="text-xs text-stone-400 -mt-2 mb-3">Нараховано за доставки. Офлайн-продажі флориста не входять.</p>
+        {% if ltv.top_by_revenue %}
+        <table class="w-full text-sm">
+          <tbody>
+            {% for row in ltv.top_by_revenue %}
+            <tr class="border-b border-stone-50">
+              <td class="py-2 text-stone-400 w-6">{{ loop.index }}</td>
+              <td class="py-2 text-stone-700">{{ row.client }}</td>
+              <td class="py-2 text-right text-stone-700 font-medium">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p class="text-sm text-stone-400">Немає даних</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>{# /tab-wedding_ltv #}
 
 </div>{# /flex #}
 {% endblock %}

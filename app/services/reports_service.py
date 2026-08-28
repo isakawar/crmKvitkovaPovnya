@@ -1171,3 +1171,201 @@ def get_active_months():
     # Exclude future months — they have no historical data worth filtering by
     months = {(y, m) for y, m in months if (y, m) <= (today.year, today.month)}
     return sorted(months, reverse=True)  # newest first
+
+
+# ── Wedding subscription analytics ────────────────────────────────────────────
+
+def get_wedding_analytics(date_from_str=None, date_to_str=None):
+    """Wedding subscription KPIs.
+
+    Revenue / payments / deliveries / orders follow the selected date range
+    (each filtered by its own date column). `active_count` and
+    `max_deliveries_single_sub` are all-time snapshots, independent of the range.
+
+    Note: `payments` relies on a credit Transaction being linked to the
+    subscription (via the linked order) — only reliably populated from
+    Aug 2026 onward.
+    """
+    from app.models.transaction import Transaction
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    wedding_sub_ids = [
+        r[0] for r in db.session.query(Subscription.id)
+        .filter(Subscription.is_wedding.is_(True)).all()
+    ]
+
+    active_count = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.is_wedding.is_(True), Subscription.status == 'active')
+        .scalar() or 0
+    )
+
+    empty = {
+        'active_count': active_count,
+        'orders_in_range': 0,
+        'deliveries_done': 0,
+        'revenue': 0,
+        'payments': 0,
+        'avg_collected_per_sub': 0,
+        'max_deliveries_single_sub': 0,
+        'revenue_share': 0.0,
+    }
+    if not wedding_sub_ids:
+        return empty
+
+    orders_in_range = (
+        db.session.query(func.count(Order.id))
+        .filter(Order.subscription_id.in_(wedding_sub_ids),
+                *_build_date_filters(func.date(Order.created_at), d_from, d_to))
+        .scalar() or 0
+    )
+
+    deliveries_done = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id.in_(wedding_sub_ids),
+                Delivery.status == 'Доставлено',
+                *_build_date_filters(Delivery.delivery_date, d_from, d_to))
+        .scalar() or 0
+    )
+
+    revenue = (
+        db.session.query(func.sum(Transaction.amount))
+        .join(Delivery, Transaction.delivery_id == Delivery.id)
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Transaction.transaction_type == 'delivery_charge',
+                Order.subscription_id.in_(wedding_sub_ids),
+                *_build_date_filters(Transaction.date, d_from, d_to))
+        .scalar() or 0
+    )
+
+    total_revenue = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'delivery_charge',
+                *_build_date_filters(Transaction.date, d_from, d_to))
+        .scalar() or 0
+    )
+
+    payment_filters = [
+        Transaction.transaction_type == 'credit',
+        Transaction.subscription_id.in_(wedding_sub_ids),
+        *_build_date_filters(Transaction.date, d_from, d_to),
+    ]
+    payments = (
+        db.session.query(func.sum(Transaction.amount)).filter(*payment_filters).scalar() or 0
+    )
+    subs_with_payment = (
+        db.session.query(func.count(func.distinct(Transaction.subscription_id)))
+        .filter(*payment_filters).scalar() or 0
+    )
+
+    per_sub_counts = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id.in_(wedding_sub_ids))
+        .group_by(Order.subscription_id)
+        .all()
+    )
+    max_deliveries_single_sub = max((c[0] for c in per_sub_counts), default=0)
+
+    return {
+        'active_count': active_count,
+        'orders_in_range': orders_in_range,
+        'deliveries_done': deliveries_done,
+        'revenue': int(revenue),
+        'payments': int(payments),
+        'avg_collected_per_sub': int(payments / subs_with_payment) if subs_with_payment else 0,
+        'max_deliveries_single_sub': max_deliveries_single_sub,
+        'revenue_share': round(float(revenue) / float(total_revenue) * 100, 1) if total_revenue else 0.0,
+    }
+
+
+# ── Customer LTV analytics ────────────────────────────────────────────────────
+
+def get_ltv_data(date_from_str=None, date_to_str=None):
+    """Lifetime-value metrics. All metrics are all-time — the date range is
+    accepted for signature consistency but intentionally ignored."""
+    from app.models.delivery import Delivery
+    from app.models.transaction import Transaction
+
+    DELIVERED = 'Доставлено'
+
+    def _client_label(c):
+        return c.name or c.instagram or f'#{c.id}'
+
+    sub_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Delivery.status == DELIVERED, Order.subscription_id.isnot(None))
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    avg_sub_deliveries = round(sum(r.c for r in sub_del) / len(sub_del), 1) if sub_del else 0.0
+
+    all_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .filter(Delivery.status == DELIVERED)
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    avg_all_deliveries = round(sum(r.c for r in all_del) / len(all_del), 1) if all_del else 0.0
+
+    top_del = (
+        db.session.query(Client, func.count(Delivery.id).label('c'))
+        .join(Delivery, Delivery.client_id == Client.id)
+        .filter(Delivery.status == DELIVERED)
+        .group_by(Client.id)
+        .order_by(func.count(Delivery.id).desc())
+        .limit(10)
+        .all()
+    )
+    top_by_deliveries = [{'client': _client_label(c), 'count': int(n)} for c, n in top_del]
+
+    top_rev = (
+        db.session.query(Client, func.sum(Transaction.amount).label('r'))
+        .join(Transaction, Transaction.client_id == Client.id)
+        .filter(Transaction.transaction_type == 'delivery_charge')
+        .group_by(Client.id)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(10)
+        .all()
+    )
+    top_by_revenue = [{'client': _client_label(c), 'revenue': int(r or 0)} for c, r in top_rev]
+
+    today = date.today()
+    first_del = (
+        db.session.query(Delivery.client_id, func.min(Delivery.delivery_date).label('first'))
+        .filter(Delivery.status == DELIVERED)
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    lifespans = {r.client_id: (today - r.first).days for r in first_del if r.first}
+    avg_lifespan_days = round(sum(lifespans.values()) / len(lifespans)) if lifespans else 0
+
+    client_types = (
+        db.session.query(Order.client_id, Subscription.type)
+        .join(Subscription, Subscription.id == Order.subscription_id)
+        .filter(Subscription.status != 'draft')
+        .distinct()
+        .all()
+    )
+    by_type = {}
+    for client_id, sub_type in client_types:
+        if client_id in lifespans and sub_type:
+            by_type.setdefault(sub_type, []).append(lifespans[client_id])
+    lifespan_by_type = [
+        {'type': t, 'clients': len(v), 'avg_days': round(sum(v) / len(v))}
+        for t, v in sorted(by_type.items(), key=lambda kv: -len(kv[1]))
+    ]
+
+    return {
+        'avg_sub_deliveries_per_client': avg_sub_deliveries,
+        'avg_all_deliveries_per_client': avg_all_deliveries,
+        'top_by_deliveries': top_by_deliveries,
+        'top_by_revenue': top_by_revenue,
+        'avg_lifespan_days': avg_lifespan_days,
+        'lifespan_by_type': lifespan_by_type,
+    }

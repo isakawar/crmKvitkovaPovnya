@@ -15,6 +15,8 @@ from app.services.reports_service import (
     get_cash_flow_data,
     get_active_months,
     get_client_revenue_breakdown,
+    get_wedding_analytics,
+    get_ltv_data,
 )
 from app.utils.decorators import permission_required
 
@@ -38,6 +40,8 @@ def reports_page():
         florist=get_florist_sales_data(date_from, date_to),
         cash_flow=get_cash_flow_data(date_from, date_to),
         revenue=get_client_revenue_breakdown(date_from, date_to),
+        wedding=get_wedding_analytics(date_from, date_to),
+        ltv=get_ltv_data(date_from, date_to),
         active_tab=active_tab,
         date_from=date_from or '',
         date_to=date_to or '',

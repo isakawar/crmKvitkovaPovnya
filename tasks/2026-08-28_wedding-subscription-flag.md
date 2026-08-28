@@ -54,3 +54,40 @@ done
 - `subscriptions/_edit_modal.html` — не використовується (dead code), редагування
   йде через композер; регресії немає.
 - Продовження весільної підписки — `is_wedding` копіюється з батьківської (без змін).
+
+---
+
+## Частина 2: блок аналітики «LTV / Весільні»
+
+### Статус
+done
+
+### Реалізація
+- `app/services/reports_service.py`
+  - `get_wedding_analytics(date_from, date_to)` → namespace `wedding`:
+    `active_count`, `orders_in_range`, `deliveries_done`, `revenue` (delivery_charge),
+    `payments` (credit з `subscription_id` ∈ весільні), `avg_collected_per_sub`,
+    `max_deliveries_single_sub`, `revenue_share` (% від загального revenue).
+    Діапазон фільтрує revenue/payments/deliveries/orders; `active_count` і
+    `max_deliveries_single_sub` — за весь час.
+  - `get_ltv_data(date_from, date_to)` → namespace `ltv` (усе за весь час):
+    `avg_sub_deliveries_per_client`, `avg_all_deliveries_per_client`,
+    `top_by_deliveries` (топ-10), `top_by_revenue` (топ-10, без офлайн-флориста),
+    `avg_lifespan_days` (перша доставка → сьогодні), `lifespan_by_type`.
+- `app/blueprints/reports/routes.py` — kwargs `wedding=`, `ltv=`
+- `app/templates/reports/index.html` — вкладка «LTV / Весільні» (`tab=wedding_ltv`):
+  KPI-картки весільних + KPI LTV + таблиця lifespan по типах + 2 таблиці топ-10
+- `CLAUDE.md` — оновлено таблицю Reports API + список вкладок
+- `npm run build`
+
+### Відомі обмеження
+- `payments` / `avg_collected_per_sub` для весільних = 0 на історичних даних
+  (квітневий імпорт без привʼязки оплат). Працює для підписок від серпня 2026,
+  де оплати чіпляються до підписки.
+- `avg_lifespan_days` занижений — історія в базі ~4 місяці.
+
+### Як тестувати
+1. `/reports?tab=wedding_ltv` — вкладка відкривається, KPI заповнені.
+2. Порівняти з ручним SQL: revenue весільних, к-ть доставлених, max доставок.
+3. Змінити діапазон дат — revenue/доставки/замовлення весільних змінюються,
+   LTV-блок лишається сталим.
