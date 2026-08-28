@@ -1335,14 +1335,16 @@ def get_wedding_analytics(date_from_str=None, date_to_str=None):
         .scalar() or 0
     )
 
-    deliveries_done = (
-        db.session.query(func.count(Delivery.id))
+    del_by_status = dict(
+        db.session.query(Delivery.status, func.count(Delivery.id))
         .join(Order, Delivery.order_id == Order.id)
         .filter(Order.subscription_id.in_(wedding_sub_ids),
-                Delivery.status == 'Доставлено',
                 *_build_date_filters(Delivery.delivery_date, d_from, d_to))
-        .scalar() or 0
+        .group_by(Delivery.status)
+        .all()
     )
+    deliveries_done = del_by_status.get('Доставлено', 0)
+    deliveries_pending = del_by_status.get('Очікує', 0) + del_by_status.get('Розподілено', 0)
 
     revenue = (
         db.session.query(func.sum(Transaction.amount))
@@ -1389,6 +1391,7 @@ def get_wedding_analytics(date_from_str=None, date_to_str=None):
         'active_count': active_count,
         'orders_in_range': orders_in_range,
         'deliveries_done': deliveries_done,
+        'deliveries_pending': deliveries_pending,
         'revenue': int(revenue),
         'payments': int(payments),
         'avg_collected_per_sub': int(payments / subs_with_payment) if subs_with_payment else 0,

@@ -1318,7 +1318,7 @@
       <div class="kpi-card">
         <div class="kpi-card__label">Доставок здійснено</div>
         <div class="kpi-card__value">{{ wedding.deliveries_done }}</div>
-        <div class="kpi-card__sub">Статус «Доставлено» за період</div>
+        <div class="kpi-card__sub">Виконано{% if wedding.deliveries_pending %} · ще {{ wedding.deliveries_pending }} заплановано на період{% endif %}</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-card__label">Замовлень створено</div>
