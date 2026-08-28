@@ -1288,8 +1288,11 @@
   ════════════════════════════════════════════ -->
   <div id="tab-clients" class="reports-tab-content {% if active_tab == 'clients' %}is-active{% endif %}">
 
-    <h2 class="text-base font-semibold text-stone-800 mb-1">Весільні підписки</h2>
-    <p class="text-xs text-stone-400 mb-3">Дохід, доставки та замовлення — за обраний період. Активні підписки та рекорд доставок — за весь час.</p>
+    <h2 class="text-base font-semibold text-stone-800 mb-1">
+      Весільні підписки
+      {% if has_range %}<span class="ml-1 rounded-md bg-teal-50 px-1.5 py-0.5 text-[11px] font-medium text-teal-700">{{ range_label }}</span>{% endif %}
+    </h2>
+    <p class="text-xs text-stone-400 mb-3">Дохід, доставки, оплати та замовлення — за обраний період{% if not has_range %} (зараз: весь час){% endif %}. Активні підписки та рекорд доставок — завжди за весь час.</p>
 
     <div class="kpi-grid">
       <div class="kpi-card">
@@ -1342,8 +1345,11 @@
       {% endif %}
     </div>
 
-    <h2 class="text-base font-semibold text-stone-800 mt-8 mb-1">LTV клієнтів</h2>
-    <p class="text-xs text-stone-400 mb-3">Усі показники — за весь час, незалежно від фільтра дат. Середні доставки враховують усі заплановані (виконані + очікують, без скасованих) і не рахують старі частинні підписки (&lt; 4 доставок); топ-10 і «час з нами» — лише виконані.</p>
+    <h2 class="text-base font-semibold text-stone-800 mt-8 mb-1">
+      LTV клієнтів
+      <span class="ml-1 rounded-md bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-500">завжди за весь час</span>
+    </h2>
+    <p class="text-xs text-stone-400 mb-3">LTV — це показники за весь час життя клієнта, тому фільтр дат на них <strong>не впливає</strong>. Середні доставки враховують усі заплановані (виконані + очікують, без скасованих) і не рахують старі частинні підписки (&lt; 4 доставок); топ-10 і «час з нами» — лише виконані.</p>
 
     <div class="kpi-grid">
       <div class="kpi-card">
