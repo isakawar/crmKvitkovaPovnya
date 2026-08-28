@@ -1335,14 +1335,32 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     )
     top_by_revenue = [{'client': _client_label(c), 'revenue': int(r or 0)} for c, r in top_rev]
 
+    # Lifespan per client:
+    #   active client (has an upcoming delivery) → first delivered → today
+    #   churned client (no upcoming deliveries)  → first delivered → last delivered
     today = date.today()
-    first_del = (
-        db.session.query(Delivery.client_id, func.min(Delivery.delivery_date).label('first'))
+    bounds = (
+        db.session.query(
+            Delivery.client_id,
+            func.min(Delivery.delivery_date).label('first'),
+            func.max(Delivery.delivery_date).label('last'),
+        )
         .filter(Delivery.status == DELIVERED)
         .group_by(Delivery.client_id)
         .all()
     )
-    lifespans = {r.client_id: (today - r.first).days for r in first_del if r.first}
+    active_client_ids = {
+        r[0] for r in db.session.query(Delivery.client_id)
+        .filter(Delivery.status.in_(['Очікує', 'Розподілено']))
+        .distinct()
+        .all()
+    }
+    lifespans = {}
+    for r in bounds:
+        if not r.first:
+            continue
+        end = today if r.client_id in active_client_ids else (r.last or r.first)
+        lifespans[r.client_id] = max((end - r.first).days, 0)
     avg_lifespan_days = round(sum(lifespans.values()) / len(lifespans)) if lifespans else 0
 
     client_types = (

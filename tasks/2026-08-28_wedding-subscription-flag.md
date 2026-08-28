@@ -73,7 +73,10 @@ done
   - `get_ltv_data(date_from, date_to)` → namespace `ltv` (усе за весь час):
     `avg_sub_deliveries_per_client`, `avg_all_deliveries_per_client`,
     `top_by_deliveries` (топ-10), `top_by_revenue` (топ-10, без офлайн-флориста),
-    `avg_lifespan_days` (перша доставка → сьогодні), `lifespan_by_type`.
+    `avg_lifespan_days`, `lifespan_by_type`.
+    Час «з нами»: активний клієнт (є доставка у статусі «Очікує»/«Розподілено») —
+    від першої доставки до сьогодні; клієнт без майбутніх доставок — від першої
+    до останньої доставленої.
 - `app/blueprints/reports/routes.py` — kwargs `wedding=`, `ltv=`
 - `app/templates/reports/index.html` — вкладка «LTV / Весільні» (`tab=wedding_ltv`):
   KPI-картки весільних + KPI LTV + таблиця lifespan по типах + 2 таблиці топ-10

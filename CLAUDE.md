@@ -56,7 +56,7 @@ Page: `/reports` (blueprint: `app/blueprints/reports/`). Tabs: Deliveries, P&L, 
 | `get_florist_sales_data(date_from_str, date_to_str)` | `florist` | Offline florist sales with 5% bonus; defaults to current month when no range given |
 | `get_client_revenue_breakdown(date_from_str, date_to_str)` | `revenue` | Per-client monthly balance: start balance, Нараховано (delivery_charge), Оплачено (credit), end balance; defaults to last 3 months |
 | `get_wedding_analytics(date_from_str, date_to_str)` | `wedding` | Wedding-subscription KPIs: revenue (delivery_charge), payments (credit linked to sub), deliveries done, orders, avg collected per sub, max deliveries on one sub, revenue share. Range filters revenue/payments/deliveries/orders; `active_count` + `max_deliveries_single_sub` are all-time |
-| `get_ltv_data(date_from_str, date_to_str)` | `ltv` | Lifetime-value metrics, all all-time (range ignored): avg deliveries per client (subscription-only and total), top-10 clients by deliveries, top-10 by revenue, avg lifespan (first delivery → today), lifespan by subscription periodicity |
+| `get_ltv_data(date_from_str, date_to_str)` | `ltv` | Lifetime-value metrics, all all-time (range ignored): avg deliveries per client (subscription-only and total), top-10 clients by deliveries, top-10 by revenue, avg lifespan (active client: first delivery → today; churned: first → last delivery), lifespan by subscription periodicity |
 
 ### How the route passes data to the template
 
