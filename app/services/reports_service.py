@@ -70,6 +70,35 @@ def _total(items):
     return sum(item['count'] for item in items)
 
 
+def _group_small_items(items, other_label='Інші', min_pct=2.5, keep_top=None):
+    """Collapse long-tail buckets into a single ``other_label`` row.
+
+    A bucket is folded in when its share of the total is below ``min_pct``.
+    When ``keep_top`` is set, only the first ``keep_top`` buckets are kept and
+    the rest are folded regardless of share. ``items`` must already be sorted
+    by count desc (``_rows_to_items`` does this). Returns a new list; the
+    ``other_label`` row, if any, is appended last.
+    """
+    total = _total(items)
+    if not total or len(items) <= 1:
+        return list(items)
+
+    kept, tail = [], 0
+    for idx, item in enumerate(items):
+        over_top = keep_top is not None and idx >= keep_top
+        below_pct = item['count'] / total * 100 < min_pct
+        if over_top or below_pct:
+            tail += item['count']
+        else:
+            kept.append(item)
+
+    if tail and len(kept) < len(items):
+        kept.append({'label': other_label, 'count': tail})
+    elif not kept:  # everything was tiny — keep original rather than a lone "other"
+        return list(items)
+    return kept
+
+
 def _build_date_filters(col, d_from, d_to):
     f = []
     if d_from:
@@ -244,8 +273,8 @@ def get_orders_data(date_from_str=None, date_to_str=None):
         'for_whom_total': _total(for_whom),
         'delivery_type_total': _total(delivery_type),
         'size_total': _total(size),
-        'marketing_chart': _items_to_chart(marketing),
-        'for_whom_chart': _items_to_chart(for_whom),
+        'marketing_chart': _items_to_chart(_group_small_items(marketing, other_label='Інші', min_pct=2.5)),
+        'for_whom_chart': _items_to_chart(_group_small_items(for_whom, other_label='Інше', keep_top=3, min_pct=0)),
         'delivery_type_chart': _items_to_chart(delivery_type),
         'size_chart': _items_to_chart(size),
         'monthly_orders_total': sum(trend['orders_values']),
@@ -331,7 +360,7 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     city_rows = (
         city_q.group_by(Order.city)
         .order_by(func.count(Delivery.id).desc())
-        .limit(10)
+        .limit(50)
         .all()
     )
 
@@ -373,7 +402,9 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
         'new_clients_delta': new_clients_delta,
         'new_clients_delta_pct': new_clients_delta_pct,
         'dynamics_chart': {'labels': dyn_labels, 'values': dyn_values},
-        'city_chart': _items_to_chart(_rows_to_items(city_rows)),
+        'city_chart': _items_to_chart(
+            _group_small_items(_rows_to_items(city_rows), other_label='Інші міста', min_pct=2.5)
+        ),
     }
 
 
@@ -581,6 +612,28 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     profit = revenue - total_expenses
     margin = round(profit / revenue * 100, 1) if revenue else 0.0
 
+    # Revenue growth: selected period vs the immediately preceding period of
+    # equal length. Only meaningful when a full range is selected.
+    revenue_growth_pct = None
+    if d_from and d_to and d_to >= d_from:
+        span = (d_to - d_from).days
+        prev_to = d_from - timedelta(days=1)
+        prev_from = prev_to - timedelta(days=span)
+        prev_tx_filters = _build_date_filters(Transaction.date, prev_from, prev_to)
+        prev_charge = (
+            db.session.query(func.sum(Transaction.amount))
+            .filter(Transaction.transaction_type == 'delivery_charge', *prev_tx_filters)
+            .scalar() or 0
+        )
+        prev_florist = (
+            db.session.query(func.sum(FloristSale.amount))
+            .filter(*_build_date_filters(func.date(FloristSale.created_at), prev_from, prev_to))
+            .scalar() or 0
+        )
+        prev_revenue = prev_charge + prev_florist
+        if prev_revenue:
+            revenue_growth_pct = round(float(revenue - prev_revenue) / float(prev_revenue) * 100, 1)
+
     expense_breakdown = _build_expense_breakdown(d_from, d_to, total_expenses)
 
     def _category_expenses(slug):
@@ -609,6 +662,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     return {
         'total_income': int(total_income),
         'revenue': int(revenue),
+        'revenue_growth_pct': revenue_growth_pct,
         'expenses': total_expenses,
         'profit': profit,
         'margin': margin,
@@ -1171,6 +1225,60 @@ def get_active_months():
     # Exclude future months — they have no historical data worth filtering by
     months = {(y, m) for y, m in months if (y, m) <= (today.year, today.month)}
     return sorted(months, reverse=True)  # newest first
+
+
+# ── Dashboard hero KPIs ───────────────────────────────────────────────────────
+
+def get_dashboard_kpis(date_from_str=None, date_to_str=None, pl=None):
+    """The four always-visible hero metrics above the report tabs.
+
+    Reuses the domain data so the numbers never drift from their tabs. Pass an
+    already-computed ``pl`` dict (from :func:`get_pl_data`) to avoid recomputing.
+    """
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    if pl is None:
+        pl = get_pl_data(date_from_str, date_to_str)
+
+    del_filters = _build_date_filters(Delivery.delivery_date, d_from, d_to)
+    del_row = (
+        db.session.query(
+            func.count(Delivery.id).label('total'),
+            func.sum(case((Delivery.status == 'Доставлено', 1), else_=0)).label('done'),
+            func.sum(case((Delivery.status == 'Скасовано', 1), else_=0)).label('cancelled'),
+        )
+        .filter(*del_filters)
+        .one()
+    )
+    total = del_row.total or 0
+    done = del_row.done or 0
+    in_progress = total - done - (del_row.cancelled or 0)
+
+    active_subscriptions = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.status == 'active')
+        .scalar() or 0
+    )
+    new_subs_filters = _build_date_filters(func.date(Subscription.created_at), d_from, d_to)
+    new_subscriptions = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.status != 'draft', *new_subs_filters)
+        .scalar() or 0
+    )
+
+    return {
+        'revenue': pl['revenue'],
+        'revenue_growth_pct': pl['revenue_growth_pct'],
+        'profit': pl['profit'],
+        'margin': pl['margin'],
+        'deliveries_done': done,
+        'deliveries_in_progress': in_progress,
+        'active_subscriptions': active_subscriptions,
+        'new_subscriptions': new_subscriptions,
+    }
 
 
 # ── Wedding subscription analytics ────────────────────────────────────────────
