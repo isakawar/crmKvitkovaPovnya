@@ -1443,7 +1443,7 @@ def get_subscription_record_card(subscription_id):
     return {
         'subscription_id': sub.id,
         'client_id': client.id if client else None,
-        'client_name': (client.name or client.instagram or client.telegram or client.phone or f'#{client.id}') if client else '—',
+        'client_name': client.display_name if client else '—',
         'instagram': (client.instagram or '') if client else '',
         'telegram': (client.telegram or '') if client else '',
         'phone': (client.phone or '') if client else '',
@@ -1472,7 +1472,7 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     DELIVERED = 'Доставлено'
 
     def _client_label(c):
-        return c.name or c.instagram or c.telegram or c.phone or f'#{c.id}'
+        return c.display_name  # instagram → telegram → phone → name → #id
 
     # Average deliveries per client — counts every planned delivery (delivered
     # + still awaiting), excluding only cancelled ones, so the number reflects
