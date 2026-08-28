@@ -18,6 +18,7 @@ from app.services.reports_service import (
     get_wedding_analytics,
     get_ltv_data,
     get_dashboard_kpis,
+    get_subscription_record_card,
 )
 from app.utils.decorators import permission_required
 
@@ -60,6 +61,16 @@ def reports_page():
         date_to=date_to or '',
         active_months=get_active_months(),
     )
+
+
+@reports_bp.route('/reports/subscription/<int:subscription_id>/record-card')
+@login_required
+@permission_required('view_reports')
+def subscription_record_card(subscription_id):
+    card = get_subscription_record_card(subscription_id)
+    if not card:
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    return jsonify({'ok': True, 'card': card})
 
 
 @reports_bp.route('/reports/revenue/adjust', methods=['POST'])

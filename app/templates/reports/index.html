@@ -455,13 +455,14 @@
   .rv-pill--neg { background: #fee2e2; color: #b91c1c; }
 
   /* progress-bar widget (top clients, florists) */
-  .rv-prog { display: flex; align-items: center; gap: 0.7rem; padding: 0.45rem 0; }
+  .rv-prog { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; }
   .rv-prog + .rv-prog { border-top: 1px solid var(--r-line); }
   .rv-prog__rank { width: 1.1rem; text-align: right; font-size: 0.75rem; color: var(--r-faint); flex-shrink: 0; }
-  .rv-prog__name { width: 8.5rem; flex-shrink: 0; font-size: 0.82rem; color: var(--r-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rv-prog__track { flex: 1; height: 8px; border-radius: 9999px; background: var(--r-bg); overflow: hidden; }
+  .rv-prog__name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--r-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-prog__meta { flex-shrink: 0; font-size: 0.72rem; color: var(--r-faint); white-space: nowrap; }
+  .rv-prog__track { width: 72px; flex-shrink: 0; height: 7px; border-radius: 9999px; background: var(--r-slate-soft); overflow: hidden; }
   .rv-prog__fill { height: 100%; border-radius: 9999px; background: var(--r-teal); }
-  .rv-prog__val { width: 5.5rem; text-align: right; flex-shrink: 0; font-size: 0.82rem; font-weight: 700; color: var(--r-ink); }
+  .rv-prog__val { width: 6rem; text-align: right; flex-shrink: 0; font-size: 0.85rem; font-weight: 700; color: var(--r-ink); }
 </style>
 {% endblock %}
 
@@ -705,7 +706,7 @@
           </div>
         </div>
         {% if orders.marketing_chart['labels'] %}
-        <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
+        <div class="report-chart-wrap report-chart-wrap--pie"><canvas id="marketingChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних для графіка</div>
         {% endif %}
@@ -1097,6 +1098,7 @@
         <div>
           <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
           <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець &middot; <span class="text-blue-400">Поч. редагується через кнопку &laquo;Редагувати&raquo;</span></p>
+          <p class="text-xs text-stone-400 mt-0.5">За замовчуванням показані лише клієнти, що мали хоча б одну операцію (нарахування, оплата, коригування) за вибраний період.</p>
         </div>
         {% if revenue.rows %}
         <div class="flex flex-wrap items-center gap-2">
@@ -1111,12 +1113,18 @@
               class="h-8 w-48 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
           </div>
-          <!-- Filter dropdown -->
+          <!-- Hide-inactive toggle -->
+          <button type="button" id="revenue-hide-inactive"
+                  class="reports-filter-pill is-active" title="Показуються клієнти, які мали хоча б одну операцію протягом вибраного періоду">
+            <i class="bi bi-eye-slash text-xs mr-1"></i>
+            <span>Тільки з операціями</span>
+          </button>
+          <!-- Sort dropdown -->
           <div class="relative" id="revenue-filter-wrap">
             <button id="revenue-filter-btn"
                     class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
                     data-mode="alpha">
-              <i class="bi bi-funnel text-xs"></i>
+              <i class="bi bi-sort-alpha-down text-xs"></i>
               <span id="revenue-filter-label">За алфавітом</span>
               <i class="bi bi-chevron-down text-xs"></i>
             </button>
@@ -1126,11 +1134,6 @@
                 <i class="bi bi-check-lg text-xs text-amber-500" data-check="alpha"></i>
                 За алфавітом
               </button>
-              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="active">
-                <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="active"></i>
-                Тільки активні
-              </button>
-              <div class="my-1 border-t border-stone-100"></div>
               <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="bal-asc">
                 <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="bal-asc"></i>
                 За балансом ↑
@@ -1319,11 +1322,24 @@
         <div class="kpi-card__value">{{ wedding.orders_in_range }}</div>
         <div class="kpi-card__sub">За обраний період</div>
       </div>
+      {% if wedding.record_sub_id %}
+      <button type="button" id="wedding-record-card"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              data-sub-id="{{ wedding.record_sub_id }}">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Макс. доставок / підписку</div>
+          <i class="bi bi-arrow-up-right text-stone-400 text-xs mt-0.5"></i>
+        </div>
+        <div class="kpi-card__value">{{ wedding.max_deliveries_single_sub }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити рекордсмена</div>
+      </button>
+      {% else %}
       <div class="kpi-card">
         <div class="kpi-card__label">Макс. доставок / підписку</div>
         <div class="kpi-card__value">{{ wedding.max_deliveries_single_sub }}</div>
         <div class="kpi-card__sub">Рекорд по одній весільній, за весь час</div>
       </div>
+      {% endif %}
     </div>
 
     <h2 class="text-base font-semibold text-stone-800 mt-8 mb-1">LTV клієнтів</h2>
@@ -1380,6 +1396,7 @@
         <div class="rv-prog">
           <span class="rv-prog__rank">{{ loop.index }}</span>
           <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__meta">{{ row.orders }} зам.</span>
           <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.count / dmax * 100) | round(1) }}%"></span></span>
           <span class="rv-prog__val">{{ row.count }}</span>
         </div>
@@ -1398,6 +1415,7 @@
         <div class="rv-prog">
           <span class="rv-prog__rank">{{ loop.index }}</span>
           <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__meta">{{ row.orders }} зам.</span>
           <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.revenue / rmax * 100) | round(1) }}%"></span></span>
           <span class="rv-prog__val">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</span>
         </div>
@@ -1409,6 +1427,31 @@
     </div>
 
   </div>{# /tab-clients #}
+
+  <!-- Record-holder modal -->
+  <div id="record-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" style="border:1px solid var(--r-line)">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide" style="color:var(--r-faint)">Рекордсмен за доставками</p>
+          <h3 id="rm-name" class="text-lg font-semibold" style="color:var(--r-ink)">—</h3>
+        </div>
+        <button type="button" id="rm-close" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+      </div>
+      <div id="rm-contacts" class="flex flex-wrap gap-2 mb-4 text-sm"></div>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><div class="text-xs" style="color:var(--r-faint)">Тип підписки</div><div id="rm-type" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Доставок (виконано / всього)</div><div id="rm-deliveries" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Нараховано (всього)</div><div id="rm-charged" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Оплачено (всього)</div><div id="rm-paid" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Баланс</div><div id="rm-balance" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Клієнт з</div><div id="rm-since" class="font-medium">—</div></div>
+      </div>
+      <a id="rm-open" href="#" class="mt-5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white" style="background:var(--r-teal)">
+        <i class="bi bi-person-lines-fill"></i> Відкрити картку клієнта
+      </a>
+    </div>
+  </div>
 
 </div>{# /flex #}
 {% endblock %}
@@ -1774,7 +1817,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const marketingData = { labels: {{ orders.marketing_chart['labels']|tojson }}, values: {{ orders.marketing_chart['values']|tojson }} };
   const forWhomData   = { labels: {{ orders.for_whom_chart['labels']|tojson }}, values: {{ orders.for_whom_chart['values']|tojson }} };
 
-  createHBarChart('marketingChart', marketingData.labels, marketingData.values, RV_SLATE);
+  createSwitchablePieChart('marketingChart', marketingData);
   createSwitchablePieChart('forWhomChart', forWhomData);
 
   createLineTrendChart(
@@ -1939,11 +1982,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const tbody       = document.querySelector('.revenue-table tbody');
     const originalRows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
 
+    const hideInactiveBtn = document.getElementById('revenue-hide-inactive');
     let currentMode = 'alpha';
+    let hideInactive = true;   // default: hide clients with no operations in the period
 
     const MODE_LABELS = {
       'alpha':    'За алфавітом',
-      'active':   'Тільки активні',
       'bal-asc':  'За балансом ↑',
       'bal-desc': 'За балансом ↓',
     };
@@ -1978,13 +2022,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function applyFilters() {
-      const query      = searchInput.value.trim().toLowerCase();
-      const activeOnly = currentMode === 'active';
+      const query = searchInput.value.trim().toLowerCase();
       let visible = 0;
 
       allRows.forEach(function (tr) {
         const nameMatch  = !query || tr.dataset.client.includes(query);
-        const activityOk = !activeOnly || tr.dataset.anyActivity === '1';
+        const activityOk = !hideInactive || tr.dataset.anyActivity === '1';
         const show       = nameMatch && activityOk;
         tr.style.display = show ? '' : 'none';
         if (show) visible++;
@@ -1994,9 +2037,20 @@ document.addEventListener('DOMContentLoaded', function () {
       if (countEl)   countEl.textContent = visible + ' / ' + allRows.length;
     }
 
+    if (hideInactiveBtn) {
+      hideInactiveBtn.addEventListener('click', function () {
+        hideInactive = !hideInactive;
+        hideInactiveBtn.classList.toggle('is-active', hideInactive);
+        hideInactiveBtn.querySelector('span').textContent = hideInactive ? 'Тільки з операціями' : 'Показані всі';
+        try { sessionStorage.setItem('revenue_hide_inactive', hideInactive ? '1' : '0'); } catch (e) {}
+        applyFilters();
+      });
+    }
+
     function setMode(mode) {
+      if (!MODE_LABELS[mode]) mode = 'alpha';
       currentMode = mode;
-      filterLabel.textContent = MODE_LABELS[mode] || 'Фільтри';
+      filterLabel.textContent = MODE_LABELS[mode];
       const isDefault = mode === 'alpha';
       filterBtn.classList.toggle('border-amber-400', !isDefault);
       filterBtn.classList.toggle('text-stone-900',   !isDefault);
@@ -2031,9 +2085,16 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const savedSearch = sessionStorage.getItem('revenue_search');
       if (savedSearch) { searchInput.value = savedSearch; sessionStorage.removeItem('revenue_search'); }
+      if (sessionStorage.getItem('revenue_hide_inactive') === '0') {
+        hideInactive = false;
+        if (hideInactiveBtn) {
+          hideInactiveBtn.classList.remove('is-active');
+          hideInactiveBtn.querySelector('span').textContent = 'Показані всі';
+        }
+      }
       const saved = sessionStorage.getItem('revenue_filter_mode');
-      if (saved && MODE_LABELS[saved]) { setMode(saved); } else { applyFilters(); updateCheckmarks(currentMode); }
-    } catch(e) { applyFilters(); updateCheckmarks(currentMode); }
+      if (saved && MODE_LABELS[saved]) { setMode(saved); } else { applySort('alpha'); applyFilters(); updateCheckmarks('alpha'); }
+    } catch(e) { applySort('alpha'); applyFilters(); updateCheckmarks('alpha'); }
   }());
 
   // ── Revenue edit mode ──────────────────────────────
@@ -2149,6 +2210,51 @@ document.addEventListener('DOMContentLoaded', function () {
           alert('Мережева помилка, спробуйте ще раз.');
           saveBtn.disabled = false;
         });
+    });
+  }());
+
+  // ── Record-holder modal (wedding max deliveries) ────
+  (function () {
+    const trigger = document.getElementById('wedding-record-card');
+    const modal   = document.getElementById('record-modal');
+    if (!trigger || !modal) return;
+    const uah = function (n) { return '₴' + Number(n || 0).toLocaleString('uk-UA').replace(/,/g, ' '); };
+
+    function close() { modal.classList.add('hidden'); }
+    document.getElementById('rm-close').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+    trigger.addEventListener('click', async function () {
+      const subId = trigger.dataset.subId;
+      try {
+        const res = await fetch('/reports/subscription/' + subId + '/record-card');
+        const data = await res.json();
+        if (!data.ok) throw new Error();
+        const c = data.card;
+        document.getElementById('rm-name').textContent = c.client_name;
+        document.getElementById('rm-type').textContent = c.type + (c.is_wedding ? ' · весільна' : '');
+        document.getElementById('rm-deliveries').textContent = c.deliveries_done + ' / ' + c.deliveries_total;
+        document.getElementById('rm-charged').textContent = uah(c.client_charged);
+        document.getElementById('rm-paid').textContent = uah(c.client_paid);
+        document.getElementById('rm-balance').textContent = uah(c.client_balance);
+        document.getElementById('rm-since').textContent = c.client_since;
+        const contacts = document.getElementById('rm-contacts');
+        contacts.innerHTML = '';
+        [['bi-telephone', c.phone], ['bi-instagram', c.instagram], ['bi-telegram', c.telegram]].forEach(function (p) {
+          if (!p[1]) return;
+          const span = document.createElement('span');
+          span.className = 'inline-flex items-center gap-1 rounded-lg px-2 py-1';
+          span.style.background = 'var(--r-bg)';
+          span.innerHTML = '<i class="bi ' + p[0] + '"></i> ' + p[1];
+          contacts.appendChild(span);
+        });
+        const open = document.getElementById('rm-open');
+        open.href = '/clients?q=' + encodeURIComponent(c.phone || c.client_name);
+        modal.classList.remove('hidden');
+      } catch (e) {
+        showToast ? showToast('Не вдалося завантажити картку', 'error') : alert('Не вдалося завантажити картку');
+      }
     });
   }());
 });

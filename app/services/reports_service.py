@@ -1183,8 +1183,12 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             totals[mo]['paid']    += paid
             balance = bal_end
 
+        # "Активність за період" — щонайменше одна операція в показаних місяцях:
+        # нарахування (доставка), оплата/поповнення, або коригування балансу.
         any_activity = any(
-            month_data[mo]['charged'] > 0 or month_data[mo]['paid'] > 0
+            month_data[mo]['charged'] != 0
+            or month_data[mo]['paid'] != 0
+            or month_data[mo]['adj'] != 0
             for mo in months
         )
 
@@ -1371,13 +1375,15 @@ def get_wedding_analytics(date_from_str=None, date_to_str=None):
     )
 
     per_sub_counts = (
-        db.session.query(func.count(Delivery.id))
-        .join(Order, Delivery.order_id == Order.id)
+        db.session.query(Order.subscription_id, func.count(Delivery.id).label('c'))
+        .join(Delivery, Delivery.order_id == Order.id)
         .filter(Order.subscription_id.in_(wedding_sub_ids))
         .group_by(Order.subscription_id)
+        .order_by(func.count(Delivery.id).desc())
         .all()
     )
-    max_deliveries_single_sub = max((c[0] for c in per_sub_counts), default=0)
+    max_deliveries_single_sub = per_sub_counts[0].c if per_sub_counts else 0
+    record_sub_id = per_sub_counts[0].subscription_id if per_sub_counts else None
 
     return {
         'active_count': active_count,
@@ -1387,7 +1393,68 @@ def get_wedding_analytics(date_from_str=None, date_to_str=None):
         'payments': int(payments),
         'avg_collected_per_sub': int(payments / subs_with_payment) if subs_with_payment else 0,
         'max_deliveries_single_sub': max_deliveries_single_sub,
+        'record_sub_id': record_sub_id,
         'revenue_share': round(float(revenue) / float(total_revenue) * 100, 1) if total_revenue else 0.0,
+    }
+
+
+def get_subscription_record_card(subscription_id):
+    """Detail payload for the 'record holder' modal on the LTV/wedding tab."""
+    from app.models.delivery import Delivery
+    from app.models.transaction import Transaction
+
+    sub = Subscription.query.get(subscription_id)
+    if not sub:
+        return None
+    client = sub.client
+
+    deliveries_total = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id == sub.id)
+        .scalar() or 0
+    )
+    deliveries_done = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id == sub.id, Delivery.status == 'Доставлено')
+        .scalar() or 0
+    )
+    # Lifetime charged for this client (all subscriptions + one-time)
+    client_charged = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'delivery_charge', Transaction.client_id == client.id)
+        .scalar() or 0
+    ) if client else 0
+    client_paid = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'credit', Transaction.client_id == client.id)
+        .scalar() or 0
+    ) if client else 0
+    first_order = (
+        db.session.query(func.min(Order.created_at))
+        .filter(Order.client_id == client.id)
+        .scalar()
+    ) if client else None
+
+    return {
+        'subscription_id': sub.id,
+        'client_id': client.id if client else None,
+        'client_name': (client.name or client.instagram or f'#{client.id}') if client else '—',
+        'instagram': (client.instagram or '') if client else '',
+        'telegram': (client.telegram or '') if client else '',
+        'phone': (client.phone or '') if client else '',
+        'type': sub.type or '—',
+        'is_wedding': bool(sub.is_wedding),
+        'status': sub.status,
+        'deliveries_total': deliveries_total,
+        'deliveries_done': deliveries_done,
+        'client_charged': int(client_charged),
+        'client_paid': int(client_paid),
+        'client_balance': int(client.credits or 0) if client else 0,
+        'client_since': first_order.strftime('%d.%m.%Y') if first_order else (
+            client.created_at.strftime('%d.%m.%Y') if client and client.created_at else '—'
+        ),
     }
 
 
@@ -1452,8 +1519,6 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
         .limit(10)
         .all()
     )
-    top_by_deliveries = [{'client': _client_label(c), 'count': int(n)} for c, n in top_del]
-
     top_rev = (
         db.session.query(Client, func.sum(Transaction.amount).label('r'))
         .join(Transaction, Transaction.client_id == Client.id)
@@ -1463,7 +1528,24 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
         .limit(10)
         .all()
     )
-    top_by_revenue = [{'client': _client_label(c), 'revenue': int(r or 0)} for c, r in top_rev]
+
+    # Order counts for every client shown in either top-10 (one query)
+    _top_ids = {c.id for c, _ in top_del} | {c.id for c, _ in top_rev}
+    order_counts = dict(
+        db.session.query(Order.client_id, func.count(Order.id))
+        .filter(Order.client_id.in_(_top_ids))
+        .group_by(Order.client_id)
+        .all()
+    ) if _top_ids else {}
+
+    top_by_deliveries = [
+        {'client': _client_label(c), 'count': int(n), 'orders': int(order_counts.get(c.id, 0))}
+        for c, n in top_del
+    ]
+    top_by_revenue = [
+        {'client': _client_label(c), 'revenue': int(r or 0), 'orders': int(order_counts.get(c.id, 0))}
+        for c, r in top_rev
+    ]
 
     # Lifespan per client:
     #   active client (has an upcoming delivery) → first delivered → today
@@ -1491,7 +1573,6 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
             continue
         end = today if r.client_id in active_client_ids else (r.last or r.first)
         lifespans[r.client_id] = max((end - r.first).days, 0)
-    avg_lifespan_days = round(sum(lifespans.values()) / len(lifespans)) if lifespans else 0
 
     client_types = (
         db.session.query(Order.client_id, Subscription.type)
@@ -1500,6 +1581,14 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
         .distinct()
         .all()
     )
+    # Overall average is computed over the SAME population as the by-type
+    # breakdown — clients that have at least one (non-draft) subscription —
+    # so the headline number is consistent with the rows beneath it. Clients
+    # with only one-time orders would otherwise drag it down.
+    subscription_client_ids = {cid for cid, _ in client_types}
+    sub_lifespans = [v for cid, v in lifespans.items() if cid in subscription_client_ids]
+    avg_lifespan_days = round(sum(sub_lifespans) / len(sub_lifespans)) if sub_lifespans else 0
+
     by_type = {}
     for client_id, sub_type in client_types:
         if client_id in lifespans and sub_type:
