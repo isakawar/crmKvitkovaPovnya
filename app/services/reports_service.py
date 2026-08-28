@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from sqlalchemy import func, case, literal
+from sqlalchemy import func, case, literal, or_
 
 from app.extensions import db
 from app.models import Client, Order, Settings
@@ -1406,20 +1406,38 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
 
     # Average deliveries per client — counts every planned delivery (delivered
     # + still awaiting), excluding only cancelled ones, so the number reflects
-    # what a client is actually signed up for (a subscription is ≥4 deliveries),
-    # not just how many have been fulfilled so far.
+    # what a client is actually signed up for, not just what's been fulfilled.
+    #
+    # Partial legacy subscriptions (imported mid-cycle, fewer than a full
+    # 4-delivery cycle) are excluded — they were never real full subscriptions
+    # and would drag the average down.
+    NOT_CANCELLED = Delivery.status != 'Скасовано'
+
+    full_sub_ids = [
+        r[0] for r in (
+            db.session.query(Order.subscription_id)
+            .join(Delivery, Delivery.order_id == Order.id)
+            .filter(Order.subscription_id.isnot(None), NOT_CANCELLED)
+            .group_by(Order.subscription_id)
+            .having(func.count(Delivery.id) >= 4)
+            .all()
+        )
+    ]
+
     sub_del = (
         db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
         .join(Order, Delivery.order_id == Order.id)
-        .filter(Delivery.status != 'Скасовано', Order.subscription_id.isnot(None))
+        .filter(NOT_CANCELLED, Order.subscription_id.in_(full_sub_ids))
         .group_by(Delivery.client_id)
         .all()
-    )
+    ) if full_sub_ids else []
     avg_sub_deliveries = round(sum(r.c for r in sub_del) / len(sub_del), 1) if sub_del else 0.0
 
     all_del = (
         db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
-        .filter(Delivery.status != 'Скасовано')
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(NOT_CANCELLED,
+                or_(Order.subscription_id.is_(None), Order.subscription_id.in_(full_sub_ids)))
         .group_by(Delivery.client_id)
         .all()
     )
