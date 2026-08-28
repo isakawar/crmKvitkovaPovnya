@@ -1396,7 +1396,7 @@
         <div class="rv-prog">
           <span class="rv-prog__rank">{{ loop.index }}</span>
           <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
-          <span class="rv-prog__meta">{{ row.orders }} зам.</span>
+          <span class="rv-prog__meta">{{ row.purchases }} покупок</span>
           <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.count / dmax * 100) | round(1) }}%"></span></span>
           <span class="rv-prog__val">{{ row.count }}</span>
         </div>
@@ -1415,7 +1415,7 @@
         <div class="rv-prog">
           <span class="rv-prog__rank">{{ loop.index }}</span>
           <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
-          <span class="rv-prog__meta">{{ row.orders }} зам.</span>
+          <span class="rv-prog__meta">{{ row.purchases }} покупок</span>
           <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.revenue / rmax * 100) | round(1) }}%"></span></span>
           <span class="rv-prog__val">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</span>
         </div>

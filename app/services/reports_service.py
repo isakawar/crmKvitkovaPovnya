@@ -1529,21 +1529,30 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
         .all()
     )
 
-    # Order counts for every client shown in either top-10 (one query)
+    # "Покупок" per client = distinct subscriptions + one-time orders
+    # (a subscription is one purchase, not one Order row per delivery).
     _top_ids = {c.id for c, _ in top_del} | {c.id for c, _ in top_rev}
-    order_counts = dict(
-        db.session.query(Order.client_id, func.count(Order.id))
-        .filter(Order.client_id.in_(_top_ids))
-        .group_by(Order.client_id)
-        .all()
-    ) if _top_ids else {}
+    purchases = {}
+    if _top_ids:
+        for cid, n in (
+            db.session.query(Order.client_id, func.count(Order.id))
+            .filter(Order.client_id.in_(_top_ids), Order.subscription_id.is_(None))
+            .group_by(Order.client_id).all()
+        ):
+            purchases[cid] = purchases.get(cid, 0) + int(n)
+        for cid, n in (
+            db.session.query(Subscription.client_id, func.count(Subscription.id))
+            .filter(Subscription.client_id.in_(_top_ids), Subscription.status != 'draft')
+            .group_by(Subscription.client_id).all()
+        ):
+            purchases[cid] = purchases.get(cid, 0) + int(n)
 
     top_by_deliveries = [
-        {'client': _client_label(c), 'count': int(n), 'orders': int(order_counts.get(c.id, 0))}
+        {'client': _client_label(c), 'count': int(n), 'purchases': purchases.get(c.id, 0)}
         for c, n in top_del
     ]
     top_by_revenue = [
-        {'client': _client_label(c), 'revenue': int(r or 0), 'orders': int(order_counts.get(c.id, 0))}
+        {'client': _client_label(c), 'revenue': int(r or 0), 'purchases': purchases.get(c.id, 0)}
         for c, r in top_rev
     ]
 
