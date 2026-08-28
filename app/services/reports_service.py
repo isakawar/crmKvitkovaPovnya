@@ -464,7 +464,7 @@ def _build_expense_breakdown(d_from, d_to, total_expenses):
 SUBSCRIPTION_TYPES = ('Weekly', 'Monthly', 'Bi-weekly')
 
 
-def _build_revenue_breakdown(d_from, d_to, total_revenue):
+def _build_revenue_breakdown(d_from, d_to, total_revenue, florist_total=0):
     from app.models.transaction import Transaction
     from app.models.delivery import Delivery
 
@@ -509,6 +509,14 @@ def _build_revenue_breakdown(d_from, d_to, total_revenue):
             'is_separator': False,
         })
 
+    if florist_total:
+        items.append({
+            'label': 'Офлайн продажі (флористи)',
+            'amount': florist_total,
+            'pct': round(florist_total / total_revenue * 100, 1),
+            'is_separator': False,
+        })
+
     # By size
     size_rows = (
         db.session.query(Order.size, func.sum(Transaction.amount))
@@ -542,6 +550,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     from app.models.transaction import Transaction
     from app.models.expense_category import ExpenseCategory
     from app.models.delivery import Delivery
+    from app.models.florist_sale import FloristSale
 
     d_from = _parse_date(date_from_str)
     d_to = _parse_date(date_to_str)
@@ -557,11 +566,17 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         .filter(Transaction.transaction_type == 'debit', *tx_filters)
         .scalar() or 0
     )
-    revenue = (
+    delivery_charge_revenue = (
         db.session.query(func.sum(Transaction.amount))
         .filter(Transaction.transaction_type == 'delivery_charge', *tx_filters)
         .scalar() or 0
     )
+    florist_total = (
+        db.session.query(func.sum(FloristSale.amount))
+        .filter(*_build_date_filters(func.date(FloristSale.created_at), d_from, d_to))
+        .scalar() or 0
+    )
+    revenue = delivery_charge_revenue + florist_total
 
     profit = revenue - total_expenses
     margin = round(profit / revenue * 100, 1) if revenue else 0.0
@@ -587,9 +602,9 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         .scalar() or 0
     )
 
-    revenue_per_delivery = round(revenue / delivery_count) if delivery_count else 0
+    revenue_per_delivery = round(delivery_charge_revenue / delivery_count) if delivery_count else 0
     flowers_per_delivery = round(flowers_expenses / delivery_count) if delivery_count else 0
-    revenue_breakdown = _build_revenue_breakdown(d_from, d_to, revenue)
+    revenue_breakdown = _build_revenue_breakdown(d_from, d_to, revenue, florist_total)
 
     return {
         'total_income': int(total_income),
