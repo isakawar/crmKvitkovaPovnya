@@ -410,6 +410,58 @@
 
   @media (max-width: 1100px) { .rv-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 640px)  { .rv-hero-grid { grid-template-columns: 1fr; } }
+
+  /* reports v2 — restyle existing components within the scoped wrapper */
+  .reports-v2 #rv-header {
+    background: linear-gradient(135deg, #ffffff 0%, var(--r-bg) 100%);
+    border-color: var(--r-line);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  }
+  .reports-v2 #rv-header .text-amber-700,
+  .reports-v2 #rv-header .text-amber-600 { color: var(--r-teal) !important; }
+  .reports-v2 #rv-header .border-amber-200 { border-color: var(--r-teal-soft) !important; }
+  .reports-v2 #rv-header .bg-amber-50 { background: var(--r-teal-soft) !important; }
+  .reports-v2 h1, .reports-v2 h2, .reports-v2 h3 { color: var(--r-ink); }
+  .reports-v2 .report-card,
+  .reports-v2 .export-block { border-color: var(--r-line); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); border-radius: 1rem; }
+  .reports-v2 .kpi-card {
+    border-color: var(--r-line); border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 0.9rem 1.1rem;
+  }
+  .reports-v2 .kpi-card__label { color: var(--r-faint); }
+  .reports-v2 .kpi-card__value { color: var(--r-ink); font-size: 1.65rem; }
+  .reports-v2 .kpi-card__sub { color: var(--r-muted); }
+  .reports-v2 .kpi-card__value--green  { color: var(--r-green); }
+  .reports-v2 .kpi-card__value--blue   { color: var(--r-teal); }
+  .reports-v2 .kpi-card__value--orange { color: var(--r-amber); }
+  .reports-v2 .kpi-card__value--red    { color: var(--r-red); }
+  .reports-v2 .report-kpi { background: var(--r-bg); border-color: var(--r-line); color: var(--r-slate); }
+  .reports-v2 .reports-tab-nav { border-bottom-color: var(--r-line); }
+  .reports-v2 .reports-tab-btn { color: var(--r-muted); }
+  .reports-v2 .reports-tab-btn:hover { color: var(--r-ink); }
+  .reports-v2 .reports-tab-btn.is-active { color: var(--r-teal); border-bottom-color: var(--r-teal); }
+  .reports-v2 .reports-filter-pill.is-active { background: var(--r-ink); border-color: var(--r-ink); }
+  .reports-v2 .report-switch { border-color: var(--r-line); }
+  .reports-v2 .report-switch-btn.is-active { background: var(--r-teal); color: #fff; }
+  .reports-v2 .expense-bar-fill { background: var(--r-teal); }
+
+  /* status pills (balance end column) */
+  .rv-pill {
+    display: inline-block; padding: 0.1rem 0.45rem; border-radius: 9999px;
+    font-size: 0.72rem; font-weight: 700; line-height: 1.35; white-space: nowrap;
+  }
+  .rv-pill--pos { background: #d1fae5; color: #047857; }
+  .rv-pill--neg { background: #fee2e2; color: #b91c1c; }
+
+  /* progress-bar widget (top clients, florists) */
+  .rv-prog { display: flex; align-items: center; gap: 0.7rem; padding: 0.45rem 0; }
+  .rv-prog + .rv-prog { border-top: 1px solid var(--r-line); }
+  .rv-prog__rank { width: 1.1rem; text-align: right; font-size: 0.75rem; color: var(--r-faint); flex-shrink: 0; }
+  .rv-prog__name { width: 8.5rem; flex-shrink: 0; font-size: 0.82rem; color: var(--r-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-prog__track { flex: 1; height: 8px; border-radius: 9999px; background: var(--r-bg); overflow: hidden; }
+  .rv-prog__fill { height: 100%; border-radius: 9999px; background: var(--r-teal); }
+  .rv-prog__val { width: 5.5rem; text-align: right; flex-shrink: 0; font-size: 0.82rem; font-weight: 700; color: var(--r-ink); }
 </style>
 {% endblock %}
 
@@ -419,7 +471,7 @@
 <div class="reports-v2 flex flex-col gap-5">
 
   <!-- ── Header ── -->
-  <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+  <section id="rv-header" class="rounded-[20px] border px-5 py-4">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
@@ -629,9 +681,9 @@
           <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
           <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="report-kpi">Разових: {{ orders.monthly_orders_total }}</span>
-          <span class="report-kpi">Підписок: {{ orders.monthly_subscriptions_total }}</span>
+        <div class="report-switch" id="trend-switch">
+          <button type="button" class="report-switch-btn is-active" data-series="subs">Підписки: {{ orders.monthly_subscriptions_total }}</button>
+          <button type="button" class="report-switch-btn is-active" data-series="orders">Разові: {{ orders.monthly_orders_total }}</button>
         </div>
       </div>
       {% if orders.monthly_orders_trend_chart['labels'] %}
@@ -723,27 +775,17 @@
         </div>
       </div>
       {% if florist.rows %}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-stone-200 bg-stone-50">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold text-stone-600">Флорист</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Кількість</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Загальна сума</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Бонус (5%)</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-stone-100">
-            {% for row in florist.rows %}
-            <tr class="hover:bg-stone-50 transition-colors">
-              <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
-              <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
-              <td class="px-3 py-2 text-right font-semibold text-stone-900">{{ "%.2f"|format(row.total_amount) }} ₴</td>
-              <td class="px-3 py-2 text-right font-semibold text-amber-700">{{ "%.2f"|format(row.total_bonus) }} ₴</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      {% set fmax = (florist.rows | map(attribute='total_amount') | max) or 1 %}
+      <div>
+        {% for row in florist.rows %}
+        <div class="rv-prog">
+          <span class="rv-prog__name" title="{{ row.name }}">{{ row.name }}</span>
+          <span class="text-xs text-stone-400 w-14 flex-shrink-0">{{ row.count }} шт</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.total_amount / fmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">{{ "%.0f"|format(row.total_amount) }} ₴</span>
+          <span class="w-20 flex-shrink-0 text-right text-xs font-semibold" style="color: var(--r-amber)">+{{ "%.0f"|format(row.total_bonus) }} ₴</span>
+        </div>
+        {% endfor %}
       </div>
       {% else %}
       <div class="report-empty">Немає продажів{% if range_label %} за {{ range_label }}{% endif %}</div>
@@ -924,6 +966,7 @@
         <div class="kpi-card__sub">Дохід / {{ pl.delivery_count }} доставок</div>
       </div>
 
+      {% if pl.delivery_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість 1 доставки</div>
         <div class="kpi-card__value">
@@ -931,7 +974,9 @@
         </div>
         <div class="kpi-card__sub">Витрати на доставку / кількість</div>
       </div>
+      {% endif %}
 
+      {% if pl.flowers_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість квітів на 1 доставку</div>
         <div class="kpi-card__value">
@@ -947,12 +992,15 @@
         </div>
         <div class="kpi-card__sub">₴{{ "{:,}".format(pl.flowers_expenses).replace(",", " ") }} витрат на квіти</div>
       </div>
+      {% endif %}
 
+      {% if pl.salary_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Витрати на ЗП</div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.salary_expenses).replace(",", " ") }}</div>
         <div class="kpi-card__sub">{{ (pl.salary_expenses / pl.expenses * 100) | round(1) if pl.expenses else 0 }}% від загальних витрат</div>
       </div>
+      {% endif %}
 
     </div>
 
@@ -1211,11 +1259,11 @@
 
               {# Кін #}
               {% if md.balance_end > 0 %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="rv-pill rv-pill--pos">+{{ md.balance_end }}</span></td>
               {% elif md.balance_end < 0 %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="rv-pill rv-pill--neg">{{ md.balance_end }}</span></td>
               {% else %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="text-stone-300 text-xs">0</span></td>
               {% endif %}
 
               {% endfor %}
@@ -1325,39 +1373,35 @@
 
     <div class="grid gap-4 md:grid-cols-2 mt-4">
       <div class="report-card p-5">
-        <h3 class="text-sm font-semibold text-stone-800 mb-3">Топ-10 клієнтів за доставками</h3>
+        <h3 class="text-sm font-semibold mb-3">Топ-10 клієнтів за доставками</h3>
         {% if ltv.top_by_deliveries %}
-        <table class="w-full text-sm">
-          <tbody>
-            {% for row in ltv.top_by_deliveries %}
-            <tr class="border-b border-stone-50">
-              <td class="py-2 text-stone-400 w-6">{{ loop.index }}</td>
-              <td class="py-2 text-stone-700">{{ row.client }}</td>
-              <td class="py-2 text-right text-stone-700 font-medium">{{ row.count }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        {% set dmax = (ltv.top_by_deliveries | map(attribute='count') | max) or 1 %}
+        {% for row in ltv.top_by_deliveries %}
+        <div class="rv-prog">
+          <span class="rv-prog__rank">{{ loop.index }}</span>
+          <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.count / dmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">{{ row.count }}</span>
+        </div>
+        {% endfor %}
         {% else %}
         <p class="text-sm text-stone-400">Немає даних</p>
         {% endif %}
       </div>
 
       <div class="report-card p-5">
-        <h3 class="text-sm font-semibold text-stone-800 mb-3">Топ-10 клієнтів за доходом</h3>
-        <p class="text-xs text-stone-400 -mt-2 mb-3">Нараховано за доставки. Офлайн-продажі флориста не входять.</p>
+        <h3 class="text-sm font-semibold mb-1">Топ-10 клієнтів за доходом</h3>
+        <p class="text-xs text-stone-400 mb-3">Нараховано за доставки. Офлайн-продажі флориста не входять.</p>
         {% if ltv.top_by_revenue %}
-        <table class="w-full text-sm">
-          <tbody>
-            {% for row in ltv.top_by_revenue %}
-            <tr class="border-b border-stone-50">
-              <td class="py-2 text-stone-400 w-6">{{ loop.index }}</td>
-              <td class="py-2 text-stone-700">{{ row.client }}</td>
-              <td class="py-2 text-right text-stone-700 font-medium">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        {% set rmax = (ltv.top_by_revenue | map(attribute='revenue') | max) or 1 %}
+        {% for row in ltv.top_by_revenue %}
+        <div class="rv-prog">
+          <span class="rv-prog__rank">{{ loop.index }}</span>
+          <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.revenue / rmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</span>
+        </div>
+        {% endfor %}
         {% else %}
         <p class="text-sm text-stone-400">Немає даних</p>
         {% endif %}
@@ -1564,31 +1608,42 @@ document.addEventListener('DOMContentLoaded', function () {
   }());
 
   // ── Chart helpers ──────────────────────────────────
+  const RV_TEAL   = 'rgba(13, 148, 136, 0.82)';
+  const RV_SLATE  = 'rgba(71, 85, 105, 0.82)';
+  const RV_TIP    = { backgroundColor: '#0f172a', titleColor: '#fff', bodyColor: '#e2e8f0', displayColors: false, padding: 10, cornerRadius: 8 };
+
+  // Vertical bar (kept for small categorical charts like sizes)
   function createBarChart(canvasId, labels, values, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
     new Chart(canvas.getContext('2d'), {
       type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: color,
-          borderRadius: 8,
-          borderSkipped: false,
-          maxBarThickness: 46
-        }]
-      },
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: color || RV_TEAL, borderRadius: 8, borderSkipped: false, maxBarThickness: 46 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
         scales: {
-          x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } }
+        }
+      }
+    });
+  }
+
+  // Horizontal bar — for long-tail categories (cities, marketing sources, types)
+  function createHBarChart(canvasId, labels, values, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !labels || !labels.length) return;
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: color || RV_TEAL, borderRadius: 6, borderSkipped: false, maxBarThickness: 30 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } },
+          y: { ticks: { color: '#334155', font: { size: 11.5 } }, grid: { display: false } }
         }
       }
     });
@@ -1597,50 +1652,47 @@ document.addEventListener('DOMContentLoaded', function () {
   function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
-    new Chart(canvas.getContext('2d'), {
+    const chart = new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
         labels: labels,
         datasets: [
           {
-            label: 'Нові разові замовлення',
-            data: ordersValues,
-            borderColor: 'rgba(17, 24, 39, 0.88)',
-            backgroundColor: 'rgba(17, 24, 39, 0.12)',
-            pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-            tension: 0.28,
-            fill: false,
+            label: 'Підписки', data: subscriptionsValues,
+            borderColor: 'rgba(13, 148, 136, 0.95)', backgroundColor: 'rgba(13, 148, 136, 0.14)',
+            pointBackgroundColor: 'rgba(13, 148, 136, 0.95)',
+            pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2, tension: 0.3, fill: true,
           },
           {
-            label: 'Нові підписки',
-            data: subscriptionsValues,
-            borderColor: 'rgba(16, 185, 129, 0.9)',
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-            pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-            tension: 0.28,
-            fill: false,
+            label: 'Разові замовлення', data: ordersValues,
+            borderColor: 'rgba(71, 85, 105, 0.9)', backgroundColor: 'rgba(71, 85, 105, 0.10)',
+            pointBackgroundColor: 'rgba(71, 85, 105, 0.9)',
+            pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2, tension: 0.3, fill: true,
           }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, position: 'top', labels: { color: '#57534e', boxWidth: 12, usePointStyle: true } },
-          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff' }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
         scales: {
-          x: { ticks: { color: '#78716c', maxRotation: 40, minRotation: 0, font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          x: { ticks: { color: '#64748b', maxRotation: 40, minRotation: 0, font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } }
         }
       }
     });
+
+    const sw = document.getElementById('trend-switch');
+    if (sw) {
+      const idx = { subs: 0, orders: 1 };
+      sw.querySelectorAll('[data-series]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const on = btn.classList.toggle('is-active');
+          chart.setDatasetVisibility(idx[btn.dataset.series], on);
+          chart.update();
+        });
+      });
+    }
+    return chart;
   }
 
   function createSwitchableChart(canvasId, initial, color) {
@@ -1674,16 +1726,14 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   const PIE_COLORS = [
-    'rgba(59, 130, 246, 0.82)',
-    'rgba(245, 158, 11, 0.82)',
-    'rgba(16, 185, 129, 0.82)',
-    'rgba(239, 68, 68, 0.82)',
-    'rgba(139, 92, 246, 0.82)',
-    'rgba(236, 72, 153, 0.82)',
-    'rgba(20, 184, 166, 0.82)',
-    'rgba(249, 115, 22, 0.82)',
-    'rgba(99, 102, 241, 0.82)',
-    'rgba(161, 161, 170, 0.82)'
+    'rgba(13, 148, 136, 0.88)',
+    'rgba(71, 85, 105, 0.85)',
+    'rgba(45, 212, 191, 0.85)',
+    'rgba(148, 163, 184, 0.85)',
+    'rgba(15, 118, 110, 0.85)',
+    'rgba(100, 116, 139, 0.85)',
+    'rgba(94, 234, 212, 0.85)',
+    'rgba(203, 213, 225, 0.9)'
   ];
 
   function createSwitchablePieChart(canvasId, initial) {
@@ -1722,7 +1772,7 @@ document.addEventListener('DOMContentLoaded', function () {
                   const val = data.datasets[0].data[i] || 0;
                   const pct = sum > 0 ? Math.round(val / sum * 100) : 0;
                   return {
-                    text: label + ' — ' + pct + '%',
+                    text: label + ' · ' + val + ' (' + pct + '%)',
                     fillStyle: PIE_COLORS[i % PIE_COLORS.length],
                     strokeStyle: '#fff',
                     lineWidth: 2,
@@ -1753,7 +1803,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const marketingData = { labels: {{ orders.marketing_chart['labels']|tojson }}, values: {{ orders.marketing_chart['values']|tojson }} };
   const forWhomData   = { labels: {{ orders.for_whom_chart['labels']|tojson }}, values: {{ orders.for_whom_chart['values']|tojson }} };
 
-  createSwitchableChart('marketingChart', marketingData, 'rgba(245, 158, 11, 0.75)');
+  createHBarChart('marketingChart', marketingData.labels, marketingData.values, RV_SLATE);
   createSwitchablePieChart('forWhomChart', forWhomData);
 
   createLineTrendChart(
@@ -1763,8 +1813,8 @@ document.addEventListener('DOMContentLoaded', function () {
     {{ orders.monthly_orders_trend_chart['subscriptions_values']|tojson }}
   );
 
-  createBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
-  createBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          'rgba(139, 92, 246, 0.72)');
+  createHBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, RV_TEAL);
+  createHBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          RV_SLATE);
 
   // ── Deliveries dynamics (area chart) ──────────────
   (function () {
@@ -1806,11 +1856,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }());
 
   // ── Deliveries by city ────────────────────────────
-  createBarChart(
+  createHBarChart(
     'deliveriesCityChart',
     {{ deliveries.city_chart['labels']|tojson }},
     {{ deliveries.city_chart['values']|tojson }},
-    'rgba(245, 158, 11, 0.8)'
+    RV_TEAL
   );
 
   // ── Revenue breakdown toggle ───────────────────────
