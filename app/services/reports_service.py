@@ -1404,10 +1404,14 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     def _client_label(c):
         return c.name or c.instagram or f'#{c.id}'
 
+    # Average deliveries per client — counts every planned delivery (delivered
+    # + still awaiting), excluding only cancelled ones, so the number reflects
+    # what a client is actually signed up for (a subscription is ≥4 deliveries),
+    # not just how many have been fulfilled so far.
     sub_del = (
         db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
         .join(Order, Delivery.order_id == Order.id)
-        .filter(Delivery.status == DELIVERED, Order.subscription_id.isnot(None))
+        .filter(Delivery.status != 'Скасовано', Order.subscription_id.isnot(None))
         .group_by(Delivery.client_id)
         .all()
     )
@@ -1415,7 +1419,7 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
 
     all_del = (
         db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
-        .filter(Delivery.status == DELIVERED)
+        .filter(Delivery.status != 'Скасовано')
         .group_by(Delivery.client_id)
         .all()
     )
