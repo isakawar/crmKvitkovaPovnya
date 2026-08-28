@@ -46,6 +46,7 @@ def _subscription_snapshot(sub) -> dict:
         'comment': sub.comment,
         'preferences': sub.preferences,
         'is_stopped': sub.is_stopped,
+        'is_wedding': sub.is_wedding,
     }
 
 
@@ -300,6 +301,8 @@ def create_subscription(client, form):
     except (ValueError, TypeError):
         delivery_count = 4
 
+    is_wedding = form.get('is_wedding') in (True, 'true', 'True', '1', 'on')
+
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
@@ -327,6 +330,7 @@ def create_subscription(client, form):
         preferences=form.get('preferences') or None,
         discount=discount,
         delivery_count=delivery_count,
+        is_wedding=is_wedding,
     )
     db.session.add(subscription)
     db.session.flush()
@@ -907,6 +911,8 @@ def update_subscription(subscription, form):
     subscription.preferences = form.get('preferences', '').strip() or None
     discount_raw = form.get('discount', '').strip()
     subscription.discount = int(discount_raw) if discount_raw else None
+
+    subscription.is_wedding = form.get('is_wedding') in (True, 'true', 'True', '1', 'on')
 
     for order in subscription.orders:
         all_delivered = all(d.status == 'Доставлено' for d in order.deliveries)

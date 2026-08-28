@@ -283,6 +283,7 @@ def subscription_detail(subscription_id):
             'for_whom': subscription.for_whom or '',
         },
         'discount': subscription.discount or '',
+        'is_wedding': bool(subscription.is_wedding),
         'notes': {
             'comment': subscription.comment or '',
             'preferences': subscription.preferences or '',
