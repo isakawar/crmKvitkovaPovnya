@@ -46,6 +46,7 @@
     {% for t, label, count in [
         ('all',      'Всі',        all_count),
         ('active',   'Активні',    active_count),
+        ('wedding',  'Весільні',   wedding_count),
         ('draft',    'Драфтові',   draft_count),
         ('stopped',  'На стопі',   stopped_count),
         ('finished', 'Закінчені',  finished_count),
@@ -216,7 +217,10 @@
     <!-- Top: client + status dot -->
     <div class="flex items-start justify-between mb-3">
       <div>
-        <p class="font-medium text-stone-900 text-sm">{{ sub.client.display_name }}</p>
+        <p class="font-medium text-stone-900 text-sm">
+          {{ sub.client.display_name }}
+          {% if sub.is_wedding %}<span class="ml-1 inline-flex items-center gap-0.5 rounded-md bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600"><i class="bi bi-heart-fill" style="font-size:8px"></i> Весільна</span>{% endif %}
+        </p>
         <p class="text-xs text-stone-400 mt-0.5">{{ sub.recipient_name }}</p>
       </div>
       <div class="w-2 h-2 rounded-full mt-1 flex-shrink-0 {{ 'bg-green-400' if is_active else 'bg-stone-300' }}"

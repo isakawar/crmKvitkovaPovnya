@@ -68,12 +68,15 @@ def subscriptions_list():
     active_count = sum(1 for s in data if s['completed'] < s['total'] and not s['subscription'].is_stopped)
     stopped_count = sum(1 for s in data if s['subscription'].is_stopped)
     finished_count = sum(1 for s in data if s['completed'] == s['total'] and not s['subscription'].is_stopped)
+    wedding_count = sum(1 for s in data if s['subscription'].is_wedding)
     if tab == 'active':
         data = [s for s in data if s['completed'] < s['total'] and not s['subscription'].is_stopped]
     elif tab == 'stopped':
         data = [s for s in data if s['subscription'].is_stopped]
     elif tab == 'finished':
         data = [s for s in data if s['completed'] == s['total'] and not s['subscription'].is_stopped]
+    elif tab == 'wedding':
+        data = [s for s in data if s['subscription'].is_wedding]
 
     if tab == 'draft':
         drafts = get_draft_subscriptions(q=search_query or None)
@@ -103,6 +106,7 @@ def subscriptions_list():
         draft_count=draft_count,
         stopped_count=stopped_count,
         finished_count=finished_count,
+        wedding_count=wedding_count,
         tab_count=tab_count,
         per_page=per_page,
         page=page,
