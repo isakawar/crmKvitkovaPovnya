@@ -89,6 +89,8 @@ document.addEventListener('DOMContentLoaded', function () {
       const instagram = this.dataset.clientInstagram || '';
       window._convertingDraftId = this.dataset.draftConvert;
       window.orderComposerApi?.openComposer('subscription', instagram);
+      const weddingBox = document.getElementById('is-wedding-input');
+      if (weddingBox) weddingBox.checked = true;
     });
   });
 

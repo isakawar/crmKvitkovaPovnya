@@ -43,7 +43,7 @@ After implementation always: describe how to test, expected behavior, edge cases
 
 ## Reports & Statistics Architecture
 
-Page: `/reports` (blueprint: `app/blueprints/reports/`). Tabs: Deliveries, P&L, Export, Cash Flow, Баланс клієнтів.
+Page: `/reports` (blueprint: `app/blueprints/reports/`). Tabs (v2): **Огляд / P&L** (`overview` — P&L + Cash Flow), **Доставки та Продажі** (`sales`), **LTV та Клієнти** (`clients`), **Баланс клієнтів** (`balance`). A 4-card hero grid (`get_dashboard_kpis` → `kpis`) sits above the tabs. Export is a header dropdown, not a tab. Legacy `?tab=` values (deliveries/pl/cash_flow/export/revenue/wedding_ltv) are mapped in `routes.py`. Scoped palette lives under `.reports-v2` in `index.html`'s style block.
 
 ### Public API — one function per domain
 
@@ -55,6 +55,9 @@ Page: `/reports` (blueprint: `app/blueprints/reports/`). Tabs: Deliveries, P&L, 
 | `get_subscription_renewal_rate(date_from_str, date_to_str)` | `subscriptions` | Renewal rate, renewed/declined/pending counts |
 | `get_florist_sales_data(date_from_str, date_to_str)` | `florist` | Offline florist sales with 5% bonus; defaults to current month when no range given |
 | `get_client_revenue_breakdown(date_from_str, date_to_str)` | `revenue` | Per-client monthly balance: start balance, Нараховано (delivery_charge), Оплачено (credit), end balance; defaults to last 3 months |
+| `get_dashboard_kpis(date_from_str, date_to_str, pl=None)` | `kpis` | The 4 hero cards above the tabs: revenue (+`revenue_growth_pct` vs previous equal-length period, `None` for all-time), profit (+margin), deliveries done (+in progress), active subscriptions (+new in range). Pass an already-computed `pl` dict to skip recomputing `get_pl_data`. |
+| `get_wedding_analytics(date_from_str, date_to_str)` | `wedding` | Wedding-subscription KPIs: revenue (delivery_charge), payments (credit linked to sub), deliveries done, orders, avg collected per sub, max deliveries on one sub, revenue share. Range filters revenue/payments/deliveries/orders; `active_count` + `max_deliveries_single_sub` are all-time |
+| `get_ltv_data(date_from_str, date_to_str)` | `ltv` | Lifetime-value metrics, all all-time (range ignored): avg deliveries per client (subscription-only and total), top-10 clients by deliveries, top-10 by revenue, avg lifespan (active client: first delivery → today; churned: first → last delivery), lifespan by subscription periodicity |
 
 ### How the route passes data to the template
 
@@ -83,6 +86,7 @@ Template accesses data via namespace: `{{ deliveries.total }}`, `{{ pl.revenue }
 
 - **Label normalization**: `_label_key()` / `_display_label()` — normalizes Ukrainian variants of "not specified" into a single bucket. Use these when aggregating any string column from user input.
 - **Chart data format**: always `{'labels': [...], 'values': [...]}` — matches Chart.js expectations.
+- **Long-tail grouping**: `_group_small_items(items, other_label, min_pct=2.5, keep_top=None)` — folds small buckets into one "Інші"/"Інші міста"/"Інше" row. Applied to city / marketing-source / for-whom charts. `items` must be sorted count-desc.
 - **Monthly gap filling**: `_fill_monthly_gaps(month_counts: dict[date, int])` — fills zero-value months between first and last.
 - **Status aggregation**: use `func.sum(case((Model.status == 'X', 1), else_=0))` — never load full objects and count in Python.
 - **`_rows_to_items(rows)`**: converts `[(raw_label, count)]` query results into `[{'label': str, 'count': int}]` with deduplication and sorting.
