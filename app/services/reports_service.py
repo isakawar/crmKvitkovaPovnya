@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from sqlalchemy import func, case, literal
+from sqlalchemy import func, case, literal, or_
 
 from app.extensions import db
 from app.models import Client, Order, Settings
@@ -68,6 +68,35 @@ def _ordered_items(items, preferred_labels):
 
 def _total(items):
     return sum(item['count'] for item in items)
+
+
+def _group_small_items(items, other_label='Інші', min_pct=2.5, keep_top=None):
+    """Collapse long-tail buckets into a single ``other_label`` row.
+
+    A bucket is folded in when its share of the total is below ``min_pct``.
+    When ``keep_top`` is set, only the first ``keep_top`` buckets are kept and
+    the rest are folded regardless of share. ``items`` must already be sorted
+    by count desc (``_rows_to_items`` does this). Returns a new list; the
+    ``other_label`` row, if any, is appended last.
+    """
+    total = _total(items)
+    if not total or len(items) <= 1:
+        return list(items)
+
+    kept, tail = [], 0
+    for idx, item in enumerate(items):
+        over_top = keep_top is not None and idx >= keep_top
+        below_pct = item['count'] / total * 100 < min_pct
+        if over_top or below_pct:
+            tail += item['count']
+        else:
+            kept.append(item)
+
+    if tail and len(kept) < len(items):
+        kept.append({'label': other_label, 'count': tail})
+    elif not kept:  # everything was tiny — keep original rather than a lone "other"
+        return list(items)
+    return kept
 
 
 def _build_date_filters(col, d_from, d_to):
@@ -244,8 +273,8 @@ def get_orders_data(date_from_str=None, date_to_str=None):
         'for_whom_total': _total(for_whom),
         'delivery_type_total': _total(delivery_type),
         'size_total': _total(size),
-        'marketing_chart': _items_to_chart(marketing),
-        'for_whom_chart': _items_to_chart(for_whom),
+        'marketing_chart': _items_to_chart(_group_small_items(marketing, other_label='Інші', min_pct=2.5)),
+        'for_whom_chart': _items_to_chart(_group_small_items(for_whom, other_label='Інше', keep_top=3, min_pct=0)),
         'delivery_type_chart': _items_to_chart(delivery_type),
         'size_chart': _items_to_chart(size),
         'monthly_orders_total': sum(trend['orders_values']),
@@ -331,7 +360,7 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     city_rows = (
         city_q.group_by(Order.city)
         .order_by(func.count(Delivery.id).desc())
-        .limit(10)
+        .limit(50)
         .all()
     )
 
@@ -373,7 +402,9 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
         'new_clients_delta': new_clients_delta,
         'new_clients_delta_pct': new_clients_delta_pct,
         'dynamics_chart': {'labels': dyn_labels, 'values': dyn_values},
-        'city_chart': _items_to_chart(_rows_to_items(city_rows)),
+        'city_chart': _items_to_chart(
+            _group_small_items(_rows_to_items(city_rows), other_label='Інші міста', min_pct=2.5)
+        ),
     }
 
 
@@ -581,6 +612,28 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     profit = revenue - total_expenses
     margin = round(profit / revenue * 100, 1) if revenue else 0.0
 
+    # Revenue growth: selected period vs the immediately preceding period of
+    # equal length. Only meaningful when a full range is selected.
+    revenue_growth_pct = None
+    if d_from and d_to and d_to >= d_from:
+        span = (d_to - d_from).days
+        prev_to = d_from - timedelta(days=1)
+        prev_from = prev_to - timedelta(days=span)
+        prev_tx_filters = _build_date_filters(Transaction.date, prev_from, prev_to)
+        prev_charge = (
+            db.session.query(func.sum(Transaction.amount))
+            .filter(Transaction.transaction_type == 'delivery_charge', *prev_tx_filters)
+            .scalar() or 0
+        )
+        prev_florist = (
+            db.session.query(func.sum(FloristSale.amount))
+            .filter(*_build_date_filters(func.date(FloristSale.created_at), prev_from, prev_to))
+            .scalar() or 0
+        )
+        prev_revenue = prev_charge + prev_florist
+        if prev_revenue:
+            revenue_growth_pct = round(float(revenue - prev_revenue) / float(prev_revenue) * 100, 1)
+
     expense_breakdown = _build_expense_breakdown(d_from, d_to, total_expenses)
 
     def _category_expenses(slug):
@@ -609,6 +662,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     return {
         'total_income': int(total_income),
         'revenue': int(revenue),
+        'revenue_growth_pct': revenue_growth_pct,
         'expenses': total_expenses,
         'profit': profit,
         'margin': margin,
@@ -1129,8 +1183,12 @@ def get_client_revenue_breakdown(date_from_str=None, date_to_str=None):
             totals[mo]['paid']    += paid
             balance = bal_end
 
+        # "Активність за період" — щонайменше одна операція в показаних місяцях:
+        # нарахування (доставка), оплата/поповнення, або коригування балансу.
         any_activity = any(
-            month_data[mo]['charged'] > 0 or month_data[mo]['paid'] > 0
+            month_data[mo]['charged'] != 0
+            or month_data[mo]['paid'] != 0
+            or month_data[mo]['adj'] != 0
             for mo in months
         )
 
@@ -1171,3 +1229,392 @@ def get_active_months():
     # Exclude future months — they have no historical data worth filtering by
     months = {(y, m) for y, m in months if (y, m) <= (today.year, today.month)}
     return sorted(months, reverse=True)  # newest first
+
+
+# ── Dashboard hero KPIs ───────────────────────────────────────────────────────
+
+def get_dashboard_kpis(date_from_str=None, date_to_str=None, pl=None):
+    """The four always-visible hero metrics above the report tabs.
+
+    Reuses the domain data so the numbers never drift from their tabs. Pass an
+    already-computed ``pl`` dict (from :func:`get_pl_data`) to avoid recomputing.
+    """
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    if pl is None:
+        pl = get_pl_data(date_from_str, date_to_str)
+
+    del_filters = _build_date_filters(Delivery.delivery_date, d_from, d_to)
+    del_row = (
+        db.session.query(
+            func.count(Delivery.id).label('total'),
+            func.sum(case((Delivery.status == 'Доставлено', 1), else_=0)).label('done'),
+            func.sum(case((Delivery.status == 'Скасовано', 1), else_=0)).label('cancelled'),
+        )
+        .filter(*del_filters)
+        .one()
+    )
+    total = del_row.total or 0
+    done = del_row.done or 0
+    in_progress = total - done - (del_row.cancelled or 0)
+
+    active_subscriptions = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.status == 'active')
+        .scalar() or 0
+    )
+    new_subs_filters = _build_date_filters(func.date(Subscription.created_at), d_from, d_to)
+    new_subscriptions = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.status != 'draft', *new_subs_filters)
+        .scalar() or 0
+    )
+
+    return {
+        'revenue': pl['revenue'],
+        'revenue_growth_pct': pl['revenue_growth_pct'],
+        'profit': pl['profit'],
+        'margin': pl['margin'],
+        'deliveries_done': done,
+        'deliveries_in_progress': in_progress,
+        'active_subscriptions': active_subscriptions,
+        'new_subscriptions': new_subscriptions,
+    }
+
+
+# ── Wedding subscription analytics ────────────────────────────────────────────
+
+def get_wedding_analytics(date_from_str=None, date_to_str=None):
+    """Wedding subscription KPIs.
+
+    Revenue / payments / deliveries / orders follow the selected date range
+    (each filtered by its own date column). `active_count` and
+    `max_deliveries_single_sub` are all-time snapshots, independent of the range.
+
+    Note: `payments` relies on a credit Transaction being linked to the
+    subscription (via the linked order) — only reliably populated from
+    Aug 2026 onward.
+    """
+    from app.models.transaction import Transaction
+    from app.models.delivery import Delivery
+
+    d_from = _parse_date(date_from_str)
+    d_to = _parse_date(date_to_str)
+
+    wedding_sub_ids = [
+        r[0] for r in db.session.query(Subscription.id)
+        .filter(Subscription.is_wedding.is_(True)).all()
+    ]
+
+    active_count = (
+        db.session.query(func.count(Subscription.id))
+        .filter(Subscription.is_wedding.is_(True), Subscription.status == 'active')
+        .scalar() or 0
+    )
+
+    empty = {
+        'active_count': active_count,
+        'orders_in_range': 0,
+        'deliveries_done': 0,
+        'revenue': 0,
+        'payments': 0,
+        'avg_collected_per_sub': 0,
+        'max_deliveries_single_sub': 0,
+        'revenue_share': 0.0,
+    }
+    if not wedding_sub_ids:
+        return empty
+
+    orders_in_range = (
+        db.session.query(func.count(Order.id))
+        .filter(Order.subscription_id.in_(wedding_sub_ids),
+                *_build_date_filters(func.date(Order.created_at), d_from, d_to))
+        .scalar() or 0
+    )
+
+    del_by_status = dict(
+        db.session.query(Delivery.status, func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id.in_(wedding_sub_ids),
+                *_build_date_filters(Delivery.delivery_date, d_from, d_to))
+        .group_by(Delivery.status)
+        .all()
+    )
+    deliveries_done = del_by_status.get('Доставлено', 0)
+    deliveries_pending = del_by_status.get('Очікує', 0) + del_by_status.get('Розподілено', 0)
+
+    revenue = (
+        db.session.query(func.sum(Transaction.amount))
+        .join(Delivery, Transaction.delivery_id == Delivery.id)
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Transaction.transaction_type == 'delivery_charge',
+                Order.subscription_id.in_(wedding_sub_ids),
+                *_build_date_filters(Transaction.date, d_from, d_to))
+        .scalar() or 0
+    )
+
+    total_revenue = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'delivery_charge',
+                *_build_date_filters(Transaction.date, d_from, d_to))
+        .scalar() or 0
+    )
+
+    payment_filters = [
+        Transaction.transaction_type == 'credit',
+        Transaction.subscription_id.in_(wedding_sub_ids),
+        *_build_date_filters(Transaction.date, d_from, d_to),
+    ]
+    payments = (
+        db.session.query(func.sum(Transaction.amount)).filter(*payment_filters).scalar() or 0
+    )
+    subs_with_payment = (
+        db.session.query(func.count(func.distinct(Transaction.subscription_id)))
+        .filter(*payment_filters).scalar() or 0
+    )
+
+    per_sub_counts = (
+        db.session.query(Order.subscription_id, func.count(Delivery.id).label('c'))
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id.in_(wedding_sub_ids))
+        .group_by(Order.subscription_id)
+        .order_by(func.count(Delivery.id).desc())
+        .all()
+    )
+    max_deliveries_single_sub = per_sub_counts[0].c if per_sub_counts else 0
+    record_sub_id = per_sub_counts[0].subscription_id if per_sub_counts else None
+
+    return {
+        'active_count': active_count,
+        'orders_in_range': orders_in_range,
+        'deliveries_done': deliveries_done,
+        'deliveries_pending': deliveries_pending,
+        'revenue': int(revenue),
+        'payments': int(payments),
+        'avg_collected_per_sub': int(payments / subs_with_payment) if subs_with_payment else 0,
+        'max_deliveries_single_sub': max_deliveries_single_sub,
+        'record_sub_id': record_sub_id,
+        'revenue_share': round(float(revenue) / float(total_revenue) * 100, 1) if total_revenue else 0.0,
+    }
+
+
+def get_subscription_record_card(subscription_id):
+    """Detail payload for the 'record holder' modal on the LTV/wedding tab."""
+    from app.models.delivery import Delivery
+    from app.models.transaction import Transaction
+
+    sub = Subscription.query.get(subscription_id)
+    if not sub:
+        return None
+    client = sub.client
+
+    deliveries_total = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id == sub.id)
+        .scalar() or 0
+    )
+    deliveries_done = (
+        db.session.query(func.count(Delivery.id))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(Order.subscription_id == sub.id, Delivery.status == 'Доставлено')
+        .scalar() or 0
+    )
+    # Lifetime charged for this client (all subscriptions + one-time)
+    client_charged = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'delivery_charge', Transaction.client_id == client.id)
+        .scalar() or 0
+    ) if client else 0
+    client_paid = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(Transaction.transaction_type == 'credit', Transaction.client_id == client.id)
+        .scalar() or 0
+    ) if client else 0
+    first_order = (
+        db.session.query(func.min(Order.created_at))
+        .filter(Order.client_id == client.id)
+        .scalar()
+    ) if client else None
+
+    return {
+        'subscription_id': sub.id,
+        'client_id': client.id if client else None,
+        'client_name': client.display_name if client else '—',
+        'instagram': (client.instagram or '') if client else '',
+        'telegram': (client.telegram or '') if client else '',
+        'phone': (client.phone or '') if client else '',
+        'type': sub.type or '—',
+        'is_wedding': bool(sub.is_wedding),
+        'status': sub.status,
+        'deliveries_total': deliveries_total,
+        'deliveries_done': deliveries_done,
+        'client_charged': int(client_charged),
+        'client_paid': int(client_paid),
+        'client_balance': int(client.credits or 0) if client else 0,
+        'client_since': first_order.strftime('%d.%m.%Y') if first_order else (
+            client.created_at.strftime('%d.%m.%Y') if client and client.created_at else '—'
+        ),
+    }
+
+
+# ── Customer LTV analytics ────────────────────────────────────────────────────
+
+def get_ltv_data(date_from_str=None, date_to_str=None):
+    """Lifetime-value metrics. All metrics are all-time — the date range is
+    accepted for signature consistency but intentionally ignored."""
+    from app.models.delivery import Delivery
+    from app.models.transaction import Transaction
+
+    DELIVERED = 'Доставлено'
+
+    def _client_label(c):
+        return c.display_name  # instagram → telegram → phone → name → #id
+
+    # Average deliveries per client — counts every planned delivery (delivered
+    # + still awaiting), excluding only cancelled ones, so the number reflects
+    # what a client is actually signed up for, not just what's been fulfilled.
+    #
+    # Partial legacy subscriptions (imported mid-cycle, fewer than a full
+    # 4-delivery cycle) are excluded — they were never real full subscriptions
+    # and would drag the average down.
+    NOT_CANCELLED = Delivery.status != 'Скасовано'
+
+    full_sub_ids = [
+        r[0] for r in (
+            db.session.query(Order.subscription_id)
+            .join(Delivery, Delivery.order_id == Order.id)
+            .filter(Order.subscription_id.isnot(None), NOT_CANCELLED)
+            .group_by(Order.subscription_id)
+            .having(func.count(Delivery.id) >= 4)
+            .all()
+        )
+    ]
+
+    sub_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(NOT_CANCELLED, Order.subscription_id.in_(full_sub_ids))
+        .group_by(Delivery.client_id)
+        .all()
+    ) if full_sub_ids else []
+    avg_sub_deliveries = round(sum(r.c for r in sub_del) / len(sub_del), 1) if sub_del else 0.0
+
+    all_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(NOT_CANCELLED,
+                or_(Order.subscription_id.is_(None), Order.subscription_id.in_(full_sub_ids)))
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    avg_all_deliveries = round(sum(r.c for r in all_del) / len(all_del), 1) if all_del else 0.0
+
+    top_del = (
+        db.session.query(Client, func.count(Delivery.id).label('c'))
+        .join(Delivery, Delivery.client_id == Client.id)
+        .filter(Delivery.status == DELIVERED)
+        .group_by(Client.id)
+        .order_by(func.count(Delivery.id).desc())
+        .limit(10)
+        .all()
+    )
+    top_rev = (
+        db.session.query(Client, func.sum(Transaction.amount).label('r'))
+        .join(Transaction, Transaction.client_id == Client.id)
+        .filter(Transaction.transaction_type == 'delivery_charge')
+        .group_by(Client.id)
+        .order_by(func.sum(Transaction.amount).desc())
+        .limit(10)
+        .all()
+    )
+
+    # "Покупок" per client = distinct subscriptions + one-time orders
+    # (a subscription is one purchase, not one Order row per delivery).
+    _top_ids = {c.id for c, _ in top_del} | {c.id for c, _ in top_rev}
+    purchases = {}
+    if _top_ids:
+        for cid, n in (
+            db.session.query(Order.client_id, func.count(Order.id))
+            .filter(Order.client_id.in_(_top_ids), Order.subscription_id.is_(None))
+            .group_by(Order.client_id).all()
+        ):
+            purchases[cid] = purchases.get(cid, 0) + int(n)
+        for cid, n in (
+            db.session.query(Subscription.client_id, func.count(Subscription.id))
+            .filter(Subscription.client_id.in_(_top_ids), Subscription.status != 'draft')
+            .group_by(Subscription.client_id).all()
+        ):
+            purchases[cid] = purchases.get(cid, 0) + int(n)
+
+    top_by_deliveries = [
+        {'client': _client_label(c), 'count': int(n), 'purchases': purchases.get(c.id, 0)}
+        for c, n in top_del
+    ]
+    top_by_revenue = [
+        {'client': _client_label(c), 'revenue': int(r or 0), 'purchases': purchases.get(c.id, 0)}
+        for c, r in top_rev
+    ]
+
+    # Lifespan per client:
+    #   active client (has an upcoming delivery) → first delivered → today
+    #   churned client (no upcoming deliveries)  → first delivered → last delivered
+    today = date.today()
+    bounds = (
+        db.session.query(
+            Delivery.client_id,
+            func.min(Delivery.delivery_date).label('first'),
+            func.max(Delivery.delivery_date).label('last'),
+        )
+        .filter(Delivery.status == DELIVERED)
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    active_client_ids = {
+        r[0] for r in db.session.query(Delivery.client_id)
+        .filter(Delivery.status.in_(['Очікує', 'Розподілено']))
+        .distinct()
+        .all()
+    }
+    lifespans = {}
+    for r in bounds:
+        if not r.first:
+            continue
+        end = today if r.client_id in active_client_ids else (r.last or r.first)
+        lifespans[r.client_id] = max((end - r.first).days, 0)
+
+    client_types = (
+        db.session.query(Order.client_id, Subscription.type)
+        .join(Subscription, Subscription.id == Order.subscription_id)
+        .filter(Subscription.status != 'draft')
+        .distinct()
+        .all()
+    )
+    # Overall average is computed over the SAME population as the by-type
+    # breakdown — clients that have at least one (non-draft) subscription —
+    # so the headline number is consistent with the rows beneath it. Clients
+    # with only one-time orders would otherwise drag it down.
+    subscription_client_ids = {cid for cid, _ in client_types}
+    sub_lifespans = [v for cid, v in lifespans.items() if cid in subscription_client_ids]
+    avg_lifespan_days = round(sum(sub_lifespans) / len(sub_lifespans)) if sub_lifespans else 0
+
+    by_type = {}
+    for client_id, sub_type in client_types:
+        if client_id in lifespans and sub_type:
+            by_type.setdefault(sub_type, []).append(lifespans[client_id])
+    lifespan_by_type = [
+        {'type': t, 'clients': len(v), 'avg_days': round(sum(v) / len(v))}
+        for t, v in sorted(by_type.items(), key=lambda kv: -len(kv[1]))
+    ]
+
+    return {
+        'avg_sub_deliveries_per_client': avg_sub_deliveries,
+        'avg_all_deliveries_per_client': avg_all_deliveries,
+        'top_by_deliveries': top_by_deliveries,
+        'top_by_revenue': top_by_revenue,
+        'avg_lifespan_days': avg_lifespan_days,
+        'lifespan_by_type': lifespan_by_type,
+    }

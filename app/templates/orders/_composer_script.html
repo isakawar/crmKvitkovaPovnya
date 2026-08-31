@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const deliveryDayField = document.getElementById('delivery-day-field');
     const deliveryDaySelect = document.getElementById('delivery-day-select');
     const firstDeliveryLabel = document.getElementById('first-delivery-label');
+    const isWeddingField = document.getElementById('is-wedding-field');
+    const isWeddingInput = document.getElementById('is-wedding-input');
     const sizeSelect = document.getElementById('size-select');
     const customAmountDiv = document.getElementById('custom-amount-div');
     const customAmountInput = document.getElementById('custom-amount-input');
@@ -261,6 +263,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (deliveryDayField) {
             deliveryDayField.classList.toggle('hidden', currentComposerFlow !== 'subscription');
+        }
+        if (isWeddingField) {
+            isWeddingField.classList.toggle('hidden', currentComposerFlow !== 'subscription');
         }
         if (deliveryTypeSelect) {
             deliveryTypeSelect.required = currentComposerFlow === 'subscription';
@@ -915,6 +920,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const fd = new FormData(addOrderForm);
+            // A subscription created from a wedding draft is always a wedding subscription
+            if (window._convertingDraftId) fd.set('is_wedding', 'on');
             if (extraPhonesContainer) {
                 extraPhonesContainer.querySelectorAll('.extra-phone-input').forEach(inp => {
                     let v = inp.value.trim();
@@ -1232,6 +1239,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (commentInput) commentInput.value = subData.notes.comment || '';
         if (preferencesInput) preferencesInput.value = subData.notes.preferences || '';
         if (clientDiscountInput) clientDiscountInput.value = subData.discount || '';
+        if (isWeddingInput) isWeddingInput.checked = Boolean(subData.is_wedding);
         const tfFrom = addOrderForm.querySelector('[name="time_from"]');
         const tfTo = addOrderForm.querySelector('[name="time_to"]');
         if (tfFrom) tfFrom.value = subData.delivery.time_from || '';

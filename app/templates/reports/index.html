@@ -351,16 +351,128 @@
   /* Edit mode */
   .rv-input { width: 70px; text-align: right; border: 1px solid #d6d3d1; border-radius: 4px; padding: 1px 4px; font-size: 0.8rem; background: #fff; }
   .rv-input:focus { outline: none; border-color: #f59e0b; box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+
+  /* ══════════════ reports v2 — scoped palette & components ══════════════ */
+  .reports-v2 {
+    --r-bg:        #f7f9fc;
+    --r-surface:   #ffffff;
+    --r-ink:       #0f172a;
+    --r-muted:     #64748b;
+    --r-faint:     #94a3b8;
+    --r-line:      #e2e8f0;
+    --r-teal:      #0d9488;
+    --r-teal-soft: #ccfbf1;
+    --r-slate:     #475569;
+    --r-slate-soft:#e2e8f0;
+    --r-green:     #059669;
+    --r-red:       #dc2626;
+    --r-amber:     #d97706;
+  }
+
+  /* Hero grid — always visible above tabs */
+  .rv-hero-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+  .rv-hero {
+    border: 1px solid var(--r-line);
+    border-radius: 1rem;
+    background: var(--r-surface);
+    padding: 0.9rem 1.05rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  }
+  .rv-hero__label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.07em;
+    text-transform: uppercase; color: var(--r-faint); margin-bottom: 0.3rem;
+  }
+  .rv-hero__value { font-size: 1.7rem; font-weight: 700; line-height: 1.05; color: var(--r-ink); }
+  .rv-hero__sub { margin-top: 0.3rem; font-size: 0.76rem; color: var(--r-muted); }
+  .rv-delta--up   { color: var(--r-green); font-weight: 600; }
+  .rv-delta--down { color: var(--r-red);   font-weight: 600; }
+  .rv-delta--flat { color: var(--r-faint); }
+
+  /* Export dropdown */
+  .rv-export-wrap { position: relative; }
+  .rv-export-menu {
+    position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 40;
+    min-width: 15rem; padding: 0.35rem;
+    border: 1px solid var(--r-line); border-radius: 0.9rem;
+    background: #fff; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  }
+  .rv-export-menu a {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.5rem 0.7rem; border-radius: 0.6rem;
+    font-size: 0.85rem; color: var(--r-ink); text-decoration: none;
+  }
+  .rv-export-menu a:hover { background: var(--r-bg); }
+  .rv-export-menu__group { padding: 0.4rem 0.7rem 0.2rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--r-faint); }
+
+  @media (max-width: 1100px) { .rv-hero-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px)  { .rv-hero-grid { grid-template-columns: 1fr; } }
+
+  /* reports v2 — restyle existing components within the scoped wrapper */
+  .reports-v2 #rv-header {
+    background: linear-gradient(135deg, #ffffff 0%, var(--r-bg) 100%);
+    border-color: var(--r-line);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  }
+  .reports-v2 #rv-header .text-amber-700,
+  .reports-v2 #rv-header .text-amber-600 { color: var(--r-teal) !important; }
+  .reports-v2 #rv-header .border-amber-200 { border-color: var(--r-teal-soft) !important; }
+  .reports-v2 #rv-header .bg-amber-50 { background: var(--r-teal-soft) !important; }
+  .reports-v2 h1, .reports-v2 h2, .reports-v2 h3 { color: var(--r-ink); }
+  .reports-v2 .report-card,
+  .reports-v2 .export-block { border-color: var(--r-line); box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); border-radius: 1rem; }
+  .reports-v2 .kpi-card {
+    border-color: var(--r-line); border-radius: 1rem;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    padding: 0.9rem 1.1rem;
+  }
+  .reports-v2 .kpi-card__label { color: var(--r-faint); }
+  .reports-v2 .kpi-card__value { color: var(--r-ink); font-size: 1.65rem; }
+  .reports-v2 .kpi-card__sub { color: var(--r-muted); }
+  .reports-v2 .kpi-card__value--green  { color: var(--r-green); }
+  .reports-v2 .kpi-card__value--blue   { color: var(--r-teal); }
+  .reports-v2 .kpi-card__value--orange { color: var(--r-amber); }
+  .reports-v2 .kpi-card__value--red    { color: var(--r-red); }
+  .reports-v2 .report-kpi { background: var(--r-bg); border-color: var(--r-line); color: var(--r-slate); }
+  .reports-v2 .reports-tab-nav { border-bottom-color: var(--r-line); }
+  .reports-v2 .reports-tab-btn { color: var(--r-muted); }
+  .reports-v2 .reports-tab-btn:hover { color: var(--r-ink); }
+  .reports-v2 .reports-tab-btn.is-active { color: var(--r-teal); border-bottom-color: var(--r-teal); }
+  .reports-v2 .reports-filter-pill.is-active { background: var(--r-ink); border-color: var(--r-ink); }
+  .reports-v2 .report-switch { border-color: var(--r-line); }
+  .reports-v2 .report-switch-btn.is-active { background: var(--r-teal); color: #fff; }
+  .reports-v2 .expense-bar-fill { background: var(--r-teal); }
+
+  /* status pills (balance end column) */
+  .rv-pill {
+    display: inline-block; padding: 0.1rem 0.45rem; border-radius: 9999px;
+    font-size: 0.72rem; font-weight: 700; line-height: 1.35; white-space: nowrap;
+  }
+  .rv-pill--pos { background: #d1fae5; color: #047857; }
+  .rv-pill--neg { background: #fee2e2; color: #b91c1c; }
+
+  /* progress-bar widget (top clients, florists) */
+  .rv-prog { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; }
+  .rv-prog + .rv-prog { border-top: 1px solid var(--r-line); }
+  .rv-prog__rank { width: 1.1rem; text-align: right; font-size: 0.75rem; color: var(--r-faint); flex-shrink: 0; }
+  .rv-prog__name { flex: 1; min-width: 0; font-size: 0.85rem; color: var(--r-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rv-prog__meta { flex-shrink: 0; font-size: 0.72rem; color: var(--r-faint); white-space: nowrap; }
+  .rv-prog__track { width: 72px; flex-shrink: 0; height: 7px; border-radius: 9999px; background: var(--r-slate-soft); overflow: hidden; }
+  .rv-prog__fill { height: 100%; border-radius: 9999px; background: var(--r-teal); }
+  .rv-prog__val { width: 6rem; text-align: right; flex-shrink: 0; font-size: 0.85rem; font-weight: 700; color: var(--r-ink); }
 </style>
 {% endblock %}
 
 {% block content %}
 {% set has_range = date_from or date_to %}
 {% set range_label = (date_from + ' — ' + date_to) if (date_from and date_to) else (date_from or date_to) %}
-<div class="flex flex-col gap-5">
+<div class="reports-v2 flex flex-col gap-5">
 
   <!-- ── Header ── -->
-  <section class="rounded-[28px] border border-stone-200 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.14),transparent_30%),linear-gradient(135deg,#ffffff_0%,#fafaf9_58%,#f5f5f4_100%)] px-5 py-4 shadow-[0_18px_48px_rgba(28,25,23,0.08)]">
+  <section id="rv-header" class="rounded-[20px] border px-5 py-4">
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-700">
@@ -407,39 +519,91 @@
                   class="inline-flex h-9 items-center justify-center rounded-xl bg-stone-900 px-4 text-sm font-medium text-white transition-colors hover:bg-stone-700 hidden">
             Оновити
           </button>
+
+          <!-- Divider -->
+          <span class="text-stone-300 text-sm select-none">|</span>
+
+          <!-- Export dropdown -->
+          <div class="rv-export-wrap">
+            <button type="button" id="rv-export-btn"
+                    class="inline-flex h-9 items-center gap-2 rounded-xl border border-stone-200 bg-white px-3.5 text-sm font-medium text-stone-700 transition-colors hover:border-stone-300 hover:text-stone-900">
+              <i class="bi bi-download"></i>
+              Експорт
+              <i class="bi bi-chevron-down text-xs"></i>
+            </button>
+            <div id="rv-export-menu" class="rv-export-menu hidden">
+              <div class="rv-export-menu__group">Замовлення</div>
+              <a id="export-orders-csv"  href="#"><i class="bi bi-filetype-csv"></i> CSV</a>
+              <a id="export-orders-xlsx" href="#"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+              <div class="rv-export-menu__group">Транзакції</div>
+              <a id="export-tx-csv"  href="#"><i class="bi bi-filetype-csv"></i> CSV</a>
+              <a id="export-tx-xlsx" href="#"><i class="bi bi-file-earmark-spreadsheet"></i> Excel</a>
+            </div>
+          </div>
         </div>
       </form>
     </div>
   </section>
 
+  <!-- ── Hero summary grid (always visible) ── -->
+  {% set kpi_growth = kpis.revenue_growth_pct %}
+  <div class="rv-hero-grid">
+    <div class="rv-hero">
+      <div class="rv-hero__label">Загальний дохід</div>
+      <div class="rv-hero__value">₴{{ "{:,}".format(kpis.revenue).replace(",", " ") }}</div>
+      <div class="rv-hero__sub">
+        {% if kpi_growth is none %}
+          <span class="rv-delta--flat">—</span> за весь час
+        {% elif kpi_growth >= 0 %}
+          <span class="rv-delta--up">▲ {{ kpi_growth }}%</span> vs попередній період
+        {% else %}
+          <span class="rv-delta--down">▼ {{ kpi_growth | abs }}%</span> vs попередній період
+        {% endif %}
+      </div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Чистий прибуток</div>
+      <div class="rv-hero__value">₴{{ "{:,}".format(kpis.profit | round | int).replace(",", " ") }}</div>
+      <div class="rv-hero__sub">Рентабельність <strong>{{ kpis.margin }}%</strong></div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Виконано доставок</div>
+      <div class="rv-hero__value">{{ kpis.deliveries_done }}</div>
+      <div class="rv-hero__sub">В процесі: <strong>{{ kpis.deliveries_in_progress }}</strong></div>
+    </div>
+    <div class="rv-hero">
+      <div class="rv-hero__label">Активні підписки</div>
+      <div class="rv-hero__value">{{ kpis.active_subscriptions }}</div>
+      <div class="rv-hero__sub">
+        {% if has_range %}<span class="rv-delta--up">+{{ kpis.new_subscriptions }}</span> нових за період{% else %}усього активних{% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- ── Tab navigation ── -->
   <div class="reports-tab-nav">
-    <button type="button" class="reports-tab-btn {% if active_tab == 'deliveries' %}is-active{% endif %}" data-tab="deliveries">
-      <i class="bi bi-bar-chart-line"></i>
-      Доставки
-    </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'pl' %}is-active{% endif %}" data-tab="pl">
+    <button type="button" class="reports-tab-btn {% if active_tab == 'overview' %}is-active{% endif %}" data-tab="overview">
       <i class="bi bi-graph-up-arrow"></i>
-      P&L
+      Огляд / P&L
     </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'export' %}is-active{% endif %}" data-tab="export">
-      <i class="bi bi-download"></i>
-      Експорт
+    <button type="button" class="reports-tab-btn {% if active_tab == 'sales' %}is-active{% endif %}" data-tab="sales">
+      <i class="bi bi-bar-chart-line"></i>
+      Доставки та Продажі
     </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'cash_flow' %}is-active{% endif %}" data-tab="cash_flow">
-      <i class="bi bi-cash-stack"></i>
-      Cash Flow
-    </button>
-    <button type="button" class="reports-tab-btn {% if active_tab == 'revenue' %}is-active{% endif %}" data-tab="revenue">
+    <button type="button" class="reports-tab-btn {% if active_tab == 'clients' %}is-active{% endif %}" data-tab="clients">
       <i class="bi bi-people"></i>
+      LTV та Клієнти
+    </button>
+    <button type="button" class="reports-tab-btn {% if active_tab == 'balance' %}is-active{% endif %}" data-tab="balance">
+      <i class="bi bi-wallet2"></i>
       Баланс клієнтів
     </button>
   </div>
 
   <!-- ════════════════════════════════════════════
-       TAB: DELIVERIES
+       TAB: SALES (Доставки та Продажі)
   ════════════════════════════════════════════ -->
-  <div id="tab-deliveries" class="reports-tab-content {% if active_tab == 'deliveries' %}is-active{% endif %}">
+  <div id="tab-sales" class="reports-tab-content {% if active_tab == 'sales' %}is-active{% endif %}">
 
     <!-- KPI cards -->
     <div class="kpi-grid">
@@ -518,9 +682,9 @@
           <h2 class="text-lg font-semibold text-stone-900">Динаміка нових замовлень / підписок</h2>
           <p class="text-sm text-stone-500">Помісячний тренд: бачиш ріст або падіння в порівнянні з попередніми періодами.</p>
         </div>
-        <div class="flex items-center gap-2">
-          <span class="report-kpi">Разових: {{ orders.monthly_orders_total }}</span>
-          <span class="report-kpi">Підписок: {{ orders.monthly_subscriptions_total }}</span>
+        <div class="report-switch" id="trend-switch">
+          <button type="button" class="report-switch-btn is-active" data-series="subs">Підписки: {{ orders.monthly_subscriptions_total }}</button>
+          <button type="button" class="report-switch-btn is-active" data-series="orders">Разові: {{ orders.monthly_orders_total }}</button>
         </div>
       </div>
       {% if orders.monthly_orders_trend_chart['labels'] %}
@@ -542,7 +706,7 @@
           </div>
         </div>
         {% if orders.marketing_chart['labels'] %}
-        <div class="report-chart-wrap"><canvas id="marketingChart"></canvas></div>
+        <div class="report-chart-wrap report-chart-wrap--pie"><canvas id="marketingChart"></canvas></div>
         {% else %}
         <div class="report-empty">Немає даних для графіка</div>
         {% endif %}
@@ -612,39 +776,29 @@
         </div>
       </div>
       {% if florist.rows %}
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead class="border-b border-stone-200 bg-stone-50">
-            <tr>
-              <th class="px-3 py-2 text-left font-semibold text-stone-600">Флорист</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Кількість</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Загальна сума</th>
-              <th class="px-3 py-2 text-right font-semibold text-stone-600">Бонус (5%)</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-stone-100">
-            {% for row in florist.rows %}
-            <tr class="hover:bg-stone-50 transition-colors">
-              <td class="px-3 py-2 font-medium text-stone-800">{{ row.name }}</td>
-              <td class="px-3 py-2 text-right text-stone-600">{{ row.count }}</td>
-              <td class="px-3 py-2 text-right font-semibold text-stone-900">{{ "%.2f"|format(row.total_amount) }} ₴</td>
-              <td class="px-3 py-2 text-right font-semibold text-amber-700">{{ "%.2f"|format(row.total_bonus) }} ₴</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+      {% set fmax = (florist.rows | map(attribute='total_amount') | max) or 1 %}
+      <div>
+        {% for row in florist.rows %}
+        <div class="rv-prog">
+          <span class="rv-prog__name" title="{{ row.name }}">{{ row.name }}</span>
+          <span class="text-xs text-stone-400 w-14 flex-shrink-0">{{ row.count }} шт</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.total_amount / fmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">{{ "%.0f"|format(row.total_amount) }} ₴</span>
+          <span class="w-20 flex-shrink-0 text-right text-xs font-semibold" style="color: var(--r-amber)">+{{ "%.0f"|format(row.total_bonus) }} ₴</span>
+        </div>
+        {% endfor %}
       </div>
       {% else %}
       <div class="report-empty">Немає продажів{% if range_label %} за {{ range_label }}{% endif %}</div>
       {% endif %}
     </section>
 
-  </div>{# /tab-deliveries #}
+  </div>{# /tab-sales #}
 
   <!-- ════════════════════════════════════════════
-       TAB: P&L
+       TAB: OVERVIEW (Огляд / P&L + Cash Flow)
   ════════════════════════════════════════════ -->
-  <div id="tab-pl" class="reports-tab-content {% if active_tab == 'pl' %}is-active{% endif %}">
+  <div id="tab-overview" class="reports-tab-content {% if active_tab == 'overview' %}is-active{% endif %}">
 
     <!-- Main KPI cards -->
     <div class="kpi-grid">
@@ -813,6 +967,7 @@
         <div class="kpi-card__sub">Дохід / {{ pl.delivery_count }} доставок</div>
       </div>
 
+      {% if pl.delivery_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість 1 доставки</div>
         <div class="kpi-card__value">
@@ -820,7 +975,9 @@
         </div>
         <div class="kpi-card__sub">Витрати на доставку / кількість</div>
       </div>
+      {% endif %}
 
+      {% if pl.flowers_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Вартість квітів на 1 доставку</div>
         <div class="kpi-card__value">
@@ -836,100 +993,23 @@
         </div>
         <div class="kpi-card__sub">₴{{ "{:,}".format(pl.flowers_expenses).replace(",", " ") }} витрат на квіти</div>
       </div>
+      {% endif %}
 
+      {% if pl.salary_expenses %}
       <div class="kpi-card">
         <div class="kpi-card__label">Витрати на ЗП</div>
         <div class="kpi-card__value kpi-card__value--red">₴{{ "{:,}".format(pl.salary_expenses).replace(",", " ") }}</div>
         <div class="kpi-card__sub">{{ (pl.salary_expenses / pl.expenses * 100) | round(1) if pl.expenses else 0 }}% від загальних витрат</div>
       </div>
+      {% endif %}
 
     </div>
 
-  </div>{# /tab-pl #}
-
-  <!-- ════════════════════════════════════════════
-       TAB: EXPORT
-  ════════════════════════════════════════════ -->
-  <div id="tab-export" class="reports-tab-content {% if active_tab == 'export' %}is-active{% endif %}">
-
-    <p class="text-sm text-stone-500">Оберіть діапазон дат та завантажте дані у потрібному форматі. Якщо дати не вказані — експортується весь доступний архів.</p>
-
-    <!-- Orders export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-box-seam text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Замовлення</h2>
-          </div>
-          <p class="text-sm text-stone-500">ID, клієнт, адреса, розмір, дата, статус, кур'єр, коментарі</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-orders-from" value="{{ date_from }}">
-            <input type="hidden" id="export-orders-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-orders-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-orders-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-orders-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
+    <!-- ── Cash Flow section (inside Огляд / P&L) ── -->
+    <div class="mt-3 mb-1 flex items-center gap-2">
+      <span class="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">Cash Flow</span>
+      <div class="flex-1 border-t border-slate-100"></div>
     </div>
-
-    <!-- Transactions export -->
-    <div class="export-block">
-      <div class="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <i class="bi bi-arrow-left-right text-amber-600"></i>
-            <h2 class="text-base font-semibold text-stone-900">Транзакції</h2>
-          </div>
-          <p class="text-sm text-stone-500">Дата, тип, клієнт, сума, спосіб оплати, тип витрати, коментар</p>
-        </div>
-
-        <div class="flex flex-col gap-3 w-full sm:w-auto">
-          <div class="flex items-center gap-2 flex-wrap">
-            <input type="hidden" id="export-tx-from" value="{{ date_from }}">
-            <input type="hidden" id="export-tx-to"   value="{{ date_to }}">
-            <div class="relative">
-              <i class="bi bi-calendar3 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400"></i>
-              <input type="text" id="export-tx-picker" placeholder="Весь період" readonly
-                     class="h-9 w-40 rounded-xl border border-stone-200 bg-stone-50 pl-9 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500">
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <a id="export-tx-csv" href="#" class="export-btn export-btn--primary">
-              <i class="bi bi-filetype-csv"></i>
-              CSV
-            </a>
-            <a id="export-tx-xlsx" href="#" class="export-btn">
-              <i class="bi bi-file-earmark-spreadsheet"></i>
-              Excel
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>{# /tab-export #}
-
-  <!-- ════════════════════════════════════════════
-       TAB: CASH FLOW
-  ════════════════════════════════════════════ -->
-  <div id="tab-cash_flow" class="reports-tab-content {% if active_tab == 'cash_flow' %}is-active{% endif %}">
 
     <!-- KPI cards -->
     <div class="kpi-grid">
@@ -987,13 +1067,13 @@
     <div class="report-card p-5">
       <div class="flex items-center justify-between gap-2 mb-4">
         <div class="flex items-center gap-2">
-          <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:#d4c97a"></span>
+          <span class="inline-block w-3 h-3 rounded-sm flex-shrink-0" style="background:rgba(13, 148, 136, 0.55)"></span>
           <span class="text-sm font-medium text-stone-700">
             {% if cash_flow.mode == 'monthly' %}Місячні надходження — Весь час{% else %}Щоденні надходження — {{ cash_flow.period_label }}{% endif %}
           </span>
         </div>
         {% if cash_flow.mode == 'daily' %}
-        <a href="?tab=cash_flow"
+        <a href="?tab=overview"
            class="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900">
           <i class="bi bi-arrow-left text-xs"></i>
           Весь час
@@ -1005,12 +1085,12 @@
       </div>
     </div>
 
-  </div>{# /tab-cash_flow #}
+  </div>{# /tab-overview #}
 
   <!-- ════════════════════════════════════════════
-       TAB: REVENUE — per-client monthly balance
+       TAB: BALANCE — per-client monthly balance
   ════════════════════════════════════════════ -->
-  <div id="tab-revenue" class="reports-tab-content {% if active_tab == 'revenue' %}is-active{% endif %}">
+  <div id="tab-balance" class="reports-tab-content {% if active_tab == 'balance' %}is-active{% endif %}">
 
     <div class="report-card p-4">
       <!-- Header + controls -->
@@ -1018,6 +1098,7 @@
         <div>
           <h2 class="text-base font-semibold text-stone-800">Баланс клієнтів по місяцях</h2>
           <p class="text-xs text-stone-400 mt-0.5">Залишок на початок · Нараховано · Оплачено · Залишок на кінець &middot; <span class="text-blue-400">Поч. редагується через кнопку &laquo;Редагувати&raquo;</span></p>
+          <p class="text-xs text-stone-400 mt-0.5">За замовчуванням показані лише клієнти, що мали хоча б одну операцію (нарахування, оплата, коригування) за вибраний період.</p>
         </div>
         {% if revenue.rows %}
         <div class="flex flex-wrap items-center gap-2">
@@ -1032,12 +1113,18 @@
               class="h-8 w-48 rounded-xl border border-stone-200 bg-white pl-8 pr-3 text-sm text-stone-700 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
           </div>
-          <!-- Filter dropdown -->
+          <!-- Hide-inactive toggle -->
+          <button type="button" id="revenue-hide-inactive"
+                  class="reports-filter-pill is-active" title="Показуються клієнти, які мали хоча б одну операцію протягом вибраного періоду">
+            <i class="bi bi-eye-slash text-xs mr-1"></i>
+            <span>Тільки з операціями</span>
+          </button>
+          <!-- Sort dropdown -->
           <div class="relative" id="revenue-filter-wrap">
             <button id="revenue-filter-btn"
                     class="inline-flex h-8 items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-600 transition-colors hover:border-amber-400 hover:text-stone-900"
                     data-mode="alpha">
-              <i class="bi bi-funnel text-xs"></i>
+              <i class="bi bi-sort-alpha-down text-xs"></i>
               <span id="revenue-filter-label">За алфавітом</span>
               <i class="bi bi-chevron-down text-xs"></i>
             </button>
@@ -1047,11 +1134,6 @@
                 <i class="bi bi-check-lg text-xs text-amber-500" data-check="alpha"></i>
                 За алфавітом
               </button>
-              <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="active">
-                <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="active"></i>
-                Тільки активні
-              </button>
-              <div class="my-1 border-t border-stone-100"></div>
               <button class="revenue-filter-option w-full flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50" data-mode="bal-asc">
                 <i class="bi bi-check-lg text-xs text-amber-500 invisible" data-check="bal-asc"></i>
                 За балансом ↑
@@ -1180,11 +1262,11 @@
 
               {# Кін #}
               {% if md.balance_end > 0 %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-emerald-600">{{ md.balance_end }}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="rv-pill rv-pill--pos">+{{ md.balance_end }}</span></td>
               {% elif md.balance_end < 0 %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-red-500">{{ md.balance_end }}</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="rv-pill rv-pill--neg">{{ md.balance_end }}</span></td>
               {% else %}
-              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right font-bold text-stone-300">0</td>
+              <td class="revenue-table__td {{ bnd }} revenue-table__sep text-right"><span class="text-stone-300 text-xs">0</span></td>
               {% endif %}
 
               {% endfor %}
@@ -1199,7 +1281,183 @@
       {% endif %}
     </div>
 
-  </div>{# /tab-revenue #}
+  </div>{# /tab-balance #}
+
+  <!-- ════════════════════════════════════════════
+       TAB: CLIENTS (LTV та Клієнти)
+  ════════════════════════════════════════════ -->
+  <div id="tab-clients" class="reports-tab-content {% if active_tab == 'clients' %}is-active{% endif %}">
+
+    <h2 class="text-base font-semibold text-stone-800 mb-1">
+      Весільні підписки
+      {% if has_range %}<span class="ml-1 rounded-md bg-teal-50 px-1.5 py-0.5 text-[11px] font-medium text-teal-700">{{ range_label }}</span>{% endif %}
+    </h2>
+    <p class="text-xs text-stone-400 mb-3">Дохід, доставки, оплати та замовлення — за обраний період{% if not has_range %} (зараз: весь час){% endif %}. Активні підписки та рекорд доставок — завжди за весь час.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Активних весільних</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ wedding.active_count }}</div>
+        <div class="kpi-card__sub">Зараз, статус active</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Дохід (нараховано)</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.revenue).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">{{ wedding.revenue_share }}% від загального revenue</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Оплат отримано</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.payments).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Платежі, привʼязані до весільної підписки</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Сер. сума зібрана / підписку</div>
+        <div class="kpi-card__value kpi-card__value--green">₴{{ "{:,}".format(wedding.avg_collected_per_sub).replace(",", " ") }}</div>
+        <div class="kpi-card__sub">Серед весільних з ≥1 оплатою</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок здійснено</div>
+        <div class="kpi-card__value">{{ wedding.deliveries_done }}</div>
+        <div class="kpi-card__sub">Виконано{% if wedding.deliveries_pending %} · ще {{ wedding.deliveries_pending }} заплановано на період{% endif %}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Замовлень створено</div>
+        <div class="kpi-card__value">{{ wedding.orders_in_range }}</div>
+        <div class="kpi-card__sub">За обраний період</div>
+      </div>
+      {% if wedding.record_sub_id %}
+      <button type="button" id="wedding-record-card"
+              class="kpi-card text-left cursor-pointer hover:border-stone-300 transition-colors"
+              data-sub-id="{{ wedding.record_sub_id }}">
+        <div class="flex items-start justify-between gap-2">
+          <div class="kpi-card__label">Макс. доставок / підписку</div>
+          <i class="bi bi-arrow-up-right text-stone-400 text-xs mt-0.5"></i>
+        </div>
+        <div class="kpi-card__value">{{ wedding.max_deliveries_single_sub }}</div>
+        <div class="kpi-card__sub">Натисни щоб побачити рекордсмена</div>
+      </button>
+      {% else %}
+      <div class="kpi-card">
+        <div class="kpi-card__label">Макс. доставок / підписку</div>
+        <div class="kpi-card__value">{{ wedding.max_deliveries_single_sub }}</div>
+        <div class="kpi-card__sub">Рекорд по одній весільній, за весь час</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <h2 class="text-base font-semibold text-stone-800 mt-8 mb-1">
+      LTV клієнтів
+      <span class="ml-1 rounded-md bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-500">завжди за весь час</span>
+    </h2>
+    <p class="text-xs text-stone-400 mb-3">LTV — це показники за весь час життя клієнта, тому фільтр дат на них <strong>не впливає</strong>. Середні доставки враховують усі заплановані (виконані + очікують, без скасованих) і не рахують старі частинні підписки (&lt; 4 доставок); топ-10 і «час з нами» — лише виконані.</p>
+
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок / клієнта (підписки)</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ ltv.avg_sub_deliveries_per_client }}</div>
+        <div class="kpi-card__sub">Заплановані доставки серед клієнтів з підписками</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Доставок / клієнта (загалом)</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ ltv.avg_all_deliveries_per_client }}</div>
+        <div class="kpi-card__sub">Підписки + разові замовлення</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Сер. час з нами</div>
+        <div class="kpi-card__value">{{ ltv.avg_lifespan_days }} дн.</div>
+        <div class="kpi-card__sub">Активні: перша доставка → сьогодні; решта: перша → остання</div>
+      </div>
+    </div>
+
+    {% if ltv.lifespan_by_type %}
+    <div class="report-card p-5 mt-4">
+      <h3 class="text-sm font-semibold text-stone-800 mb-3">Час з нами за періодичністю підписки</h3>
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-stone-400 border-b border-stone-100">
+            <th class="py-2 font-medium">Тип підписки</th>
+            <th class="py-2 font-medium text-right">Клієнтів</th>
+            <th class="py-2 font-medium text-right">Сер. час, днів</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in ltv.lifespan_by_type %}
+          <tr class="border-b border-stone-50">
+            <td class="py-2 text-stone-700">{{ row.type }}</td>
+            <td class="py-2 text-right text-stone-700">{{ row.clients }}</td>
+            <td class="py-2 text-right text-stone-700">{{ row.avg_days }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="grid gap-4 md:grid-cols-2 mt-4">
+      <div class="report-card p-5">
+        <h3 class="text-sm font-semibold mb-3">Топ-10 клієнтів за доставками</h3>
+        {% if ltv.top_by_deliveries %}
+        {% set dmax = (ltv.top_by_deliveries | map(attribute='count') | max) or 1 %}
+        {% for row in ltv.top_by_deliveries %}
+        <div class="rv-prog">
+          <span class="rv-prog__rank">{{ loop.index }}</span>
+          <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__meta">{{ row.purchases }} покупок</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.count / dmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">{{ row.count }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-sm text-stone-400">Немає даних</p>
+        {% endif %}
+      </div>
+
+      <div class="report-card p-5">
+        <h3 class="text-sm font-semibold mb-1">Топ-10 клієнтів за доходом</h3>
+        <p class="text-xs text-stone-400 mb-3">Нараховано за доставки. Офлайн-продажі флориста не входять.</p>
+        {% if ltv.top_by_revenue %}
+        {% set rmax = (ltv.top_by_revenue | map(attribute='revenue') | max) or 1 %}
+        {% for row in ltv.top_by_revenue %}
+        <div class="rv-prog">
+          <span class="rv-prog__rank">{{ loop.index }}</span>
+          <span class="rv-prog__name" title="{{ row.client }}">{{ row.client }}</span>
+          <span class="rv-prog__meta">{{ row.purchases }} покупок</span>
+          <span class="rv-prog__track"><span class="rv-prog__fill" style="width: {{ (row.revenue / rmax * 100) | round(1) }}%"></span></span>
+          <span class="rv-prog__val">₴{{ "{:,}".format(row.revenue).replace(",", " ") }}</span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p class="text-sm text-stone-400">Немає даних</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>{# /tab-clients #}
+
+  <!-- Record-holder modal -->
+  <div id="record-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 p-4">
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl" style="border:1px solid var(--r-line)">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wide" style="color:var(--r-faint)">Рекордсмен за доставками</p>
+          <h3 id="rm-name" class="text-lg font-semibold" style="color:var(--r-ink)">—</h3>
+        </div>
+        <button type="button" id="rm-close" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+      </div>
+      <div id="rm-contacts" class="flex flex-wrap gap-2 mb-4 text-sm"></div>
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div><div class="text-xs" style="color:var(--r-faint)">Тип підписки</div><div id="rm-type" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Доставок (виконано / всього)</div><div id="rm-deliveries" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Нараховано (всього)</div><div id="rm-charged" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Оплачено (всього)</div><div id="rm-paid" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Баланс</div><div id="rm-balance" class="font-medium">—</div></div>
+        <div><div class="text-xs" style="color:var(--r-faint)">Клієнт з</div><div id="rm-since" class="font-medium">—</div></div>
+      </div>
+      <a id="rm-open" href="#" class="mt-5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white" style="background:var(--r-teal)">
+        <i class="bi bi-person-lines-fill"></i> Відкрити картку клієнта
+      </a>
+    </div>
+  </div>
 
 </div>{# /flex #}
 {% endblock %}
@@ -1217,38 +1475,9 @@ document.addEventListener('DOMContentLoaded', function () {
   const tabPanes = document.querySelectorAll('.reports-tab-content');
   const filterTabInput = document.getElementById('filter-tab-input');
 
-  // Auto-navigate to current month when cash_flow tab opens without dates
-  (function () {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('tab') === 'cash_flow' && !params.get('date_from') && !params.get('date_to') && !params.get('all')) {
-      const today = new Date();
-      const yyyy  = today.getFullYear();
-      const mm    = String(today.getMonth() + 1).padStart(2, '0');
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-      params.set('date_from', yyyy + '-' + mm + '-01');
-      params.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
-      window.location.replace('/reports?' + params.toString());
-    }
-  })();
-
   tabBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
       const target = btn.dataset.tab;
-      const fromEl = document.getElementById('reports-date-from');
-      const toEl   = document.getElementById('reports-date-to');
-
-      if (target === 'cash_flow' && (!fromEl || !fromEl.value) && (!toEl || !toEl.value)) {
-        const today = new Date();
-        const yyyy  = today.getFullYear();
-        const mm    = String(today.getMonth() + 1).padStart(2, '0');
-        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-        const url   = new URL(window.location.href);
-        url.searchParams.set('tab', 'cash_flow');
-        url.searchParams.set('date_from', yyyy + '-' + mm + '-01');
-        url.searchParams.set('date_to',   yyyy + '-' + mm + '-' + String(lastDay).padStart(2, '0'));
-        window.location.href = url.toString();
-        return;
-      }
 
       tabBtns.forEach(function (b) { b.classList.remove('is-active'); });
       tabPanes.forEach(function (p) { p.classList.remove('is-active'); });
@@ -1375,17 +1604,7 @@ document.addEventListener('DOMContentLoaded', function () {
     allBtn.addEventListener('click', function () {
       fromInput.value = '';
       toInput.value   = '';
-      const tabVal = filterTabInput ? filterTabInput.value : '';
-      if (tabVal === 'cash_flow') {
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', 'cash_flow');
-        url.searchParams.delete('date_from');
-        url.searchParams.delete('date_to');
-        url.searchParams.set('all', '1');
-        window.location.href = url.toString();
-      } else {
-        form.submit();
-      }
+      form.submit();
     });
 
     // Custom flatpickr — show submit button when user picks dates
@@ -1410,51 +1629,70 @@ document.addEventListener('DOMContentLoaded', function () {
     return base + (p.toString() ? '?' + p.toString() : '');
   }
 
-  function updateOrdersLinks() {
-    const csv  = document.getElementById('export-orders-csv');
-    const xlsx = document.getElementById('export-orders-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/orders/export/csv',  'export-orders-from', 'export-orders-to', null);
-    if (xlsx) xlsx.href = buildExportUrl('/orders/export/xlsx', 'export-orders-from', 'export-orders-to', null);
+  // Export links use the main report date filter
+  function updateExportLinks() {
+    const oc = document.getElementById('export-orders-csv');
+    const ox = document.getElementById('export-orders-xlsx');
+    const tc = document.getElementById('export-tx-csv');
+    const tx = document.getElementById('export-tx-xlsx');
+    if (oc) oc.href = buildExportUrl('/orders/export/csv',  'reports-date-from', 'reports-date-to', null);
+    if (ox) ox.href = buildExportUrl('/orders/export/xlsx', 'reports-date-from', 'reports-date-to', null);
+    if (tc) tc.href = buildExportUrl('/transactions/export', 'reports-date-from', 'reports-date-to', 'csv');
+    if (tx) tx.href = buildExportUrl('/transactions/export', 'reports-date-from', 'reports-date-to', 'xlsx');
   }
+  updateExportLinks();
 
-  function updateTxLinks() {
-    const csv  = document.getElementById('export-tx-csv');
-    const xlsx = document.getElementById('export-tx-xlsx');
-    if (csv)  csv.href  = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'csv');
-    if (xlsx) xlsx.href = buildExportUrl('/transactions/export', 'export-tx-from', 'export-tx-to', 'xlsx');
-  }
-
-  makeDatePicker('export-orders-picker', 'export-orders-from', 'export-orders-to', updateOrdersLinks);
-  makeDatePicker('export-tx-picker',     'export-tx-from',     'export-tx-to',     updateTxLinks);
-  updateOrdersLinks();
-  updateTxLinks();
+  // Export dropdown toggle
+  (function () {
+    const btn  = document.getElementById('rv-export-btn');
+    const menu = document.getElementById('rv-export-menu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      updateExportLinks();
+      menu.classList.toggle('hidden');
+    });
+    document.addEventListener('click', function () { menu.classList.add('hidden'); });
+    menu.addEventListener('click', function (e) { e.stopPropagation(); });
+  }());
 
   // ── Chart helpers ──────────────────────────────────
+  const RV_TEAL   = 'rgba(13, 148, 136, 0.82)';
+  const RV_SLATE  = 'rgba(71, 85, 105, 0.82)';
+  const RV_TIP    = { backgroundColor: '#0f172a', titleColor: '#fff', bodyColor: '#e2e8f0', displayColors: false, padding: 10, cornerRadius: 8 };
+
+  // Vertical bar (kept for small categorical charts like sizes)
   function createBarChart(canvasId, labels, values, color) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
     new Chart(canvas.getContext('2d'), {
       type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: values,
-          backgroundColor: color,
-          borderRadius: 8,
-          borderSkipped: false,
-          maxBarThickness: 46
-        }]
-      },
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: color || RV_TEAL, borderRadius: 8, borderSkipped: false, maxBarThickness: 46 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
         scales: {
-          x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          x: { ticks: { color: '#64748b', font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } }
+        }
+      }
+    });
+  }
+
+  // Horizontal bar — for long-tail categories (cities, marketing sources, types)
+  function createHBarChart(canvasId, labels, values, color) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !labels || !labels.length) return;
+    new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: values, backgroundColor: color || RV_TEAL, borderRadius: 6, borderSkipped: false, maxBarThickness: 30 }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
+        scales: {
+          x: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } },
+          y: { ticks: { color: '#334155', font: { size: 11.5 } }, grid: { display: false } }
         }
       }
     });
@@ -1463,93 +1701,59 @@ document.addEventListener('DOMContentLoaded', function () {
   function createLineTrendChart(canvasId, labels, ordersValues, subscriptionsValues) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || !labels || !labels.length) return;
-    new Chart(canvas.getContext('2d'), {
+    const chart = new Chart(canvas.getContext('2d'), {
       type: 'line',
       data: {
         labels: labels,
         datasets: [
           {
-            label: 'Нові разові замовлення',
-            data: ordersValues,
-            borderColor: 'rgba(17, 24, 39, 0.88)',
-            backgroundColor: 'rgba(17, 24, 39, 0.12)',
-            pointBackgroundColor: 'rgba(17, 24, 39, 0.88)',
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-            tension: 0.28,
-            fill: false,
+            label: 'Підписки', data: subscriptionsValues,
+            borderColor: 'rgba(13, 148, 136, 0.95)', backgroundColor: 'rgba(13, 148, 136, 0.14)',
+            pointBackgroundColor: 'rgba(13, 148, 136, 0.95)',
+            pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2, tension: 0.3, fill: true,
           },
           {
-            label: 'Нові підписки',
-            data: subscriptionsValues,
-            borderColor: 'rgba(16, 185, 129, 0.9)',
-            backgroundColor: 'rgba(16, 185, 129, 0.12)',
-            pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
-            pointRadius: 3,
-            pointHoverRadius: 5,
-            borderWidth: 2,
-            tension: 0.28,
-            fill: false,
+            label: 'Разові замовлення', data: ordersValues,
+            borderColor: 'rgba(71, 85, 105, 0.9)', backgroundColor: 'rgba(71, 85, 105, 0.10)',
+            pointBackgroundColor: 'rgba(71, 85, 105, 0.9)',
+            pointRadius: 2.5, pointHoverRadius: 5, borderWidth: 2, tension: 0.3, fill: true,
           }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: true, position: 'top', labels: { color: '#57534e', boxWidth: 12, usePointStyle: true } },
-          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff' }
-        },
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: RV_TIP },
         scales: {
-          x: { ticks: { color: '#78716c', maxRotation: 40, minRotation: 0, font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
+          x: { ticks: { color: '#64748b', maxRotation: 40, minRotation: 0, font: { size: 11 } }, grid: { display: false } },
+          y: { beginAtZero: true, ticks: { precision: 0, color: '#94a3b8', font: { size: 11 } }, grid: { color: '#eef2f7' } }
         }
       }
     });
+
+    const sw = document.getElementById('trend-switch');
+    if (sw) {
+      const idx = { subs: 0, orders: 1 };
+      sw.querySelectorAll('[data-series]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          const on = btn.classList.toggle('is-active');
+          chart.setDatasetVisibility(idx[btn.dataset.series], on);
+          chart.update();
+        });
+      });
+    }
+    return chart;
   }
 
-  function createSwitchableChart(canvasId, initial, color) {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return null;
-    return new Chart(canvas.getContext('2d'), {
-      type: 'bar',
-      data: {
-        labels: initial.labels,
-        datasets: [{
-          data: initial.values,
-          backgroundColor: color,
-          borderRadius: 8,
-          borderSkipped: false,
-          maxBarThickness: 46
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: '#1c1917', titleColor: '#fff', bodyColor: '#fff', displayColors: false }
-        },
-        scales: {
-          x: { ticks: { color: '#78716c', font: { size: 11 } }, grid: { display: false } },
-          y: { beginAtZero: true, ticks: { precision: 0, color: '#a8a29e', font: { size: 11 } }, grid: { color: '#f1f5f9' } }
-        }
-      }
-    });
-  }
 
   const PIE_COLORS = [
-    'rgba(59, 130, 246, 0.82)',
-    'rgba(245, 158, 11, 0.82)',
-    'rgba(16, 185, 129, 0.82)',
-    'rgba(239, 68, 68, 0.82)',
-    'rgba(139, 92, 246, 0.82)',
-    'rgba(236, 72, 153, 0.82)',
-    'rgba(20, 184, 166, 0.82)',
-    'rgba(249, 115, 22, 0.82)',
-    'rgba(99, 102, 241, 0.82)',
-    'rgba(161, 161, 170, 0.82)'
+    'rgba(13, 148, 136, 0.88)',
+    'rgba(71, 85, 105, 0.85)',
+    'rgba(45, 212, 191, 0.85)',
+    'rgba(148, 163, 184, 0.85)',
+    'rgba(15, 118, 110, 0.85)',
+    'rgba(100, 116, 139, 0.85)',
+    'rgba(94, 234, 212, 0.85)',
+    'rgba(203, 213, 225, 0.9)'
   ];
 
   function createSwitchablePieChart(canvasId, initial) {
@@ -1588,7 +1792,7 @@ document.addEventListener('DOMContentLoaded', function () {
                   const val = data.datasets[0].data[i] || 0;
                   const pct = sum > 0 ? Math.round(val / sum * 100) : 0;
                   return {
-                    text: label + ' — ' + pct + '%',
+                    text: label + ' · ' + val + ' (' + pct + '%)',
                     fillStyle: PIE_COLORS[i % PIE_COLORS.length],
                     strokeStyle: '#fff',
                     lineWidth: 2,
@@ -1619,7 +1823,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const marketingData = { labels: {{ orders.marketing_chart['labels']|tojson }}, values: {{ orders.marketing_chart['values']|tojson }} };
   const forWhomData   = { labels: {{ orders.for_whom_chart['labels']|tojson }}, values: {{ orders.for_whom_chart['values']|tojson }} };
 
-  createSwitchableChart('marketingChart', marketingData, 'rgba(245, 158, 11, 0.75)');
+  createSwitchablePieChart('marketingChart', marketingData);
   createSwitchablePieChart('forWhomChart', forWhomData);
 
   createLineTrendChart(
@@ -1629,8 +1833,8 @@ document.addEventListener('DOMContentLoaded', function () {
     {{ orders.monthly_orders_trend_chart['subscriptions_values']|tojson }}
   );
 
-  createBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, 'rgba(16, 185, 129, 0.72)');
-  createBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          'rgba(139, 92, 246, 0.72)');
+  createHBarChart('deliveryTypeChart', {{ orders.delivery_type_chart['labels']|tojson }}, {{ orders.delivery_type_chart['values']|tojson }}, RV_TEAL);
+  createHBarChart('sizeChart',         {{ orders.size_chart['labels']|tojson }},          {{ orders.size_chart['values']|tojson }},          RV_SLATE);
 
   // ── Deliveries dynamics (area chart) ──────────────
   (function () {
@@ -1646,9 +1850,9 @@ document.addEventListener('DOMContentLoaded', function () {
         datasets: [{
           label: 'Доставки',
           data: values,
-          borderColor: 'rgba(16, 185, 129, 0.9)',
-          backgroundColor: 'rgba(16, 185, 129, 0.15)',
-          pointBackgroundColor: 'rgba(16, 185, 129, 0.9)',
+          borderColor: 'rgba(13, 148, 136, 0.95)',
+          backgroundColor: 'rgba(13, 148, 136, 0.14)',
+          pointBackgroundColor: 'rgba(13, 148, 136, 0.95)',
           pointRadius: 3,
           pointHoverRadius: 5,
           borderWidth: 2,
@@ -1672,11 +1876,11 @@ document.addEventListener('DOMContentLoaded', function () {
   }());
 
   // ── Deliveries by city ────────────────────────────
-  createBarChart(
+  createHBarChart(
     'deliveriesCityChart',
     {{ deliveries.city_chart['labels']|tojson }},
     {{ deliveries.city_chart['values']|tojson }},
-    'rgba(245, 158, 11, 0.8)'
+    RV_TEAL
   );
 
   // ── Revenue breakdown toggle ───────────────────────
@@ -1723,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', function () {
         type: 'bar',
         data: {
           labels: data.labels,
-          datasets: [{ data: data.values, backgroundColor: '#e8e0a0', borderRadius: 8, borderSkipped: false, maxBarThickness: 60 }]
+          datasets: [{ data: data.values, backgroundColor: 'rgba(13, 148, 136, 0.55)', borderRadius: 8, borderSkipped: false, maxBarThickness: 60 }]
         },
         options: {
           responsive: true,
@@ -1748,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var lastDay = new Date(y, m, 0).getDate();
             var pad = function (n) { return String(n).padStart(2, '0'); };
             var url = new URL(window.location.href);
-            url.searchParams.set('tab', 'cash_flow');
+            url.searchParams.set('tab', 'overview');
             url.searchParams.set('date_from', yyyy + '-' + pad(m) + '-01');
             url.searchParams.set('date_to',   yyyy + '-' + pad(m) + '-' + pad(lastDay));
             window.location.href = url.toString();
@@ -1756,7 +1960,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
       });
     } else {
-      createBarChart('cashFlowChart', data.labels, data.values, '#e8e0a0');
+      createBarChart('cashFlowChart', data.labels, data.values, 'rgba(13, 148, 136, 0.55)');
     }
   }());
 
@@ -1780,15 +1984,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterLabel = document.getElementById('revenue-filter-label');
     if (!searchInput || !filterBtn) return;
 
-    const allRows     = Array.from(document.querySelectorAll('#tab-revenue .revenue-table__row'));
+    const allRows     = Array.from(document.querySelectorAll('#tab-balance .revenue-table__row'));
     const tbody       = document.querySelector('.revenue-table tbody');
     const originalRows = tbody ? Array.from(tbody.querySelectorAll('tr')) : [];
 
+    const hideInactiveBtn = document.getElementById('revenue-hide-inactive');
     let currentMode = 'alpha';
+    let hideInactive = true;   // default: hide clients with no operations in the period
 
     const MODE_LABELS = {
       'alpha':    'За алфавітом',
-      'active':   'Тільки активні',
       'bal-asc':  'За балансом ↑',
       'bal-desc': 'За балансом ↓',
     };
@@ -1823,13 +2028,12 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function applyFilters() {
-      const query      = searchInput.value.trim().toLowerCase();
-      const activeOnly = currentMode === 'active';
+      const query = searchInput.value.trim().toLowerCase();
       let visible = 0;
 
       allRows.forEach(function (tr) {
         const nameMatch  = !query || tr.dataset.client.includes(query);
-        const activityOk = !activeOnly || tr.dataset.anyActivity === '1';
+        const activityOk = !hideInactive || tr.dataset.anyActivity === '1';
         const show       = nameMatch && activityOk;
         tr.style.display = show ? '' : 'none';
         if (show) visible++;
@@ -1839,9 +2043,20 @@ document.addEventListener('DOMContentLoaded', function () {
       if (countEl)   countEl.textContent = visible + ' / ' + allRows.length;
     }
 
+    if (hideInactiveBtn) {
+      hideInactiveBtn.addEventListener('click', function () {
+        hideInactive = !hideInactive;
+        hideInactiveBtn.classList.toggle('is-active', hideInactive);
+        hideInactiveBtn.querySelector('span').textContent = hideInactive ? 'Тільки з операціями' : 'Показані всі';
+        try { sessionStorage.setItem('revenue_hide_inactive', hideInactive ? '1' : '0'); } catch (e) {}
+        applyFilters();
+      });
+    }
+
     function setMode(mode) {
+      if (!MODE_LABELS[mode]) mode = 'alpha';
       currentMode = mode;
-      filterLabel.textContent = MODE_LABELS[mode] || 'Фільтри';
+      filterLabel.textContent = MODE_LABELS[mode];
       const isDefault = mode === 'alpha';
       filterBtn.classList.toggle('border-amber-400', !isDefault);
       filterBtn.classList.toggle('text-stone-900',   !isDefault);
@@ -1876,9 +2091,16 @@ document.addEventListener('DOMContentLoaded', function () {
     try {
       const savedSearch = sessionStorage.getItem('revenue_search');
       if (savedSearch) { searchInput.value = savedSearch; sessionStorage.removeItem('revenue_search'); }
+      if (sessionStorage.getItem('revenue_hide_inactive') === '0') {
+        hideInactive = false;
+        if (hideInactiveBtn) {
+          hideInactiveBtn.classList.remove('is-active');
+          hideInactiveBtn.querySelector('span').textContent = 'Показані всі';
+        }
+      }
       const saved = sessionStorage.getItem('revenue_filter_mode');
-      if (saved && MODE_LABELS[saved]) { setMode(saved); } else { applyFilters(); updateCheckmarks(currentMode); }
-    } catch(e) { applyFilters(); updateCheckmarks(currentMode); }
+      if (saved && MODE_LABELS[saved]) { setMode(saved); } else { applySort('alpha'); applyFilters(); updateCheckmarks('alpha'); }
+    } catch(e) { applySort('alpha'); applyFilters(); updateCheckmarks('alpha'); }
   }());
 
   // ── Revenue edit mode ──────────────────────────────
@@ -1994,6 +2216,51 @@ document.addEventListener('DOMContentLoaded', function () {
           alert('Мережева помилка, спробуйте ще раз.');
           saveBtn.disabled = false;
         });
+    });
+  }());
+
+  // ── Record-holder modal (wedding max deliveries) ────
+  (function () {
+    const trigger = document.getElementById('wedding-record-card');
+    const modal   = document.getElementById('record-modal');
+    if (!trigger || !modal) return;
+    const uah = function (n) { return '₴' + Number(n || 0).toLocaleString('uk-UA').replace(/,/g, ' '); };
+
+    function close() { modal.classList.add('hidden'); }
+    document.getElementById('rm-close').addEventListener('click', close);
+    modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+
+    trigger.addEventListener('click', async function () {
+      const subId = trigger.dataset.subId;
+      try {
+        const res = await fetch('/reports/subscription/' + subId + '/record-card');
+        const data = await res.json();
+        if (!data.ok) throw new Error();
+        const c = data.card;
+        document.getElementById('rm-name').textContent = c.client_name;
+        document.getElementById('rm-type').textContent = c.type + (c.is_wedding ? ' · весільна' : '');
+        document.getElementById('rm-deliveries').textContent = c.deliveries_done + ' / ' + c.deliveries_total;
+        document.getElementById('rm-charged').textContent = uah(c.client_charged);
+        document.getElementById('rm-paid').textContent = uah(c.client_paid);
+        document.getElementById('rm-balance').textContent = uah(c.client_balance);
+        document.getElementById('rm-since').textContent = c.client_since;
+        const contacts = document.getElementById('rm-contacts');
+        contacts.innerHTML = '';
+        [['bi-telephone', c.phone], ['bi-instagram', c.instagram], ['bi-telegram', c.telegram]].forEach(function (p) {
+          if (!p[1]) return;
+          const span = document.createElement('span');
+          span.className = 'inline-flex items-center gap-1 rounded-lg px-2 py-1';
+          span.style.background = 'var(--r-bg)';
+          span.innerHTML = '<i class="bi ' + p[0] + '"></i> ' + p[1];
+          contacts.appendChild(span);
+        });
+        const open = document.getElementById('rm-open');
+        open.href = '/clients?q=' + encodeURIComponent(c.phone || c.client_name);
+        modal.classList.remove('hidden');
+      } catch (e) {
+        showToast ? showToast('Не вдалося завантажити картку', 'error') : alert('Не вдалося завантажити картку');
+      }
     });
   }());
 });

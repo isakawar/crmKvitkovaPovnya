@@ -15,6 +15,10 @@ from app.services.reports_service import (
     get_cash_flow_data,
     get_active_months,
     get_client_revenue_breakdown,
+    get_wedding_analytics,
+    get_ltv_data,
+    get_dashboard_kpis,
+    get_subscription_record_card,
 )
 from app.utils.decorators import permission_required
 
@@ -27,22 +31,46 @@ reports_bp = Blueprint('reports', __name__)
 def reports_page():
     date_from = request.args.get('date_from', '').strip() or None
     date_to = request.args.get('date_to', '').strip() or None
-    active_tab = request.args.get('tab', 'deliveries')
+
+    # v2 tabs: overview | sales | clients | balance. Map legacy tab names.
+    _legacy_tab_map = {
+        'deliveries': 'sales', 'pl': 'overview', 'cash_flow': 'overview',
+        'export': 'overview', 'revenue': 'balance', 'wedding_ltv': 'clients',
+    }
+    active_tab = request.args.get('tab', 'overview')
+    active_tab = _legacy_tab_map.get(active_tab, active_tab)
+    if active_tab not in ('overview', 'sales', 'clients', 'balance'):
+        active_tab = 'overview'
+
+    pl = get_pl_data(date_from, date_to)
 
     return render_template(
         'reports/index.html',
+        kpis=get_dashboard_kpis(date_from, date_to, pl=pl),
         orders=get_orders_data(date_from, date_to),
         deliveries=get_deliveries_analytics(date_from, date_to),
-        pl=get_pl_data(date_from, date_to),
+        pl=pl,
         subscriptions=get_subscription_renewal_rate(date_from, date_to),
         florist=get_florist_sales_data(date_from, date_to),
         cash_flow=get_cash_flow_data(date_from, date_to),
         revenue=get_client_revenue_breakdown(date_from, date_to),
+        wedding=get_wedding_analytics(date_from, date_to),
+        ltv=get_ltv_data(date_from, date_to),
         active_tab=active_tab,
         date_from=date_from or '',
         date_to=date_to or '',
         active_months=get_active_months(),
     )
+
+
+@reports_bp.route('/reports/subscription/<int:subscription_id>/record-card')
+@login_required
+@permission_required('view_reports')
+def subscription_record_card(subscription_id):
+    card = get_subscription_record_card(subscription_id)
+    if not card:
+        return jsonify({'ok': False, 'error': 'not found'}), 404
+    return jsonify({'ok': True, 'card': card})
 
 
 @reports_bp.route('/reports/revenue/adjust', methods=['POST'])
