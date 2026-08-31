@@ -1,0 +1,418 @@
+{% extends "layout.html" %}
+{% block head %}
+  {{ super() }}
+  <style>
+    body, input, select, textarea, button {
+      font-family: 'Roboto', Arial, sans-serif;
+    }
+    h2 {
+      font-weight: 700;
+      font-size: 1.35rem;
+      color: #1f2430;
+      margin-bottom: 1.1rem;
+    }
+    .leads-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 1.2rem;
+    }
+    .leads-tab {
+      border-radius: 999px;
+      padding: 0.5rem 1.1rem;
+      font-size: 0.86rem;
+      font-weight: 500;
+      border: 1px solid #e4e8ee;
+      background: #fff;
+      color: #55606e;
+      text-decoration: none;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .leads-tab:hover {
+      background: #f3f6fa;
+      color: #1f2430;
+    }
+    .leads-tab.active {
+      background: #2f6fed;
+      border-color: #2f6fed;
+      color: #fff;
+    }
+    .leads-mapping-btn {
+      margin-left: auto;
+      border-radius: 0.6rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.86rem;
+      font-weight: 500;
+      border: 1px solid #e4e8ee;
+      background: #fff;
+      color: #55606e;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: background 0.15s, color 0.15s;
+    }
+    .leads-mapping-btn:hover {
+      background: #f3f6fa;
+      color: #1f2430;
+    }
+    .leads-toolbar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.2rem;
+    }
+    .leads-search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 420px;
+    }
+    .leads-search-wrap input {
+      width: 100%;
+      border-radius: 0.6rem;
+      border: 1px solid #e4e8ee;
+      background: #f8f9fb;
+      padding: 0.55rem 0.85rem 0.55rem 2.3rem;
+      font-size: 0.88rem;
+      transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
+    }
+    .leads-search-wrap input:focus {
+      outline: none;
+      border-color: #7abaff;
+      box-shadow: 0 0 0 3px rgba(122,186,255,0.16);
+      background: #fff;
+    }
+    .leads-search-wrap i {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9aa4b2;
+      font-size: 0.9rem;
+    }
+    .leads-card {
+      background: #fff;
+      border: 1px solid #eef1f5;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+      overflow: hidden;
+    }
+    .leads-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88rem;
+    }
+    .leads-table thead th {
+      text-align: left;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9aa4b2;
+      padding: 0.9rem 1.1rem;
+      border-bottom: 1px solid #eef1f5;
+      white-space: nowrap;
+    }
+    .leads-table tbody td {
+      padding: 1rem 1.1rem;
+      border-bottom: 1px solid #f5f6f8;
+      vertical-align: middle;
+      color: #2a2a2a;
+    }
+    .leads-table tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .leads-table tbody tr:hover {
+      background: #fafbfd;
+    }
+    .lead-status-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: #2f6fed;
+      margin-top: 0.3rem;
+    }
+    .lead-status-dot::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #2f6fed;
+    }
+    .lead-status-dot.processed {
+      color: #1a9c5c;
+    }
+    .lead-status-dot.processed::before {
+      background: #1a9c5c;
+    }
+    .lead-status-dot.ignored {
+      color: #9aa4b2;
+    }
+    .lead-status-dot.ignored::before {
+      background: #9aa4b2;
+    }
+    .lead-item-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .lead-item-icon {
+      width: 2.2rem;
+      height: 2.2rem;
+      border-radius: 0.6rem;
+      background: #f3f6fa;
+      color: #9aa4b2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .lead-multi-badge {
+      display: inline-block;
+      margin-top: 0.3rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      padding: 0.2em 0.55em;
+      border-radius: 0.4rem;
+      background: #fff6e0;
+      color: #a26b00;
+    }
+    .lead-contact-name {
+      font-weight: 500;
+    }
+    .lead-contact-phone {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: #9aa4b2;
+      margin-top: 0.15rem;
+    }
+    .lead-badge {
+      font-size: 0.76rem;
+      font-weight: 500;
+      padding: 0.3em 0.7em;
+      border-radius: 999px;
+    }
+    .lead-badge.found {
+      background: #e7f8ef;
+      color: #1a9c5c;
+    }
+    .lead-badge.missing {
+      background: #f1f2f5;
+      color: #7c8798;
+    }
+    .lead-create-client-btn {
+      display: inline-block;
+      margin-left: 0.4rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.28em 0.7em;
+      border-radius: 999px;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      color: #4338ca;
+      cursor: pointer;
+    }
+    .lead-create-client-btn:hover { background: #e0e7ff; }
+    .lead-actions .btn {
+      border-radius: 0.6rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 0.4rem 0.9rem;
+    }
+    .lead-actions .btn-primary {
+      background: linear-gradient(90deg, #7abaff 0%, #4e9fff 100%);
+      border: none;
+    }
+    .lead-actions .btn-outline-secondary {
+      border: 1px solid #e4e8ee;
+      color: #55606e;
+      background: #fff;
+    }
+    .lead-actions .btn-outline-secondary:hover {
+      background: #f3f6fa;
+    }
+    .leads-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.9rem 1.1rem;
+      font-size: 0.82rem;
+      color: #9aa4b2;
+    }
+    .leads-empty {
+      text-align: center;
+      color: #9aa4b2;
+      padding: 3rem 1rem;
+      font-size: 0.9rem;
+    }
+    body {
+      background: #f7fafd;
+    }
+  </style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <h2>Заявки з сайту</h2>
+
+    <div class="leads-tabs">
+        <a href="?status=new" class="leads-tab {% if status_filter == 'new' %}active{% endif %}">Нові</a>
+        <a href="?status=processed" class="leads-tab {% if status_filter == 'processed' %}active{% endif %}">Оброблені</a>
+        <a href="?status=ignored" class="leads-tab {% if status_filter == 'ignored' %}active{% endif %}">Ігноровані</a>
+        <a href="{{ url_for('integrations.wix_product_mappings_list') }}" class="leads-mapping-btn">
+            <i class="bi bi-box-seam"></i> Мапінг товарів
+        </a>
+    </div>
+
+    <div class="leads-toolbar">
+        <div class="leads-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" id="leads-search-input" placeholder="Пошук за номером, клієнтом, товаром...">
+        </div>
+    </div>
+
+    <div class="leads-card">
+        {% if leads %}
+        <table class="leads-table" id="leads-table">
+            <thead>
+                <tr>
+                    <th>Отримано</th>
+                    <th>№ замовлення</th>
+                    <th>Товар</th>
+                    <th>Сума</th>
+                    <th>Контакт</th>
+                    <th>Клієнт</th>
+                    <th>Мапінг</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td>
+                        {{ lead.received_at | kyiv_time }}
+                        <div class="lead-status-dot {{ lead.status }}">
+                            {% if lead.status == 'new' %}Нове{% elif lead.status == 'processed' %}Оброблено{% else %}Ігноровано{% endif %}
+                        </div>
+                    </td>
+                    <td>{{ lead.wix_order_number or '—' }}</td>
+                    <td>
+                        <div class="lead-item-cell">
+                            <div class="lead-item-icon"><i class="bi bi-flower1"></i></div>
+                            <div>
+                                {{ lead.item_name or '—' }}
+                                {% if lead.line_items_count and lead.line_items_count > 1 %}
+                                    <span class="lead-multi-badge">кілька позицій — перевірте вручну</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>{{ lead.amount or '—' }} {{ lead.currency or '' }}</td>
+                    <td>
+                        <div class="lead-contact-name">{{ lead.contact_name or '—' }}</div>
+                        {% if lead.contact_phone or lead.contact_email %}
+                        <div class="lead-contact-phone">
+                            <i class="bi bi-telephone"></i> {{ lead.contact_phone or lead.contact_email }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set matched = lead_clients.get(lead.id) if lead_clients else None %}
+                        {% if matched %}
+                            <span class="lead-badge found">Знайдено</span>
+                        {% else %}
+                            <span class="lead-badge missing">Немає</span>
+                            {% if status_filter == 'new' and (lead.contact_phone or lead.contact_email) %}
+                            <button type="button" class="lead-create-client-btn"
+                                    data-create-client
+                                    data-create-client-name="{{ lead.contact_name or '' }}"
+                                    data-create-client-phone="{{ lead.contact_phone or '' }}"
+                                    data-create-client-email="{{ lead.contact_email or '' }}">
+                                + Створити
+                            </button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if lead.mapping_matched %}
+                            <span class="lead-badge found">Є</span>
+                        {% else %}
+                            <span class="lead-badge missing">Немає</span>
+                        {% endif %}
+                    </td>
+                    <td class="lead-actions">
+                        {% if status_filter == 'new' %}
+                        <button type="button" class="btn btn-primary" data-process-wix-lead="{{ lead.id }}">Обробити</button>
+                        <form method="post" action="{{ url_for('integrations.wix_lead_ignore', lead_id=lead.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-outline-secondary">Ігнорувати</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="leads-footer">
+            <span id="leads-count-label">Показано {{ leads|length }} з {{ leads|length }} заявок</span>
+        </div>
+        {% else %}
+        <div class="leads-empty">Немає заявок</div>
+        {% endif %}
+    </div>
+</div>
+
+{% include 'orders/_composer_modal.html' %}
+{% include 'clients/modal.html' %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('leads-search-input');
+    const table = document.getElementById('leads-table');
+    const countLabel = document.getElementById('leads-count-label');
+    if (!searchInput || !table) return;
+
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    const total = rows.length;
+
+    searchInput.addEventListener('input', function () {
+        const query = this.value.trim().toLowerCase();
+        let visible = 0;
+        rows.forEach(function (row) {
+            const matches = !query || row.innerText.toLowerCase().includes(query);
+            row.style.display = matches ? '' : 'none';
+            if (matches) visible++;
+        });
+        if (countLabel) {
+            countLabel.textContent = 'Показано ' + visible + ' з ' + total + ' заявок';
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+{% include 'orders/_composer_script.html' %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+<script>
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-create-client]');
+    if (!btn) return;
+    const modalEl = document.getElementById('clientModal');
+    if (!modalEl || !window.bootstrap) return;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val) { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    set('edit-name', btn.dataset.createClientName);
+    set('edit-phone', btn.dataset.createClientPhone);
+    set('edit-email', btn.dataset.createClientEmail);
+});
+</script>
+{% endblock %}

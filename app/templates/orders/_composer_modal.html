@@ -5,6 +5,7 @@
         <input type="hidden" name="order_scenario" id="order-scenario-input" value="order">
         <input type="hidden" name="extend_from_order_id" id="extend-from-order-id" value="">
         <input type="hidden" name="client_id" id="order-client-id" value="">
+        <input type="hidden" name="lead_id" id="composer-lead-id" value="">
         <div class="order-composer-shell">
           <div class="order-composer-header">
             <div class="space-y-3">
@@ -38,6 +39,17 @@
 
           <div class="order-composer-body">
             <div id="add-order-error" class="order-error-banner"></div>
+
+            <section id="composer-wix-block" class="order-scenario-panel hidden" style="border-color:#c7d2fe;background:#eef2ff;">
+              <div class="flex items-center gap-2" style="flex-wrap:wrap;">
+                <span class="order-composer-chip" style="background:#e0e7ff;color:#3730a3;">
+                  <i class="bi bi-bag-check"></i> Заявка з сайту <span id="composer-wix-order-number"></span>
+                </span>
+                <span id="composer-wix-amount" class="text-sm font-semibold text-stone-700"></span>
+                <span id="composer-wix-badges" class="text-xs" style="color:#6366f1;"></span>
+              </div>
+              <div id="composer-wix-details" class="mt-2 text-xs text-stone-600 space-y-1"></div>
+            </section>
 
             <section class="order-scenario-panel">
               <div class="order-scenario-head">

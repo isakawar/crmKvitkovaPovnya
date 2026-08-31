@@ -165,7 +165,11 @@ def _monthly_orders_trend():
             func.extract('month', Subscription.created_at).label('m'),
             func.count(Subscription.id).label('cnt'),
         )
-        .filter(Subscription.created_at.isnot(None), Subscription.created_at >= cutoff)
+        .filter(
+            Subscription.created_at.isnot(None),
+            Subscription.created_at >= cutoff,
+            Subscription.status != 'draft',
+        )
         .group_by('y', 'm')
         .all()
     )
@@ -1261,9 +1265,16 @@ def get_dashboard_kpis(date_from_str=None, date_to_str=None, pl=None):
     done = del_row.done or 0
     in_progress = total - done - (del_row.cancelled or 0)
 
+    # "Active" = status 'active' AND still has at least one delivery that is
+    # neither delivered nor cancelled (a finished cycle left in 'active' doesn't count).
     active_subscriptions = (
-        db.session.query(func.count(Subscription.id))
-        .filter(Subscription.status == 'active')
+        db.session.query(func.count(func.distinct(Subscription.id)))
+        .join(Order, Order.subscription_id == Subscription.id)
+        .join(Delivery, Delivery.order_id == Order.id)
+        .filter(
+            Subscription.status == 'active',
+            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+        )
         .scalar() or 0
     )
     new_subs_filters = _build_date_filters(func.date(Subscription.created_at), d_from, d_to)

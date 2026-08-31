@@ -11,9 +11,19 @@ from app.models.courier import Courier
 from app.models.delivery import Delivery
 from app.models.order import Order
 from app.models.client import Client
+from app.models.user import User
 from app.extensions import db
 
 logger = logging.getLogger(__name__)
+
+
+def find_manager_by_phone(phone: str):
+    """Find an active admin/manager User by phone, for Telegram registration."""
+    return User.query.filter(
+        User.phone == phone,
+        User.user_type.in_(('admin', 'manager')),
+        User.is_active.is_(True),
+    ).first()
 
 
 class TelegramService:

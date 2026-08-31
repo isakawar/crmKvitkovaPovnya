@@ -529,6 +529,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (orderClientIdInput) {
             orderClientIdInput.value = '';
         }
+        const _leadInput = document.getElementById('composer-lead-id');
+        if (_leadInput) _leadInput.value = '';
+        const _wixBlock = document.getElementById('composer-wix-block');
+        if (_wixBlock) _wixBlock.classList.add('hidden');
         clearOrderError();
         window.currentOrderId = null;
         clearClientResults();
@@ -619,6 +623,86 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         addOrderModal.show();
     }
+
+    const composerLeadIdInput = document.getElementById('composer-lead-id');
+    const composerWixBlock = document.getElementById('composer-wix-block');
+
+    function renderWixBlock(lead) {
+        if (!composerWixBlock) return;
+        if (!lead) { composerWixBlock.classList.add('hidden'); return; }
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || ''; };
+        set('composer-wix-order-number', '#' + (lead.order_number || ''));
+        set('composer-wix-amount', lead.amount || '');
+        const badges = [];
+        badges.push(lead.client_matched ? '✓ клієнта знайдено' : '• клієнт не знайдений');
+        badges.push(lead.mapping_matched ? '✓ мапінг товару' : '• товар без мапінгу');
+        set('composer-wix-badges', badges.join('  '));
+        const details = document.getElementById('composer-wix-details');
+        if (details) {
+            const rows = [];
+            if (lead.item_name) rows.push(`<div><b>Товар:</b> ${lead.item_name}</div>`);
+            (lead.custom_fields || []).forEach(f => rows.push(`<div><b>${f.label}:</b> ${f.value}</div>`));
+            if (lead.buyer_note) rows.push(`<div><b>Коментар покупця:</b> ${lead.buyer_note}</div>`);
+            details.innerHTML = rows.join('');
+        }
+        composerWixBlock.classList.remove('hidden');
+    }
+
+    function populateComposerFromWixLead(data) {
+        const flow = data.flow || 'order';
+        resetComposerForm(flow, '');
+        lockScenarioSwitch(true);
+        addOrderForm.removeAttribute('data-edit-id');
+        setComposerFlow(flow, false);
+        if (composerLeadIdInput) composerLeadIdInput.value = data.lead_id || '';
+        if (orderClientIdInput) orderClientIdInput.value = data.client_id || '';
+        // Set the search field without triggering a lookup — the client is
+        // already linked via the hidden client_id when it matched.
+        clientSearch.value = data.client_instagram || '';
+        addOrderForm.querySelector('[name="recipient_name"]').value = data.recipient_name || '';
+        recipientPhoneInput.value = data.recipient_phone || '+380';
+        addOrderForm.querySelector('[name="recipient_social"]').value = data.recipient_social || '';
+        addOrderForm.querySelector('[name="city"]').value = data.city || '';
+        addressInput.value = data.street || '';
+        if (addressCommentInput) {
+            addressCommentInput.value = data.address_comment || '';
+            addressCommentInput.style.height = 'auto';
+            addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px';
+        }
+        if (data.delivery_type) {
+            deliveryTypeSelect.value = ensureDeliveryTypeOption(data.delivery_type, data.delivery_type);
+        }
+        sizeSelect.value = data.size || '';
+        addOrderForm.querySelector('[name="first_delivery_date"]').value = data.first_delivery_date || '';
+        if (data.delivery_day) deliveryDaySelect.value = data.delivery_day;
+        addOrderForm.querySelector('[name="for_whom"]').value = data.for_whom || '';
+        if (commentInput) commentInput.value = data.comment || '';
+        if (preferencesInput) preferencesInput.value = data.preferences || '';
+        setDeliveryMode(data.delivery_method === 'nova_poshta' ? 'nova_poshta' : 'courier');
+        syncCustomAmountState();
+        renderWixBlock(data.wix_lead);
+        addOrderModal.show();
+    }
+
+    async function openComposerFromWixLead(leadId) {
+        if (!leadId) return;
+        try {
+            const resp = await fetch(`/orders/wix-lead/${leadId}/composer-data`);
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) {
+                showToast(data.error || 'Не вдалося завантажити заявку', 'error');
+                return;
+            }
+            populateComposerFromWixLead(data);
+        } catch (e) {
+            showToast('Помилка зʼєднання з сервером', 'error');
+        }
+    }
+
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-process-wix-lead]');
+        if (btn) openComposerFromWixLead(btn.dataset.processWixLead);
+    });
 
     async function openSubscriptionExtension(orderId, options = {}) {
         if (!orderId) return;
@@ -1217,6 +1301,7 @@ document.addEventListener('DOMContentLoaded', function() {
         openOrderEditor,
         openSubscriptionExtension,
         openSubscriptionEditor,
+        openComposerFromWixLead,
     };
 
     if (composerBackBtn) {

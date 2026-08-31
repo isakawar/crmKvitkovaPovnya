@@ -202,10 +202,100 @@ def order_form():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+
+    wix_lead = None
+    wix_mapping = None
+    wix_prefill = {}
+    lead_id = request.args.get('lead_id', type=int)
+    if lead_id:
+        from app.models.wix_lead import WixLead
+        from app.services import wix_integration_service as wix_service
+        candidate = WixLead.query.get(lead_id)
+        if candidate and candidate.status == 'new':
+            wix_lead = candidate
+            wix_mapping = wix_service.find_product_mapping(candidate.catalog_item_id)
+            requested_date = wix_service.resolve_requested_first_delivery_date(candidate.custom_fields)
+            wix_prefill = {
+                'delivery_type': wix_service.resolve_requested_delivery_type(candidate.custom_fields)
+                or (wix_mapping.delivery_type if wix_mapping else None),
+                'order_scenario': wix_mapping.order_scenario if wix_mapping else None,
+                'first_delivery_date': requested_date.isoformat() if requested_date else '',
+                'wishes': wix_service.resolve_customer_wishes(candidate),
+                'custom_fields': wix_service.humanize_custom_fields(candidate.custom_fields),
+            }
+
     return render_template(
         'orders/form.html',
-        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom
+        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom,
+        wix_lead=wix_lead, wix_mapping=wix_mapping, wix_prefill=wix_prefill,
     )
+
+
+@orders_bp.route('/orders/wix-lead/<int:lead_id>/composer-data', methods=['GET'])
+@login_required
+def wix_lead_composer_data(lead_id):
+    """JSON to prefill the order composer from a Wix lead (status='new' only)."""
+    from app.models.wix_lead import WixLead
+    from app.services import wix_integration_service as wix_service
+
+    lead = WixLead.query.get_or_404(lead_id)
+    if lead.status != 'new':
+        return jsonify({'error': 'Заявку вже оброблено або проігноровано'}), 409
+
+    mapping = wix_service.find_product_mapping(lead.catalog_item_id)
+    requested_date = wix_service.resolve_requested_first_delivery_date(lead.custom_fields)
+    delivery_type = (
+        wix_service.resolve_requested_delivery_type(lead.custom_fields)
+        or (mapping.delivery_type if mapping else None)
+        or ''
+    )
+    flow = 'subscription' if (mapping and mapping.order_scenario == 'subscription') else 'order'
+
+    matched_client = wix_service.match_client_for_lead(lead)
+    client_display = ''
+    client_instagram = ''
+    if matched_client:
+        c = matched_client
+        client_display = ' · '.join(
+            p for p in [c.instagram, c.telegram, c.phone, c.name] if p
+        ) or f'#{c.id}'
+        client_instagram = c.instagram or c.phone or c.name or f'#{c.id}'
+
+    amount_str = f'{lead.amount} {lead.currency or ""}'.strip() if lead.amount is not None else ''
+    return jsonify({
+        'lead_id': lead.id,
+        'flow': flow,
+        'client_id': matched_client.id if matched_client else None,
+        'client_display': client_display,
+        'client_instagram': client_instagram,
+        'recipient_name': lead.contact_name or '',
+        'recipient_phone': lead.contact_phone or '+380',
+        'recipient_social': '',
+        'city': lead.city or '',
+        'street': lead.street or '',
+        'address_comment': lead.address_comment or '',
+        'delivery_type': delivery_type,
+        'size': (mapping.size if mapping else '') or '',
+        'custom_amount': '',
+        'first_delivery_date': requested_date.isoformat() if requested_date else '',
+        'delivery_day': '',
+        'for_whom': '',
+        'comment': f'Заявка з сайту #{lead.wix_order_number or lead.id}'
+                   + (f' ({amount_str})' if amount_str else ''),
+        'preferences': wix_service.resolve_customer_wishes(lead) or '',
+        'delivery_method': 'courier',
+        'wix_lead': {
+            'order_number': lead.wix_order_number or str(lead.id),
+            'amount': amount_str,
+            'item_name': lead.item_name or '',
+            'catalog_item_id': lead.catalog_item_id or '',
+            'payment_status': lead.payment_status or '',
+            'client_matched': matched_client is not None,
+            'mapping_matched': mapping is not None,
+            'buyer_note': lead.buyer_note or '',
+            'custom_fields': wix_service.humanize_custom_fields(lead.custom_fields),
+        },
+    })
 
 
 @orders_bp.route('/orders/new', methods=['POST'])
@@ -396,6 +486,15 @@ def order_create():
         entity = create_order_and_deliveries(client, request.form)
         entity_id = entity.id
         logging.info(f'Order created: {entity_id}')
+
+    lead_id_raw = (request.form.get('lead_id') or '').strip()
+    if lead_id_raw.isdigit():
+        from flask_login import current_user
+        from app.models.wix_lead import WixLead
+        from app.services.wix_integration_service import mark_lead_processed
+        lead = WixLead.query.get(int(lead_id_raw))
+        if lead and lead.status == 'new':
+            mark_lead_processed(lead, entity, current_user)
 
     if certificate:
         from datetime import datetime as _dt
