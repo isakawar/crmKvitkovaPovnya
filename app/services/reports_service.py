@@ -165,7 +165,11 @@ def _monthly_orders_trend():
             func.extract('month', Subscription.created_at).label('m'),
             func.count(Subscription.id).label('cnt'),
         )
-        .filter(Subscription.created_at.isnot(None), Subscription.created_at >= cutoff)
+        .filter(
+            Subscription.created_at.isnot(None),
+            Subscription.created_at >= cutoff,
+            Subscription.status != 'draft',
+        )
         .group_by('y', 'm')
         .all()
     )

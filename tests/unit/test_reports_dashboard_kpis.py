@@ -73,3 +73,21 @@ def test_active_subscription_counted_once_despite_multiple_pending_deliveries(ap
     session.commit()
 
     assert get_dashboard_kpis()['active_subscriptions'] == 1
+
+
+def test_monthly_trend_excludes_draft_subscriptions(app, session):
+    """The 'Динаміка нових замовлень / підписок' chart must match the hero card:
+    a draft subscription is not a new subscription."""
+    from app.services.reports_service import _monthly_orders_trend
+
+    client = Client(instagram='c3', phone='+380991110002')
+    session.add(client)
+    session.commit()
+
+    session.add(_new_sub(client, 'active'))
+    session.add(_new_sub(client, 'active'))
+    session.add(_new_sub(client, 'draft'))
+    session.commit()
+
+    trend = _monthly_orders_trend()
+    assert sum(trend['subscriptions_values']) == 2
