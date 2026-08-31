@@ -18,7 +18,7 @@ from app.models.delivery import Delivery
 from app.extensions import db
 from app.services.csv_import_service import normalize_phone
 from .keyboards import CourierKeyboards
-from .services import TelegramService
+from .services import TelegramService, find_manager_by_phone
 
 logger = logging.getLogger(__name__)
 
@@ -140,8 +140,32 @@ class CourierHandlers:
 
         # Find courier by phone
         courier = Courier.query.filter_by(phone=phone).first()
-        
+
         if not courier:
+            manager = find_manager_by_phone(phone)
+            if manager:
+                if manager.telegram_chat_id and manager.telegram_chat_id != chat_id:
+                    await update.message.reply_text(
+                        "❌ **Цей акаунт вже прив'язаний до іншого Telegram.**\n\n"
+                        "Зверніться до адміністратора для скидання прив'язки.",
+                        parse_mode='Markdown'
+                    )
+                    return
+
+                manager.telegram_chat_id = chat_id
+                manager.telegram_username = user.username if user.username else None
+                manager.telegram_registered = True
+                manager.last_telegram_activity = datetime.utcnow()
+                db.session.commit()
+
+                await update.message.reply_text(
+                    f"✅ Реєстрація успішна, {manager.display_name or manager.username}!\n\n"
+                    f"Ви отримуватимете сповіщення про нові заявки з сайту.",
+                    parse_mode='Markdown'
+                )
+                logger.info(f"Manager {manager.username} (ID: {manager.id}) successfully registered with Telegram chat_id {chat_id}")
+                return
+
             await update.message.reply_text(
                 "❌ **Кур'єра з таким номером не знайдено в системі.**\n\n"
                 "🔍 **Можливі причини:**\n"
@@ -155,7 +179,7 @@ class CourierHandlers:
                 parse_mode='Markdown'
             )
             return
-        
+
         # Check if courier account is active
         if not courier.active:
             await update.message.reply_text(
@@ -235,6 +259,30 @@ class CourierHandlers:
         courier = Courier.query.filter_by(phone=phone).first()
 
         if not courier:
+            manager = find_manager_by_phone(phone)
+            if manager:
+                if manager.telegram_chat_id and manager.telegram_chat_id != chat_id:
+                    await update.message.reply_text(
+                        "❌ Цей акаунт вже прив'язаний до іншого Telegram.\n"
+                        "Зверніться до адміністратора для скидання прив'язки.",
+                        reply_markup=ReplyKeyboardRemove(),
+                    )
+                    return
+
+                manager.telegram_chat_id = chat_id
+                manager.telegram_username = user.username if user.username else None
+                manager.telegram_registered = True
+                manager.last_telegram_activity = datetime.utcnow()
+                db.session.commit()
+
+                await update.message.reply_text(
+                    f"✅ Реєстрація успішна, {manager.display_name or manager.username}!\n\n"
+                    "Ви отримуватимете сповіщення про нові заявки з сайту.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                logger.info(f"Manager {manager.username} (ID: {manager.id}) registered via contact sharing, chat_id={chat_id}")
+                return
+
             keyboard = ReplyKeyboardMarkup(
                 [[KeyboardButton("📱 Поділитися номером телефону", request_contact=True)]],
                 resize_keyboard=True,

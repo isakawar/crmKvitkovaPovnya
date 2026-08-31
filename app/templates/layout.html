@@ -280,6 +280,14 @@
             <span>Завдання</span>
         </a>
         {% endif %}
+        {% if current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+            <span>Заявки з сайту</span>
+        </a>
+        {% endif %}
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors mb-1
@@ -422,6 +430,15 @@
            title="Завдання">
             <i class="bi bi-check2-square text-lg flex-shrink-0"></i>
             <span class="nav-label">Завдання</span>
+        </a>
+        {% endif %}
+        {% if current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        <a href="{{ url_for('integrations.wix_leads_list') }}"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Заявки з сайту">
+            <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+            <span class="nav-label">Заявки з сайту</span>
         </a>
         {% endif %}
         <!-- Spacer -->

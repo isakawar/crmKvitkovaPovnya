@@ -202,9 +202,22 @@ def order_form():
     delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
     sizes = Settings.query.filter_by(type='size').order_by(Settings.sort_order.nullslast(), Settings.value).all()
     for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+
+    wix_lead = None
+    wix_mapping = None
+    lead_id = request.args.get('lead_id', type=int)
+    if lead_id:
+        from app.models.wix_lead import WixLead
+        from app.services.wix_integration_service import find_product_mapping
+        candidate = WixLead.query.get(lead_id)
+        if candidate and candidate.status == 'new':
+            wix_lead = candidate
+            wix_mapping = find_product_mapping(candidate.catalog_item_id)
+
     return render_template(
         'orders/form.html',
-        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom
+        clients=clients, cities=cities, delivery_types=delivery_types, sizes=sizes, for_whom=for_whom,
+        wix_lead=wix_lead, wix_mapping=wix_mapping,
     )
 
 
@@ -396,6 +409,15 @@ def order_create():
         entity = create_order_and_deliveries(client, request.form)
         entity_id = entity.id
         logging.info(f'Order created: {entity_id}')
+
+    lead_id_raw = (request.form.get('lead_id') or '').strip()
+    if lead_id_raw.isdigit():
+        from flask_login import current_user
+        from app.models.wix_lead import WixLead
+        from app.services.wix_integration_service import mark_lead_processed
+        lead = WixLead.query.get(int(lead_id_raw))
+        if lead and lead.status == 'new':
+            mark_lead_processed(lead, entity, current_user)
 
     if certificate:
         from datetime import datetime as _dt

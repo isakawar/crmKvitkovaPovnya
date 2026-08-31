@@ -2,30 +2,35 @@
 {% from "macros.html" import render_toast, toast_script %}
 
 {% block head %}
+  {{ super() }}
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
   <style>
     body, input, select, textarea, button {
       font-family: 'Roboto', Arial, sans-serif;
     }
     .form-control, .form-select, textarea {
-      border-radius: 0.7rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-      border: 1px solid #e0e0e0;
-      transition: box-shadow 0.3s, border-color 0.3s;
-      background: #fafbfc;
+      border-radius: 0.6rem;
+      border: 1px solid #e4e8ee;
+      box-shadow: none;
+      transition: box-shadow 0.2s, border-color 0.2s;
+      background: #f8f9fb;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.92rem;
     }
     .form-control:focus, .form-select:focus, textarea:focus {
       border-color: #7abaff;
-      box-shadow: 0 4px 16px rgba(122,186,255,0.18);
+      box-shadow: 0 0 0 3px rgba(122,186,255,0.16);
       background: #fff;
       outline: none;
-      transition: box-shadow 0.3s, border-color 0.3s, background 0.3s;
+      transition: box-shadow 0.2s, border-color 0.2s, background 0.2s;
     }
     .btn, button {
-      border-radius: 0.7rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border-radius: 0.6rem;
+      box-shadow: none;
       transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.1s;
       font-weight: 500;
+      font-size: 0.92rem;
+      padding: 0.55rem 1.3rem;
     }
     .btn-success, .btn-primary {
       background: linear-gradient(90deg, #7abaff 0%, #4e9fff 100%);
@@ -35,35 +40,132 @@
     .btn-success:hover, .btn-primary:hover {
       background: linear-gradient(90deg, #4e9fff 0%, #7abaff 100%);
       color: #fff;
-      box-shadow: 0 4px 16px rgba(122,186,255,0.18);
-      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 4px 12px rgba(122,186,255,0.28);
+      transform: translateY(-1px);
     }
     .btn-secondary {
-      background: #f3f6fa;
-      color: #222;
-      border: none;
+      background: transparent;
+      color: #6b7280;
+      border: 1px solid #e4e8ee;
     }
     .btn-secondary:hover {
-      background: #e0e7ef;
+      background: #f3f6fa;
       color: #222;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: none;
     }
     .form-label {
       font-weight: 500;
-      color: #2a2a2a;
+      font-size: 0.82rem;
+      color: #55606e;
       letter-spacing: 0.01em;
+      margin-bottom: 0.3rem;
     }
     h2 {
       font-family: 'Roboto', Arial, sans-serif;
       font-weight: 700;
-      color: #2a2a2a;
+      font-size: 1.35rem;
+      color: #1f2430;
       letter-spacing: 0.01em;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.1rem;
     }
     .form-control::placeholder {
       color: #b0b8c1;
       opacity: 1;
-      font-size: 0.98em;
+      font-size: 0.9em;
+    }
+    .order-form-card {
+      background: #fff;
+      border: 1px solid #eef1f5;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+      padding: 1.6rem 1.8rem;
+    }
+    .form-subtitle {
+      font-size: 0.85rem;
+      color: #8a94a6;
+      margin-top: -0.6rem;
+      margin-bottom: 1.4rem;
+    }
+    .form-section-heading {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin: 1.5rem 0 1.1rem;
+      padding-top: 1.3rem;
+      border-top: 1px solid #eef1f5;
+    }
+    .form-section-heading.is-first {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    .form-section-heading .section-num {
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      background: #e8f0fe;
+      color: #2f6fed;
+      font-weight: 700;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .form-section-heading .section-title-text {
+      font-weight: 600;
+      font-size: 0.98rem;
+      color: #1f2430;
+    }
+    .form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='none' stroke='%239aa4b2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.9rem center;
+      background-size: 11px 7px;
+      padding-right: 2.3rem;
+    }
+    .input-icon-wrap {
+      position: relative;
+    }
+    .input-icon-wrap .form-control {
+      padding-right: 2.5rem;
+    }
+    .input-icon-wrap .input-icon {
+      position: absolute;
+      right: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #b0b8c1;
+      font-size: 0.95rem;
+      pointer-events: none;
+    }
+    .textarea-wrap {
+      position: relative;
+    }
+    .textarea-wrap .char-counter {
+      position: absolute;
+      right: 0.8rem;
+      bottom: 0.55rem;
+      font-size: 0.72rem;
+      color: #b0b8c1;
+      background: transparent;
+      pointer-events: none;
+    }
+    .form-footer-note {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: #9aa4b2;
+      margin-top: 1rem;
+    }
+    .form-select[multiple] {
+      appearance: auto;
+      -webkit-appearance: auto;
+      background-image: none;
+      padding-right: 0.85rem;
     }
     .form-select[multiple] option {
       transition: background 0.2s, color 0.2s;
@@ -113,47 +215,213 @@
       background: #f7fafd;
       color: #222;
     }
+    .wix-lead-card {
+      position: sticky;
+      top: 1.25rem;
+      background: #fff;
+      border: 1px solid #eef1f5;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(20,20,30,0.04);
+      padding: 1.1rem 1.3rem;
+    }
+    .wix-lead-card h5 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #1f2430;
+      margin-bottom: 0.7rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .wix-lead-card h5 i {
+      color: #4e9fff;
+    }
+    .wix-lead-card .badge {
+      font-weight: 500;
+      font-size: 0.72rem;
+      padding: 0.35em 0.6em;
+    }
+    .wix-lead-field {
+      margin-bottom: 0.65rem;
+      padding-bottom: 0.65rem;
+      border-bottom: 1px solid #f5f6f8;
+    }
+    .wix-lead-field:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+    .wix-lead-field .label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #9aa4b2;
+      margin-bottom: 0.15rem;
+    }
+    .wix-lead-field .value {
+      font-size: 0.86rem;
+      line-height: 1.4;
+      color: #2a2a2a;
+      word-break: break-word;
+    }
+    .wix-lead-order-number {
+      font-size: 0.85rem;
+      color: #55606e;
+      margin-bottom: 0.8rem;
+    }
+    .value-icon-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.86rem;
+      color: #2a2a2a;
+      margin-top: 0.2rem;
+    }
+    .value-icon-row i {
+      color: #9aa4b2;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
   </style>
 {% endblock %}
 {% block content %}
 <div class="container-fluid">
-    <h2 class="mb-4">Створення замовлення</h2>
-    
+    <h2 class="mb-1">Створення замовлення</h2>
+    <p class="form-subtitle">Заповніть дані для створення нового замовлення</p>
+
+    <div class="row g-4">
+    {% if wix_lead %}
+    <div class="col-lg-4">
+        <div class="wix-lead-card">
+            <h5><i class="bi bi-tag"></i> Інформація про заявку</h5>
+            <div class="wix-lead-order-number">Заявка з сайту #{{ wix_lead.wix_order_number or wix_lead.id }}</div>
+
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                {% if wix_lead.matched_client_id %}
+                    <span class="badge bg-success">Клієнта знайдено</span>
+                {% else %}
+                    <span class="badge bg-secondary">Клієнта не знайдено</span>
+                {% endif %}
+                {% if wix_lead.mapping_matched %}
+                    <span class="badge bg-success">Мапінг товару є</span>
+                {% else %}
+                    <span class="badge bg-secondary">Мапінгу немає</span>
+                {% endif %}
+                {% if wix_lead.line_items_count and wix_lead.line_items_count > 1 %}
+                    <span class="badge bg-warning text-dark">Кілька позицій — перевірте вручну</span>
+                {% endif %}
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Контакт</div>
+                <div class="value">{{ wix_lead.contact_name or '—' }}</div>
+                {% if wix_lead.contact_phone %}
+                <div class="value-icon-row"><i class="bi bi-telephone"></i> {{ wix_lead.contact_phone }}</div>
+                {% endif %}
+                {% if wix_lead.contact_email %}
+                <div class="value-icon-row"><i class="bi bi-envelope"></i> {{ wix_lead.contact_email }}</div>
+                {% endif %}
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Адреса</div>
+                <div class="value-icon-row" style="margin-top:0;">
+                    <i class="bi bi-geo-alt"></i>
+                    <span>{{ wix_lead.city or '—' }}{% if wix_lead.street %}, {{ wix_lead.street }}{% endif %}{% if wix_lead.postal_code %}, {{ wix_lead.postal_code }}{% endif %}</span>
+                </div>
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Товар</div>
+                <div class="value">
+                    {{ wix_lead.item_name or '—' }}
+                    {% if wix_lead.quantity %}× {{ wix_lead.quantity }}{% endif %}
+                </div>
+                <div class="value-icon-row"><code>{{ wix_lead.catalog_item_id or '—' }}</code></div>
+            </div>
+
+            <div class="wix-lead-field">
+                <div class="label">Сума</div>
+                <div class="value">{{ wix_lead.amount or '—' }} {{ wix_lead.currency or '' }}</div>
+                {% if wix_lead.payment_status %}
+                <div class="value-icon-row"><i class="bi bi-credit-card"></i> Оплата: {{ wix_lead.payment_status }}</div>
+                {% endif %}
+            </div>
+
+            <div class="wix-lead-field mb-0">
+                <div class="label">Отримано</div>
+                <div class="value-icon-row" style="margin-top:0;">
+                    <i class="bi bi-calendar3"></i> {{ wix_lead.received_at | kyiv_time }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    <div class="{% if wix_lead %}col-lg-8{% else %}col-12{% endif %}">
+    <div class="order-form-card">
     <form method="post" class="row g-3" id="orderForm">
+        {% if wix_lead %}
+        <input type="hidden" name="lead_id" value="{{ wix_lead.id }}">
+        {% endif %}
+        <div class="col-12">
+            <div class="form-section-heading is-first">
+                <span class="section-num">1</span>
+                <span class="section-title-text">Клієнт та отримувач</span>
+            </div>
+        </div>
         <!-- Клієнт -->
         <div class="col-md-6">
             <label class="form-label">Клієнт <span class="text-danger">*</span></label>
             <div class="position-relative">
-                <input type="text" class="form-control" id="client-search" name="client_instagram" 
-                       placeholder="Введіть Instagram клієнта..." required autocomplete="off">
-                <div class="list-group position-absolute w-100 d-none" id="client-results" 
+                <input type="hidden" name="client_id" value="{{ wix_lead.matched_client_id or '' }}">
+                <input type="text" class="form-control" id="client-search" name="client_instagram"
+                       placeholder="Введіть Instagram клієнта..." autocomplete="off"
+                       {% if not (wix_lead and wix_lead.matched_client_id) %}required{% endif %}
+                       {% if wix_lead and wix_lead.matched_client_id %}value="{{ wix_lead.matched_client.display_name }}"{% endif %}>
+                <div class="list-group position-absolute w-100 d-none" id="client-results"
                      style="z-index: 1000; max-height: 200px; overflow-y: auto;"></div>
             </div>
+            {% if wix_lead and not wix_lead.matched_client_id %}
+            <div class="form-text text-warning">Клієнта з сайту не знайдено в CRM за телефоном/email — оберіть або створіть вручну.</div>
+            {% endif %}
         </div>
-        
+
         <!-- Отримувач -->
         <div class="col-md-6">
             <label class="form-label">Ім'я отримувача <span class="text-danger">*</span></label>
-            <input type="text" name="recipient_name" class="form-control" required>
+            <input type="text" name="recipient_name" class="form-control" required value="{{ wix_lead.contact_name or '' }}">
         </div>
-        
+
         <div class="col-md-6">
             <label class="form-label">Номер телефону отримувача <span class="text-danger">*</span></label>
-            <input type="text" name="recipient_phone" class="form-control" required 
-                   placeholder="+380" pattern="\+380[0-9]{9}">
+            <div class="input-icon-wrap">
+                <input type="text" name="recipient_phone" class="form-control" required
+                       placeholder="+380" pattern="\+380[0-9]{9}" value="{{ wix_lead.contact_phone or '' }}">
+                <i class="bi bi-telephone input-icon"></i>
+            </div>
         </div>
-        
+
         <div class="col-md-6">
             <label class="form-label">Instagram/Telegram отримувача</label>
-            <input type="text" name="recipient_social" class="form-control" placeholder="Необов'язково">
+            <div class="input-icon-wrap">
+                <input type="text" name="recipient_social" class="form-control" placeholder="Необов'язково">
+                <i class="bi bi-instagram input-icon"></i>
+            </div>
         </div>
-        
+
+        <div class="col-12">
+            <div class="form-section-heading">
+                <span class="section-num">2</span>
+                <span class="section-title-text">Адреса доставки</span>
+            </div>
+        </div>
         <!-- Адреса -->
         <div class="col-md-6" style="position: relative;">
             <label class="form-label">Населений пункт <span class="text-danger">*</span></label>
             <input type="text" name="city" id="form-city-input"
                    class="form-control" placeholder="Введіть місто або село"
-                   required autocomplete="off">
+                   required autocomplete="off" value="{{ wix_lead.city or '' }}">
             <div id="form-city-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
         </div>
         
@@ -168,7 +436,7 @@
         
         <div class="col-md-12">
             <label class="form-label">Адреса <span class="text-danger">*</span></label>
-            <input type="text" name="street" id="address-input" class="form-control" required>
+            <input type="text" name="street" id="address-input" class="form-control" required value="{{ wix_lead.street or '' }}">
         </div>
         
         <div class="col-md-3">
@@ -186,6 +454,12 @@
             <input type="text" name="entrance" class="form-control">
         </div>
         
+        <div class="col-12">
+            <div class="form-section-heading">
+                <span class="section-num">3</span>
+                <span class="section-title-text">Деталі доставки</span>
+            </div>
+        </div>
         <!-- Тип доставки -->
         <div class="col-md-6">
             <label class="form-label">Тип доставки <span class="text-danger">*</span></label>
@@ -193,7 +467,7 @@
                 <option value="">Оберіть тип</option>
                 {% if delivery_types and delivery_types|length > 0 %}
                     {% for t in delivery_types %}
-                        <option value="{{ t.value }}">{{ t.value }}</option>
+                        <option value="{{ t.value }}" {% if wix_mapping and wix_mapping.order_scenario == 'subscription' and wix_mapping.delivery_type == t.value %}selected{% endif %}>{{ t.value }}</option>
                     {% endfor %}
                 {% else %}
                     <option disabled>Додайте типи у налаштуваннях</option>
@@ -217,7 +491,7 @@
                 <option value="">Оберіть розмір</option>
                 {% if sizes and sizes|length > 0 %}
                     {% for s in sizes %}
-                        <option value="{{ s.value }}">{{ s.value }}</option>
+                        <option value="{{ s.value }}" {% if wix_mapping and wix_mapping.size == s.value %}selected{% endif %}>{{ s.value }}</option>
                     {% endfor %}
                 {% else %}
                     <option disabled>Додайте розміри у налаштуваннях</option>
@@ -268,7 +542,7 @@
                 <option value="">Оберіть для кого</option>
                 {% if for_whom and for_whom|length > 0 %}
                     {% for f in for_whom %}
-                        <option value="{{ f.value }}">{{ f.value }}</option>
+                        <option value="{{ f.value }}" {% if wix_mapping and wix_mapping.for_whom == f.value %}selected{% endif %}>{{ f.value }}</option>
                     {% endfor %}
                 {% else %}
                     <option disabled>Додайте варіанти у налаштуваннях</option>
@@ -276,22 +550,38 @@
             </select>
         </div>
         
+        <div class="col-12">
+            <div class="form-section-heading">
+                <span class="section-num">4</span>
+                <span class="section-title-text">Примітки</span>
+            </div>
+        </div>
         <!-- Коментар та побажання -->
         <div class="col-md-6">
             <label class="form-label">Коментар</label>
-            <textarea name="comment" class="form-control" rows="3" placeholder="Додаткові коментарі..."></textarea>
+            <div class="textarea-wrap">
+                <textarea name="comment" class="form-control char-counter-textarea" rows="3" maxlength="500" placeholder="Додаткові коментарі...">{% if wix_lead %}Заявка з сайту #{{ wix_lead.wix_order_number }} ({{ wix_lead.amount }} {{ wix_lead.currency }}){% endif %}</textarea>
+                <span class="char-counter">0 / 500</span>
+            </div>
         </div>
-        
+
         <div class="col-md-6">
             <label class="form-label">Побажання</label>
-            <textarea name="preferences" class="form-control" rows="3" placeholder="Особливі побажання..."></textarea>
+            <div class="textarea-wrap">
+                <textarea name="preferences" class="form-control char-counter-textarea" rows="3" maxlength="500" placeholder="Особливі побажання..."></textarea>
+                <span class="char-counter">0 / 500</span>
+            </div>
         </div>
-        
+
         <div class="col-12">
-            <button type="submit" class="btn btn-primary">Створити замовлення</button>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Створити замовлення</button>
             <a href="/orders" class="btn btn-secondary">Скасувати</a>
+            <div class="form-footer-note"><i class="bi bi-shield-check"></i> Поля, позначені <span class="text-danger">*</span>, обов'язкові для заповнення</div>
         </div>
     </form>
+    </div>
+    </div>
+    </div>
 </div>
 
 {{ render_toast() }}
@@ -313,9 +603,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const sizeSelect = document.getElementById('size-select');
     const customAmountDiv = document.getElementById('custom-amount-div');
     const customAmountInput = document.querySelector('input[name="custom_amount"]');
-    
+
+    // Лічильники символів для коментаря/побажань
+    document.querySelectorAll('.char-counter-textarea').forEach(function (ta) {
+        const counter = ta.closest('.textarea-wrap').querySelector('.char-counter');
+        const max = ta.getAttribute('maxlength') || 500;
+        function updateCounter() {
+            counter.textContent = ta.value.length + ' / ' + max;
+        }
+        ta.addEventListener('input', updateCounter);
+        updateCounter();
+    });
+
     // Автопоиск клієнтів
+    const clientIdHidden = document.querySelector('input[name="client_id"]');
     clientSearch.addEventListener('input', async function() {
+        if (clientIdHidden) {
+            clientIdHidden.value = '';
+        }
         const query = this.value.trim();
         if (query.length < 2) {
             clientResults.classList.add('d-none');
