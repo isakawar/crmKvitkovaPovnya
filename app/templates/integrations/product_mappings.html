@@ -16,7 +16,6 @@
                 <th>Сценарій</th>
                 <th>Тип підписки</th>
                 <th>Розмір</th>
-                <th>Для кого</th>
                 <th>Активний</th>
                 <th></th>
             </tr>
@@ -35,7 +34,6 @@
                 </td>
                 <td><input type="text" name="delivery_type" class="form-control form-control-sm" value="{{ m.delivery_type or '' }}" placeholder="Weekly/Monthly/Bi-weekly"></td>
                 <td><input type="text" name="size" class="form-control form-control-sm" value="{{ m.size }}" required></td>
-                <td><input type="text" name="for_whom" class="form-control form-control-sm" value="{{ m.for_whom or '' }}"></td>
                 <td><input type="checkbox" name="is_active" {% if m.is_active %}checked{% endif %}></td>
                 <td>
                     <button type="submit" class="btn btn-sm btn-outline-primary">Зберегти</button>
@@ -48,7 +46,7 @@
                 </td>
             </tr>
             {% else %}
-            <tr><td colspan="8" class="text-center text-muted">Мапінгів ще немає</td></tr>
+            <tr><td colspan="7" class="text-center text-muted">Мапінгів ще немає</td></tr>
             {% endfor %}
         </tbody>
     </table>
@@ -74,13 +72,9 @@
             <label class="form-label">Тип підписки</label>
             <input type="text" name="delivery_type" class="form-control" placeholder="Weekly/Monthly/Bi-weekly">
         </div>
-        <div class="col-md-1">
+        <div class="col-md-2">
             <label class="form-label">Розмір <span class="text-danger">*</span></label>
             <input type="text" name="size" class="form-control" required>
-        </div>
-        <div class="col-md-1">
-            <label class="form-label">Для кого</label>
-            <input type="text" name="for_whom" class="form-control">
         </div>
         <div class="col-12">
             <button type="submit" class="btn btn-primary">Додати мапінг</button>

@@ -22,7 +22,6 @@ def upgrade():
         sa.Column('order_scenario', sa.String(length=16), nullable=False),
         sa.Column('delivery_type', sa.String(length=32), nullable=True),
         sa.Column('size', sa.String(length=32), nullable=False),
-        sa.Column('for_whom', sa.String(length=64), nullable=True),
         sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('catalog_item_id'),

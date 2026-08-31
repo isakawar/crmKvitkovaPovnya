@@ -31,6 +31,11 @@ class WixLead(db.Model):
     payment_status = db.Column(db.String(32), nullable=True)
     line_items_count = db.Column(db.Integer, nullable=True)
 
+    # Buyer note + checkout custom fields — fetched from the Wix Orders API
+    # (the "order placed" automation payload does not include them).
+    buyer_note = db.Column(db.Text, nullable=True)
+    custom_fields = db.Column(db.JSON, nullable=True)  # {slug: value} from extendedFields._user_fields
+
     matched_client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True)
     mapping_matched = db.Column(db.Boolean, nullable=False, default=False)
 

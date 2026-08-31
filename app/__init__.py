@@ -1,5 +1,6 @@
 import os
 import datetime as _dt_module
+import click
 from flask import Flask, render_template, send_file, Response, redirect, url_for, request
 from dotenv import load_dotenv
 from flask_login import current_user
@@ -236,6 +237,44 @@ def create_app(config_class=DevelopmentConfig):
     def create_florist():
         """Створити флориста інтерактивно."""
         _create_user('florist', 'florist', 'Florist')
+
+    @app.cli.command('wix-products')
+    @click.option('--api-key', default=None, help='Wix API key (default: WIX_API_KEY env)')
+    @click.option('--site-id', default=None, help='Wix site id (default: WIX_SITE_ID env)')
+    @click.option('--unmapped', is_flag=True, help='Show only products without an active CRM mapping')
+    def wix_products(api_key, site_id, unmapped):
+        """Витягнути каталог Wix Stores і вивести таблицю catalog_item_id → назва."""
+        _click = click
+        from app.services.wix_integration_service import fetch_wix_products
+
+        api_key = api_key or app.config.get('WIX_API_KEY')
+        site_id = site_id or app.config.get('WIX_SITE_ID')
+        if not api_key or not site_id:
+            _click.echo('Потрібні WIX_API_KEY та WIX_SITE_ID (env або --api-key/--site-id).')
+            return
+
+        try:
+            products = fetch_wix_products(api_key, site_id)
+        except RuntimeError as e:
+            _click.echo(f'Помилка Wix API: {e}')
+            return
+
+        if unmapped:
+            products = [p for p in products if not p['mapped']]
+
+        if not products:
+            _click.echo('Товарів не знайдено.')
+            return
+
+        _click.echo(f'{"catalog_item_id":38}  {"M":1}  {"назва":40}  {"ціна":>10}  тип')
+        _click.echo('-' * 110)
+        for p in products:
+            price = f'{p["price"]} {p["currency"]}'.strip() if p['price'] is not None else ''
+            _click.echo(
+                f'{p["id"] or "":38}  {"✓" if p["mapped"] else " ":1}  '
+                f'{(p["name"] or "")[:40]:40}  {price:>10}  {p["product_type"]}'
+            )
+        _click.echo(f'\nВсього: {len(products)}  (✓ = вже є активний мапінг у CRM)')
 
     version = get_version()
     @app.context_processor

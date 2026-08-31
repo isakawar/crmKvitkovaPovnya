@@ -205,6 +205,19 @@
       background: #f1f2f5;
       color: #7c8798;
     }
+    .lead-create-client-btn {
+      display: inline-block;
+      margin-left: 0.4rem;
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 0.28em 0.7em;
+      border-radius: 999px;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+      color: #4338ca;
+      cursor: pointer;
+    }
+    .lead-create-client-btn:hover { background: #e0e7ff; }
     .lead-actions .btn {
       border-radius: 0.6rem;
       font-size: 0.82rem;
@@ -308,10 +321,20 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if lead.matched_client_id %}
+                        {% set matched = lead_clients.get(lead.id) if lead_clients else None %}
+                        {% if matched %}
                             <span class="lead-badge found">Знайдено</span>
                         {% else %}
                             <span class="lead-badge missing">Немає</span>
+                            {% if status_filter == 'new' and (lead.contact_phone or lead.contact_email) %}
+                            <button type="button" class="lead-create-client-btn"
+                                    data-create-client
+                                    data-create-client-name="{{ lead.contact_name or '' }}"
+                                    data-create-client-phone="{{ lead.contact_phone or '' }}"
+                                    data-create-client-email="{{ lead.contact_email or '' }}">
+                                + Створити
+                            </button>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td>
@@ -323,7 +346,7 @@
                     </td>
                     <td class="lead-actions">
                         {% if status_filter == 'new' %}
-                        <a href="{{ url_for('orders.order_form', lead_id=lead.id) }}" class="btn btn-primary">Обробити</a>
+                        <button type="button" class="btn btn-primary" data-process-wix-lead="{{ lead.id }}">Обробити</button>
                         <form method="post" action="{{ url_for('integrations.wix_lead_ignore', lead_id=lead.id) }}" class="d-inline">
                             <button type="submit" class="btn btn-outline-secondary">Ігнорувати</button>
                         </form>
@@ -341,6 +364,9 @@
         {% endif %}
     </div>
 </div>
+
+{% include 'orders/_composer_modal.html' %}
+{% include 'clients/modal.html' %}
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -364,6 +390,29 @@ document.addEventListener('DOMContentLoaded', function () {
             countLabel.textContent = 'Показано ' + visible + ' з ' + total + ' заявок';
         }
     });
+});
+</script>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+{% include 'orders/_composer_script.html' %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+<script>
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-create-client]');
+    if (!btn) return;
+    const modalEl = document.getElementById('clientModal');
+    if (!modalEl || !window.bootstrap) return;
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val) { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); }
+    };
+    set('edit-name', btn.dataset.createClientName);
+    set('edit-phone', btn.dataset.createClientPhone);
+    set('edit-email', btn.dataset.createClientEmail);
 });
 </script>
 {% endblock %}

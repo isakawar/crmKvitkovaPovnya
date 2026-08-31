@@ -22,7 +22,7 @@ def test_order_form_prefills_from_new_lead(app, session):
     manager = _make_manager(session)
     mapping = WixProductMapping(
         catalog_item_id='cat-1', order_scenario='subscription',
-        delivery_type='Monthly', size='M', for_whom='Дружина',
+        delivery_type='Monthly', size='M',
     )
     lead = WixLead(
         wix_order_id='o-10', raw_payload={}, status='new',
@@ -128,3 +128,72 @@ def test_order_create_does_not_reprocess_already_processed_lead(app, session):
     # reassigned to this new order.
     assert updated.status == 'processed'
     assert updated.processed_order_id is None
+
+
+def test_wix_lead_composer_data_endpoint(app, session):
+    manager = _make_manager(session)
+    mapping = WixProductMapping(catalog_item_id='cat-sub', order_scenario='subscription',
+                                delivery_type='Weekly', size='L')
+    client_obj = Client(instagram='masha_flowers', phone='+380671112233')
+    lead = WixLead(
+        wix_order_id='o-cd-1', wix_order_number='9001', raw_payload={}, status='new',
+        contact_name='Марія Н', contact_phone='+380671112233', city='Київ',
+        street='вул. Тестова, 5', catalog_item_id='cat-sub', amount='6800.00', currency='UAH',
+        buyer_note='без лілій',
+        custom_fields={'periodichnist_dostavki': 'Щотижня', 'data_pershoyi_dostavki': '2026-09-10'},
+    )
+    session.add_all([mapping, client_obj, lead])
+    session.commit()
+    lead.matched_client_id = client_obj.id
+    session.commit()
+
+    web_client = app.test_client()
+    _login(app, web_client, manager)
+    resp = web_client.get(f'/orders/wix-lead/{lead.id}/composer-data')
+    assert resp.status_code == 200
+    d = resp.get_json()
+    assert d['flow'] == 'subscription'
+    assert d['size'] == 'L'
+    assert d['delivery_type'] == 'Weekly'
+    assert d['first_delivery_date'] == '2026-09-10'
+    assert d['client_id'] == client_obj.id
+    assert d['client_instagram'] == 'masha_flowers'
+    assert 'без лілій' in d['preferences']
+    assert d['wix_lead']['mapping_matched'] is True
+    labels = [f['label'] for f in d['wix_lead']['custom_fields']]
+    assert 'Періодичність доставки' in labels
+
+
+def test_wix_lead_composer_data_rejects_processed(app, session):
+    manager = _make_manager(session)
+    lead = WixLead(wix_order_id='o-cd-2', raw_payload={}, status='processed')
+    session.add(lead)
+    session.commit()
+    web_client = app.test_client()
+    _login(app, web_client, manager)
+    resp = web_client.get(f'/orders/wix-lead/{lead.id}/composer-data')
+    assert resp.status_code == 409
+
+
+def test_composer_data_live_matches_client_created_after_webhook(app, session):
+    """matched_client_id was never set, but a client with the lead's phone exists now."""
+    manager = _make_manager(session)
+    lead = WixLead(
+        wix_order_id='o-live-1', raw_payload={}, status='new',
+        contact_name='Пізній Клієнт', contact_phone='+380631112244',
+    )
+    session.add(lead)
+    session.commit()
+    assert lead.matched_client_id is None
+
+    # client created later, independently
+    later = Client(instagram='late_client', phone='+380631112244')
+    session.add(later)
+    session.commit()
+
+    web_client = app.test_client()
+    _login(app, web_client, manager)
+    d = web_client.get(f'/orders/wix-lead/{lead.id}/composer-data').get_json()
+    assert d['client_id'] == later.id
+    assert d['client_instagram'] == 'late_client'
+    assert d['wix_lead']['client_matched'] is True

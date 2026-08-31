@@ -26,6 +26,10 @@ class Config:
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
+    # Wix REST API — used by the `flask wix-products` CLI to list the store catalog
+    WIX_API_KEY = os.environ.get('WIX_API_KEY', '')
+    WIX_SITE_ID = os.environ.get('WIX_SITE_ID', '')
+
     # Base URL used to build links inside Telegram notifications (localhost
     # is unreachable from a manager's phone) — e.g. https://crm.example.com
     CRM_PUBLIC_URL = os.environ.get('CRM_PUBLIC_URL', '')
@@ -65,6 +69,10 @@ class DevelopmentConfig:
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
+
+    # Wix REST API — used by the `flask wix-products` CLI to list the store catalog
+    WIX_API_KEY = os.environ.get('WIX_API_KEY', '')
+    WIX_SITE_ID = os.environ.get('WIX_SITE_ID', '')
 
     # Base URL used to build links inside Telegram notifications (localhost
     # is unreachable from a manager's phone) — e.g. https://crm.example.com

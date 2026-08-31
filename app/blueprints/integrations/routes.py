@@ -24,6 +24,10 @@ def wix_order_webhook():
 
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
+        logging.warning(
+            'Wix webhook: invalid JSON body. content_type=%r raw=%r',
+            request.content_type, request.get_data(as_text=True)[:2000],
+        )
         return jsonify({'ok': False, 'error': 'invalid json body'}), 400
 
     # metaSiteId is not secret (it's visible in every public Wix site's page
@@ -36,10 +40,14 @@ def wix_order_webhook():
     context = context if isinstance(context, dict) else {}
     meta_site_id = context.get('metaSiteId')
     if not isinstance(meta_site_id, str) or meta_site_id not in allowed_ids:
-        logging.warning(f'Wix webhook rejected: unknown/invalid metaSiteId={meta_site_id!r}')
+        logging.warning(
+            'Wix webhook rejected: metaSiteId=%r allowed=%r top_level_keys=%r',
+            meta_site_id, sorted(allowed_ids), sorted(payload.keys()),
+        )
         return jsonify({'ok': False, 'error': 'unknown site'}), 403
 
     try:
+        payload = wix_service.enrich_payload_with_order_api(payload)
         parsed = wix_service.parse_wix_payload(payload)
         wix_order_id = parsed.get('wix_order_id')
         existing_before = (
@@ -80,8 +88,25 @@ def wix_leads_list():
     if status_filter in ('new', 'processed', 'ignored'):
         query = query.filter_by(status=status_filter)
     leads = query.order_by(WixLead.received_at.desc()).all()
+
+    # Live client match (a client created after the webhook is still picked up)
+    lead_clients = {
+        lead.id: wix_service.match_client_for_lead(lead) for lead in leads
+    }
+
+    # Settings needed by the shared order composer + client modals
+    from app.models.settings import Settings
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(
+        Settings.sort_order.nullslast(), Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    marketing_sources = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
+
     return render_template(
-        'integrations/leads_list.html', leads=leads, status_filter=status_filter
+        'integrations/leads_list.html', leads=leads, status_filter=status_filter,
+        lead_clients=lead_clients,
+        delivery_types=delivery_types, sizes=sizes, for_whom=for_whom,
+        marketing_sources=marketing_sources,
     )
 
 
@@ -128,7 +153,6 @@ def wix_product_mapping_create():
         order_scenario=order_scenario,
         delivery_type=(request.form.get('delivery_type') or '').strip() or None,
         size=size,
-        for_whom=(request.form.get('for_whom') or '').strip() or None,
     )
     db.session.add(mapping)
     db.session.commit()
@@ -146,7 +170,6 @@ def wix_product_mapping_edit(mapping_id):
     mapping.order_scenario = request.form.get('order_scenario') or mapping.order_scenario
     mapping.delivery_type = (request.form.get('delivery_type') or '').strip() or None
     mapping.size = request.form.get('size') or mapping.size
-    mapping.for_whom = (request.form.get('for_whom') or '').strip() or None
     mapping.is_active = request.form.get('is_active') == 'on'
     db.session.commit()
     flash('Мапінг оновлено', 'success')

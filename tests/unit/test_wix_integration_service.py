@@ -59,7 +59,6 @@ def test_wix_lead_and_mapping_models_roundtrip(session):
         order_scenario='subscription',
         delivery_type='Monthly',
         size='M',
-        for_whom='Дружина',
     )
     session.add(mapping)
     session.commit()
@@ -106,6 +105,79 @@ def test_parse_wix_payload_extracts_expected_fields():
     assert parsed['currency'] == 'UAH'
     assert parsed['payment_status'] == 'NOT_PAID'
     assert parsed['line_items_count'] == 1
+
+
+def test_parse_wix_payload_reads_nested_catalog_reference():
+    from app.services.wix_integration_service import parse_wix_payload
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    del payload['data']['lineItems'][0]['catalogItemId']
+    payload['data']['lineItems'][0]['catalogReference'] = {'catalogItemId': 'nested-cat-99'}
+    payload['data']['lineItems'][0]['productName'] = {'original': 'Nested name'}
+    del payload['data']['lineItems'][0]['itemName']
+
+    parsed = parse_wix_payload(payload)
+    assert parsed['catalog_item_id'] == 'nested-cat-99'
+    assert parsed['item_name'] == 'Nested name'
+
+
+def test_parse_wix_payload_extracts_checkout_custom_fields_and_note():
+    from app.services.wix_integration_service import parse_wix_payload
+
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    payload['data']['buyerNote'] = 'лишіть на ресепшені'
+    payload['data']['extendedFields'] = {'namespaces': {'_user_fields': {
+        'periodichnist_dostavki': 'Щотижня',
+        'data_pershoyi_dostavki': '2026-08-31',
+        'pobazhannya_1': '',
+    }}}
+
+    parsed = parse_wix_payload(payload)
+    assert parsed['buyer_note'] == 'лишіть на ресепшені'
+    assert parsed['custom_fields'] == {
+        'periodichnist_dostavki': 'Щотижня',
+        'data_pershoyi_dostavki': '2026-08-31',
+    }
+
+
+def test_resolve_helpers_map_ukrainian_custom_fields():
+    from app.services import wix_integration_service as w
+    from datetime import date
+
+    cf = {'periodichnist_dostavki': 'Щотижня', 'data_pershoyi_dostavki': '2026-08-31'}
+    assert w.resolve_requested_delivery_type(cf) == 'Weekly'
+    assert w.resolve_requested_first_delivery_date(cf) == date(2026, 8, 31)
+    assert w.resolve_requested_delivery_type({'periodichnist_dostavki': 'Раз на 2 тижні'}) == 'Bi-weekly'
+    assert w.resolve_requested_delivery_type({'x': 'невідомо'}) is None
+
+
+def test_humanize_custom_fields_labels_known_slugs():
+    from app.services.wix_integration_service import humanize_custom_fields
+
+    rows = humanize_custom_fields({
+        'periodichnist_dostavki': 'Щотижня',
+        'data_pershoyi_dostavki': '2026-08-31',
+        'pobazhannya_1': 'без лілій',
+        'nomer_telefonu_zamovnika': '+380000000000',
+        'some_unknown_slug': 'x',
+        'empty_one': '',
+    })
+    labels = {r['label']: r['value'] for r in rows}
+    assert labels['Періодичність доставки'] == 'Щотижня'
+    assert labels['Дата першої доставки'] == '2026-08-31'
+    assert labels['Побажання'] == 'без лілій'
+    assert labels['Номер телефону замовника'] == '+380000000000'
+    assert labels['Some unknown slug'] == 'x'
+    assert 'empty_one' not in [r['value'] for r in rows] and len(rows) == 5
+
+
+def test_enrich_payload_noop_when_api_not_configured(app):
+    from app.services.wix_integration_service import enrich_payload_with_order_api
+
+    app.config['WIX_API_KEY'] = ''
+    payload = copy.deepcopy(SAMPLE_WIX_PAYLOAD)
+    assert enrich_payload_with_order_api(payload) is payload
+    assert 'extendedFields' not in payload['data']
 
 
 def test_parse_wix_payload_falls_back_to_shipping_contact_phone():

@@ -10,5 +10,4 @@ class WixProductMapping(db.Model):
     order_scenario = db.Column(db.String(16), nullable=False)  # order | subscription
     delivery_type = db.Column(db.String(32), nullable=True)  # Weekly | Monthly | Bi-weekly
     size = db.Column(db.String(32), nullable=False)
-    for_whom = db.Column(db.String(64), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)

@@ -349,6 +349,22 @@
                 {% endif %}
             </div>
 
+            {% if wix_prefill and wix_prefill.custom_fields %}
+            <div class="wix-lead-field">
+                <div class="label">Поля з чекауту</div>
+                {% for f in wix_prefill.custom_fields %}
+                <div class="value-icon-row" style="margin-top:2px;"><i class="bi bi-input-cursor-text"></i> {{ f.label }}: {{ f.value }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if wix_lead.buyer_note %}
+            <div class="wix-lead-field">
+                <div class="label">Коментар покупця</div>
+                <div class="value">{{ wix_lead.buyer_note }}</div>
+            </div>
+            {% endif %}
+
             <div class="wix-lead-field mb-0">
                 <div class="label">Отримано</div>
                 <div class="value-icon-row" style="margin-top:0;">
@@ -363,6 +379,9 @@
     <form method="post" class="row g-3" id="orderForm">
         {% if wix_lead %}
         <input type="hidden" name="lead_id" value="{{ wix_lead.id }}">
+        {% if wix_prefill and wix_prefill.order_scenario %}
+        <input type="hidden" name="order_scenario" value="{{ wix_prefill.order_scenario }}">
+        {% endif %}
         {% endif %}
         <div class="col-12">
             <div class="form-section-heading is-first">
@@ -467,7 +486,7 @@
                 <option value="">Оберіть тип</option>
                 {% if delivery_types and delivery_types|length > 0 %}
                     {% for t in delivery_types %}
-                        <option value="{{ t.value }}" {% if wix_mapping and wix_mapping.order_scenario == 'subscription' and wix_mapping.delivery_type == t.value %}selected{% endif %}>{{ t.value }}</option>
+                        <option value="{{ t.value }}" {% if wix_prefill and wix_prefill.delivery_type == t.value %}selected{% endif %}>{{ t.value }}</option>
                     {% endfor %}
                 {% else %}
                     <option disabled>Додайте типи у налаштуваннях</option>
@@ -507,7 +526,7 @@
         <!-- Дата та день -->
         <div class="col-md-6">
             <label class="form-label">Дата першої доставки <span class="text-danger">*</span></label>
-            <input type="date" name="first_delivery_date" class="form-control" required>
+            <input type="date" name="first_delivery_date" class="form-control" required value="{{ wix_prefill.first_delivery_date if wix_prefill else '' }}">
         </div>
         
         <div class="col-md-6">
@@ -542,7 +561,7 @@
                 <option value="">Оберіть для кого</option>
                 {% if for_whom and for_whom|length > 0 %}
                     {% for f in for_whom %}
-                        <option value="{{ f.value }}" {% if wix_mapping and wix_mapping.for_whom == f.value %}selected{% endif %}>{{ f.value }}</option>
+                        <option value="{{ f.value }}">{{ f.value }}</option>
                     {% endfor %}
                 {% else %}
                     <option disabled>Додайте варіанти у налаштуваннях</option>
@@ -568,7 +587,7 @@
         <div class="col-md-6">
             <label class="form-label">Побажання</label>
             <div class="textarea-wrap">
-                <textarea name="preferences" class="form-control char-counter-textarea" rows="3" maxlength="500" placeholder="Особливі побажання..."></textarea>
+                <textarea name="preferences" class="form-control char-counter-textarea" rows="3" maxlength="500" placeholder="Особливі побажання...">{{ wix_prefill.wishes if wix_prefill and wix_prefill.wishes else '' }}</textarea>
                 <span class="char-counter">0 / 500</span>
             </div>
         </div>
