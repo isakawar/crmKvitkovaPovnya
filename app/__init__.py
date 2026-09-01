@@ -276,6 +276,57 @@ def create_app(config_class=DevelopmentConfig):
             )
         _click.echo(f'\nВсього: {len(products)}  (✓ = вже є активний мапінг у CRM)')
 
+    @app.cli.command('freeze-subscription-prices')
+    @click.option('--commit', is_flag=True, help='Записати зміни (без прапорця — dry-run)')
+    def freeze_subscription_prices(commit):
+        """Заморозити ціни існуючих підписок: заповнити order.charged_amount там, де воно NULL.
+
+        Джерело ціни, у порядку пріоритету:
+          1. сума вже наявної транзакції delivery_charge по будь-якій доставці замовлення
+          2. поточна ціна з активного PricePreset (get_order_price)
+
+        Спочатку dry-run. ВАЖЛИВО: прогнати ДО зміни цін у довіднику,
+        інакше замовлення без історії списань заморозяться на новій ціні.
+        """
+        from app.models import Order, Delivery
+        from app.models.transaction import Transaction
+        from app.services.billing_service import get_order_price
+
+        orders = Order.query.filter(
+            Order.subscription_id.isnot(None),
+            Order.charged_amount.is_(None),
+        ).all()
+
+        from_txn = from_live = skipped = 0
+        for order in orders:
+            txn = (Transaction.query
+                   .join(Delivery, Transaction.delivery_id == Delivery.id)
+                   .filter(Delivery.order_id == order.id,
+                           Transaction.transaction_type == 'delivery_charge')
+                   .order_by(Transaction.date.desc())
+                   .first())
+            if txn and txn.amount:
+                order.charged_amount = int(txn.amount)
+                from_txn += 1
+                continue
+            price = get_order_price(order)
+            if price is None:
+                skipped += 1
+                continue
+            order.charged_amount = price
+            from_live += 1
+
+        click.echo(f'Підписочних замовлень без charged_amount: {len(orders)}')
+        click.echo(f'  заповнено з наявної транзакції: {from_txn}')
+        click.echo(f'  заповнено з активного прайсу:   {from_live}')
+        click.echo(f'  пропущено (нема ціни):          {skipped}')
+        if commit:
+            db.session.commit()
+            click.echo('✅ Записано.')
+        else:
+            db.session.rollback()
+            click.echo('DRY-RUN — нічого не записано. Додай --commit.')
+
     version = get_version()
     @app.context_processor
     def inject_version():

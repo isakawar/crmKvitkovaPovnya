@@ -52,6 +52,20 @@ def get_order_price(order: Order) -> int | None:
     return int(base * (1 - discount / 100))
 
 
+def resolve_charge_amount(order: Order) -> int | None:
+    """Сума до списання за замовлення: спершу заморожена ціна, потім — жива.
+
+    ``order.charged_amount`` фіксується при створенні/редагуванні замовлення та
+    підписки (ціна за одну доставку, вже після ÷4 і знижки). Зміна цін в
+    активному ``PricePreset`` не має заднім числом переоцінювати вже створені
+    замовлення — підписки в тому числі. Тому ``get_order_price()`` наживо
+    використовується лише як фолбек, коли знімка ціни немає.
+    """
+    if order.charged_amount is not None:
+        return order.charged_amount
+    return get_order_price(order)
+
+
 def charge_delivery(delivery: Delivery) -> Transaction | None:
     """Create a delivery_charge transaction for a completed delivery.
 
@@ -72,12 +86,7 @@ def charge_delivery(delivery: Delivery) -> Transaction | None:
         logger.warning('charge_delivery: no order for delivery %d', delivery.id)
         return None
 
-    if order.subscription_id:
-        amount = get_order_price(order)
-    else:
-        amount = order.charged_amount
-        if amount is None:
-            amount = get_order_price(order)
+    amount = resolve_charge_amount(order)
     if amount is None:
         logger.warning('charge_delivery: no price found for order %d (delivery %d)', order.id, delivery.id)
         return None
@@ -137,12 +146,7 @@ def reconcile_historical_charges(dry_run: bool = True) -> dict:
         if not order:
             continue
 
-        if order.subscription_id:
-            amount = get_order_price(order)
-        else:
-            amount = order.charged_amount
-            if amount is None:
-                amount = get_order_price(order)
+        amount = resolve_charge_amount(order)
         if amount is None or amount <= 0:
             skipped_no_price += 1
             continue
