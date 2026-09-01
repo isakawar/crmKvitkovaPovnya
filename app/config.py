@@ -26,6 +26,11 @@ class Config:
     # Google Maps / Places (New) — address autocomplete in order/subscription forms
     GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
+    # short.io — shortens Google Maps route links in courier Telegram messages.
+    # Both must be set for short.io to be used; otherwise falls back to is.gd.
+    SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
+    SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
+
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
@@ -72,6 +77,10 @@ class DevelopmentConfig:
 
     # Google Maps / Places (New) — address autocomplete in order/subscription forms
     GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+    # short.io — shortens Google Maps route links in courier Telegram messages.
+    SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
+    SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
