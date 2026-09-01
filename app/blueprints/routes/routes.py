@@ -10,11 +10,39 @@ import json
 import urllib.parse
 import requests as http_requests
 
+from app.services.url_shortener_service import shorten_url
+
 
 def _route_log(action, route, description, before_data=None, after_data=None):
     from app.services.activity_log_service import log as _log
     _user = current_user._get_current_object() if current_user.is_authenticated else None
     _log(_user, action, 'route', route.id, description, before_data=before_data, after_data=after_data)
+
+
+def _build_gmaps_dir_url(stops):
+    """Build a Google Maps directions URL (depot → each stop in order).
+
+    Returns None when there are no usable addresses. The result is a long
+    google.com/maps/dir/... link — pass it through shorten_url() before showing
+    it to couriers.
+    """
+    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
+    parts = []
+    if depot_address:
+        parts.append(urllib.parse.quote(depot_address))
+    for stop in stops:
+        d = stop.delivery
+        order = d.order if d else None
+        addr = [p for p in [
+            (order.city if order else '') or '',
+            (d.street or (order.street if order else '')) or '',
+            (d.building_number or (order.building_number if order else '')) or '',
+        ] if p]
+        if addr:
+            parts.append(urllib.parse.quote(', '.join(addr)))
+    if not parts:
+        return None
+    return 'https://www.google.com/maps/dir/' + '/'.join(parts)
 
 routes_bp = Blueprint('routes', __name__)
 
@@ -286,21 +314,9 @@ def assign_and_send_route(route_id):
         except (json.JSONDecodeError, IndexError, KeyError):
             pass
 
-    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
-    gmaps_parts = []
-    if depot_address:
-        gmaps_parts.append(urllib.parse.quote(depot_address))
-    for stop in stops:
-        d = stop.delivery
-        order = d.order if d else None
-        parts = [p for p in [
-            (order.city if order else '') or '',
-            (d.street or (order.street if order else '')) or '',
-            (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
-    gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts) if gmaps_parts else None
+    gmaps_url = _build_gmaps_dir_url(stops)
+    if gmaps_url:
+        gmaps_url = shorten_url(gmaps_url)
 
     inline_keyboard = []
     if gmaps_url:
@@ -372,29 +388,9 @@ def route_message_text(route_id):
         if d and d.address_comment:
             text += f"\n   📝 {d.address_comment}"
 
-    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
-    gmaps_parts = []
-    if depot_address:
-        gmaps_parts.append(urllib.parse.quote(depot_address))
-    for stop in stops:
-        d = stop.delivery
-        order = d.order if d else None
-        parts = [p for p in [
-            (order.city if order else '') or '',
-            (d.street or (order.street if order else '')) or '',
-            (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
-    if gmaps_parts:
-        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
-        try:
-            r = http_requests.get('https://is.gd/create.php', params={'format': 'simple', 'url': gmaps_url}, timeout=5)
-            if r.status_code == 200 and r.text.startswith('http'):
-                gmaps_url = r.text.strip()
-        except Exception:
-            pass
-        text += f"\n\n+ посилання на карті {gmaps_url}"
+    gmaps_url = _build_gmaps_dir_url(stops)
+    if gmaps_url:
+        text += f"\n\n+ посилання на карті {shorten_url(gmaps_url)}"
 
     return jsonify({'text': text})
 
@@ -452,29 +448,9 @@ def route_delivery_text(route_id):
         except (json.JSONDecodeError, IndexError, KeyError):
             pass
 
-    depot_address = current_app.config.get('DEPOT_ADDRESS', '').strip()
-    gmaps_parts = []
-    if depot_address:
-        gmaps_parts.append(urllib.parse.quote(depot_address))
-    for stop in stops:
-        d = stop.delivery
-        order = d.order if d else None
-        parts = [p for p in [
-            (order.city if order else '') or '',
-            (d.street or (order.street if order else '')) or '',
-            (d.building_number or (order.building_number if order else '')) or '',
-        ] if p]
-        if parts:
-            gmaps_parts.append(urllib.parse.quote(', '.join(parts)))
-    if gmaps_parts:
-        gmaps_url = 'https://www.google.com/maps/dir/' + '/'.join(gmaps_parts)
-        try:
-            r = http_requests.get('https://is.gd/create.php', params={'format': 'simple', 'url': gmaps_url}, timeout=5)
-            if r.status_code == 200 and r.text.startswith('http'):
-                gmaps_url = r.text.strip()
-        except Exception:
-            pass
-        text += f"\n🗺 {gmaps_url}"
+    gmaps_url = _build_gmaps_dir_url(stops)
+    if gmaps_url:
+        text += f"\n🗺 {shorten_url(gmaps_url)}"
 
     return jsonify({'text': text})
 
