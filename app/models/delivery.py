@@ -17,7 +17,13 @@ class Delivery(db.Model):
     floor = db.Column(db.String(16))
     entrance = db.Column(db.String(16))
     is_pickup = db.Column(db.Boolean, default=False)
-    
+
+    # Координати з Google Places (передаються в route optimizer)
+    latitude = db.Column(db.Numeric(9, 6))
+    longitude = db.Column(db.Numeric(9, 6))
+    google_place_id = db.Column(db.String(255))
+    formatted_address = db.Column(db.String(500))
+
     # Час та розмір
     time_from = db.Column(db.String(8))
     time_to = db.Column(db.String(8))

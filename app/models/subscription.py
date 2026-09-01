@@ -31,6 +31,12 @@ class Subscription(db.Model):
     is_pickup = db.Column(db.Boolean, default=False)
     address_comment = db.Column(db.Text, nullable=True)
 
+    # Координати з Google Places (передаються в route optimizer)
+    latitude = db.Column(db.Numeric(9, 6))
+    longitude = db.Column(db.Numeric(9, 6))
+    google_place_id = db.Column(db.String(255))
+    formatted_address = db.Column(db.String(500))
+
     # Метод доставки
     delivery_method = db.Column(db.String(32), default='courier', nullable=False)
 
