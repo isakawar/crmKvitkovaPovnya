@@ -914,6 +914,19 @@ def update_subscription(subscription, form):
 
     subscription.is_wedding = form.get('is_wedding') in (True, 'true', 'True', '1', 'on')
 
+    # The free-text comment ("коментар") describes a single bouquet, so it must
+    # live only on the first upcoming delivery — mirroring create_subscription
+    # (`comment ... if i == 0 else None`). Only `preferences` ("побажання")
+    # propagates to every delivery in the cycle.
+    eligible_orders = [
+        o for o in subscription.orders
+        if not all(d.status == 'Доставлено' for d in o.deliveries)
+    ]
+    first_order = min(
+        eligible_orders,
+        key=lambda o: (o.delivery_date or datetime.date.max, o.sequence_number or 0),
+    ) if eligible_orders else None
+
     for order in subscription.orders:
         all_delivered = all(d.status == 'Доставлено' for d in order.deliveries)
         if all_delivered:
@@ -937,7 +950,7 @@ def update_subscription(subscription, form):
         order.bouquet_type = subscription.bouquet_type
         order.composition_type = subscription.composition_type
         order.for_whom = subscription.for_whom
-        order.comment = subscription.comment
+        order.comment = subscription.comment if order is first_order else None
         order.preferences = subscription.preferences
         order.discount = subscription.discount
         order.charged_amount = get_order_price(order)

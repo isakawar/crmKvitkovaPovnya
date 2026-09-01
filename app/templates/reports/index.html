@@ -1367,6 +1367,11 @@
         <div class="kpi-card__value">{{ ltv.avg_lifespan_days }} дн.</div>
         <div class="kpi-card__sub">Активні: перша доставка → сьогодні; решта: перша → остання</div>
       </div>
+      <div class="kpi-card">
+        <div class="kpi-card__label">Сер. разових доставок / клієнта</div>
+        <div class="kpi-card__value kpi-card__value--blue">{{ ltv.avg_one_time_deliveries_per_client }}</div>
+        <div class="kpi-card__sub">{{ ltv.one_time_deliveries_total }} разових доставок / {{ ltv.one_time_clients_count }} клієнтів з разовою</div>
+      </div>
     </div>
 
     {% if ltv.lifespan_by_type %}

@@ -108,6 +108,21 @@ def _build_date_filters(col, d_from, d_to):
     return f
 
 
+def _florist_sale_date_col():
+    """Reporting date for an offline florist sale.
+
+    The linked credit transaction's ``date`` is the single source of truth —
+    admins can edit it from the transactions page. Fall back to the immutable
+    ``created_at`` audit timestamp for legacy rows with no linked transaction.
+
+    Queries using this must ``outerjoin`` Transaction on
+    ``Transaction.id == FloristSale.transaction_id``.
+    """
+    from app.models.transaction import Transaction
+    from app.models.florist_sale import FloristSale
+    return func.coalesce(Transaction.date, func.date(FloristSale.created_at))
+
+
 # ── Date helpers ───────────────────────────────────────────────────────────────
 
 def _parse_date(s):
@@ -608,7 +623,8 @@ def get_pl_data(date_from_str=None, date_to_str=None):
     )
     florist_total = (
         db.session.query(func.sum(FloristSale.amount))
-        .filter(*_build_date_filters(func.date(FloristSale.created_at), d_from, d_to))
+        .outerjoin(Transaction, Transaction.id == FloristSale.transaction_id)
+        .filter(*_build_date_filters(_florist_sale_date_col(), d_from, d_to))
         .scalar() or 0
     )
     revenue = delivery_charge_revenue + florist_total
@@ -631,7 +647,8 @@ def get_pl_data(date_from_str=None, date_to_str=None):
         )
         prev_florist = (
             db.session.query(func.sum(FloristSale.amount))
-            .filter(*_build_date_filters(func.date(FloristSale.created_at), prev_from, prev_to))
+            .outerjoin(Transaction, Transaction.id == FloristSale.transaction_id)
+            .filter(*_build_date_filters(_florist_sale_date_col(), prev_from, prev_to))
             .scalar() or 0
         )
         prev_revenue = prev_charge + prev_florist
@@ -736,6 +753,7 @@ def get_subscription_renewal_rate(date_from_str=None, date_to_str=None):
 def get_florist_sales_data(date_from_str=None, date_to_str=None):
     """Offline florist sales with 5% bonus. Defaults to current month when no range given."""
     from app.models.florist_sale import FloristSale
+    from app.models.transaction import Transaction
 
     d_from = _parse_date(date_from_str)
     d_to = _parse_date(date_to_str)
@@ -753,7 +771,8 @@ def get_florist_sales_data(date_from_str=None, date_to_str=None):
             func.sum(FloristSale.bonus_amount),
         )
         .join(User, User.id == FloristSale.florist_id)
-        .filter(*_build_date_filters(func.date(FloristSale.created_at), d_from, d_to))
+        .outerjoin(Transaction, Transaction.id == FloristSale.transaction_id)
+        .filter(*_build_date_filters(_florist_sale_date_col(), d_from, d_to))
     )
 
     rows = q.group_by(User.id, User.username).order_by(func.sum(FloristSale.amount).desc()).all()
@@ -1524,6 +1543,24 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     )
     avg_all_deliveries = round(sum(r.c for r in all_del) / len(all_del), 1) if all_del else 0.0
 
+    # Average one-time deliveries per client. Population = clients with at least
+    # one non-cancelled one-time delivery (Order.subscription_id IS NULL). A
+    # client who has both subscriptions and one-time orders still counts as one;
+    # a client with only subscriptions is not in the population at all.
+    one_time_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(NOT_CANCELLED, Order.subscription_id.is_(None))
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    one_time_deliveries_total = sum(r.c for r in one_time_del)
+    one_time_clients_count = len(one_time_del)
+    avg_one_time_deliveries = (
+        round(one_time_deliveries_total / one_time_clients_count, 1)
+        if one_time_clients_count else 0.0
+    )
+
     top_del = (
         db.session.query(Client, func.count(Delivery.id).label('c'))
         .join(Delivery, Delivery.client_id == Client.id)
@@ -1624,6 +1661,9 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     return {
         'avg_sub_deliveries_per_client': avg_sub_deliveries,
         'avg_all_deliveries_per_client': avg_all_deliveries,
+        'avg_one_time_deliveries_per_client': avg_one_time_deliveries,
+        'one_time_deliveries_total': one_time_deliveries_total,
+        'one_time_clients_count': one_time_clients_count,
         'top_by_deliveries': top_by_deliveries,
         'top_by_revenue': top_by_revenue,
         'avg_lifespan_days': avg_lifespan_days,
