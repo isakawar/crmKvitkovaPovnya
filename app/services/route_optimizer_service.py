@@ -30,6 +30,14 @@ def _delivery_to_order_json(delivery) -> dict:
         "address": street,
         "house": house,
     }
+
+    # Google-Places coordinates, when we have them — the optimizer skips its own
+    # geocoding for this stop (see flower_route_optimizer feat/accept-coordinates).
+    lat = delivery.latitude if delivery.latitude is not None else (order.latitude if order else None)
+    lng = delivery.longitude if delivery.longitude is not None else (order.longitude if order else None)
+    if lat is not None and lng is not None:
+        item["lat"] = float(lat)
+        item["lng"] = float(lng)
     if delivery.time_from and delivery.time_from != '∞':
         item["delivery_window_start"] = delivery.time_from
     if delivery.time_to:

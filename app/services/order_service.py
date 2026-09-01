@@ -6,6 +6,8 @@ import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
+from app.utils.address_utils import coords_from_form, copy_coords
+
 logger = logging.getLogger(__name__)
 
 from app.services.subscription_service import SUBSCRIPTION_TYPES  # noqa: F401
@@ -89,6 +91,7 @@ def create_order_and_deliveries(client, form):
         comment=form.get('comment') or None,
         preferences=form.get('preferences') or None,
         discount=discount,
+        **coords_from_form(form, is_pickup),
     )
     db.session.add(order)
     db.session.flush()
@@ -123,6 +126,7 @@ def create_order_and_deliveries(client, form):
         address_comment=order.address_comment,
         bouquet_type=order.bouquet_type,
         composition_type=order.composition_type,
+        **copy_coords(order, order.is_pickup),
     )
     db.session.add(delivery)
     db.session.commit()
@@ -236,6 +240,8 @@ def sync_order_to_active_deliveries(order):
         delivery.building_number = order.building_number if not order.is_pickup else None
         delivery.floor = order.floor if not order.is_pickup else None
         delivery.entrance = order.entrance if not order.is_pickup else None
+        for field, value in copy_coords(order, order.is_pickup).items():
+            setattr(delivery, field, value)
         delivery.is_pickup = order.is_pickup
         delivery.phone = order.recipient_phone
         delivery.delivery_method = order.delivery_method
@@ -282,6 +288,11 @@ def update_order(order, form):
     order.entrance = form.get('entrance') or None
     order.is_pickup = is_pickup
     order.address_comment = form.get('address_comment') or None
+    # Google-Places coordinates — only when the form carries the address field
+    # (autocomplete-enabled forms), so posts without it don't wipe stored coords.
+    if 'street' in form or 'latitude' in form:
+        for field, value in coords_from_form(form, is_pickup).items():
+            setattr(order, field, value)
     # Only touch these when the form actually carries the field — the order-edit
     # modal has no inputs for them, so an unconditional write would wipe values
     # set elsewhere (e.g. the inline "тип пакування" selector).

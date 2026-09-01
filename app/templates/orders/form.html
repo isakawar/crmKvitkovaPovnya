@@ -453,14 +453,19 @@
             </div>
         </div>
         
-        <div class="col-md-12">
+        <div class="col-md-12" style="position: relative;">
             <label class="form-label">Адреса <span class="text-danger">*</span></label>
-            <input type="text" name="street" id="address-input" class="form-control" required value="{{ wix_lead.street or '' }}">
+            <input type="text" name="street" id="address-input" class="form-control" required autocomplete="off" value="{{ wix_lead.street or '' }}">
+            <div id="form-address-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
+            <input type="hidden" name="latitude" id="form-latitude" value="{{ wix_lead.latitude or '' }}">
+            <input type="hidden" name="longitude" id="form-longitude" value="{{ wix_lead.longitude or '' }}">
+            <input type="hidden" name="google_place_id" id="form-google-place-id">
+            <input type="hidden" name="formatted_address" id="form-formatted-address">
         </div>
-        
+
         <div class="col-md-3">
             <label class="form-label">№ будинку</label>
-            <input type="text" name="building_number" class="form-control">
+            <input type="text" name="building_number" id="form-building-number" class="form-control">
         </div>
         
         <div class="col-md-3">
@@ -606,6 +611,7 @@
 {{ render_toast() }}
 
 <script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/address_autocomplete.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // City autocomplete
@@ -613,6 +619,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const formCityDropdown = document.getElementById('form-city-dropdown');
     if (formCityInput && formCityDropdown && typeof initCityAutocomplete === 'function') {
         initCityAutocomplete(formCityInput, formCityDropdown);
+    }
+
+    // Address autocomplete (Google Places)
+    const formAddressInput = document.getElementById('address-input');
+    const formAddressDropdown = document.getElementById('form-address-dropdown');
+    const formEl = formAddressInput ? formAddressInput.closest('form') : null;
+    if (formAddressInput && formAddressDropdown && formEl && typeof initAddressAutocomplete === 'function') {
+        initAddressAutocomplete(formAddressInput, formAddressDropdown, formEl, {
+            cityInput: formCityInput,
+            buildingInput: document.getElementById('form-building-number'),
+            prefix: 'form-',
+        });
     }
 
     const clientSearch = document.getElementById('client-search');

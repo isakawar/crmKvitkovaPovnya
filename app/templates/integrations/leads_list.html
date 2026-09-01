@@ -397,6 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
 {% block scripts %}
 {{ super() }}
 <script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/address_autocomplete.js') }}"></script>
 {% include 'orders/_composer_script.html' %}
 <script src="{{ url_for('static', filename='js/clients.js') }}"></script>
 <script>

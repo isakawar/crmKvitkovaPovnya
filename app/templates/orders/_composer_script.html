@@ -30,6 +30,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (citySelect && cityDropdown && typeof initCityAutocomplete === 'function') {
         initCityAutocomplete(citySelect, cityDropdown);
     }
+    const addressDropdown = document.getElementById('order-address-dropdown');
+    if (addressInput && addressDropdown && typeof initAddressAutocomplete === 'function') {
+        initAddressAutocomplete(addressInput, addressDropdown, addOrderForm, { cityInput: citySelect });
+    }
+    // When editing / prefilling, the address text comes with saved coordinates —
+    // mark it confirmed so the "not verified" prompt does not fire on save.
+    function applySavedCoords(data) {
+        const set = (name, val) => {
+            const el = addOrderForm.querySelector('[name="' + name + '"]');
+            if (el) el.value = (val === undefined || val === null) ? '' : val;
+        };
+        set('latitude', data.latitude);
+        set('longitude', data.longitude);
+        set('google_place_id', data.google_place_id);
+        set('formatted_address', data.formatted_address);
+        addOrderForm.dataset.addrConfirmed = (data.latitude && data.longitude) ? '1' : '';
+    }
     const deliveryMethodInput = document.getElementById('delivery-method-input');
     const pickupInput = document.getElementById('is-pickup-input');
     const deliveryModeHint = document.getElementById('delivery-mode-hint');
@@ -466,6 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Address
         if (data.city && citySelect) citySelect.value = data.city;
         if (addressInput) addressInput.value = data.street || '';
+        applySavedCoords(data);
         if (addressCommentInput) { addressCommentInput.value = data.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
 
         // Size — setSelectValueOrAdd also dispatches change → triggers syncCustomAmountState
@@ -534,6 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const _wixBlock = document.getElementById('composer-wix-block');
         if (_wixBlock) _wixBlock.classList.add('hidden');
         clearOrderError();
+        applySavedCoords({});
         window.currentOrderId = null;
         clearClientResults();
         lockScenarioSwitch(false);
@@ -595,6 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
+        applySavedCoords(orderData);
         if (addressCommentInput) { addressCommentInput.value = orderData.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
@@ -664,6 +684,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = data.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = data.city || '';
         addressInput.value = data.street || '';
+        applySavedCoords(data);
         if (addressCommentInput) {
             addressCommentInput.value = data.address_comment || '';
             addressCommentInput.style.height = 'auto';
@@ -1064,6 +1085,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = orderData.recipient_social || '';
         addOrderForm.querySelector('[name="city"]').value = orderData.city || '';
         addressInput.value = orderData.street || '';
+        applySavedCoords(orderData);
         if (addressCommentInput) { addressCommentInput.value = orderData.address_comment || ''; addressCommentInput.style.height = 'auto'; addressCommentInput.style.height = addressCommentInput.scrollHeight + 'px'; }
         deliveryTypeSelect.value = ensureDeliveryTypeOption(orderData.delivery_type || getDefaultOneTimeType(), orderData.delivery_type || getDefaultOneTimeType());
         sizeSelect.value = orderData.size || '';
@@ -1227,6 +1249,7 @@ document.addEventListener('DOMContentLoaded', function() {
         addOrderForm.querySelector('[name="recipient_social"]').value = subData.recipient.social || '';
         if (citySelect) citySelect.value = subData.delivery.city || '';
         addressInput.value = subData.delivery.street || '';
+        applySavedCoords(subData.delivery);
         if (addressCommentInput) {
             addressCommentInput.value = subData.notes.address_comment || '';
             addressCommentInput.style.height = 'auto';

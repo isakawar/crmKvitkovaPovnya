@@ -6,6 +6,8 @@ import logging
 from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 
+from app.utils.address_utils import coords_from_form, copy_coords, COORD_FIELDS
+
 logger = logging.getLogger(__name__)
 
 SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
@@ -273,6 +275,7 @@ def _create_delivery_for_order(order, client_id, is_first):
         address_comment=order.address_comment,
         bouquet_type=order.bouquet_type,
         composition_type=order.composition_type,
+        **copy_coords(order, order.is_pickup),
     )
 
 
@@ -331,6 +334,7 @@ def create_subscription(client, form):
         discount=discount,
         delivery_count=delivery_count,
         is_wedding=is_wedding,
+        **coords_from_form(form, is_pickup),
     )
     db.session.add(subscription)
     db.session.flush()
@@ -357,6 +361,7 @@ def create_subscription(client, form):
             size=subscription.size,
             custom_amount=subscription.custom_amount,
             delivery_date=d_date,
+            **copy_coords(subscription, subscription.is_pickup),
             time_from=subscription.time_from if i == 0 else None,
             time_to=subscription.time_to if i == 0 else None,
             bouquet_type=subscription.bouquet_type,
@@ -454,6 +459,7 @@ def create_subscription_from_import(client, form, delivery_number):
         preferences=form.get('preferences') or None,
         discount=discount,
         is_wedding=is_wedding,
+        **coords_from_form(form, is_pickup),
     )
 
     if delivery_number >= 5:
@@ -490,6 +496,7 @@ def create_subscription_from_import(client, form, delivery_number):
             size=subscription.size,
             custom_amount=subscription.custom_amount,
             delivery_date=d_date,
+            **copy_coords(subscription, subscription.is_pickup),
             time_from=subscription.time_from if i == 0 else None,
             time_to=subscription.time_to if i == 0 else None,
             bouquet_type=subscription.bouquet_type,
@@ -711,6 +718,8 @@ def extend_subscription(subscription, overrides=None):
         is_stopped=False,
         delivery_count=subscription.delivery_count or 4,
         created_at=datetime.datetime.utcnow(),
+        **{f: overrides.get(f) if overrides.get(f) is not None else getattr(subscription, f)
+           for f in COORD_FIELDS},
     )
     db.session.add(new_sub)
     db.session.flush()
@@ -737,6 +746,7 @@ def extend_subscription(subscription, overrides=None):
             size=new_sub.size,
             custom_amount=new_sub.custom_amount,
             delivery_date=d_date,
+            **copy_coords(new_sub, new_sub.is_pickup),
             time_from=new_sub.time_from if i == 0 else None,
             time_to=new_sub.time_to if i == 0 else None,
             bouquet_type=new_sub.bouquet_type,
@@ -894,6 +904,9 @@ def update_subscription(subscription, form):
     subscription.floor = form.get('floor', '').strip() or None
     subscription.entrance = form.get('entrance', '').strip() or None
     subscription.address_comment = form.get('address_comment', '').strip() or None
+    if 'street' in form or 'latitude' in form:
+        for field, value in coords_from_form(form, is_pickup).items():
+            setattr(subscription, field, value)
 
     if form.get('delivery_method'):
         subscription.delivery_method = form.get('delivery_method')
@@ -942,6 +955,8 @@ def update_subscription(subscription, form):
         order.floor = subscription.floor
         order.entrance = subscription.entrance
         order.address_comment = subscription.address_comment
+        for field, value in copy_coords(subscription, subscription.is_pickup).items():
+            setattr(order, field, value)
         order.delivery_method = subscription.delivery_method
         order.time_from = subscription.time_from
         order.time_to = subscription.time_to

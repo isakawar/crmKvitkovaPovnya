@@ -23,6 +23,9 @@ class Config:
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
 
+    # Google Maps / Places (New) — address autocomplete in order/subscription forms
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
@@ -66,6 +69,9 @@ class DevelopmentConfig:
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+
+    # Google Maps / Places (New) — address autocomplete in order/subscription forms
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')

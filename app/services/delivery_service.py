@@ -99,6 +99,10 @@ def update_delivery(d, data):
         d.time_to = data['time_to']
     if 'street' in data:
         d.street = data['street']
+    if 'latitude' in data or 'longitude' in data:
+        from app.utils.address_utils import coords_from_form
+        for field, value in coords_from_form(data, d.is_pickup).items():
+            setattr(d, field, value)
     if 'phone' in data:
         d.phone = data['phone']
     if 'size' in data:
