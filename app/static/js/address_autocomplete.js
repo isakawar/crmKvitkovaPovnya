@@ -52,13 +52,13 @@
   }
 
   function _ensureHidden(form, prefix, name) {
-    var id = prefix + name;
-    var el = form.querySelector('#' + CSS.escape(id));
+    // Prefer an existing field the template already declares (matched by name).
+    var el = form.querySelector('input[name="' + name + '"]');
     if (!el) {
       el = document.createElement('input');
       el.type = 'hidden';
       el.name = name;
-      el.id = id;
+      el.id = prefix + name;
       form.appendChild(el);
     }
     return el;
