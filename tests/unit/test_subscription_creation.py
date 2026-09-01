@@ -350,6 +350,25 @@ def test_update_subscription_syncs_size_to_active_deliveries(session):
     assert all(d.size == 'L' for d in deliveries)
 
 
+def test_update_subscription_comment_stays_on_first_order_only(session):
+    """Editing the subscription must not fan the free-text comment out to every
+    delivery — only 'preferences' (побажання) propagates to the whole cycle."""
+    client = _make_client(session, 'update_comment_sub')
+    sub = create_subscription(client, _base_subscription_form(comment='старий', preferences='люблю півонії'))
+
+    update_subscription(sub, _base_subscription_form(comment='новий коментар', preferences='тепер троянди'))
+
+    orders = Order.query.filter_by(subscription_id=sub.id).order_by(Order.sequence_number).all()
+    assert orders[0].comment == 'новий коментар'
+    assert all(o.comment is None for o in orders[1:])
+    assert all(o.preferences == 'тепер троянди' for o in orders)
+
+    deliveries = Delivery.query.filter_by(client_id=client.id).order_by(Delivery.delivery_date).all()
+    assert deliveries[0].comment == 'новий коментар'
+    assert all(d.comment is None for d in deliveries[1:])
+    assert all(d.preferences == 'тепер троянди' for d in deliveries)
+
+
 def test_extend_subscription_honors_first_delivery_date_override(session):
     """When a first_delivery_date is supplied (manager picked it in the UI),
     the new cycle starts exactly on that date and the rest follow the interval."""
