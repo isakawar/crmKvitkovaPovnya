@@ -1543,6 +1543,24 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     )
     avg_all_deliveries = round(sum(r.c for r in all_del) / len(all_del), 1) if all_del else 0.0
 
+    # Average one-time deliveries per client. Population = clients with at least
+    # one non-cancelled one-time delivery (Order.subscription_id IS NULL). A
+    # client who has both subscriptions and one-time orders still counts as one;
+    # a client with only subscriptions is not in the population at all.
+    one_time_del = (
+        db.session.query(Delivery.client_id, func.count(Delivery.id).label('c'))
+        .join(Order, Delivery.order_id == Order.id)
+        .filter(NOT_CANCELLED, Order.subscription_id.is_(None))
+        .group_by(Delivery.client_id)
+        .all()
+    )
+    one_time_deliveries_total = sum(r.c for r in one_time_del)
+    one_time_clients_count = len(one_time_del)
+    avg_one_time_deliveries = (
+        round(one_time_deliveries_total / one_time_clients_count, 1)
+        if one_time_clients_count else 0.0
+    )
+
     top_del = (
         db.session.query(Client, func.count(Delivery.id).label('c'))
         .join(Delivery, Delivery.client_id == Client.id)
@@ -1643,6 +1661,9 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     return {
         'avg_sub_deliveries_per_client': avg_sub_deliveries,
         'avg_all_deliveries_per_client': avg_all_deliveries,
+        'avg_one_time_deliveries_per_client': avg_one_time_deliveries,
+        'one_time_deliveries_total': one_time_deliveries_total,
+        'one_time_clients_count': one_time_clients_count,
         'top_by_deliveries': top_by_deliveries,
         'top_by_revenue': top_by_revenue,
         'avg_lifespan_days': avg_lifespan_days,
