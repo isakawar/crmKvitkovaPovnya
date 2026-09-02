@@ -77,3 +77,37 @@ def test_order_edit_get_falls_back_to_order_time_when_delivery_has_none(app, ses
     data = resp.get_json()
     assert data['time_from'] == '09:00'
     assert data['time_to'] == '11:00'
+
+
+def test_order_edit_get_returns_anytime_sentinel(app, session):
+    """'будь-який час' is stored as the ∞ sentinel; the modal payload keeps it so
+    the composer can tick the 'Будь-який час' checkbox."""
+    order = _make_order(session, order_time=('∞', None), delivery_time=('∞', None))
+
+    data = app.test_client().get(f'/orders/{order.id}/edit').get_json()
+    assert data['time_from'] == '∞'
+
+
+def test_order_edit_post_preserves_anytime_sentinel(app, session):
+    """Saving the modal with the 'Будь-який час' checkbox on submits time_from='∞';
+    update_order must keep it (not wipe the delivery time)."""
+    order = _make_order(session, order_time=('∞', None), delivery_time=('∞', None))
+    oid = order.id
+
+    resp = app.test_client().post(f'/orders/{oid}/edit', data={
+        'recipient_name': 'Тест',
+        'recipient_phone': '+380991234567',
+        'city': 'Київ',
+        'street': 'Хрещатик 1',
+        'size': 'M',
+        'for_whom': 'Дружина',
+        'first_delivery_date': datetime.date.today().isoformat(),
+        'delivery_method': 'courier',
+        'time_from': '∞',
+        'time_to': '',
+    }, headers={'X-Requested-With': 'XMLHttpRequest'})
+    assert resp.status_code == 200
+
+    order = Order.query.get(oid)
+    assert order.time_from == '∞'
+    assert order.deliveries[0].time_from == '∞'

@@ -34,6 +34,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (addressInput && addressDropdown && typeof initAddressAutocomplete === 'function') {
         initAddressAutocomplete(addressInput, addressDropdown, addOrderForm, { cityInput: citySelect });
     }
+    // "Будь-який час (∞)" checkbox — when on, disables the time inputs and the
+    // form submits time_from='∞'. Mirrors the inline widget on the orders list.
+    const timeFromInput = document.getElementById('time-from-input');
+    const timeToInput = document.getElementById('time-to-input');
+    const timeAnytimeInput = document.getElementById('time-anytime-input');
+    function setComposerAnytime(on) {
+        if (!timeAnytimeInput) return;
+        timeAnytimeInput.checked = on;
+        if (timeFromInput) {
+            if (on) timeFromInput.value = '';
+            timeFromInput.disabled = on;
+        }
+        if (timeToInput) {
+            if (on) timeToInput.value = '';
+            timeToInput.disabled = on;
+        }
+    }
+    if (timeAnytimeInput) {
+        timeAnytimeInput.addEventListener('change', () => setComposerAnytime(timeAnytimeInput.checked));
+    }
+
     // When editing / prefilling, the address text comes with saved coordinates —
     // mark it confirmed so the "not verified" prompt does not fire on save.
     function applySavedCoords(data) {
@@ -553,6 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (_wixBlock) _wixBlock.classList.add('hidden');
         clearOrderError();
         applySavedCoords({});
+        setComposerAnytime(false);
         window.currentOrderId = null;
         clearClientResults();
         lockScenarioSwitch(false);
@@ -621,8 +643,13 @@ document.addEventListener('DOMContentLoaded', function() {
         customAmountInput.value = orderData.custom_amount || '';
         addOrderForm.querySelector('[name="first_delivery_date"]').value = '';
         deliveryDaySelect.value = orderData.delivery_day || '';
-        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
-        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        if (orderData.time_from === '∞') {
+            setComposerAnytime(true);
+        } else {
+            setComposerAnytime(false);
+            addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+            addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        }
         addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
         if (commentInput) commentInput.value = orderData.comment || '';
         if (preferencesInput) preferencesInput.value = orderData.preferences || '';
@@ -941,6 +968,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
         try {
             const fd = new FormData(addOrderForm);
+            // "Будь-який час" → disabled time inputs are omitted by FormData, so
+            // send the ∞ sentinel explicitly (otherwise the backend wipes the time).
+            if (timeAnytimeInput && timeAnytimeInput.checked) {
+                fd.set('time_from', '∞');
+                fd.set('time_to', '');
+            }
             // A subscription created from a wedding draft is always a wedding subscription
             if (window._convertingDraftId) fd.set('is_wedding', 'on');
             if (extraPhonesContainer) {
@@ -1092,8 +1125,13 @@ document.addEventListener('DOMContentLoaded', function() {
         customAmountInput.value = orderData.custom_amount || '';
         addOrderForm.querySelector('[name="first_delivery_date"]').value = orderData.first_delivery_date || '';
         deliveryDaySelect.value = orderData.delivery_day || '';
-        addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
-        addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        if (orderData.time_from === '∞') {
+            setComposerAnytime(true);
+        } else {
+            setComposerAnytime(false);
+            addOrderForm.querySelector('[name="time_from"]').value = orderData.time_from || '';
+            addOrderForm.querySelector('[name="time_to"]').value = orderData.time_to || '';
+        }
         addOrderForm.querySelector('[name="for_whom"]').value = orderData.for_whom || '';
         if (commentInput) commentInput.value = orderData.comment || '';
         if (preferencesInput) preferencesInput.value = orderData.preferences || '';
@@ -1263,10 +1301,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (preferencesInput) preferencesInput.value = subData.notes.preferences || '';
         if (clientDiscountInput) clientDiscountInput.value = subData.discount || '';
         if (isWeddingInput) isWeddingInput.checked = Boolean(subData.is_wedding);
-        const tfFrom = addOrderForm.querySelector('[name="time_from"]');
-        const tfTo = addOrderForm.querySelector('[name="time_to"]');
-        if (tfFrom) tfFrom.value = subData.delivery.time_from || '';
-        if (tfTo) tfTo.value = subData.delivery.time_to || '';
+        if (subData.delivery.time_from === '∞') {
+            setComposerAnytime(true);
+        } else {
+            setComposerAnytime(false);
+            const tfFrom = addOrderForm.querySelector('[name="time_from"]');
+            const tfTo = addOrderForm.querySelector('[name="time_to"]');
+            if (tfFrom) tfFrom.value = subData.delivery.time_from || '';
+            if (tfTo) tfTo.value = subData.delivery.time_to || '';
+        }
 
         if (subData.delivery.is_pickup) {
             setDeliveryMode('pickup');
