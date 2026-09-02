@@ -1088,6 +1088,8 @@
 
 {% block scripts %}
 {{ toast_script() }}
+<script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/address_autocomplete.js') }}"></script>
 {% include 'orders/_composer_script.html' %}
 {% include 'subscriptions/_draft_actions_script.html' %}
 <script>

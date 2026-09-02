@@ -243,12 +243,17 @@
                     <div id="order-city-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
                   </div>
 
-                  <div class="order-field" id="address-field">
+                  <div class="order-field" id="address-field" style="position: relative;">
                     <label class="order-label" for="address-input" id="address-label">
                       <i class="bi bi-signpost-2"></i>
                       Адреса <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок">
+                    <input type="text" name="street" id="address-input" class="order-input" required placeholder="Вулиця, будинок" autocomplete="off">
+                    <div id="order-address-dropdown" class="city-autocomplete-dropdown" style="display:none;"></div>
+                    <input type="hidden" name="latitude" id="order-latitude">
+                    <input type="hidden" name="longitude" id="order-longitude">
+                    <input type="hidden" name="google_place_id" id="order-google-place-id">
+                    <input type="hidden" name="formatted_address" id="order-formatted-address">
                     <p class="order-helper-copy" id="address-hint">
                       Вкажіть повну адресу доставки, щоб кур'єр міг швидко оформити маршрут.
                     </p>
@@ -356,6 +361,13 @@
                         {% endif %}
                       </select>
                     </div>
+                  </div>
+
+                  <div class="order-field">
+                    <label class="order-label" style="cursor: pointer;">
+                      <input type="checkbox" id="time-anytime-input" style="width: auto; margin-right: 6px;">
+                      Будь-який час (∞)
+                    </label>
                   </div>
 
                   <div class="order-two-col">

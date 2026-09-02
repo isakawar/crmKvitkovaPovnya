@@ -54,6 +54,13 @@
     font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
     background: #fef3c7; color: #92400e; margin-left: 6px; vertical-align: middle;
   }
+  .stop-badge-geo {
+    display: inline-flex; align-items: center;
+    padding: 1px 6px; border-radius: 999px;
+    font-size: 0.65rem; font-weight: 700;
+    background: #fee2e2; color: #b91c1c; margin-left: 6px; vertical-align: middle;
+    cursor: help;
+  }
   .drag-handle { display: none; }
   .route-stops-list li { cursor: grab; }
   .route-stops-list li:active { cursor: grabbing; }
@@ -350,6 +357,19 @@
       <p class="text-xs text-amber-700 mt-0.5">
         Нові доставки виділені бурштиновим. Перевірте та натисніть <b>Зберегти маршрути</b> для застосування.
       </p>
+    </div>
+  </div>
+
+  <!-- Failed-to-geocode orders (not placed in any route) -->
+  <div id="failed-orders-banner" style="display:none;"
+       class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+    <i class="bi bi-exclamation-triangle-fill text-red-500 text-base flex-shrink-0 mt-0.5"></i>
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-red-900">
+        <span id="failed-orders-count">0</span> замовлень не потрапили в маршрут — адресу не знайдено на карті
+      </p>
+      <ul id="failed-orders-list" class="text-xs text-red-700 mt-1 space-y-0.5"></ul>
+      <p class="text-xs text-red-600 mt-1.5">Виправте адресу в замовленні й перебудуйте маршрут.</p>
     </div>
   </div>
 
@@ -820,7 +840,12 @@ document.getElementById('btn-run-optimizer').addEventListener('click', async fun
       startJobPolling(data.job_id, false, data.selected_date);
     } else {
       document.getElementById('loading-overlay').classList.remove('active');
-      alert(data.error || 'Помилка оптимізації');
+      if (data.failed_orders && data.failed_orders.length) {
+        window.renderFailedOrders(data.failed_orders);
+        document.getElementById('failed-orders-banner').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert(data.error || 'Помилка оптимізації');
+      }
     }
   } catch(e) {
     document.getElementById('loading-overlay').classList.remove('active');
@@ -849,12 +874,26 @@ document.getElementById('route-map').addEventListener('wheel', function(e) {
   }
 }, { passive: false });
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-  subdomains: 'abcd',
+// Stadia "Alidade Smooth" — muted light basemap made for data overlays.
+// Keyless on localhost; on production add the domain in the Stadia dashboard
+// (free) or append ?api_key=<key>. Falls back to plain OpenStreetMap tiles.
+const _stadiaKey = "{{ config.STADIA_API_KEY }}";
+const _stadiaUrl = 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png'
+  + (_stadiaKey ? ('?api_key=' + _stadiaKey) : '');
+const stadiaLayer = L.tileLayer(_stadiaUrl, {
+  attribution: '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
   maxZoom: 20,
   detectRetina: true
-}).addTo(map);
+});
+stadiaLayer.on('tileerror', function onFail() {
+  stadiaLayer.off('tileerror', onFail);
+  map.removeLayer(stadiaLayer);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(map);
+});
+stadiaLayer.addTo(map);
 
 // ── Per-route map layer registry ─────────────────────────────────────────────
 window.routeMapLayers = [];
@@ -909,7 +948,7 @@ document.addEventListener('click', function(e) {
     if (candidates.length) {
       var optimal = Math.max.apply(null, candidates);
       if (optimal >= 0 && optimal < 24 * 60) {
-        return String(Math.floor(optimal / 60)).padStart(2, '0') + ':' + String(optimal % 60).padStart(2, '0');
+        return _fmtMinRoundedUp(optimal);
       }
     }
 
@@ -919,7 +958,17 @@ document.addEventListener('click', function(e) {
     var fp = first.eta.split(':');
     var depMin = parseInt(fp[0]) * 60 + parseInt(fp[1]) - first.driveMin;
     if (depMin < 0) return '';
-    return String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+    return _fmtMinRoundedUp(depMin);
+  }
+
+  // Suggested departures are shown on a clean 15-minute grid. Snap to the
+  // NEAREST mark (not always up) so a departure the optimizer timed against a
+  // window end doesn't get pushed past it: 11:57 -> 12:00, 10:17 -> 10:15.
+  // (The optimizer already does a window-checked snap; this is the fallback.)
+  function _fmtMinRoundedUp(mins, step) {
+    step = step || 15;
+    var m = Math.round(mins / step) * step;
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   }
 
   function recalcETAs(stops, depTimeStr) {
@@ -960,8 +1009,18 @@ document.addEventListener('click', function(e) {
 
       const stopsCount = route.stops.length;
       const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
-      const departureTime = route.departureTime || calcDeparture(route.stops);
-      if (!route.departureTime && departureTime) {
+      let departureTime = route.departureTime || calcDeparture(route.stops);
+      // Always present the suggested departure on a clean 5-minute grid and
+      // recompute ETAs from it, whatever the optimizer sent.
+      if (departureTime && /^\d{1,2}:\d{2}$/.test(departureTime)) {
+        const [hh, mm] = departureTime.split(':').map(Number);
+        const rounded = _fmtMinRoundedUp(hh * 60 + mm);
+        if (rounded !== departureTime || route.departureTime !== rounded) {
+          departureTime = rounded;
+          route.departureTime = rounded;
+          route.stops = recalcETAs(route.stops, rounded);
+        }
+      } else if (!route.departureTime && departureTime) {
         route.departureTime = departureTime;
         route.stops = recalcETAs(route.stops, departureTime);
       }
@@ -1040,8 +1099,11 @@ document.addEventListener('click', function(e) {
     li.dataset.stopId = stop.id || '';
     li.dataset.stopJson = JSON.stringify(stop);
 
-    const timePart = stop.timeStart || stop.timeEnd
-      ? `<span><i class="bi bi-calendar-event me-1"></i>${stop.timeStart || '?'} – ${stop.timeEnd || '?'}</span>`
+    // distribute results carry the window as delivery_window_* instead of timeStart/timeEnd
+    const winStart = stop.timeStart || stop.delivery_window_start;
+    const winEnd = stop.timeEnd || stop.delivery_window_end;
+    const timePart = winStart || winEnd
+      ? `<span><i class="bi bi-calendar-event me-1"></i>${winStart || '?'} – ${winEnd || '?'}</span>`
       : '';
     const drivePart = stop.driveMin
       ? `<span><i class="bi bi-car-front me-1"></i>${stop.driveMin} хв дороги</span>`
@@ -1050,12 +1112,16 @@ document.addEventListener('click', function(e) {
       ? `<span><i class="bi bi-hourglass-split me-1"></i>${stop.waitMin} хв очікування</span>`
       : '';
     const newBadge = isNew ? '<span class="stop-badge-new">нова</span>' : '';
+    const q = stop.geocodeQuality;
+    const geoBadge = (q === 'approximate' || q === 'not_found')
+      ? '<span class="stop-badge-geo" title="Оптимізатор не знайшов точну адресу — мітку поставлено приблизно. Перевірте на карті.">⚠ неточна адреса</span>'
+      : '';
 
     li.innerHTML = `
       <i class="bi bi-grip-vertical drag-handle"></i>
       <span class="stop-num" style="background:${color};">${num}</span>
       <div style="flex:1;">
-        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}${newBadge}</div>
+        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}${newBadge}${geoBadge}</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:0.8rem;color:#a8a29e;">
           <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
           ${timePart}${drivePart}${waitPart}
@@ -1152,14 +1218,17 @@ document.addEventListener('click', function(e) {
     const routeDbIdByCourier = {};
     const courierNameByCourier = {};
     const stopIdsByRouteIdx = {};
+    const stopQualityByRouteIdx = {};
     currentRoutes.forEach(function(r, idx) {
       let key = r.courierId;
       if (typeof key === 'string') { const m = key.match(/\d+/); key = m ? parseInt(m[0], 10) : idx + 1; }
       else if (typeof key !== 'number' || key === null) { key = idx + 1; }
       if (r.routeDbId) routeDbIdByCourier[key] = r.routeDbId;
       if (r.courierName) courierNameByCourier[key] = r.courierName;
-      // Preserve delivery ids by stop position so save still works after recalculate
+      // Recalculate only recomputes ETAs — preserve delivery ids and the
+      // geocode-quality flag by stop position so they survive the round-trip.
       stopIdsByRouteIdx[idx] = (r.stops || []).map(function(s) { return s.id; });
+      stopQualityByRouteIdx[idx] = (r.stops || []).map(function(s) { return s.geocodeQuality || null; });
     });
 
     const recalcRoutes = currentRoutes.map(function(route, idx) {
@@ -1181,6 +1250,7 @@ document.addEventListener('click', function(e) {
               id: s.id,
               lat: s.lat, lng: s.lng,
               address: s.address || '',
+              geocode_quality: s.geocodeQuality || null,
               timeStart: s.timeStart || null,
               timeEnd: s.timeEnd || null,
             };
@@ -1213,8 +1283,10 @@ document.addEventListener('click', function(e) {
         if (!r.routeDbId && routeDbIdByCourier[r.courierId]) r.routeDbId = routeDbIdByCourier[r.courierId];
         if (!r.courierName && courierNameByCourier[r.courierId]) r.courierName = courierNameByCourier[r.courierId];
         const prevIds = stopIdsByRouteIdx[idx] || [];
+        const prevQ = stopQualityByRouteIdx[idx] || [];
         (r.stops || []).forEach(function(stop, si) {
           if (!stop.id && prevIds[si]) stop.id = prevIds[si];
+          if (stop.geocodeQuality == null && prevQ[si] != null) stop.geocodeQuality = prevQ[si];
         });
       });
       hasChanges = false;
@@ -1519,13 +1591,40 @@ document.addEventListener('click', function(e) {
   });
 
   function updateStats(stats) {
-    document.getElementById('stat-deliveries').textContent = stats.totalDeliveries ?? 0;
-    document.getElementById('stat-couriers').textContent = stats.numCouriers ?? 0;
+    // The rendered routes are authoritative for the counts — a per-route cache
+    // can carry stale batch-level stats (e.g. when editing one saved route).
+    const routes = currentRoutes || [];
+    const deliveriesFromRoutes = routes.reduce(function (n, r) {
+      return n + ((r.stops && r.stops.length) || 0);
+    }, 0);
+    document.getElementById('stat-deliveries').textContent =
+      routes.length ? deliveriesFromRoutes : (stats.totalDeliveries ?? 0);
+    document.getElementById('stat-couriers').textContent =
+      routes.length || (stats.numCouriers ?? 0);
     const dropped = stats.droppedOrders || 0;
     const droppedCard = document.getElementById('stat-dropped-card');
     droppedCard.style.display = dropped ? '' : 'none';
     document.getElementById('stat-dropped').textContent = dropped;
   }
+
+  window.renderFailedOrders = function(failed) {
+    const banner = document.getElementById('failed-orders-banner');
+    const list = document.getElementById('failed-orders-list');
+    if (!failed || !failed.length) {
+      banner.style.display = 'none';
+      list.innerHTML = '';
+      return;
+    }
+    document.getElementById('failed-orders-count').textContent = failed.length;
+    list.innerHTML = failed.map(f => {
+      const addr = (f.address || '').replace(/</g, '&lt;');
+      const link = f.id
+        ? `<a href="/orders?highlight=${f.id}" target="_blank" class="underline">#${f.id}</a> `
+        : '';
+      return `<li>• ${link}${addr}</li>`;
+    }).join('');
+    banner.style.display = '';
+  };
 
   window.renderResult = function(result) {
     originalResult = result;
@@ -1544,6 +1643,9 @@ document.addEventListener('click', function(e) {
     document.getElementById('btn-save-routes').style.display = '';
 
     updateStats(result.stats || {});
+    // Skip the "not placed" banner when editing one saved route — its cache may
+    // carry the original batch's failures, which are not this route's concern.
+    window.renderFailedOrders(EDITING_ROUTE_ID ? null : result.failedOrders);
     updateMap(result);
     renderRoutes(currentRoutes);
 

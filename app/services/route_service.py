@@ -56,7 +56,22 @@ def save_routes(
                     db.session.flush()
             continue
 
-        single_route_cache = json.dumps({**result_meta, 'routes': [route_data]})
+        # Per-route cache: recompute stats for THIS route only — result_meta
+        # carries the whole batch's stats / failedOrders, which would mislead
+        # when the route is later reopened for editing.
+        single_meta = {
+            **result_meta,
+            'stats': {
+                **(result_meta.get('stats') or {}),
+                'totalDeliveries': len(stops),
+                'numCouriers': 1,
+                'totalDistanceKm': route_data.get('totalDistanceKm'),
+                'totalDriveMin': route_data.get('totalDriveMin'),
+            },
+            'droppedOrders': 0,
+            'failedOrders': [],
+        }
+        single_route_cache = json.dumps({**single_meta, 'routes': [route_data]})
 
         route_db_id = route_data.get('routeDbId')
         if not route_db_id and _editing_route_id:

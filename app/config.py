@@ -23,6 +23,18 @@ class Config:
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
 
+    # Google Maps / Places (New) — address autocomplete in order/subscription forms
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+    # short.io — shortens Google Maps route links in courier Telegram messages.
+    # Both must be set for short.io to be used; otherwise falls back to is.gd.
+    SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
+    SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
+
+    # Stadia Maps — basemap for the route optimizer map. Optional: keyless works
+    # on localhost and on domains allow-listed in the Stadia dashboard.
+    STADIA_API_KEY = os.environ.get('STADIA_API_KEY', '')
+
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
@@ -66,6 +78,16 @@ class DevelopmentConfig:
     TELEGRAM_NOTIFICATIONS_ENABLED = os.environ.get('TELEGRAM_NOTIFICATIONS_ENABLED', 'true').lower() == 'true'
     ROUTE_OPTIMIZER_URL = os.environ.get('ROUTE_OPTIMIZER_URL', '')
     DEPOT_ADDRESS = os.environ.get('DEPOT_ADDRESS', '')
+
+    # Google Maps / Places (New) — address autocomplete in order/subscription forms
+    GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', '')
+
+    # short.io — shortens Google Maps route links in courier Telegram messages.
+    SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
+    SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
+
+    # Stadia Maps — basemap for the route optimizer map (optional API key).
+    STADIA_API_KEY = os.environ.get('STADIA_API_KEY', '')
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
