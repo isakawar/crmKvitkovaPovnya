@@ -948,7 +948,7 @@ document.addEventListener('click', function(e) {
     if (candidates.length) {
       var optimal = Math.max.apply(null, candidates);
       if (optimal >= 0 && optimal < 24 * 60) {
-        return String(Math.floor(optimal / 60)).padStart(2, '0') + ':' + String(optimal % 60).padStart(2, '0');
+        return _fmtMinRoundedUp(optimal);
       }
     }
 
@@ -958,7 +958,14 @@ document.addEventListener('click', function(e) {
     var fp = first.eta.split(':');
     var depMin = parseInt(fp[0]) * 60 + parseInt(fp[1]) - first.driveMin;
     if (depMin < 0) return '';
-    return String(Math.floor(depMin / 60)).padStart(2, '0') + ':' + String(depMin % 60).padStart(2, '0');
+    return _fmtMinRoundedUp(depMin);
+  }
+
+  // Suggested departures are shown on a clean 15-minute grid (09:57 -> 10:00).
+  function _fmtMinRoundedUp(mins, step) {
+    step = step || 15;
+    var m = Math.ceil(mins / step) * step;
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   }
 
   function recalcETAs(stops, depTimeStr) {
@@ -999,8 +1006,18 @@ document.addEventListener('click', function(e) {
 
       const stopsCount = route.stops.length;
       const distKm = route.totalDistanceKm != null ? route.totalDistanceKm + ' км' : '—';
-      const departureTime = route.departureTime || calcDeparture(route.stops);
-      if (!route.departureTime && departureTime) {
+      let departureTime = route.departureTime || calcDeparture(route.stops);
+      // Always present the suggested departure on a clean 5-minute grid and
+      // recompute ETAs from it, whatever the optimizer sent.
+      if (departureTime && /^\d{1,2}:\d{2}$/.test(departureTime)) {
+        const [hh, mm] = departureTime.split(':').map(Number);
+        const rounded = _fmtMinRoundedUp(hh * 60 + mm);
+        if (rounded !== departureTime || route.departureTime !== rounded) {
+          departureTime = rounded;
+          route.departureTime = rounded;
+          route.stops = recalcETAs(route.stops, rounded);
+        }
+      } else if (!route.departureTime && departureTime) {
         route.departureTime = departureTime;
         route.stops = recalcETAs(route.stops, departureTime);
       }
