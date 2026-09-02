@@ -54,6 +54,13 @@
     font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
     background: #fef3c7; color: #92400e; margin-left: 6px; vertical-align: middle;
   }
+  .stop-badge-geo {
+    display: inline-flex; align-items: center;
+    padding: 1px 6px; border-radius: 999px;
+    font-size: 0.65rem; font-weight: 700;
+    background: #fee2e2; color: #b91c1c; margin-left: 6px; vertical-align: middle;
+    cursor: help;
+  }
   .drag-handle { display: none; }
   .route-stops-list li { cursor: grab; }
   .route-stops-list li:active { cursor: grabbing; }
@@ -350,6 +357,19 @@
       <p class="text-xs text-amber-700 mt-0.5">
         Нові доставки виділені бурштиновим. Перевірте та натисніть <b>Зберегти маршрути</b> для застосування.
       </p>
+    </div>
+  </div>
+
+  <!-- Failed-to-geocode orders (not placed in any route) -->
+  <div id="failed-orders-banner" style="display:none;"
+       class="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+    <i class="bi bi-exclamation-triangle-fill text-red-500 text-base flex-shrink-0 mt-0.5"></i>
+    <div class="min-w-0">
+      <p class="text-sm font-semibold text-red-900">
+        <span id="failed-orders-count">0</span> замовлень не потрапили в маршрут — адресу не знайдено на карті
+      </p>
+      <ul id="failed-orders-list" class="text-xs text-red-700 mt-1 space-y-0.5"></ul>
+      <p class="text-xs text-red-600 mt-1.5">Виправте адресу в замовленні й перебудуйте маршрут.</p>
     </div>
   </div>
 
@@ -820,7 +840,12 @@ document.getElementById('btn-run-optimizer').addEventListener('click', async fun
       startJobPolling(data.job_id, false, data.selected_date);
     } else {
       document.getElementById('loading-overlay').classList.remove('active');
-      alert(data.error || 'Помилка оптимізації');
+      if (data.failed_orders && data.failed_orders.length) {
+        window.renderFailedOrders(data.failed_orders);
+        document.getElementById('failed-orders-banner').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        alert(data.error || 'Помилка оптимізації');
+      }
     }
   } catch(e) {
     document.getElementById('loading-overlay').classList.remove('active');
@@ -1050,12 +1075,16 @@ document.addEventListener('click', function(e) {
       ? `<span><i class="bi bi-hourglass-split me-1"></i>${stop.waitMin} хв очікування</span>`
       : '';
     const newBadge = isNew ? '<span class="stop-badge-new">нова</span>' : '';
+    const q = stop.geocodeQuality;
+    const geoBadge = (q === 'approximate' || q === 'not_found')
+      ? '<span class="stop-badge-geo" title="Оптимізатор не знайшов точну адресу — мітку поставлено приблизно. Перевірте на карті.">⚠ неточна адреса</span>'
+      : '';
 
     li.innerHTML = `
       <i class="bi bi-grip-vertical drag-handle"></i>
       <span class="stop-num" style="background:${color};">${num}</span>
       <div style="flex:1;">
-        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}${newBadge}</div>
+        <div style="font-weight:500;font-size:0.92rem;color:#1c1917;">${stop.address || '—'}${newBadge}${geoBadge}</div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;font-size:0.8rem;color:#a8a29e;">
           <span><i class="bi bi-clock me-1"></i>ETA ${stop.eta || '—'}</span>
           ${timePart}${drivePart}${waitPart}
@@ -1527,6 +1556,25 @@ document.addEventListener('click', function(e) {
     document.getElementById('stat-dropped').textContent = dropped;
   }
 
+  window.renderFailedOrders = function(failed) {
+    const banner = document.getElementById('failed-orders-banner');
+    const list = document.getElementById('failed-orders-list');
+    if (!failed || !failed.length) {
+      banner.style.display = 'none';
+      list.innerHTML = '';
+      return;
+    }
+    document.getElementById('failed-orders-count').textContent = failed.length;
+    list.innerHTML = failed.map(f => {
+      const addr = (f.address || '').replace(/</g, '&lt;');
+      const link = f.id
+        ? `<a href="/orders?highlight=${f.id}" target="_blank" class="underline">#${f.id}</a> `
+        : '';
+      return `<li>• ${link}${addr}</li>`;
+    }).join('');
+    banner.style.display = '';
+  };
+
   window.renderResult = function(result) {
     originalResult = result;
     currentRoutes = JSON.parse(JSON.stringify(result.routes || []));
@@ -1544,6 +1592,7 @@ document.addEventListener('click', function(e) {
     document.getElementById('btn-save-routes').style.display = '';
 
     updateStats(result.stats || {});
+    window.renderFailedOrders(result.failedOrders);
     updateMap(result);
     renderRoutes(currentRoutes);
 

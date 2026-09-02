@@ -33,6 +33,7 @@ from app.services.route_optimizer_service import (
     distribute_deliveries,
     RouteOptimizerError,
     RouteOptimizerInfeasibleError,
+    RouteOptimizerAllFailedError,
 )
 from app.services.route_service import save_routes as svc_save_routes, remove_delivery_from_route
 import csv
@@ -1109,6 +1110,8 @@ def route_generator():
             return jsonify({'result': result, 'selected_date': selected_date_str})
         except RouteOptimizerInfeasibleError as exc:
             return jsonify({'error': str(exc), 'minimum_couriers_required': exc.minimum_couriers_required}), 422
+        except RouteOptimizerAllFailedError as exc:
+            return jsonify({'error': str(exc), 'failed_orders': exc.failed_orders}), 422
         except RouteOptimizerError as exc:
             return jsonify({'error': str(exc)}), 502
 
@@ -1379,6 +1382,8 @@ def route_generator_distribute():
         result = distribute_deliveries(route_ids, delivery_ids, optimizer_url)
     except RouteOptimizerInfeasibleError as e:
         return jsonify({'error': str(e)}), 422
+    except RouteOptimizerAllFailedError as e:
+        return jsonify({'error': str(e), 'failed_orders': e.failed_orders}), 422
     except RouteOptimizerError as e:
         return jsonify({'error': str(e)}), 502
 

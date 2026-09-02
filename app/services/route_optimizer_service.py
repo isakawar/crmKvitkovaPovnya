@@ -19,6 +19,14 @@ class RouteOptimizerInfeasibleError(RouteOptimizerError):
         self.reason = reason
 
 
+class RouteOptimizerAllFailedError(RouteOptimizerError):
+    """Raised when the optimizer could not geocode a single delivery address."""
+
+    def __init__(self, failed_orders: list | None = None):
+        super().__init__("Жодну адресу не вдалося знайти на карті")
+        self.failed_orders = failed_orders or []
+
+
 def _delivery_to_order_json(delivery) -> dict:
     order = delivery.order
     city = (order.city if order else "") or ""
@@ -59,12 +67,21 @@ def _ensure_stats(result: dict) -> dict:
 
 def _parse_error(body: dict, status_code: int):
     """Raise appropriate exception for non-200 responses."""
-    if status_code == 422 and body.get("error") == "INFEASIBLE":
+    # The optimizer returns structured 422s either at the top level (INFEASIBLE)
+    # or nested under "detail" (raised via HTTPException) — accept both.
+    err_body = body
+    if isinstance(body.get("detail"), dict):
+        err_body = {**body, **body["detail"]}
+
+    if status_code == 422 and err_body.get("error") == "INFEASIBLE":
         raise RouteOptimizerInfeasibleError(
-            body.get("message") or "Неможливо побудувати маршрут з поточними параметрами",
-            body.get("minimum_couriers_required"),
-            body.get("reason"),
+            err_body.get("message") or "Неможливо побудувати маршрут з поточними параметрами",
+            err_body.get("minimum_couriers_required"),
+            err_body.get("reason"),
         )
+    if status_code == 422 and err_body.get("error") == "ALL_GEOCODING_FAILED":
+        raise RouteOptimizerAllFailedError(err_body.get("failedOrders"))
+
     detail = body.get("detail") or body.get("message") or body.get("error")
     if isinstance(detail, str):
         raise RouteOptimizerError(detail)
