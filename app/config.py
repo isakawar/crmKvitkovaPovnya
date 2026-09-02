@@ -31,6 +31,10 @@ class Config:
     SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
     SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
 
+    # Stadia Maps — basemap for the route optimizer map. Optional: keyless works
+    # on localhost and on domains allow-listed in the Stadia dashboard.
+    STADIA_API_KEY = os.environ.get('STADIA_API_KEY', '')
+
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
 
@@ -81,6 +85,9 @@ class DevelopmentConfig:
     # short.io — shortens Google Maps route links in courier Telegram messages.
     SHORTIO_API_KEY = os.environ.get('SHORTIO_API_KEY', '')
     SHORTIO_DOMAIN = os.environ.get('SHORTIO_DOMAIN', '')
+
+    # Stadia Maps — basemap for the route optimizer map (optional API key).
+    STADIA_API_KEY = os.environ.get('STADIA_API_KEY', '')
 
     # Wix site order integration — comma-separated allowed data.context.metaSiteId values
     WIX_ALLOWED_SITE_IDS = os.environ.get('WIX_ALLOWED_SITE_IDS', '')
