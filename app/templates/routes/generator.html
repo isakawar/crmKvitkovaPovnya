@@ -961,10 +961,13 @@ document.addEventListener('click', function(e) {
     return _fmtMinRoundedUp(depMin);
   }
 
-  // Suggested departures are shown on a clean 15-minute grid (09:57 -> 10:00).
+  // Suggested departures are shown on a clean 15-minute grid. Snap to the
+  // NEAREST mark (not always up) so a departure the optimizer timed against a
+  // window end doesn't get pushed past it: 11:57 -> 12:00, 10:17 -> 10:15.
+  // (The optimizer already does a window-checked snap; this is the fallback.)
   function _fmtMinRoundedUp(mins, step) {
     step = step || 15;
-    var m = Math.ceil(mins / step) * step;
+    var m = Math.round(mins / step) * step;
     return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
   }
 
