@@ -1212,14 +1212,17 @@ document.addEventListener('click', function(e) {
     const routeDbIdByCourier = {};
     const courierNameByCourier = {};
     const stopIdsByRouteIdx = {};
+    const stopQualityByRouteIdx = {};
     currentRoutes.forEach(function(r, idx) {
       let key = r.courierId;
       if (typeof key === 'string') { const m = key.match(/\d+/); key = m ? parseInt(m[0], 10) : idx + 1; }
       else if (typeof key !== 'number' || key === null) { key = idx + 1; }
       if (r.routeDbId) routeDbIdByCourier[key] = r.routeDbId;
       if (r.courierName) courierNameByCourier[key] = r.courierName;
-      // Preserve delivery ids by stop position so save still works after recalculate
+      // Recalculate only recomputes ETAs — preserve delivery ids and the
+      // geocode-quality flag by stop position so they survive the round-trip.
       stopIdsByRouteIdx[idx] = (r.stops || []).map(function(s) { return s.id; });
+      stopQualityByRouteIdx[idx] = (r.stops || []).map(function(s) { return s.geocodeQuality || null; });
     });
 
     const recalcRoutes = currentRoutes.map(function(route, idx) {
@@ -1241,6 +1244,7 @@ document.addEventListener('click', function(e) {
               id: s.id,
               lat: s.lat, lng: s.lng,
               address: s.address || '',
+              geocode_quality: s.geocodeQuality || null,
               timeStart: s.timeStart || null,
               timeEnd: s.timeEnd || null,
             };
@@ -1273,8 +1277,10 @@ document.addEventListener('click', function(e) {
         if (!r.routeDbId && routeDbIdByCourier[r.courierId]) r.routeDbId = routeDbIdByCourier[r.courierId];
         if (!r.courierName && courierNameByCourier[r.courierId]) r.courierName = courierNameByCourier[r.courierId];
         const prevIds = stopIdsByRouteIdx[idx] || [];
+        const prevQ = stopQualityByRouteIdx[idx] || [];
         (r.stops || []).forEach(function(stop, si) {
           if (!stop.id && prevIds[si]) stop.id = prevIds[si];
+          if (stop.geocodeQuality == null && prevQ[si] != null) stop.geocodeQuality = prevQ[si];
         });
       });
       hasChanges = false;
