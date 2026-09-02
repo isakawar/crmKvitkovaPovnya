@@ -1585,8 +1585,16 @@ document.addEventListener('click', function(e) {
   });
 
   function updateStats(stats) {
-    document.getElementById('stat-deliveries').textContent = stats.totalDeliveries ?? 0;
-    document.getElementById('stat-couriers').textContent = stats.numCouriers ?? 0;
+    // The rendered routes are authoritative for the counts — a per-route cache
+    // can carry stale batch-level stats (e.g. when editing one saved route).
+    const routes = currentRoutes || [];
+    const deliveriesFromRoutes = routes.reduce(function (n, r) {
+      return n + ((r.stops && r.stops.length) || 0);
+    }, 0);
+    document.getElementById('stat-deliveries').textContent =
+      routes.length ? deliveriesFromRoutes : (stats.totalDeliveries ?? 0);
+    document.getElementById('stat-couriers').textContent =
+      routes.length || (stats.numCouriers ?? 0);
     const dropped = stats.droppedOrders || 0;
     const droppedCard = document.getElementById('stat-dropped-card');
     droppedCard.style.display = dropped ? '' : 'none';
@@ -1629,7 +1637,9 @@ document.addEventListener('click', function(e) {
     document.getElementById('btn-save-routes').style.display = '';
 
     updateStats(result.stats || {});
-    window.renderFailedOrders(result.failedOrders);
+    // Skip the "not placed" banner when editing one saved route — its cache may
+    // carry the original batch's failures, which are not this route's concern.
+    window.renderFailedOrders(EDITING_ROUTE_ID ? null : result.failedOrders);
     updateMap(result);
     renderRoutes(currentRoutes);
 
