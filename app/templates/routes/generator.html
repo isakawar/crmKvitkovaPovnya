@@ -1096,8 +1096,11 @@ document.addEventListener('click', function(e) {
     li.dataset.stopId = stop.id || '';
     li.dataset.stopJson = JSON.stringify(stop);
 
-    const timePart = stop.timeStart || stop.timeEnd
-      ? `<span><i class="bi bi-calendar-event me-1"></i>${stop.timeStart || '?'} – ${stop.timeEnd || '?'}</span>`
+    // distribute results carry the window as delivery_window_* instead of timeStart/timeEnd
+    const winStart = stop.timeStart || stop.delivery_window_start;
+    const winEnd = stop.timeEnd || stop.delivery_window_end;
+    const timePart = winStart || winEnd
+      ? `<span><i class="bi bi-calendar-event me-1"></i>${winStart || '?'} – ${winEnd || '?'}</span>`
       : '';
     const drivePart = stop.driveMin
       ? `<span><i class="bi bi-car-front me-1"></i>${stop.driveMin} хв дороги</span>`
