@@ -60,6 +60,73 @@ def features_page():
     return render_template('settings/features.html')
 
 
+@bp.route('/settings/messaging')
+@login_required
+@permission_required('edit_settings')
+def messaging_page():
+    from app.services.messaging import channel_config_service as ccs
+    channels = ccs.list_channels()
+    managers = User.query.filter(User.user_type.in_(('admin', 'manager'))).order_by(User.username).all()
+    token_set = bool(current_app.config.get('INBOX_TELEGRAM_BOT_TOKEN'))
+    public_url_set = bool(current_app.config.get('CRM_PUBLIC_URL'))
+    return render_template(
+        'settings/messaging.html',
+        channels=channels, managers=managers,
+        token_set=token_set, public_url_set=public_url_set,
+    )
+
+
+@bp.route('/settings/messaging/channels', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_create_channel():
+    from app.services.messaging import channel_config_service as ccs
+    data = request.get_json() or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'success': False, 'error': 'Вкажіть назву'}), 400
+    channel = ccs.create_channel(name, data.get('channel_type') or 'telegram')
+    return jsonify({'success': True, 'id': channel.id})
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_update_channel(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import channel_config_service as ccs
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    data = request.get_json() or {}
+    ccs.update_channel(channel, name=data.get('name'), is_active=data.get('is_active'))
+    if 'manager_ids' in data:
+        ccs.set_managers(channel, [int(x) for x in data['manager_ids']])
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>/delete', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_delete_channel(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import channel_config_service as ccs
+    ccs.delete_channel(MessagingChannel.query.get_or_404(channel_id))
+    return jsonify({'success': True})
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>/webhook', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_register_webhook(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import channel_config_service as ccs
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    try:
+        ccs.register_webhook(channel)
+        return jsonify({'success': True, 'url': ccs.webhook_url(channel)})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
 @bp.route('/settings/charges')
 @login_required
 @permission_required('view_settings')

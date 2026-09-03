@@ -57,6 +57,11 @@ class Config:
     MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 MB
     ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
 
+    # Omnichannel inbox — Telegram Business API bot (SEPARATE bot from the courier bot)
+    INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
+    INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
+    INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
+
 class DevelopmentConfig:
     DEBUG = True
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_secret')
@@ -110,6 +115,11 @@ class DevelopmentConfig:
     UPLOAD_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'order_photos')
     MAX_CONTENT_LENGTH = 15 * 1024 * 1024  # 15 MB
     ALLOWED_PHOTO_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp', 'heic'}
+
+    # Omnichannel inbox — Telegram Business API bot (SEPARATE bot from the courier bot)
+    INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
+    INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
+    INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

@@ -57,6 +57,7 @@ def create_app(config_class=DevelopmentConfig):
     from app.blueprints.activity_log import activity_log_bp
     from app.blueprints.notifications import notifications_bp
     from app.blueprints.integrations import integrations_bp
+    from app.blueprints.inbox import inbox_bp
 
     app.register_blueprint(orders_bp)
     app.register_blueprint(clients_bp)
@@ -76,9 +77,11 @@ def create_app(config_class=DevelopmentConfig):
     app.register_blueprint(activity_log_bp)
     app.register_blueprint(notifications_bp)
     app.register_blueprint(integrations_bp)
+    app.register_blueprint(inbox_bp)
 
-    # Ensure upload folder exists
+    # Ensure upload folders exist
     os.makedirs(app.config.get('UPLOAD_FOLDER', 'uploads/order_photos'), exist_ok=True)
+    os.makedirs(app.config.get('INBOX_MEDIA_FOLDER', 'uploads/inbox_media'), exist_ok=True)
 
     # Cleanup old route cache (раз на добу, старше 7 днів)
     @app.before_request
@@ -128,7 +131,7 @@ def create_app(config_class=DevelopmentConfig):
             return
         public_endpoints = [
             'auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon',
-            'integrations.wix_order_webhook',
+            'integrations.wix_order_webhook', 'inbox.telegram_webhook',
         ]
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
@@ -358,6 +361,35 @@ def create_app(config_class=DevelopmentConfig):
             )
         except Exception:
             return dict(action_items_pending_count=0, stuck_deliveries_count=0, florist_pending_count=0)
+
+    @app.context_processor
+    def inject_inbox_unread():
+        if not current_user.is_authenticated:
+            return dict(inbox_unread=0)
+        try:
+            from app.services.messaging import inbox_service
+            if not inbox_service.user_is_manager(current_user):
+                return dict(inbox_unread=0)
+            return dict(inbox_unread=inbox_service.total_unread(current_user))
+        except Exception:
+            return dict(inbox_unread=0)
+
+    @app.cli.command('messaging-set-webhook')
+    @click.argument('channel_id', type=int)
+    def messaging_set_webhook(channel_id):
+        """Зареєструвати webhook у Telegram для каналу інбоксу."""
+        from app.models.messaging_channel import MessagingChannel
+        from app.services.messaging import channel_config_service as ccs
+
+        channel = MessagingChannel.query.get(channel_id)
+        if not channel:
+            click.echo(f'Канал #{channel_id} не знайдено.')
+            return
+        try:
+            ccs.register_webhook(channel)
+            click.echo(f'✅ Webhook встановлено: {ccs.webhook_url(channel)}')
+        except Exception as exc:  # noqa: BLE001
+            click.echo(f'❌ Помилка: {exc}')
 
     @app.context_processor
     def inject_feature_flags():

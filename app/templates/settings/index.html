@@ -79,6 +79,21 @@
     </a>
     {% endif %}
 
+    {% if current_user.has_permission('edit_settings') %}
+    <a class="settings-grid-card" href="{{ url_for('settings.messaging_page') }}">
+      <span class="settings-grid-card__icon"><i class="bi bi-chat-dots"></i></span>
+      <div>
+        <p class="settings-grid-card__eyebrow">Інтеграції</p>
+        <h2 class="settings-grid-card__title">Чат / Інбокс</h2>
+        <p class="settings-grid-card__text">Підключення Telegram (згодом Instagram, Viber, WhatsApp) та доступ менеджерів до діалогів.</p>
+      </div>
+      <div class="settings-grid-card__meta">
+        <span>Налаштувати канали</span>
+        <span class="settings-grid-card__chevron"><i class="bi bi-arrow-up-right"></i></span>
+      </div>
+    </a>
+    {% endif %}
+
     <a class="settings-grid-card" href="{{ url_for('photos.list_photos') }}">
       <span class="settings-grid-card__icon"><i class="bi bi-images"></i></span>
       <div>

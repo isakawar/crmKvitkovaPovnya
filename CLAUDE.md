@@ -38,6 +38,7 @@ After implementation always: describe how to test, expected behavior, edge cases
 | Route optimization | `app/services/route_optimizer_service.py` |
 | CSV import | `app/services/csv_import_service.py` |
 | Reports / Statistics / P&L | `app/services/reports_service.py` |
+| Omnichannel inbox / chat | `app/services/messaging/` |
 
 ---
 
@@ -109,6 +110,27 @@ Transaction (debit)
 Use `expense_type_id` FK — not the legacy `expense_type` string column.
 
 ---
+
+## Omnichannel Inbox (chat)
+
+In-CRM chat where dialogs from corporate accounts land and managers reply. Page `/inbox`
+(blueprint `app/blueprints/inbox/`). Config in `/settings/messaging`.
+
+- **Channel adapters**: `app/services/messaging/adapter.py` defines `ChannelAdapter` Protocol +
+  `InboundEvent` / `SentResult`. `get_adapter(channel)` resolves by `channel_type`. Telegram =
+  `telegram_business.py` (Telegram **Business API** over plain `requests`, no PTB — separate bot
+  from the courier bot, token `INBOX_TELEGRAM_BOT_TOKEN`). Add Instagram/Viber/WhatsApp as new
+  adapter modules + webhook route; models stay unchanged.
+- **Domain logic**: `inbox_service.py` (no Flask) — `ingest_event`, `send_reply`,
+  `list_conversations`, `total_unread`, `ensure_media_downloaded` (lazy — webhook never downloads
+  media, only stores `tg_file_id`, to avoid Telegram retry storms).
+- **Models**: `MessagingChannel`, `MessagingChannelAccess` (per-manager access), `Conversation`,
+  `Message`. Tables `messaging_channel` / `messaging_channel_access` / `messaging_conversation` /
+  `messaging_message`.
+- **Webhook**: `POST /api/messaging/telegram/<channel_id>/webhook` (in `public_endpoints`),
+  verified by `X-Telegram-Bot-Api-Secret-Token` == `channel.webhook_secret`.
+- **Live updates**: JS polling (`app/static/js/inbox.js`, `setTimeout` chain), no WebSocket/SSE.
+- CLI: `flask messaging-set-webhook <channel_id>`.
 
 ## Key Concepts
 
