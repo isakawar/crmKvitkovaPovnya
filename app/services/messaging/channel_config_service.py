@@ -50,7 +50,7 @@ def set_managers(channel: MessagingChannel, user_ids: list[int]) -> None:
 
 
 def webhook_path(channel: MessagingChannel) -> str:
-    return f'/api/messaging/telegram/{channel.id}/webhook'
+    return f'/api/messaging/{channel.channel_type}/{channel.id}/webhook'
 
 
 def webhook_url(channel: MessagingChannel) -> str:

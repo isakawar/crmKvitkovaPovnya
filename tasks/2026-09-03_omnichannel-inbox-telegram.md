@@ -49,11 +49,32 @@ Instagram, Viber, WhatsApp). Менеджеры с выданным доступ
 - `app/templates/settings/index.html` — карточка «Чат / Інбокс».
 - `env.example`, `npm run build`.
 
-## Осталось (не в v1 / следующие шаги)
+## Этап 2 — Instagram (реализован, commit 2)
+
+- `app/services/messaging/instagram_dm.py` — `InstagramDMAdapter` (Instagram API with Instagram
+  Login, `graph.instagram.com`, без FB Page). `verify_subscription` (GET hub.challenge vs
+  `channel.webhook_secret`), `verify_webhook` (X-Hub-Signature-256 c `INBOX_INSTAGRAM_APP_SECRET`),
+  `parse_events` (пропуск echo/deleted), `download_media` (по CDN-URL из attachment),
+  `enrich_contact` (name/username по IGSID), `send_text`. `send_media` → пока ошибка (нужен public URL).
+- Роут `GET|POST /api/messaging/instagram/<channel_id>/webhook`, общий хендлер `_handle_webhook`.
+  `telegram_webhook`/`instagram_webhook` проверяют `channel.channel_type`.
+- `adapter.ChannelAdapter`: `verify_webhook(request, channel)` (был `headers`), новый `verify_subscription`.
+- `inbox_service.ingest_event` — узнаёт `channel.external_id` (IG account id) из первого вебхука;
+  `_get_or_create_conversation` вызывает `enrich_contact` для новых диалогов.
+- Config: `INBOX_INSTAGRAM_ACCESS_TOKEN`, `INBOX_INSTAGRAM_APP_SECRET`, `INBOX_INSTAGRAM_GRAPH_VERSION`.
+- `/settings/messaging` — выбор типа канала при создании, показ Webhook URL + Verify token,
+  подсказка про Meta App Dashboard. CLI `flask messaging-refresh-instagram <id>`.
+- Тесты: `test_messaging_instagram_adapter.py` (7) + 3 в inbox_service. Всего 379+27 passed.
+
+## Осталось / следующие шаги
 - Применить миграцию: `git commit` → `flask db upgrade` (правило проекта).
-- E2E-проверка с реальным ботом (BotFather → .env → /settings/messaging → Telegram Business → Chatbots).
-- Instagram/Viber/WhatsApp адаптеры.
-- Опционально: SSE вместо поллинга; пинг менеджерам в Telegram; связь conversation↔Client.
+- E2E Telegram: BotFather → .env → /settings/messaging → Telegram Business → Chatbots.
+- E2E Instagram: создать Meta App (Instagram API w/ Instagram Login), App Review для
+  `instagram_business_manage_messages`, вставить Webhook URL+Verify token в Meta Dashboard,
+  подписаться на `messages`, получить long-lived token в `.env`.
+- Instagram: исходящие фото (нужен публичный URL для медиа); 24-часовое окно ответа.
+- Viber / WhatsApp адаптеры.
+- Опционально: SSE вместо поллинга; пинг менеджерам; связь conversation↔Client.
 
 ## Как тестувати
 См. раздел «Верификация» в плане. Кратко:

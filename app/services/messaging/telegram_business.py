@@ -95,9 +95,12 @@ class TelegramBusinessAdapter:
     channel_type = 'telegram'
 
     # --- inbound -----------------------------------------------------------
-    def verify_webhook(self, headers, channel) -> bool:
-        got = headers.get('X-Telegram-Bot-Api-Secret-Token', '')
+    def verify_webhook(self, request, channel) -> bool:
+        got = request.headers.get('X-Telegram-Bot-Api-Secret-Token', '')
         return bool(channel.webhook_secret) and hmac.compare_digest(got, channel.webhook_secret)
+
+    def verify_subscription(self, args, channel) -> str | None:
+        return None  # Telegram has no GET verification handshake
 
     def parse_events(self, payload: dict) -> list[InboundEvent]:
         if not isinstance(payload, dict):

@@ -67,12 +67,15 @@ def messaging_page():
     from app.services.messaging import channel_config_service as ccs
     channels = ccs.list_channels()
     managers = User.query.filter(User.user_type.in_(('admin', 'manager'))).order_by(User.username).all()
-    token_set = bool(current_app.config.get('INBOX_TELEGRAM_BOT_TOKEN'))
-    public_url_set = bool(current_app.config.get('CRM_PUBLIC_URL'))
+    base = (current_app.config.get('CRM_PUBLIC_URL') or '').rstrip('/')
+    webhooks = {c.id: (base + ccs.webhook_path(c)) if base else ccs.webhook_path(c) for c in channels}
     return render_template(
         'settings/messaging.html',
-        channels=channels, managers=managers,
-        token_set=token_set, public_url_set=public_url_set,
+        channels=channels, managers=managers, webhooks=webhooks,
+        tg_token_set=bool(current_app.config.get('INBOX_TELEGRAM_BOT_TOKEN')),
+        ig_token_set=bool(current_app.config.get('INBOX_INSTAGRAM_ACCESS_TOKEN')),
+        ig_secret_set=bool(current_app.config.get('INBOX_INSTAGRAM_APP_SECRET')),
+        public_url_set=bool(base),
     )
 
 
@@ -85,7 +88,10 @@ def messaging_create_channel():
     name = (data.get('name') or '').strip()
     if not name:
         return jsonify({'success': False, 'error': 'Вкажіть назву'}), 400
-    channel = ccs.create_channel(name, data.get('channel_type') or 'telegram')
+    channel_type = data.get('channel_type') or 'telegram'
+    if channel_type not in ('telegram', 'instagram'):
+        return jsonify({'success': False, 'error': 'Непідтримуваний тип каналу'}), 400
+    channel = ccs.create_channel(name, channel_type)
     return jsonify({'success': True, 'id': channel.id})
 
 

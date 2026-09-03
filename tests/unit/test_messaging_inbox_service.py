@@ -149,6 +149,41 @@ def test_webhook_route_rejects_bad_secret(app, session):
     assert resp.status_code == 401
 
 
+def test_instagram_ingest_learns_account_id(session):
+    ch = MessagingChannel(name='IG', channel_type='instagram', webhook_secret='v', external_id=None)
+    session.add(ch)
+    session.commit()
+    ev = InboundEvent(kind='message', external_chat_id='IGSID1', external_message_id='m1',
+                      text='hi', contact={'_account_id': 'IGACC'}, media=[])
+    inbox_service.ingest_event(ch, ev)
+    session.refresh(ch)
+    assert ch.external_id == 'IGACC'
+    assert Conversation.query.one().external_chat_id == 'IGSID1'
+
+
+def test_instagram_webhook_get_handshake(app, session):
+    ch = MessagingChannel(name='IG', channel_type='instagram', webhook_secret='v-token')
+    session.add(ch)
+    session.commit()
+    client = app.test_client()
+    resp = client.get(f'/api/messaging/instagram/{ch.id}/webhook'
+                      '?hub.mode=subscribe&hub.verify_token=v-token&hub.challenge=abc123')
+    assert resp.status_code == 200
+    assert resp.get_data(as_text=True) == 'abc123'
+    bad = client.get(f'/api/messaging/instagram/{ch.id}/webhook'
+                     '?hub.mode=subscribe&hub.verify_token=wrong&hub.challenge=abc123')
+    assert bad.status_code == 403
+
+
+def test_telegram_webhook_rejects_instagram_channel(app, session):
+    ch = MessagingChannel(name='IG', channel_type='instagram', webhook_secret='v')
+    session.add(ch)
+    session.commit()
+    resp = app.test_client().post(f'/api/messaging/telegram/{ch.id}/webhook',
+                                  json={}, headers={'X-Telegram-Bot-Api-Secret-Token': 'v'})
+    assert resp.status_code == 404
+
+
 def test_webhook_route_ingests_with_valid_secret(app, session):
     ch = _channel(session)
     client = app.test_client()

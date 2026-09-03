@@ -37,7 +37,14 @@ class SentResult:
 class ChannelAdapter(Protocol):
     channel_type: str
 
-    def verify_webhook(self, headers, channel) -> bool: ...
+    def verify_webhook(self, request, channel) -> bool:
+        """Authenticate an inbound webhook POST (secret token / HMAC signature)."""
+        ...
+
+    def verify_subscription(self, args, channel) -> str | None:
+        """Handle a provider's GET verification handshake. Return the challenge
+        string to echo, or None when this provider has no GET handshake."""
+        ...
 
     def parse_events(self, payload: dict) -> list[InboundEvent]: ...
 
@@ -59,4 +66,7 @@ def get_adapter(channel) -> ChannelAdapter:
     if ctype == 'telegram':
         from app.services.messaging.telegram_business import TelegramBusinessAdapter
         return TelegramBusinessAdapter()
+    if ctype == 'instagram':
+        from app.services.messaging.instagram_dm import InstagramDMAdapter
+        return InstagramDMAdapter()
     raise ValueError(f'No messaging adapter for channel_type={ctype!r}')

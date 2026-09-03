@@ -61,6 +61,9 @@ class Config:
     INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
     INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
     INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
+    INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
+    INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
+    INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
 
 class DevelopmentConfig:
     DEBUG = True
@@ -120,6 +123,9 @@ class DevelopmentConfig:
     INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
     INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
     INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
+    INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
+    INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
+    INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

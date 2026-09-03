@@ -119,18 +119,23 @@ In-CRM chat where dialogs from corporate accounts land and managers reply. Page 
 - **Channel adapters**: `app/services/messaging/adapter.py` defines `ChannelAdapter` Protocol +
   `InboundEvent` / `SentResult`. `get_adapter(channel)` resolves by `channel_type`. Telegram =
   `telegram_business.py` (Telegram **Business API** over plain `requests`, no PTB — separate bot
-  from the courier bot, token `INBOX_TELEGRAM_BOT_TOKEN`). Add Instagram/Viber/WhatsApp as new
-  adapter modules + webhook route; models stay unchanged.
+  from the courier bot, token `INBOX_TELEGRAM_BOT_TOKEN`). Instagram = `instagram_dm.py`
+  (Instagram API with Instagram Login, `graph.instagram.com`, no FB Page; token + app secret in
+  env, channel `webhook_secret` is the `hub.verify_token`; webhook configured in the Meta App
+  dashboard, not via API; outbound text only for now). Add Viber/WhatsApp as new adapter modules
+  + webhook route; models stay unchanged.
 - **Domain logic**: `inbox_service.py` (no Flask) — `ingest_event`, `send_reply`,
   `list_conversations`, `total_unread`, `ensure_media_downloaded` (lazy — webhook never downloads
   media, only stores `tg_file_id`, to avoid Telegram retry storms).
 - **Models**: `MessagingChannel`, `MessagingChannelAccess` (per-manager access), `Conversation`,
   `Message`. Tables `messaging_channel` / `messaging_channel_access` / `messaging_conversation` /
   `messaging_message`.
-- **Webhook**: `POST /api/messaging/telegram/<channel_id>/webhook` (in `public_endpoints`),
-  verified by `X-Telegram-Bot-Api-Secret-Token` == `channel.webhook_secret`.
+- **Webhooks** (both in `public_endpoints`): `POST /api/messaging/telegram/<channel_id>/webhook`
+  (verified by `X-Telegram-Bot-Api-Secret-Token`); `GET|POST /api/messaging/instagram/<channel_id>/webhook`
+  (GET = `hub.challenge` handshake vs `channel.webhook_secret`; POST verified by `X-Hub-Signature-256`
+  with `INBOX_INSTAGRAM_APP_SECRET`). Shared handler `inbox_bp._handle_webhook`.
 - **Live updates**: JS polling (`app/static/js/inbox.js`, `setTimeout` chain), no WebSocket/SSE.
-- CLI: `flask messaging-set-webhook <channel_id>`.
+- CLI: `flask messaging-set-webhook <id>` (Telegram), `flask messaging-refresh-instagram <id>`.
 
 ## Key Concepts
 

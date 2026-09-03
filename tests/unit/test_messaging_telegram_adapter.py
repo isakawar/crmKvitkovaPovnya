@@ -7,14 +7,14 @@ adapter = TelegramBusinessAdapter()
 
 
 def _headers(value):
-    return {'X-Telegram-Bot-Api-Secret-Token': value}
+    return SimpleNamespace(headers={'X-Telegram-Bot-Api-Secret-Token': value})
 
 
 def test_verify_webhook_matches_secret():
     ch = SimpleNamespace(webhook_secret='s3cr3t')
     assert adapter.verify_webhook(_headers('s3cr3t'), ch) is True
     assert adapter.verify_webhook(_headers('wrong'), ch) is False
-    assert adapter.verify_webhook({}, ch) is False
+    assert adapter.verify_webhook(SimpleNamespace(headers={}), ch) is False
 
 
 def test_parse_business_connection():

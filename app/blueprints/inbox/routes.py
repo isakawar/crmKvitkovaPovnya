@@ -141,14 +141,17 @@ def media(message_id, idx):
     return send_from_directory(current_app.config['INBOX_MEDIA_FOLDER'], stored)
 
 
-# --- inbound webhook (public) ---------------------------------------
-@inbox_bp.route('/api/messaging/telegram/<int:channel_id>/webhook', methods=['POST'])
-def telegram_webhook(channel_id):
-    channel = MessagingChannel.query.get(channel_id)
-    if channel is None:
-        abort(404)
+# --- inbound webhooks (public) -------------------------------------
+def _handle_webhook(channel):
     adapter = get_adapter(channel)
-    if not adapter.verify_webhook(request.headers, channel):
+
+    if request.method == 'GET':
+        challenge = adapter.verify_subscription(request.args, channel)
+        if challenge is None:
+            abort(403)
+        return challenge, 200
+
+    if not adapter.verify_webhook(request, channel):
         abort(401)
 
     payload = request.get_json(silent=True) or {}
@@ -163,3 +166,19 @@ def telegram_webhook(channel_id):
         if msg is not None and event.kind == 'message' and event.media:
             inbox_service.prefetch_message_media(current_app._get_current_object(), msg.id)
     return '', 200
+
+
+@inbox_bp.route('/api/messaging/telegram/<int:channel_id>/webhook', methods=['POST'])
+def telegram_webhook(channel_id):
+    channel = MessagingChannel.query.get(channel_id)
+    if channel is None or channel.channel_type != 'telegram':
+        abort(404)
+    return _handle_webhook(channel)
+
+
+@inbox_bp.route('/api/messaging/instagram/<int:channel_id>/webhook', methods=['GET', 'POST'])
+def instagram_webhook(channel_id):
+    channel = MessagingChannel.query.get(channel_id)
+    if channel is None or channel.channel_type != 'instagram':
+        abort(404)
+    return _handle_webhook(channel)

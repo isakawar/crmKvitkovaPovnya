@@ -51,6 +51,11 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
             db.session.commit()
             return None
 
+        # Instagram: learn our own account id from the first webhook
+        account_id = event.contact.get('_account_id') if event.contact else None
+        if account_id and not channel.external_id:
+            channel.external_id = account_id
+
         conv = _get_or_create_conversation(channel, event)
 
         if event.kind == 'deleted':
@@ -109,12 +114,22 @@ def _get_or_create_conversation(channel: MessagingChannel, event) -> Conversatio
     conv = Conversation.query.filter_by(
         channel_id=channel.id, external_chat_id=event.external_chat_id).first()
     if conv is None:
+        contact = dict(event.contact or {})
+        if not contact.get('name') and not contact.get('username'):
+            adapter = get_adapter(channel)
+            if hasattr(adapter, 'enrich_contact'):
+                try:
+                    contact.update({k: v for k, v in
+                                    adapter.enrich_contact(channel, event.external_chat_id).items()
+                                    if v})
+                except Exception:  # noqa: BLE001
+                    log.exception('enrich_contact failed')
         conv = Conversation(
             channel_id=channel.id,
             external_chat_id=event.external_chat_id,
-            contact_name=event.contact.get('name'),
-            contact_username=event.contact.get('username'),
-            contact_phone=event.contact.get('phone'),
+            contact_name=contact.get('name'),
+            contact_username=contact.get('username'),
+            contact_phone=contact.get('phone'),
         )
         db.session.add(conv)
         db.session.flush()
