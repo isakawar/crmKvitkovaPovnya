@@ -156,10 +156,16 @@
     if (c) {
       $('ib-th-name').textContent = c.name;
       $('ib-th-sub').innerHTML = '<i class="bi bi-' + (c.channel_type === 'telegram' ? 'telegram' : 'instagram') + '"></i> ' +
-        (c.username ? '@' + esc(c.username) : c.channel_type);
+        (c.username ? '@' + esc(c.username) : c.channel_type) +
+        (c.assigned_user_id ? ' · <i class="bi bi-person-fill"></i> ' + (c.assigned_user_id === ME ? 'ви' : 'інший') : '');
       var a = $('ib-th-avatar');
       a.style.background = avaColor(c.name); a.textContent = initials(c.name);
       c.unread = 0;
+      var closed = c.status === 'closed';
+      $('ib-close').innerHTML = closed
+        ? '<i class="bi bi-arrow-counterclockwise"></i> Відкрити'
+        : '<i class="bi bi-check2-circle"></i> Закрити';
+      $('ib-close').dataset.action = closed ? 'reopen' : 'close';
     }
     renderList();
     if (window.matchMedia('(max-width:768px)').matches) {
@@ -232,13 +238,26 @@
   $('ib-assign').addEventListener('click', function () {
     if (!S.activeId) return;
     fetch('/inbox/conversations/' + S.activeId + '/assign', { method: 'POST' })
-      .then(function () { showToast('Призначено вам', 'success'); pollList(); });
+      .then(function () {
+        showToast('Призначено вам', 'success');
+        var c = S.convs.find(function (x) { return x.id === S.activeId; });
+        if (c) { c.assigned_user_id = ME; openConv(S.activeId); }
+        pollList();
+      });
   });
   $('ib-close').addEventListener('click', function () {
     if (!S.activeId) return;
-    fetch('/inbox/conversations/' + S.activeId + '/close', { method: 'POST' }).then(function () {
-      bodyEl.style.display = 'none'; emptyEl.style.display = 'flex';
-      S.activeId = null; S.activeConv = null; pollList();
+    var action = $('ib-close').dataset.action || 'close';
+    fetch('/inbox/conversations/' + S.activeId + '/' + action, { method: 'POST' }).then(function () {
+      if (action === 'close') {
+        bodyEl.style.display = 'none'; emptyEl.style.display = 'flex';
+        S.activeId = null; S.activeConv = null;
+      } else if (S.activeConv) {
+        S.activeConv.status = 'open';
+        $('ib-close').innerHTML = '<i class="bi bi-check2-circle"></i> Закрити';
+        $('ib-close').dataset.action = 'close';
+      }
+      pollList();
     });
   });
   $('ib-back').addEventListener('click', function () { wrap.classList.remove('mobile-thread'); });
