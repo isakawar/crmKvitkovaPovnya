@@ -107,9 +107,44 @@ def _enrich_stop_ids(result: dict, orders: list[dict]) -> None:
                 stop["id"] = addr_to_id.get(addr)
 
 
-def optimize_json(deliveries: Iterable, optimizer_url: str) -> dict:
-    """/api/optimize/json — always synchronous, returns result directly."""
+def optimize_json(
+    deliveries: Iterable,
+    optimizer_url: str,
+    *,
+    start_time: str = "09:00",
+    num_couriers: int | None = None,
+    time_buffer_min: int = 15,
+    capacity: int | None = None,
+    timeout: int = 120,
+) -> dict:
+    """/api/optimize/json — always synchronous, returns result directly.
+
+    Accepts ORM ``Delivery`` objects; see :func:`optimize_orders_json` for the
+    already-serialized variant used by the offline courier-hire analysis.
+    """
     orders = [_delivery_to_order_json(d) for d in deliveries]
+    return optimize_orders_json(
+        orders,
+        optimizer_url,
+        start_time=start_time,
+        num_couriers=num_couriers,
+        time_buffer_min=time_buffer_min,
+        capacity=capacity,
+        timeout=timeout,
+    )
+
+
+def optimize_orders_json(
+    orders: list[dict],
+    optimizer_url: str,
+    *,
+    start_time: str = "09:00",
+    num_couriers: int | None = None,
+    time_buffer_min: int = 15,
+    capacity: int | None = None,
+    timeout: int = 120,
+) -> dict:
+    """/api/optimize/json for pre-serialized order dicts (see ``_delivery_to_order_json``)."""
     url = f"{optimizer_url.rstrip('/')}/api/optimize/json"
     headers = {"Content-Type": "application/json"}
 
@@ -117,8 +152,20 @@ def optimize_json(deliveries: Iterable, optimizer_url: str) -> dict:
     if api_key:
         headers["X-API-Key"] = api_key
 
+    payload: dict = {"orders": orders}
+    # Only send non-default knobs — keeps the request identical to the historical
+    # shape when callers don't override anything.
+    if start_time != "09:00":
+        payload["start_time"] = start_time
+    if num_couriers is not None:
+        payload["num_couriers"] = num_couriers
+    if time_buffer_min != 15:
+        payload["time_buffer_min"] = time_buffer_min
+    if capacity is not None:
+        payload["capacity"] = capacity
+
     try:
-        response = requests.post(url, json={"orders": orders}, headers=headers, timeout=120)
+        response = requests.post(url, json=payload, headers=headers, timeout=timeout)
     except requests.RequestException as exc:
         raise RouteOptimizerError(f"Немає з'єднання з route optimizer: {exc}") from exc
 
@@ -132,6 +179,48 @@ def optimize_json(deliveries: Iterable, optimizer_url: str) -> dict:
         result = _ensure_stats(body)
         _enrich_stop_ids(result, orders)
         return result
+
+    _parse_error(body, response.status_code)
+
+
+def recalculate(
+    routes: list[dict],
+    optimizer_url: str,
+    *,
+    start_time: str = "09:00",
+    timeout: int = 120,
+) -> dict:
+    """POST /api/recalculate — re-time a fixed stop sequence with real OSRM times.
+
+    ``routes`` is a list of ``{"courierId": int, "stops": [{lat, lng, address,
+    timeStart?, timeEnd?, id?}]}``. Does not drop window violators — the caller
+    compares each returned ``eta`` against ``timeEnd`` itself.
+    """
+    url = f"{optimizer_url.rstrip('/')}/api/recalculate"
+    headers = {"Content-Type": "application/json"}
+
+    api_key = os.environ.get("OPTIMIZER_API_KEY")
+    if api_key:
+        headers["X-API-Key"] = api_key
+
+    try:
+        response = requests.post(
+            url,
+            json={"routes": routes, "startTime": start_time},
+            headers=headers,
+            timeout=timeout,
+        )
+    except requests.RequestException as exc:
+        raise RouteOptimizerError(f"Немає з'єднання з route optimizer: {exc}") from exc
+
+    body = {}
+    try:
+        body = response.json()
+    except ValueError:
+        pass
+
+    if response.status_code == 200:
+        return _ensure_stats(body)
 
     _parse_error(body, response.status_code)
 
