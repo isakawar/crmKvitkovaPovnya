@@ -34,7 +34,8 @@
     <input id="new-channel-name" type="text" placeholder="Назва каналу"
            class="border rounded-lg px-3 py-2 text-sm w-64">
     <select id="new-channel-type" class="border rounded-lg px-3 py-2 text-sm">
-      <option value="telegram">Telegram</option>
+      <option value="telegram">Telegram (бот-секретар)</option>
+      <option value="telegram_personal">Telegram (особистий номер)</option>
       <option value="instagram">Instagram</option>
     </select>
     <button id="btn-create-channel"
@@ -50,7 +51,7 @@
       <div class="flex items-start justify-between gap-4">
         <div>
           <div class="flex items-center gap-2 flex-wrap">
-            <i class="bi bi-{{ 'telegram text-sky-500' if ch.channel_type == 'telegram' else 'instagram text-pink-500' }}"></i>
+            <i class="bi bi-{{ 'telegram text-sky-500' if ch.channel_type == 'telegram' else ('telegram text-indigo-500' if ch.channel_type == 'telegram_personal' else 'instagram text-pink-500') }}"></i>
             <span class="font-semibold text-stone-800">{{ ch.name }}</span>
             <span class="text-xs px-2 py-0.5 rounded-full
                          {{ 'bg-green-100 text-green-700' if ch.is_connected else 'bg-stone-100 text-stone-500' }}">
@@ -62,11 +63,16 @@
           </div>
 
           <div class="mt-2 text-xs text-stone-500 space-y-1">
+            {% if ch.channel_type != 'telegram_personal' %}
             <div>Webhook URL: <code class="bg-stone-50 px-1 rounded select-all">{{ webhooks[ch.id] }}</code></div>
+            {% endif %}
             {% if ch.channel_type == 'instagram' %}
             <div>Verify token: <code class="bg-stone-50 px-1 rounded select-all">{{ ch.webhook_secret }}</code></div>
             {% if not ig_token_set %}<div class="text-amber-700">⚠ INBOX_INSTAGRAM_ACCESS_TOKEN не заданий у .env</div>{% endif %}
             {% if not ig_secret_set %}<div class="text-amber-700">⚠ INBOX_INSTAGRAM_APP_SECRET не заданий у .env</div>{% endif %}
+            {% elif ch.channel_type == 'telegram_personal' %}
+            {% if ch.phone_number %}<div>Номер: {{ ch.phone_number }}</div>{% endif %}
+            {% if not tg_personal_creds_set %}<div class="text-amber-700">⚠ MESSAGING_TG_API_ID / MESSAGING_TG_API_HASH / MESSAGING_SESSION_KEY не задані у .env</div>{% endif %}
             {% else %}
             {% if not tg_token_set %}<div class="text-amber-700">⚠ INBOX_TELEGRAM_BOT_TOKEN не заданий у .env</div>{% endif %}
             {% endif %}
@@ -89,6 +95,31 @@
         Instagram webhook налаштовується в Meta App Dashboard → Webhooks → Instagram: вставте URL і
         Verify token вище, підпишіться на поле <code>messages</code>.
       </p>
+      {% elif ch.channel_type == 'telegram_personal' and not ch.is_connected %}
+      <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 tg-personal-auth">
+        <p class="text-xs text-amber-800 mb-2">
+          ⚠ Це вхід в особистий Telegram-акаунт (не бот). Telegram може обмежити акаунт, якщо
+          розпізнає автоматизовану активність — рекомендується окремий номер, не основний.
+        </p>
+        <div class="step-phone flex items-center gap-2">
+          <input type="tel" placeholder="+380..." class="input-phone border rounded-lg px-3 py-1.5 text-sm w-48">
+          <button class="btn-send-code text-xs rounded-lg bg-stone-800 text-white px-3 py-1.5 hover:bg-stone-700">
+            Надіслати код
+          </button>
+        </div>
+        <div class="step-code hidden flex items-center gap-2 mt-2">
+          <input type="text" placeholder="Код з Telegram" class="input-code border rounded-lg px-3 py-1.5 text-sm w-48">
+          <button class="btn-confirm-code text-xs rounded-lg bg-stone-800 text-white px-3 py-1.5 hover:bg-stone-700">
+            Підтвердити код
+          </button>
+        </div>
+        <div class="step-password hidden flex items-center gap-2 mt-2">
+          <input type="password" placeholder="Пароль 2FA" class="input-password border rounded-lg px-3 py-1.5 text-sm w-48">
+          <button class="btn-confirm-password text-xs rounded-lg bg-stone-800 text-white px-3 py-1.5 hover:bg-stone-700">
+            Підтвердити пароль
+          </button>
+        </div>
+      </div>
       {% endif %}
 
       <div class="mt-3 border-t border-stone-100 pt-3">
@@ -157,6 +188,35 @@ document.querySelectorAll('[data-channel-id]').forEach(card => {
     if (res.success) showToast('Збережено', 'success');
     else showToast('Помилка', 'error');
   });
+
+  const auth = card.querySelector('.tg-personal-auth');
+  if (auth) {
+    const base = `/settings/messaging/channels/${id}/telegram-personal`;
+    auth.querySelector('.btn-send-code').addEventListener('click', async () => {
+      const phone = auth.querySelector('.input-phone').value.trim();
+      if (!phone) { showToast('Вкажіть номер телефону', 'error'); return; }
+      const res = await api(`${base}/send-code`, {phone});
+      if (res.success) {
+        auth.querySelector('.step-code').classList.remove('hidden');
+        showToast('Код надіслано в Telegram', 'success');
+      } else showToast(res.error || 'Помилка', 'error');
+    });
+    auth.querySelector('.btn-confirm-code').addEventListener('click', async () => {
+      const code = auth.querySelector('.input-code').value.trim();
+      if (!code) { showToast('Вкажіть код', 'error'); return; }
+      const res = await api(`${base}/confirm-code`, {code});
+      if (res.success) location.reload();
+      else if (res.needs_password) auth.querySelector('.step-password').classList.remove('hidden');
+      else showToast(res.error || 'Помилка', 'error');
+    });
+    auth.querySelector('.btn-confirm-password').addEventListener('click', async () => {
+      const password = auth.querySelector('.input-password').value;
+      if (!password) { showToast('Вкажіть пароль', 'error'); return; }
+      const res = await api(`${base}/confirm-password`, {password});
+      if (res.success) location.reload();
+      else showToast(res.error || 'Помилка', 'error');
+    });
+  }
 });
 </script>
 {% endblock %}

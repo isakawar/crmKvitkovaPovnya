@@ -65,6 +65,13 @@ class Config:
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
 
+    # Omnichannel inbox — Telegram "personal number" channel (MTProto/Telethon login).
+    # App credentials from my.telegram.org; session strings are encrypted at rest
+    # with MESSAGING_SESSION_KEY (Fernet).
+    MESSAGING_TG_API_ID = os.environ.get('MESSAGING_TG_API_ID', '')
+    MESSAGING_TG_API_HASH = os.environ.get('MESSAGING_TG_API_HASH', '')
+    MESSAGING_SESSION_KEY = os.environ.get('MESSAGING_SESSION_KEY', '')
+
 class DevelopmentConfig:
     DEBUG = True
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev_secret')
@@ -126,6 +133,13 @@ class DevelopmentConfig:
     INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
+
+    # Omnichannel inbox — Telegram "personal number" channel (MTProto/Telethon login).
+    # App credentials from my.telegram.org; session strings are encrypted at rest
+    # with MESSAGING_SESSION_KEY (Fernet).
+    MESSAGING_TG_API_ID = os.environ.get('MESSAGING_TG_API_ID', '')
+    MESSAGING_TG_API_HASH = os.environ.get('MESSAGING_TG_API_HASH', '')
+    MESSAGING_SESSION_KEY = os.environ.get('MESSAGING_SESSION_KEY', '')
 
 class ProductionConfig(DevelopmentConfig):
     DEBUG = False

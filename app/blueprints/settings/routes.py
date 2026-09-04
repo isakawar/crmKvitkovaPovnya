@@ -75,6 +75,9 @@ def messaging_page():
         tg_token_set=bool(current_app.config.get('INBOX_TELEGRAM_BOT_TOKEN')),
         ig_token_set=bool(current_app.config.get('INBOX_INSTAGRAM_ACCESS_TOKEN')),
         ig_secret_set=bool(current_app.config.get('INBOX_INSTAGRAM_APP_SECRET')),
+        tg_personal_creds_set=bool(current_app.config.get('MESSAGING_TG_API_ID')
+                                    and current_app.config.get('MESSAGING_TG_API_HASH')
+                                    and current_app.config.get('MESSAGING_SESSION_KEY')),
         public_url_set=bool(base),
     )
 
@@ -89,7 +92,7 @@ def messaging_create_channel():
     if not name:
         return jsonify({'success': False, 'error': 'Вкажіть назву'}), 400
     channel_type = data.get('channel_type') or 'telegram'
-    if channel_type not in ('telegram', 'instagram'):
+    if channel_type not in ('telegram', 'telegram_personal', 'instagram'):
         return jsonify({'success': False, 'error': 'Непідтримуваний тип каналу'}), 400
     channel = ccs.create_channel(name, channel_type)
     return jsonify({'success': True, 'id': channel.id})
@@ -130,6 +133,65 @@ def messaging_register_webhook(channel_id):
         ccs.register_webhook(channel)
         return jsonify({'success': True, 'url': ccs.webhook_url(channel)})
     except Exception as exc:  # noqa: BLE001
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/send-code', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_tg_personal_send_code(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import telegram_personal_auth as auth
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    phone = (request.get_json(silent=True) or {}).get('phone', '').strip()
+    if not phone:
+        return jsonify({'success': False, 'error': 'Вкажіть номер телефону'}), 400
+    try:
+        auth.request_code(channel, phone)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as exc:  # noqa: BLE001
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/confirm-code', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_tg_personal_confirm_code(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import telegram_personal_auth as auth
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    code = (request.get_json(silent=True) or {}).get('code', '').strip()
+    if not code:
+        return jsonify({'success': False, 'error': 'Вкажіть код'}), 400
+    try:
+        auth.confirm_code(channel, code)
+        db.session.commit()
+        return jsonify({'success': True})
+    except auth.NeedsPasswordError:
+        return jsonify({'success': False, 'needs_password': True})
+    except Exception as exc:  # noqa: BLE001
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/confirm-password', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_tg_personal_confirm_password(channel_id):
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import telegram_personal_auth as auth
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    password = (request.get_json(silent=True) or {}).get('password', '')
+    if not password:
+        return jsonify({'success': False, 'error': 'Вкажіть пароль'}), 400
+    try:
+        auth.confirm_password(channel, password)
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as exc:  # noqa: BLE001
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(exc)}), 400
 
 

@@ -69,4 +69,7 @@ def get_adapter(channel) -> ChannelAdapter:
     if ctype == 'instagram':
         from app.services.messaging.instagram_dm import InstagramDMAdapter
         return InstagramDMAdapter()
+    if ctype == 'telegram_personal':
+        from app.services.messaging.telegram_personal import TelegramPersonalAdapter
+        return TelegramPersonalAdapter()
     raise ValueError(f'No messaging adapter for channel_type={ctype!r}')

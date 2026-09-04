@@ -87,6 +87,29 @@ services:
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_bot.py"]
 
+  telegram-personal-bot:
+    build: .
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./instance:/app/instance
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      MESSAGING_TG_API_ID: ${MESSAGING_TG_API_ID:-}
+      MESSAGING_TG_API_HASH: ${MESSAGING_TG_API_HASH:-}
+      MESSAGING_SESSION_KEY: ${MESSAGING_SESSION_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    entrypoint: ["python3", "scripts/run_telegram_personal_worker.py"]
+
 networks:
   default:
     driver: bridge
