@@ -9,6 +9,8 @@ import logging
 import threading
 from datetime import datetime
 
+from sqlalchemy.orm.attributes import flag_modified
+
 from app.extensions import db
 from app.models.conversation import Conversation
 from app.models.message import Message
@@ -146,12 +148,14 @@ def _preview(text: str | None, media: list[dict]) -> str:
 # --- lazy media ------------------------------------------------------
 def ensure_media_downloaded(message: Message, idx: int) -> str | None:
     """Download media[idx] to disk if not present. Returns stored filename or None."""
-    media = list(message.media or [])
+    media = [dict(m) for m in (message.media or [])]  # fresh dicts — see note below
     if idx < 0 or idx >= len(media):
         return None
     item = media[idx]
     if item.get('path'):
         return item['path']
+    if item.get('expired'):
+        return None  # purged by media_cleanup.purge_old_media — gone for good
     adapter = get_adapter(message.conversation.channel)
     try:
         stored, mime = adapter.download_media(message.conversation.channel, item)
@@ -162,6 +166,11 @@ def ensure_media_downloaded(message: Message, idx: int) -> str | None:
     item['mime'] = item.get('mime') or mime
     media[idx] = item
     message.media = media
+    # `media` is a plain JSON column — SQLAlchemy only detects the change if the
+    # new value differs from the old one by more than in-place-mutated shared
+    # dicts (copying with dict(m) above avoids that), and flag_modified makes
+    # the intent explicit regardless.
+    flag_modified(message, 'media')
     db.session.add(message)
     db.session.commit()
     return stored
@@ -301,7 +310,7 @@ def serialize_message(msg: Message) -> dict:
         'sender_user_id': msg.sender_user_id,
         'media': [
             {'idx': i, 'type': m.get('type'),
-             'downloaded': bool(m.get('path'))}
+             'downloaded': bool(m.get('path')), 'expired': bool(m.get('expired'))}
             for i, m in enumerate(msg.media or [])
         ],
         'created_at': (msg.tg_date or msg.created_at).isoformat(),

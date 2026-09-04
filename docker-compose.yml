@@ -110,6 +110,25 @@ services:
     restart: unless-stopped
     entrypoint: ["python3", "scripts/run_telegram_personal_worker.py"]
 
+  media-cleanup:
+    build: .
+    volumes:
+      - ./app:/app/app
+      - ./scripts:/app/scripts
+      - ./uploads:/app/uploads
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      INBOX_MEDIA_RETENTION_DAYS: ${INBOX_MEDIA_RETENTION_DAYS:-14}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    entrypoint: ["python3", "scripts/run_media_cleanup.py"]
+
 networks:
   default:
     driver: bridge

@@ -64,6 +64,8 @@ async def run_channel(app, channel_id: int):
 
     @client.on(events.NewMessage(incoming=True))
     async def _on_message(event):
+        if not event.is_private:
+            return  # skip channel posts / group messages — inbox is 1:1 only
         with app.app_context():
             from app.models.messaging_channel import MessagingChannel
             ch = MessagingChannel.query.get(channel_id)

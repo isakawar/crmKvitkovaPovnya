@@ -423,6 +423,16 @@ def create_app(config_class=DevelopmentConfig):
         except Exception as exc:  # noqa: BLE001
             click.echo(f'❌ Помилка: {exc}')
 
+    @app.cli.command('messaging-purge-old-media')
+    @click.option('--days', type=int, default=14, help='Видаляти медіа старіше N днів (за замовчуванням 14).')
+    def messaging_purge_old_media(days):
+        """Видалити з диска старі медіафайли інбоксу (текст переписки не чіпає)."""
+        from app.services.messaging.media_cleanup import purge_old_media
+
+        result = purge_old_media(days=days)
+        click.echo(f"✅ Видалено {result['files_deleted']} файлів "
+                   f"({result['messages_touched']} повідомлень позначено).")
+
     @app.context_processor
     def inject_feature_flags():
         if not current_user.is_authenticated:

@@ -123,7 +123,8 @@
     var inner = '<div class="msg__bubble">';
     if (m.text) inner += esc(m.text);
     (m.media || []).forEach(function (md) {
-      if (md.type === 'photo') inner += '<img class="msg__img" data-full="/inbox/media/' + m.id + '/' + md.idx + '" src="/inbox/media/' + m.id + '/' + md.idx + '" alt="">';
+      if (md.expired) inner += '<div class="msg__file" style="color:#a8a29e"><i class="bi bi-slash-circle"></i> Вкладення видалено (14 днів)</div>';
+      else if (md.type === 'photo') inner += '<img class="msg__img" data-full="/inbox/media/' + m.id + '/' + md.idx + '" src="/inbox/media/' + m.id + '/' + md.idx + '" alt="">';
       else inner += '<a class="msg__file" href="/inbox/media/' + m.id + '/' + md.idx + '" target="_blank"><i class="bi bi-paperclip"></i> ' + esc(md.type) + '</a>';
     });
     inner += '</div>';
