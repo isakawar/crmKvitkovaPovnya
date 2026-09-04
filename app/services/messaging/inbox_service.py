@@ -74,12 +74,10 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
                 db.session.commit()
             return msg
 
-        # kind == 'message'
-        media = [
-            {'type': m.get('type'), 'tg_file_id': m.get('tg_file_id'),
-             'mime': m.get('mime'), 'filename': m.get('filename'), 'path': None}
-            for m in event.media
-        ]
+        # kind == 'message' — keep whatever fields the adapter put in each media
+        # dict (telegram/instagram use tg_file_id, telegram_personal uses
+        # tg_chat_id/tg_message_id instead — download_media needs its own shape).
+        media = [dict(m, path=None) for m in event.media]
         msg = Message(
             conversation_id=conv.id,
             direction='in',
@@ -100,8 +98,6 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         conv.last_message_preview = _preview(event.text, media)
         conv.last_message_direction = 'in'
         conv.unread_count = (conv.unread_count or 0) + 1
-        if conv.status == 'closed':
-            conv.status = 'open'
         db.session.commit()
         return msg
     except Exception:  # noqa: BLE001
@@ -219,13 +215,13 @@ def send_reply(conversation: Conversation, user, text: str | None,
 
 
 # --- reads -----------------------------------------------------------
-def list_conversations(user, status: str = 'open'):
+def list_conversations(user, unread_only: bool = False):
     channel_ids = accessible_channel_ids(user)
     if not channel_ids:
         return []
     q = Conversation.query.filter(Conversation.channel_id.in_(channel_ids))
-    if status in ('open', 'closed'):
-        q = q.filter(Conversation.status == status)
+    if unread_only:
+        q = q.filter(Conversation.unread_count > 0)
     return q.order_by(Conversation.last_message_at.desc().nullslast(),
                       Conversation.id.desc()).all()
 
@@ -243,25 +239,39 @@ def mark_read(conversation: Conversation) -> None:
         db.session.commit()
 
 
-def assign(conversation: Conversation, user) -> None:
-    conversation.assigned_user_id = getattr(user, 'id', None)
-    db.session.commit()
-
-
-def set_status(conversation: Conversation, status: str) -> None:
-    if status in ('open', 'closed'):
-        conversation.status = status
-        db.session.commit()
-
-
 def total_unread(user) -> int:
     channel_ids = accessible_channel_ids(user)
     if not channel_ids:
         return 0
     return int(db.session.query(db.func.coalesce(db.func.sum(Conversation.unread_count), 0))
-               .filter(Conversation.channel_id.in_(channel_ids),
-                       Conversation.status == 'open')
+               .filter(Conversation.channel_id.in_(channel_ids))
                .scalar() or 0)
+
+
+def start_conversation(channel: MessagingChannel, query: str) -> Conversation:
+    """Resolve a contact (phone/username) and get-or-create its conversation.
+
+    Only channel types whose adapter implements `resolve_contact` (currently
+    telegram_personal — a real account can message anyone, unlike a webhook bot).
+    """
+    adapter = get_adapter(channel)
+    if not hasattr(adapter, 'resolve_contact'):
+        raise RuntimeError('Цей канал не підтримує ручний початок діалогу')
+    contact = adapter.resolve_contact(channel, query)
+
+    conv = Conversation.query.filter_by(
+        channel_id=channel.id, external_chat_id=contact['external_chat_id']).first()
+    if conv is None:
+        conv = Conversation(
+            channel_id=channel.id,
+            external_chat_id=contact['external_chat_id'],
+            contact_name=contact.get('name'),
+            contact_username=contact.get('username'),
+            contact_phone=contact.get('phone'),
+        )
+        db.session.add(conv)
+        db.session.commit()
+    return conv
 
 
 # --- serialization for JSON endpoints ------------------------------

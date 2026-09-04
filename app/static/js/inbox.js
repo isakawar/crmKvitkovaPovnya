@@ -2,7 +2,7 @@
   'use strict';
 
   var S = {
-    status: 'open',
+    filter: 'all',
     search: '',
     activeId: null,
     activeConv: null,
@@ -29,7 +29,10 @@
   var searchEl = $('ib-search');
   var soundBtn = $('ib-sound');
   var lightbox = $('ib-lightbox');
+  var newModal = $('ib-new-modal');
   var ME = window.IB_USER_ID;
+
+  function chIcon(t) { return t === 'instagram' ? 'instagram' : 'telegram'; }
 
   var AVA = ['#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#14b8a6'];
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -75,7 +78,7 @@
         '" data-id="' + c.id + '">' +
         '<div class="conv__avatar" style="background:' + avaColor(c.name) + '">' + esc(initials(c.name)) +
         '<span class="conv__ch ' + esc(c.channel_type) + '"><i class="bi bi-' +
-        (c.channel_type === 'telegram' ? 'telegram' : 'instagram') + '"></i></span></div>' +
+        chIcon(c.channel_type) + '"></i></span></div>' +
         '<div class="conv__body">' +
         '<div class="conv__top"><span class="conv__name">' + esc(c.name) + '</span>' +
         '<span class="conv__time">' + relTime(c.last_message_at) + '</span></div>' +
@@ -93,7 +96,7 @@
   function pollList() {
     if (S.listBusy) return;
     S.listBusy = true;
-    fetch('/inbox/conversations?status=' + S.status)
+    fetch('/inbox/conversations?filter=' + S.filter)
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var prevUnread = S.convs.reduce(function (a, c) { return a + (c.unread || 0); }, 0);
@@ -155,17 +158,11 @@
     bodyEl.style.display = 'flex';
     if (c) {
       $('ib-th-name').textContent = c.name;
-      $('ib-th-sub').innerHTML = '<i class="bi bi-' + (c.channel_type === 'telegram' ? 'telegram' : 'instagram') + '"></i> ' +
-        (c.username ? '@' + esc(c.username) : c.channel_type) +
-        (c.assigned_user_id ? ' · <i class="bi bi-person-fill"></i> ' + (c.assigned_user_id === ME ? 'ви' : 'інший') : '');
+      $('ib-th-sub').innerHTML = '<i class="bi bi-' + chIcon(c.channel_type) + '"></i> ' +
+        (c.username ? '@' + esc(c.username) : c.channel_type);
       var a = $('ib-th-avatar');
       a.style.background = avaColor(c.name); a.textContent = initials(c.name);
       c.unread = 0;
-      var closed = c.status === 'closed';
-      $('ib-close').innerHTML = closed
-        ? '<i class="bi bi-arrow-counterclockwise"></i> Відкрити'
-        : '<i class="bi bi-check2-circle"></i> Закрити';
-      $('ib-close').dataset.action = closed ? 'reopen' : 'close';
     }
     renderList();
     if (window.matchMedia('(max-width:768px)').matches) {
@@ -235,41 +232,47 @@
   });
 
   // ---- header actions -----------------------------------------
-  $('ib-assign').addEventListener('click', function () {
-    if (!S.activeId) return;
-    fetch('/inbox/conversations/' + S.activeId + '/assign', { method: 'POST' })
-      .then(function () {
-        showToast('Призначено вам', 'success');
-        var c = S.convs.find(function (x) { return x.id === S.activeId; });
-        if (c) { c.assigned_user_id = ME; openConv(S.activeId); }
-        pollList();
-      });
-  });
-  $('ib-close').addEventListener('click', function () {
-    if (!S.activeId) return;
-    var action = $('ib-close').dataset.action || 'close';
-    fetch('/inbox/conversations/' + S.activeId + '/' + action, { method: 'POST' }).then(function () {
-      if (action === 'close') {
-        bodyEl.style.display = 'none'; emptyEl.style.display = 'flex';
-        S.activeId = null; S.activeConv = null;
-      } else if (S.activeConv) {
-        S.activeConv.status = 'open';
-        $('ib-close').innerHTML = '<i class="bi bi-check2-circle"></i> Закрити';
-        $('ib-close').dataset.action = 'close';
-      }
-      pollList();
-    });
-  });
   $('ib-back').addEventListener('click', function () { wrap.classList.remove('mobile-thread'); });
 
   [].forEach.call(document.querySelectorAll('.ib-tab'), function (t) {
     t.addEventListener('click', function () {
-      S.status = t.dataset.status;
+      S.filter = t.dataset.filter;
       document.querySelectorAll('.ib-tab').forEach(function (x) { x.classList.toggle('active', x === t); });
       pollList();
     });
   });
   searchEl.addEventListener('input', function () { S.search = searchEl.value.trim().toLowerCase(); renderList(); });
+
+  // ---- new conversation -----------------------------------------
+  var newConvBtn = $('ib-new-conv');
+  if (newConvBtn && newModal) {
+    newConvBtn.addEventListener('click', function () {
+      $('ib-new-query').value = '';
+      newModal.style.display = 'flex';
+    });
+    newModal.addEventListener('click', function (e) { if (e.target === newModal) newModal.style.display = 'none'; });
+    $('ib-new-cancel').addEventListener('click', function () { newModal.style.display = 'none'; });
+    $('ib-new-submit').addEventListener('click', function () {
+      var channelId = +$('ib-new-channel').value;
+      var query = $('ib-new-query').value.trim();
+      if (!query) { showToast('Вкажіть номер або username', 'error'); return; }
+      fetch('/inbox/conversations/new', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel_id: channelId, query: query }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.ok) { showToast(data.error || 'Помилка', 'error'); return; }
+          newModal.style.display = 'none';
+          var existing = S.convs.some(function (c) { return c.id === data.conversation.id; });
+          if (!existing) S.convs.unshift(data.conversation);
+          renderList();
+          openConv(data.conversation.id);
+        })
+        .catch(function () { showToast('Помилка мережі', 'error'); });
+    });
+  }
 
   // ---- sound --------------------------------------------------
   try { S.soundOn = localStorage.getItem('ibSound') === '1'; } catch (e) {}

@@ -53,14 +53,29 @@ def test_ingest_second_message_increments_unread_same_conversation(session):
     assert Message.query.count() == 2
 
 
-def test_ingest_reopens_closed_conversation(session):
+def test_ingest_preserves_adapter_specific_media_keys(session):
     ch = _channel(session)
-    inbox_service.ingest_event(ch, _msg_event(mid='1'))
-    conv = Conversation.query.one()
-    conv.status = 'closed'
+    media = [{'type': 'photo', 'tg_chat_id': 555, 'tg_message_id': 42, 'mime': 'image/jpeg', 'filename': None}]
+    msg = inbox_service.ingest_event(ch, _msg_event(text=None, media=media))
+    assert msg.media[0]['tg_chat_id'] == 555
+    assert msg.media[0]['tg_message_id'] == 42
+    assert msg.media[0]['path'] is None
+
+
+def test_list_conversations_unread_only(session):
+    ch = _channel(session)
+    inbox_service.ingest_event(ch, _msg_event(chat='1', mid='1'))
+    inbox_service.ingest_event(ch, _msg_event(chat='2', mid='2'))
+    mgr = _manager(session)
+    session.add(MessagingChannelAccess(channel_id=ch.id, user_id=mgr.id))
     session.commit()
-    inbox_service.ingest_event(ch, _msg_event(mid='2'))
-    assert Conversation.query.one().status == 'open'
+    conv2 = Conversation.query.filter_by(external_chat_id='2').one()
+    inbox_service.mark_read(conv2)
+
+    all_convs = inbox_service.list_conversations(mgr)
+    unread_convs = inbox_service.list_conversations(mgr, unread_only=True)
+    assert len(all_convs) == 2
+    assert [c.external_chat_id for c in unread_convs] == ['1']
 
 
 def test_connection_event_updates_channel(session):

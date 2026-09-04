@@ -405,6 +405,24 @@ def create_app(config_class=DevelopmentConfig):
             return
         click.echo(InstagramDMAdapter().refresh_token())
 
+    @app.cli.command('messaging-backfill-telegram-personal')
+    @click.argument('channel_id', type=int)
+    @click.option('--days', type=int, default=30, help='Скільки днів історії імпортувати (за замовчуванням 30).')
+    def messaging_backfill_telegram_personal(channel_id, days):
+        """Імпортувати історію переписки особистого Telegram-номера. Безпечно перезапускати."""
+        from app.models.messaging_channel import MessagingChannel
+        from app.services.messaging import telegram_personal_backfill as backfill
+
+        channel = MessagingChannel.query.get(channel_id)
+        if not channel or channel.channel_type != 'telegram_personal':
+            click.echo('Канал особистого номера не знайдено.')
+            return
+        try:
+            result = backfill.run(channel, days=days)
+            click.echo(f"✅ Імпортовано {result['messages']} повідомлень з {result['dialogs']} діалогів.")
+        except Exception as exc:  # noqa: BLE001
+            click.echo(f'❌ Помилка: {exc}')
+
     @app.context_processor
     def inject_feature_flags():
         if not current_user.is_authenticated:

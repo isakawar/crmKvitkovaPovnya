@@ -33,19 +33,40 @@ def index():
     channel_ids = set(inbox_service.accessible_channel_ids(current_user))
     channels = [c for c in MessagingChannel.query.order_by(MessagingChannel.name).all()
                 if c.id in channel_ids]
-    return render_template('inbox/index.html', channels=channels)
+    personal_channels = [c for c in channels if c.channel_type == 'telegram_personal' and c.is_connected]
+    return render_template('inbox/index.html', channels=channels, personal_channels=personal_channels)
 
 
 @inbox_bp.route('/inbox/conversations')
 @login_required
 def conversations():
     _require_manager()
-    status = request.args.get('status', 'open')
-    convs = inbox_service.list_conversations(current_user, status=status)
+    unread_only = request.args.get('filter') == 'unread'
+    convs = inbox_service.list_conversations(current_user, unread_only=unread_only)
     return jsonify({
         'conversations': [inbox_service.serialize_conversation(c) for c in convs],
         'total_unread': inbox_service.total_unread(current_user),
     })
+
+
+@inbox_bp.route('/inbox/conversations/new', methods=['POST'])
+@login_required
+def new_conversation():
+    _require_manager()
+    data = request.get_json(silent=True) or {}
+    channel_id = data.get('channel_id')
+    query = (data.get('query') or '').strip()
+    if not channel_id or not query:
+        return jsonify({'ok': False, 'error': 'Вкажіть канал і номер/username'}), 400
+
+    channel = MessagingChannel.query.get_or_404(channel_id)
+    if not inbox_service.user_can_access(current_user, channel):
+        abort(403)
+    try:
+        conv = inbox_service.start_conversation(channel, query)
+        return jsonify({'ok': True, 'conversation': inbox_service.serialize_conversation(conv)})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({'ok': False, 'error': str(exc)}), 400
 
 
 @inbox_bp.route('/inbox/conversations/<int:conversation_id>/messages')
@@ -100,31 +121,6 @@ def mark_read(conversation_id):
     _require_manager()
     conv = _conversation_or_404(conversation_id)
     inbox_service.mark_read(conv)
-    return jsonify({'ok': True})
-
-
-@inbox_bp.route('/inbox/conversations/<int:conversation_id>/assign', methods=['POST'])
-@login_required
-def assign(conversation_id):
-    _require_manager()
-    conv = _conversation_or_404(conversation_id)
-    inbox_service.assign(conv, current_user._get_current_object())
-    return jsonify({'ok': True})
-
-
-@inbox_bp.route('/inbox/conversations/<int:conversation_id>/close', methods=['POST'])
-@login_required
-def close_conversation(conversation_id):
-    _require_manager()
-    inbox_service.set_status(_conversation_or_404(conversation_id), 'closed')
-    return jsonify({'ok': True})
-
-
-@inbox_bp.route('/inbox/conversations/<int:conversation_id>/reopen', methods=['POST'])
-@login_required
-def reopen_conversation(conversation_id):
-    _require_manager()
-    inbox_service.set_status(_conversation_or_404(conversation_id), 'open')
     return jsonify({'ok': True})
 
 

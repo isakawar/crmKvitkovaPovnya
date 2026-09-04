@@ -117,11 +117,16 @@
       <div class="ib-chips">
         {% for ch in channels %}
         <span class="ib-chip {{ '' if ch.is_connected and ch.is_active else 'off' }}">
-          <i class="bi bi-{{ 'telegram' if ch.channel_type == 'telegram' else 'instagram' }}"></i>
+          <i class="bi bi-{{ 'instagram' if ch.channel_type == 'instagram' else 'telegram' }}"></i>
           {{ ch.name }}
         </span>
         {% endfor %}
       </div>
+      {% if personal_channels %}
+      <button class="ib-icon-btn" id="ib-new-conv" title="Новий діалог">
+        <i class="bi bi-plus-lg"></i> Новий діалог
+      </button>
+      {% endif %}
       <button class="ib-icon-btn" id="ib-sound" title="Звук нових повідомлень">
         <i class="bi bi-bell"></i>
       </button>
@@ -137,8 +142,8 @@
   <div class="ib-wrap" id="ib-wrap">
     <div class="ib-list">
       <div class="ib-list__tabs">
-        <button class="ib-tab active" data-status="open">Активні</button>
-        <button class="ib-tab" data-status="closed">Закриті</button>
+        <button class="ib-tab active" data-filter="all">Всі</button>
+        <button class="ib-tab" data-filter="unread">Непрочитані</button>
       </div>
       <div class="ib-search"><input type="text" id="ib-search" placeholder="Пошук за імʼям..."></div>
       <div class="ib-list__scroll" id="ib-conv-list"></div>
@@ -158,10 +163,6 @@
               <div class="ib-thread__name" id="ib-th-name"></div>
               <div class="ib-thread__sub" id="ib-th-sub"></div>
             </div>
-          </div>
-          <div class="ib-thread__actions">
-            <button class="ib-btn" id="ib-assign"><i class="bi bi-person-check"></i> Взяти</button>
-            <button class="ib-btn" id="ib-close"><i class="bi bi-check2-circle"></i> Закрити</button>
           </div>
         </div>
         <div class="ib-msgs" id="ib-msgs"></div>
@@ -184,6 +185,28 @@
 </div>
 
 <div class="ib-lightbox" id="ib-lightbox"><img alt=""></div>
+
+{% if personal_channels %}
+<div class="ib-lightbox" id="ib-new-modal">
+  <div style="background:#fff; border-radius:0.9rem; padding:1.2rem; width:320px; cursor:default;" onclick="event.stopPropagation()">
+    <h3 style="margin:0 0 0.8rem; font-size:1rem; font-weight:700; color:var(--ib-ink);">Новий діалог</h3>
+    <label style="display:block; font-size:0.78rem; color:var(--ib-muted); margin-bottom:0.2rem;">Канал</label>
+    <select id="ib-new-channel" style="width:100%; border:1px solid var(--ib-border); border-radius:0.5rem; padding:0.4rem 0.6rem; font-size:0.85rem; margin-bottom:0.7rem;">
+      {% for ch in personal_channels %}
+      <option value="{{ ch.id }}">{{ ch.name }}</option>
+      {% endfor %}
+    </select>
+    <label style="display:block; font-size:0.78rem; color:var(--ib-muted); margin-bottom:0.2rem;">Телефон або @username</label>
+    <input type="text" id="ib-new-query" placeholder="+380... або @username"
+           style="width:100%; border:1px solid var(--ib-border); border-radius:0.5rem; padding:0.4rem 0.6rem; font-size:0.85rem; margin-bottom:0.9rem;">
+    <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
+      <button class="ib-btn" id="ib-new-cancel">Скасувати</button>
+      <button class="ib-btn primary" id="ib-new-submit">Почати</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {{ render_toast() }}
 {% endblock %}
 

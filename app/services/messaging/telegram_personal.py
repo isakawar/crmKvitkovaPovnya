@@ -53,8 +53,10 @@ def client_for(channel) -> TelegramClient:
     return TelegramClient(StringSession(session_str), api_id, api_hash)
 
 
-def build_inbound_event(message) -> InboundEvent:
-    """Normalize a Telethon `events.NewMessage.Event.message` into InboundEvent."""
+def _media_dicts(message) -> list[dict]:
+    """Media entries shaped for download_media (tg_chat_id/tg_message_id, not
+    tg_file_id like the bot adapters) — shared by the live worker and the
+    history backfill script so both produce identically-downloadable media."""
     media = []
     if message.photo:
         media.append({'type': 'photo', 'tg_chat_id': message.chat_id,
@@ -68,14 +70,18 @@ def build_inbound_event(message) -> InboundEvent:
                 break
         media.append({'type': 'document', 'tg_chat_id': message.chat_id,
                       'tg_message_id': message.id, 'mime': mime, 'filename': filename})
+    return media
 
+
+def build_inbound_event(message) -> InboundEvent:
+    """Normalize a Telethon `events.NewMessage.Event.message` into InboundEvent."""
     return InboundEvent(
         kind='message',
         external_chat_id=str(message.chat_id),
         external_message_id=str(message.id),
         text=message.message or None,
-        contact={},  # enrich_contact (below) fills this in lazily
-        media=media,
+        contact={},
+        media=_media_dicts(message),
         date=message.date.replace(tzinfo=None) if message.date else None,
     )
 
@@ -144,6 +150,45 @@ class TelegramPersonalAdapter:
             return SentResult(ok=True, external_message_id=str(sent.id))
         except Exception as exc:  # noqa: BLE001
             return SentResult(ok=False, error=str(exc))
+        finally:
+            await client.disconnect()
+
+    # --- start new conversation (not a Protocol method — duck-typed, see
+    # inbox_service.start_conversation) ----------------------------------
+    def resolve_contact(self, channel, query: str) -> dict:
+        return asyncio.run(self._resolve_contact_async(channel, query))
+
+    async def _resolve_contact_async(self, channel, query: str) -> dict:
+        from telethon.tl.functions.contacts import ImportContactsRequest, DeleteContactsRequest
+        from telethon.tl.types import InputPhoneContact
+
+        client = client_for(channel)
+        await client.connect()
+        try:
+            query = query.strip()
+            if query.startswith('@'):
+                entity = await client.get_entity(query.lstrip('@'))
+            else:
+                phone = query if query.startswith('+') else f'+{query}'
+                result = await client(ImportContactsRequest([
+                    InputPhoneContact(client_id=0, phone=phone, first_name='CRM', last_name='Contact'),
+                ]))
+                if not result.users:
+                    raise RuntimeError('Номер не знайдено в Telegram')
+                entity = result.users[0]
+                try:
+                    await client(DeleteContactsRequest([entity]))
+                except Exception:  # noqa: BLE001 — best-effort cleanup, not fatal
+                    pass
+
+            name = ' '.join(p for p in [getattr(entity, 'first_name', None),
+                                         getattr(entity, 'last_name', None)] if p) or None
+            return {
+                'external_chat_id': str(entity.id),
+                'name': name,
+                'username': getattr(entity, 'username', None),
+                'phone': getattr(entity, 'phone', None),
+            }
         finally:
             await client.disconnect()
 
