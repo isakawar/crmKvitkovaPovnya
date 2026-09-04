@@ -86,22 +86,45 @@ async def run_channel(app, channel_id: int):
     await client.run_until_disconnected()
 
 
-async def main_async(app):
+POLL_INTERVAL_SECONDS = 20
+
+
+def _active_channel_ids(app) -> set[int]:
     with app.app_context():
         from app.models.messaging_channel import MessagingChannel
-        channel_ids = [
+        return {
             c.id for c in MessagingChannel.query.filter_by(
                 channel_type='telegram_personal', is_active=True,
             ).all()
             if c.session_encrypted
-        ]
+        }
 
-    if not channel_ids:
-        logger.info('No active telegram_personal channels — sleeping')
-        while True:
-            await asyncio.sleep(60)
 
-    await asyncio.gather(*(run_channel(app, cid) for cid in channel_ids))
+async def main_async(app):
+    """Supervisor loop: periodically re-scans for channels connected/deleted/
+    deactivated since startup — a channel authorized through the settings UI
+    while this process is already running must not require a manual restart."""
+    running: dict[int, asyncio.Task] = {}
+
+    while True:
+        wanted = _active_channel_ids(app)
+
+        for channel_id in wanted - running.keys():
+            logger.info('Channel #%s: starting listener', channel_id)
+            running[channel_id] = asyncio.create_task(run_channel(app, channel_id))
+
+        for channel_id in list(running.keys() - wanted):
+            logger.info('Channel #%s: no longer active, stopping listener', channel_id)
+            running.pop(channel_id).cancel()
+
+        for channel_id, task in list(running.items()):
+            if task.done():
+                exc = task.exception() if not task.cancelled() else None
+                if exc:
+                    logger.error('Channel #%s: listener crashed: %s', channel_id, exc)
+                running.pop(channel_id)
+
+        await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
 def main():
