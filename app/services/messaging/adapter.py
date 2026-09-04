@@ -72,4 +72,7 @@ def get_adapter(channel) -> ChannelAdapter:
     if ctype == 'telegram_personal':
         from app.services.messaging.telegram_personal import TelegramPersonalAdapter
         return TelegramPersonalAdapter()
+    if ctype == 'viber':
+        from app.services.messaging.viber import ViberAdapter
+        return ViberAdapter()
     raise ValueError(f'No messaging adapter for channel_type={ctype!r}')

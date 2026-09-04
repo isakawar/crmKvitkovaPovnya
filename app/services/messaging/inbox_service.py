@@ -330,7 +330,7 @@ def serialize_conversation(conv: Conversation) -> dict:
     }
 
 
-def serialize_message(msg: Message) -> dict:
+def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
     return {
         'id': msg.id,
         'direction': msg.direction,
@@ -338,6 +338,7 @@ def serialize_message(msg: Message) -> dict:
         'status': msg.status,
         'error': msg.error,
         'sender_user_id': msg.sender_user_id,
+        'channel_type': channel_type or msg.conversation.channel.channel_type,
         'media': [
             {'idx': i, 'type': m.get('type'),
              'downloaded': bool(m.get('path')), 'expired': bool(m.get('expired'))}

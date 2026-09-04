@@ -37,6 +37,11 @@
   var ME = window.IB_USER_ID;
 
   function chIcon(t) { return t === 'instagram' ? 'instagram' : 'telegram'; }
+  function chBadge(t) {
+    if (t === 'viber') return '<span title="Viber" style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#7360F2;color:#fff;font-size:0.55rem;font-weight:700;">V</span>';
+    var label = t === 'instagram' ? 'Instagram' : (t === 'telegram_personal' ? 'Telegram (особистий)' : 'Telegram');
+    return '<i class="bi bi-' + chIcon(t) + '" title="' + label + '"></i>';
+  }
 
   var AVA = ['#0ea5e9', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#14b8a6'];
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -135,7 +140,8 @@
     var tick = m.direction === 'out'
       ? (m.status === 'failed' ? '<i class="bi bi-exclamation-circle" style="color:#ef4444"></i>'
         : '<i class="bi bi-check2"></i>') : '';
-    inner += '<div class="msg__meta">' + new Date(m.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
+    inner += '<div class="msg__meta">' + chBadge(m.channel_type) + ' ' +
+      new Date(m.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
       ' ' + tick + (m.status === 'failed' && m.error ? ' <span style="color:#ef4444">' + esc(m.error) + '</span>' : '') + '</div>';
     wrapEl.innerHTML = inner;
     return wrapEl;

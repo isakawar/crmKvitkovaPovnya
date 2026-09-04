@@ -78,6 +78,7 @@ def messaging_page():
         tg_personal_creds_set=bool(current_app.config.get('MESSAGING_TG_API_ID')
                                     and current_app.config.get('MESSAGING_TG_API_HASH')
                                     and current_app.config.get('MESSAGING_SESSION_KEY')),
+        viber_token_set=bool(current_app.config.get('INBOX_VIBER_BOT_TOKEN')),
         public_url_set=bool(base),
     )
 
@@ -92,7 +93,7 @@ def messaging_create_channel():
     if not name:
         return jsonify({'success': False, 'error': 'Вкажіть назву'}), 400
     channel_type = data.get('channel_type') or 'telegram'
-    if channel_type not in ('telegram', 'telegram_personal', 'instagram'):
+    if channel_type not in ('telegram', 'telegram_personal', 'instagram', 'viber'):
         return jsonify({'success': False, 'error': 'Непідтримуваний тип каналу'}), 400
     channel = ccs.create_channel(name, channel_type)
     return jsonify({'success': True, 'id': channel.id})

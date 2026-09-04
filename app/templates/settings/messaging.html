@@ -37,6 +37,7 @@
       <option value="telegram">Telegram (бот-секретар)</option>
       <option value="telegram_personal">Telegram (особистий номер)</option>
       <option value="instagram">Instagram</option>
+      <option value="viber">Viber</option>
     </select>
     <button id="btn-create-channel"
             class="rounded-lg bg-stone-800 text-white text-sm px-4 py-2 hover:bg-stone-700">
@@ -51,7 +52,12 @@
       <div class="flex items-start justify-between gap-4">
         <div>
           <div class="flex items-center gap-2 flex-wrap">
+            {% if ch.channel_type == 'viber' %}
+            <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-white font-bold"
+                  style="background:#7360F2; font-size:0.6rem;">V</span>
+            {% else %}
             <i class="bi bi-{{ 'telegram text-sky-500' if ch.channel_type == 'telegram' else ('telegram text-indigo-500' if ch.channel_type == 'telegram_personal' else 'instagram text-pink-500') }}"></i>
+            {% endif %}
             <span class="font-semibold text-stone-800">{{ ch.name }}</span>
             <span class="text-xs px-2 py-0.5 rounded-full
                          {{ 'bg-green-100 text-green-700' if ch.is_connected else 'bg-stone-100 text-stone-500' }}">
@@ -73,13 +79,15 @@
             {% elif ch.channel_type == 'telegram_personal' %}
             {% if ch.phone_number %}<div>Номер: {{ ch.phone_number }}</div>{% endif %}
             {% if not tg_personal_creds_set %}<div class="text-amber-700">⚠ MESSAGING_TG_API_ID / MESSAGING_TG_API_HASH / MESSAGING_SESSION_KEY не задані у .env</div>{% endif %}
+            {% elif ch.channel_type == 'viber' %}
+            {% if not viber_token_set %}<div class="text-amber-700">⚠ INBOX_VIBER_BOT_TOKEN не заданий у .env</div>{% endif %}
             {% else %}
             {% if not tg_token_set %}<div class="text-amber-700">⚠ INBOX_TELEGRAM_BOT_TOKEN не заданий у .env</div>{% endif %}
             {% endif %}
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
-          {% if ch.channel_type == 'telegram' %}
+          {% if ch.channel_type in ('telegram', 'viber') %}
           <button class="btn-webhook text-xs rounded-lg border px-3 py-1.5 hover:bg-stone-50">
             Підключити webhook
           </button>

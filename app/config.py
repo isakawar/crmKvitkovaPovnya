@@ -65,6 +65,9 @@ class Config:
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
 
+    # Omnichannel inbox — Viber (REST Bot API, chatapi.viber.com)
+    INBOX_VIBER_BOT_TOKEN = os.environ.get('INBOX_VIBER_BOT_TOKEN', '')
+
     # Omnichannel inbox — Telegram "personal number" channel (MTProto/Telethon login).
     # App credentials from my.telegram.org; session strings are encrypted at rest
     # with MESSAGING_SESSION_KEY (Fernet).
@@ -133,6 +136,9 @@ class DevelopmentConfig:
     INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
+
+    # Omnichannel inbox — Viber (REST Bot API, chatapi.viber.com)
+    INBOX_VIBER_BOT_TOKEN = os.environ.get('INBOX_VIBER_BOT_TOKEN', '')
 
     # Omnichannel inbox — Telegram "personal number" channel (MTProto/Telethon login).
     # App credentials from my.telegram.org; session strings are encrypted at rest

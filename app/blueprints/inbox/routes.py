@@ -82,7 +82,7 @@ def messages(conversation_id):
     msgs, has_more = inbox_service.get_thread(conv, after_id=after_id, before_id=before_id)
     return jsonify({
         'conversation': inbox_service.serialize_conversation(conv),
-        'messages': [inbox_service.serialize_message(m) for m in msgs],
+        'messages': [inbox_service.serialize_message(m, channel_type=conv.channel.channel_type) for m in msgs],
         'has_more': has_more,
     })
 
@@ -114,7 +114,7 @@ def reply(conversation_id):
     return jsonify({
         'ok': ok,
         'error': msg.error if not ok else None,
-        'message': inbox_service.serialize_message(msg),
+        'message': inbox_service.serialize_message(msg, channel_type=conv.channel.channel_type),
     }), (200 if ok else 502)
 
 
@@ -179,5 +179,13 @@ def telegram_webhook(channel_id):
 def instagram_webhook(channel_id):
     channel = MessagingChannel.query.get(channel_id)
     if channel is None or channel.channel_type != 'instagram':
+        abort(404)
+    return _handle_webhook(channel)
+
+
+@inbox_bp.route('/api/messaging/viber/<int:channel_id>/webhook', methods=['POST'])
+def viber_webhook(channel_id):
+    channel = MessagingChannel.query.get(channel_id)
+    if channel is None or channel.channel_type != 'viber':
         abort(404)
     return _handle_webhook(channel)

@@ -132,7 +132,7 @@ def create_app(config_class=DevelopmentConfig):
         public_endpoints = [
             'auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon',
             'integrations.wix_order_webhook',
-            'inbox.telegram_webhook', 'inbox.instagram_webhook',
+            'inbox.telegram_webhook', 'inbox.instagram_webhook', 'inbox.viber_webhook',
         ]
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
