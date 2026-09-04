@@ -7,12 +7,16 @@
     activeId: null,
     activeConv: null,
     lastMsgId: 0,
+    firstMsgId: 0,
+    hasMore: false,
+    loadingOlder: false,
     convs: [],
     listTimer: null,
     threadTimer: null,
     listBusy: false,
     threadBusy: false,
     lastDateKey: null,
+    firstDateKey: null,
     soundOn: false,
   };
 
@@ -147,13 +151,57 @@
       }
       msgsEl.appendChild(msgNode(m));
       if (m.id > S.lastMsgId) S.lastMsgId = m.id;
+      if (!S.firstMsgId || m.id < S.firstMsgId) { S.firstMsgId = m.id; S.firstDateKey = dk; }
     });
     if (atBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
   }
 
+  // Older messages, prepended on scroll-to-top (see loadOlderMessages).
+  function prependMsgs(list) {
+    if (!list.length) return;
+    var oldScrollHeight = msgsEl.scrollHeight;
+    var oldScrollTop = msgsEl.scrollTop;
+    var firstDateKeyBefore = S.firstDateKey;
+    var frag = document.createDocumentFragment();
+    var localLastDateKey = null;
+    list.forEach(function (m) {
+      var dk = dateKey(m.created_at);
+      if (dk !== localLastDateKey) {
+        if (dk !== firstDateKeyBefore) {
+          var sep = document.createElement('div'); sep.className = 'ib-date'; sep.textContent = dk;
+          frag.appendChild(sep);
+        }
+        localLastDateKey = dk;
+      }
+      frag.appendChild(msgNode(m));
+    });
+    msgsEl.insertBefore(frag, msgsEl.firstChild);
+    S.firstMsgId = list[0].id;
+    S.firstDateKey = dateKey(list[0].created_at);
+    msgsEl.scrollTop = msgsEl.scrollHeight - oldScrollHeight + oldScrollTop;
+  }
+
+  function loadOlderMessages() {
+    if (!S.activeId || S.loadingOlder || !S.hasMore || !S.firstMsgId) return;
+    S.loadingOlder = true;
+    fetch('/inbox/conversations/' + S.activeId + '/messages?before=' + S.firstMsgId)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.conversation || data.conversation.id !== S.activeId) return;
+        S.hasMore = !!data.has_more;
+        prependMsgs(data.messages || []);
+      })
+      .catch(function () {})
+      .finally(function () { S.loadingOlder = false; });
+  }
+  msgsEl.addEventListener('scroll', function () {
+    if (msgsEl.scrollTop < 40) loadOlderMessages();
+  });
+
   function openConv(id) {
     var c = S.convs.find(function (x) { return x.id === id; });
     S.activeId = id; S.activeConv = c; S.lastMsgId = 0; S.lastDateKey = null;
+    S.firstMsgId = 0; S.firstDateKey = null; S.hasMore = false; S.loadingOlder = false;
     msgsEl.innerHTML = '';
     emptyEl.style.display = 'none';
     bodyEl.style.display = 'flex';
@@ -183,6 +231,7 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.conversation || data.conversation.id !== S.activeId) return;
+        if (initial) S.hasMore = !!data.has_more;
         appendMsgs(data.messages || []);
       })
       .catch(function () {})

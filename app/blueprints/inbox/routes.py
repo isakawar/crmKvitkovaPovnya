@@ -42,10 +42,11 @@ def index():
 def conversations():
     _require_manager()
     unread_only = request.args.get('filter') == 'unread'
-    convs = inbox_service.list_conversations(current_user, unread_only=unread_only)
+    channel_ids = inbox_service.accessible_channel_ids(current_user)
+    convs = inbox_service.list_conversations(current_user, unread_only=unread_only, channel_ids=channel_ids)
     return jsonify({
         'conversations': [inbox_service.serialize_conversation(c) for c in convs],
-        'total_unread': inbox_service.total_unread(current_user),
+        'total_unread': inbox_service.total_unread(current_user, channel_ids=channel_ids),
     })
 
 
@@ -75,12 +76,14 @@ def messages(conversation_id):
     _require_manager()
     conv = _conversation_or_404(conversation_id)
     after_id = request.args.get('after', type=int)
-    if not after_id:
+    before_id = request.args.get('before', type=int)
+    if not after_id and not before_id:
         inbox_service.mark_read(conv)
-    msgs = inbox_service.get_thread(conv, after_id=after_id)
+    msgs, has_more = inbox_service.get_thread(conv, after_id=after_id, before_id=before_id)
     return jsonify({
         'conversation': inbox_service.serialize_conversation(conv),
         'messages': [inbox_service.serialize_message(m) for m in msgs],
+        'has_more': has_more,
     })
 
 

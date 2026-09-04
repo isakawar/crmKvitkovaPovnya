@@ -76,8 +76,18 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
                 db.session.commit()
             return msg
 
-        # kind == 'message' — keep whatever fields the adapter put in each media
-        # dict (telegram/instagram use tg_file_id, telegram_personal uses
+        # kind == 'message'
+        # Providers can redeliver an update we've already processed (Telegram
+        # Business retries on a slow webhook response; a personal-number
+        # MTProto session can get the same recent update replayed after a
+        # reconnect — happens on every worker restart). Without this guard
+        # each redelivery silently inserts a duplicate row.
+        if event.external_message_id and Message.query.filter_by(
+                conversation_id=conv.id, external_message_id=event.external_message_id).first():
+            return None
+
+        # keep whatever fields the adapter put in each media dict
+        # (telegram/instagram use tg_file_id, telegram_personal uses
         # tg_chat_id/tg_message_id instead — download_media needs its own shape).
         media = [dict(m, path=None) for m in event.media]
         msg = Message(
@@ -224,22 +234,41 @@ def send_reply(conversation: Conversation, user, text: str | None,
 
 
 # --- reads -----------------------------------------------------------
-def list_conversations(user, unread_only: bool = False):
-    channel_ids = accessible_channel_ids(user)
+def list_conversations(user, unread_only: bool = False, channel_ids: list[int] | None = None):
+    if channel_ids is None:
+        channel_ids = accessible_channel_ids(user)
     if not channel_ids:
         return []
-    q = Conversation.query.filter(Conversation.channel_id.in_(channel_ids))
+    q = (Conversation.query
+         .options(db.joinedload(Conversation.channel))
+         .filter(Conversation.channel_id.in_(channel_ids)))
     if unread_only:
         q = q.filter(Conversation.unread_count > 0)
     return q.order_by(Conversation.last_message_at.desc().nullslast(),
                       Conversation.id.desc()).all()
 
 
-def get_thread(conversation: Conversation, after_id: int | None = None):
-    q = conversation.messages
+def get_thread(conversation: Conversation, after_id: int | None = None,
+               before_id: int | None = None, limit: int = 50):
+    """Return (messages, has_more).
+
+    - after_id: everything newer (polling for new messages) — unbounded,
+      there's never many of these between two 5s polls.
+    - before_id: a page of older messages (scrolling up), newest-first then
+      reversed to chronological order.
+    - neither: the initial page — the most recent `limit` messages.
+    """
     if after_id:
-        q = q.filter(Message.id > after_id)
-    return q.order_by(Message.id).all()
+        msgs = (conversation.messages.filter(Message.id > after_id)
+                .order_by(Message.id).all())
+        return msgs, False
+
+    q = conversation.messages
+    if before_id:
+        q = q.filter(Message.id < before_id)
+    msgs = q.order_by(Message.id.desc()).limit(limit).all()
+    msgs.reverse()
+    return msgs, len(msgs) == limit
 
 
 def mark_read(conversation: Conversation) -> None:
@@ -248,8 +277,9 @@ def mark_read(conversation: Conversation) -> None:
         db.session.commit()
 
 
-def total_unread(user) -> int:
-    channel_ids = accessible_channel_ids(user)
+def total_unread(user, channel_ids: list[int] | None = None) -> int:
+    if channel_ids is None:
+        channel_ids = accessible_channel_ids(user)
     if not channel_ids:
         return 0
     return int(db.session.query(db.func.coalesce(db.func.sum(Conversation.unread_count), 0))

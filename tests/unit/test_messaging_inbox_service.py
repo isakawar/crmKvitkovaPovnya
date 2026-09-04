@@ -62,6 +62,17 @@ def test_ingest_preserves_adapter_specific_media_keys(session):
     assert msg.media[0]['path'] is None
 
 
+def test_ingest_ignores_redelivered_duplicate(session):
+    ch = _channel(session)
+    first = inbox_service.ingest_event(ch, _msg_event(mid='dup-1'))
+    duplicate = inbox_service.ingest_event(ch, _msg_event(mid='dup-1', text='same message again'))
+    assert first is not None
+    assert duplicate is None
+    conv = Conversation.query.one()
+    assert Message.query.filter_by(conversation_id=conv.id).count() == 1
+    assert conv.unread_count == 1
+
+
 def test_list_conversations_unread_only(session):
     ch = _channel(session)
     inbox_service.ingest_event(ch, _msg_event(chat='1', mid='1'))
