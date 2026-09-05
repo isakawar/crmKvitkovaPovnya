@@ -922,6 +922,10 @@ document.addEventListener('click', function(e) {
   const ROUTE_COLORS = ['#3388ff','#e63946','#2dc653','#f4a261','#9b5de5','#f72585','#00b4d8','#ff6b35'];
   let originalResult = null;
   let currentRoutes = [];
+  // Route ids this page has actually shown at some point — stale-route
+  // cleanup on the backend only ever deletes routes from this set, never
+  // routes it never had a chance to know about (e.g. created elsewhere).
+  let knownRouteIds = new Set();
   let hasChanges = false;
   let distributeNewIds = new Set();
   let selectedDate = '{{ selected_date }}';
@@ -1331,6 +1335,7 @@ document.addEventListener('click', function(e) {
       const savePayload = {
         result_json: JSON.stringify(resultToSave),
         selected_date: selectedDate,
+        known_route_ids: Array.from(knownRouteIds),
       };
       if (EDITING_ROUTE_ID) savePayload.editing_route_id = EDITING_ROUTE_ID;
 
@@ -1346,6 +1351,7 @@ document.addEventListener('click', function(e) {
       }
       // Persist returned DB IDs into currentRoutes so re-saves update instead of duplicate
       if (data.route_ids && data.route_ids.length) {
+        data.route_ids.forEach(function(id) { knownRouteIds.add(id); });
         let savedIdx = 0;
         currentRoutes.forEach(function(r) {
           if ((r.stops || []).length && savedIdx < data.route_ids.length) {
@@ -1629,6 +1635,7 @@ document.addEventListener('click', function(e) {
   window.renderResult = function(result) {
     originalResult = result;
     currentRoutes = JSON.parse(JSON.stringify(result.routes || []));
+    currentRoutes.forEach(function(r) { if (r.routeDbId) knownRouteIds.add(r.routeDbId); });
     hasChanges = false;
     selectedDate = result._selectedDate || selectedDate;
 
