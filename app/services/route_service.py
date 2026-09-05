@@ -17,6 +17,7 @@ def save_routes(
     selected_date: date,
     editing_route_id: int | None = None,
     user=None,
+    known_route_ids: list[int] | None = None,
 ) -> list[DeliveryRoute]:
     """Persist optimized routes for a given date.
 
@@ -30,10 +31,29 @@ def save_routes(
     After processing all routes, removes stale DeliveryRoutes for the date
     that were not included in this save (full-day save mode only).
 
+    known_route_ids: ids of routes the calling session actually knows about
+    (i.e. was showing before this save) — restricts stale-route cleanup to
+    that set, so a partial payload (e.g. a single newly-distributed route)
+    can never delete routes it never had any knowledge of. `None` means the
+    caller does not track this (falls back to the old "delete anything not
+    in this payload" behaviour) — only used by call sites not yet updated.
+
+    Raises ValueError if the same routeDbId appears more than once in
+    result['routes'] — that shape only ever comes from a corrupted client
+    state and silently processing it drops stops (see incident 2026-09-05).
+
     Returns the list of saved DeliveryRoute objects.
     """
     routes_data = result.get('routes', [])
     result_meta = {k: v for k, v in result.items() if k != 'routes'}
+
+    seen_route_db_ids = set()
+    for route_data in routes_data:
+        rid = route_data.get('routeDbId')
+        if rid:
+            if rid in seen_route_db_ids:
+                raise ValueError(f'Duplicate routeDbId {rid} in save payload')
+            seen_route_db_ids.add(rid)
 
     # Fallback: match stops by address when optimizer doesn't echo id field
     addr_to_delivery_id = _build_addr_map(selected_date)
@@ -129,7 +149,7 @@ def save_routes(
 
     any_db_id = any(r.get('routeDbId') for r in routes_data)  # noqa: SIM118
     if not is_single_route_edit and any_db_id and saved_route_ids:
-        _cleanup_stale_routes(selected_date, saved_route_ids)
+        _cleanup_stale_routes(selected_date, saved_route_ids, known_route_ids)
 
     db.session.commit()
 
@@ -264,11 +284,23 @@ def _reset_route_deliveries(dr: DeliveryRoute):
     RouteDelivery.query.filter_by(route_id=dr.id).delete()
 
 
-def _cleanup_stale_routes(selected_date: date, saved_route_ids: list):
-    stale_routes = DeliveryRoute.query.filter(
+def _cleanup_stale_routes(selected_date: date, saved_route_ids: list, known_route_ids: list[int] | None = None):
+    """Delete routes for the date that this save silently dropped.
+
+    When known_route_ids is given, only routes the caller actually had
+    loaded are candidates — a route this session never saw (e.g. created by
+    another tab, or by a preview that only returned one new route) is left
+    alone, no matter what saved_route_ids contains.
+    """
+    query = DeliveryRoute.query.filter(
         DeliveryRoute.route_date == selected_date,
         ~DeliveryRoute.id.in_(saved_route_ids),
-    ).all()
+    )
+    if known_route_ids is not None:
+        if not known_route_ids:
+            return
+        query = query.filter(DeliveryRoute.id.in_(known_route_ids))
+    stale_routes = query.all()
     for stale in stale_routes:
         _reset_route_deliveries(stale)
         db.session.delete(stale)

@@ -92,6 +92,31 @@ def _addr_result(*addresses):
     return {'routes': [{'stops': stops, 'totalDistanceKm': 3.0, 'totalDriveMin': 15, 'departureTime': '10:00'}]}
 
 
+def _multi_result(route_specs):
+    """Build an optimizer result with several routes in one payload.
+
+    route_specs: list of (deliveries, route_db_id_or_None) tuples. Passing the
+    same route_db_id twice reproduces a payload where one route appears more
+    than once in the same save request.
+    """
+    routes = []
+    for deliveries, route_db_id in route_specs:
+        stops = [
+            {
+                'id': d.id,
+                'address': f'{d.order.city}, {d.order.street} {d.order.building_number}',
+                'eta': '10:00',
+                'driveMin': 5,
+            }
+            for d in deliveries
+        ]
+        route = {'stops': stops, 'totalDistanceKm': 5.0, 'totalDriveMin': 10, 'departureTime': '09:00'}
+        if route_db_id:
+            route['routeDbId'] = route_db_id
+        routes.append(route)
+    return {'routes': routes}
+
+
 # ── 1. New route is created with correct stops ────────────────────────────────
 
 def test_save_routes_creates_delivery_route_and_stops(session):
@@ -385,3 +410,110 @@ def test_delete_route_endpoint_removes_route_and_stops(app, session):
     session.expire_all()
     assert DeliveryRoute.query.filter_by(id=route_id).first() is None
     assert RouteDelivery.query.filter_by(route_id=route_id).count() == 0
+
+
+# ── 10. Incident 2026-09-05 — regression tests reproducing the production bug ─
+#
+# Root cause: _cleanup_stale_routes() (and the per-route loop itself) trusts
+# the routes array from a single save_routes() call as if it were a complete,
+# intentional snapshot of the whole day. It has no way to tell "the user
+# deleted this route on purpose" apart from "this route was never part of
+# what the caller was looking at". See tasks/ for the incident writeup.
+
+def test_incident_resave_of_newly_created_route_wipes_unrelated_routes(session):
+    """07:08:52 and 07:49:47 UTC on 2026-09-05: a manager distributes one new
+    delivery into a brand-new route (1st save: no routeDbId yet, cleanup does
+    not run). Anything that saves that same 1-route view again (double
+    submit, going back to the same page) now carries a routeDbId, so
+    _cleanup_stale_routes used to treat "1 route in this payload" as "the
+    whole day" and delete every other real route for the date.
+
+    Fixed via known_route_ids: a session that only ever saw the one route it
+    just distributed reports that as its known set, so cleanup has no basis
+    to touch r1/r2 even though they are absent from the payload."""
+    d1 = _make_delivery(session, street='Вул. А', building='1')
+    d2 = _make_delivery(session, street='Вул. Б', building='2')
+    d3 = _make_delivery(session, street='Вул. В', building='3')
+
+    r1 = save_routes(_result([d1]), TODAY)[0]
+    r2 = save_routes(_result([d2]), TODAY)[0]
+
+    # A new delivery gets distributed into a brand-new route (1st save). This
+    # session never saw r1/r2, so its known set starts out empty.
+    new_route = save_routes(_result([d3]), TODAY, known_route_ids=[])[0]
+
+    # The same "just distributed" view is saved a second time; the frontend
+    # now knows about the route id the first save returned.
+    save_routes(_result([d3], route_db_id=new_route.id), TODAY, known_route_ids=[new_route.id])
+
+    assert DeliveryRoute.query.get(r1.id) is not None, \
+        'unrelated route wiped by resaving an unrelated single new route'
+    assert DeliveryRoute.query.get(r2.id) is not None, \
+        'unrelated route wiped by resaving an unrelated single new route'
+
+
+def test_incident_stale_full_day_snapshot_wipes_routes_created_elsewhere(session):
+    """07:41:20 and 07:48:11 UTC on 2026-09-05: routes created via one
+    action (e.g. a second browser tab, or the distribute banner) after a
+    generator page already loaded its "full day" snapshot used to get
+    deleted when that stale snapshot was later saved via the ordinary
+    full-day save, because save_routes() had no way to know those new routes
+    were never part of what that page loaded.
+
+    Fixed via known_route_ids: the stale session only reports r1/r2 (what it
+    actually rendered), so r3 — created after that render, elsewhere — is
+    never a cleanup candidate."""
+    d1 = _make_delivery(session, street='Вул. А', building='1')
+    d2 = _make_delivery(session, street='Вул. Б', building='2')
+    d3 = _make_delivery(session, street='Вул. В', building='3')
+
+    r1 = save_routes(_result([d1]), TODAY)[0]
+    r2 = save_routes(_result([d2]), TODAY)[0]
+
+    # A route created independently (e.g. another tab distributing a new
+    # delivery) after the "stale" full-day view above was already loaded.
+    r3 = save_routes(_result([d3]), TODAY)[0]
+
+    # The stale full-day view (only ever rendered r1, r2) gets saved.
+    save_routes(
+        _multi_result([([d1], r1.id), ([d2], r2.id)]), TODAY,
+        known_route_ids=[r1.id, r2.id],
+    )
+
+    assert DeliveryRoute.query.get(r3.id) is not None, \
+        'route created elsewhere wiped by an unrelated stale full-day save'
+
+
+def test_incident_duplicate_route_entry_in_one_payload_rejected(session):
+    """07:35:03 UTC on 2026-09-05: the same routeDbId appeared twice in a
+    single /route-generator/save payload (route 605 logged as edited with 4
+    stops, then immediately again with 1 stop, same request). The per-route
+    loop in save_routes() used to reset and rebuild stops for every
+    occurrence, so the last occurrence silently overwrote the first — inside
+    one call, with no stale-route cleanup involved at all.
+
+    Fixed by rejecting a payload with a duplicate routeDbId outright (a
+    shape that can only come from corrupted client state) instead of
+    guessing which occurrence should win."""
+    d1 = _make_delivery(session, street='Вул. А', building='1')
+    d2 = _make_delivery(session, street='Вул. Б', building='2')
+    d3 = _make_delivery(session, street='Вул. В', building='3')
+
+    route = save_routes(_result([d1, d2, d3]), TODAY)[0]
+    route_id = route.id
+
+    # Same routeDbId referenced twice in one payload — mirrors the duplicate
+    # "edit route 605" activity-log entries from the same request.
+    import pytest
+    with pytest.raises(ValueError):
+        save_routes(_multi_result([
+            ([d1, d2, d3], route_id),
+            ([d1], route_id),
+        ]), TODAY)
+
+    # Nothing should have been touched — the payload is rejected up front.
+    session.refresh(d2)
+    session.refresh(d3)
+    assert d2.status == 'Розподілено'
+    assert d3.status == 'Розподілено'
+    assert RouteDelivery.query.filter_by(route_id=route_id).count() == 3

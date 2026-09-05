@@ -1269,7 +1269,14 @@ def route_generator_save():
     current_app.logger.info('SAVE_ROUTES: received %d routes', len(result['routes']))
 
     editing_route_id = data.get('editing_route_id')
-    saved_routes = svc_save_routes(result, selected_date, editing_route_id)
+    known_route_ids = data.get('known_route_ids')
+    try:
+        saved_routes = svc_save_routes(
+            result, selected_date, editing_route_id, known_route_ids=known_route_ids
+        )
+    except ValueError as exc:
+        current_app.logger.warning('SAVE_ROUTES: rejected payload: %s', exc)
+        return jsonify({'error': 'Дані маршрутів застаріли — онови сторінку і спробуй ще раз.'}), 400
 
     from sqlalchemy.orm import joinedload as _jl
     from app.models.delivery_route import DeliveryRoute as _DR
