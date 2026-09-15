@@ -244,7 +244,9 @@
             <span>Калькулятор</span>
         </a>
         {% else %}
-        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/transactions')) %}
+        {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/integrations', '/transactions')) %}
         <div class="nav-group" data-group="sales">
           <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if sales_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-bag text-lg flex-shrink-0"></i>
@@ -270,6 +272,14 @@
                 <i class="bi bi-truck text-lg flex-shrink-0"></i>
                 <span>Замовлення</span>
             </a>
+            {% if can_see_leads %}
+            <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+                <span>Заявки з сайту</span>
+            </a>
+            {% endif %}
             <a href="/transactions" onclick="closeMobileSidebar()"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
                       {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
@@ -311,9 +321,7 @@
         </a>
         {% endif %}
 
-        {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
-        {% set business_active = request.path.startswith(('/florist', '/certificates', '/integrations')) %}
+        {% set business_active = request.path.startswith(('/florist', '/certificates')) %}
         <div class="nav-group" data-group="business">
           <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if business_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-shop text-lg flex-shrink-0"></i>
@@ -335,14 +343,6 @@
                 <i class="bi bi-award text-lg flex-shrink-0"></i>
                 <span>Сертифікати</span>
             </a>
-            {% if can_see_leads %}
-            <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
-                <span>Заявки з сайту</span>
-            </a>
-            {% endif %}
           </div>
         </div>
 
@@ -435,7 +435,9 @@
             <span class="nav-label">Калькулятор</span>
         </a>
         {% else %}
-        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/transactions')) %}
+        {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/integrations', '/transactions')) %}
         <div class="nav-group" data-group="sales">
           <button type="button" title="Продажі" class="nav-group__header flex items-center gap-3 px-2 py-2 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if sales_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-bag text-lg flex-shrink-0"></i>
@@ -464,6 +466,15 @@
                 <i class="bi bi-truck text-lg flex-shrink-0"></i>
                 <span class="nav-label">Замовлення</span>
             </a>
+            {% if can_see_leads %}
+            <a href="{{ url_for('integrations.wix_leads_list') }}"
+               class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+               title="Заявки з сайту">
+                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+                <span class="nav-label">Заявки з сайту</span>
+            </a>
+            {% endif %}
             <a href="/transactions"
                class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                       {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
@@ -509,9 +520,7 @@
         </a>
         {% endif %}
 
-        {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
-        {% set business_active = request.path.startswith(('/florist', '/certificates', '/integrations')) %}
+        {% set business_active = request.path.startswith(('/florist', '/certificates')) %}
         <div class="nav-group" data-group="business">
           <button type="button" title="Бізнес" class="nav-group__header flex items-center gap-3 px-2 py-2 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if business_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-shop text-lg flex-shrink-0"></i>
@@ -535,15 +544,6 @@
                 <i class="bi bi-award text-lg flex-shrink-0"></i>
                 <span class="nav-label">Сертифікати</span>
             </a>
-            {% if can_see_leads %}
-            <a href="{{ url_for('integrations.wix_leads_list') }}"
-               class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-               title="Заявки з сайту">
-                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
-                <span class="nav-label">Заявки з сайту</span>
-            </a>
-            {% endif %}
           </div>
         </div>
 
