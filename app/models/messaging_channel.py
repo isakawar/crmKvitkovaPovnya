@@ -27,6 +27,19 @@ class MessagingChannel(db.Model):
     pending_session_encrypted = db.Column(db.Text, nullable=True)
     pending_phone_code_hash = db.Column(db.String(128), nullable=True)
 
+    # instagram (Facebook Login for Business OAuth) — the Facebook Page this IG
+    # Business account is linked to, and its Page Access Token (also valid for
+    # sending/receiving IG messages), encrypted the same way as session_encrypted.
+    # external_id holds the IG-scoped account id (from the OAuth page picker).
+    fb_page_id = db.Column(db.String(64), nullable=True)
+    fb_page_access_token_encrypted = db.Column(db.Text, nullable=True)
+
+    # whatsapp (Facebook Login for Business — Embedded Signup) — the WhatsApp
+    # Business Account id and its access token, encrypted the same way.
+    # external_id holds the phone_number_id (used in the send URL).
+    wa_waba_id = db.Column(db.String(64), nullable=True)
+    wa_access_token_encrypted = db.Column(db.Text, nullable=True)
+
     access_entries = db.relationship(
         'MessagingChannelAccess', back_populates='channel',
         cascade='all, delete-orphan', lazy='selectin',

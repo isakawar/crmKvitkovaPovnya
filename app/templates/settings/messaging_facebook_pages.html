@@ -1,0 +1,47 @@
+{% extends 'layout.html' %}
+
+{% block head %}
+{{ super() }}
+{% include 'settings/_styles.html' %}
+{% endblock %}
+
+{% block content %}
+<div class="settings-shell">
+  <section class="settings-hero">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <span class="settings-hero__label"><i class="bi bi-facebook"></i> Facebook Login</span>
+        <h1 class="settings-hero__title">Оберіть сторінку</h1>
+        <p class="settings-hero__text">
+          Показані лише сторінки з підключеним Instagram Business акаунтом.
+        </p>
+      </div>
+      <a class="settings-hero__back" href="{{ url_for('settings.messaging_page') }}">
+        <i class="bi bi-arrow-left"></i> Скасувати
+      </a>
+    </div>
+  </section>
+
+  <div class="space-y-3">
+    {% for p in pages %}
+    <form method="POST" action="{{ url_for('settings.messaging_facebook_select_page') }}"
+          class="flex items-center justify-between gap-4 rounded-xl border border-stone-200 bg-white p-4">
+      <input type="hidden" name="page_id" value="{{ p.page_id }}">
+      <input type="hidden" name="page_name" value="{{ p.page_name }}">
+      <input type="hidden" name="ig_id" value="{{ p.ig_id }}">
+      <input type="hidden" name="ig_username" value="{{ p.ig_username }}">
+      <input type="hidden" name="encrypted_token" value="{{ p.encrypted_token }}">
+      <div>
+        <div class="font-semibold text-stone-800">{{ p.page_name }}</div>
+        <div class="text-sm text-stone-500"><i class="bi bi-instagram text-pink-500"></i> @{{ p.ig_username }}</div>
+      </div>
+      <button type="submit" class="rounded-lg bg-stone-800 text-white text-sm px-4 py-2 hover:bg-stone-700">
+        Підключити
+      </button>
+    </form>
+    {% else %}
+    <p class="text-sm text-stone-400">Немає сторінок з підключеним Instagram.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

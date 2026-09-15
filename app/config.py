@@ -61,9 +61,20 @@ class Config:
     INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
     INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
     INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
-    INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
+
+    # Omnichannel inbox — Instagram connect flow: Facebook Login for Business
+    # (OAuth). FACEBOOK_APP_ID + INBOX_INSTAGRAM_APP_SECRET above are the same
+    # Meta App's credentials. Per-channel Page Access Tokens are stored
+    # encrypted in the DB (see facebook_oauth.py), not in env.
+    FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '')
+
+    # Omnichannel inbox — WhatsApp connect flow: Facebook Embedded Signup (same
+    # Meta App as Instagram). Config id created once in App Dashboard →
+    # WhatsApp → Embedded Signup → configuration; safe to expose client-side
+    # (not a secret, only usable together with the App's own domain allow-list).
+    FACEBOOK_WHATSAPP_CONFIG_ID = os.environ.get('FACEBOOK_WHATSAPP_CONFIG_ID', '')
 
     # Omnichannel inbox — Viber (REST Bot API, chatapi.viber.com)
     INBOX_VIBER_BOT_TOKEN = os.environ.get('INBOX_VIBER_BOT_TOKEN', '')
@@ -133,9 +144,10 @@ class DevelopmentConfig:
     INBOX_TELEGRAM_BOT_TOKEN = os.environ.get('INBOX_TELEGRAM_BOT_TOKEN', '')
     INBOX_MEDIA_FOLDER = os.path.join(_BASE_DIR, 'uploads', 'inbox_media')
     INBOX_MEDIA_MAX_BYTES = int(os.environ.get('INBOX_MEDIA_MAX_BYTES', 15 * 1024 * 1024))
-    INBOX_INSTAGRAM_ACCESS_TOKEN = os.environ.get('INBOX_INSTAGRAM_ACCESS_TOKEN', '')
     INBOX_INSTAGRAM_APP_SECRET = os.environ.get('INBOX_INSTAGRAM_APP_SECRET', '')
     INBOX_INSTAGRAM_GRAPH_VERSION = os.environ.get('INBOX_INSTAGRAM_GRAPH_VERSION', 'v23.0')
+    FACEBOOK_APP_ID = os.environ.get('FACEBOOK_APP_ID', '')
+    FACEBOOK_WHATSAPP_CONFIG_ID = os.environ.get('FACEBOOK_WHATSAPP_CONFIG_ID', '')
 
     # Omnichannel inbox — Viber (REST Bot API, chatapi.viber.com)
     INBOX_VIBER_BOT_TOKEN = os.environ.get('INBOX_VIBER_BOT_TOKEN', '')

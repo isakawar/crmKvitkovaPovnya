@@ -75,4 +75,7 @@ def get_adapter(channel) -> ChannelAdapter:
     if ctype == 'viber':
         from app.services.messaging.viber import ViberAdapter
         return ViberAdapter()
+    if ctype == 'whatsapp':
+        from app.services.messaging.whatsapp import WhatsAppAdapter
+        return WhatsAppAdapter()
     raise ValueError(f'No messaging adapter for channel_type={ctype!r}')

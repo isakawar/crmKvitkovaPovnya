@@ -1,13 +1,15 @@
-"""Instagram Direct adapter — Instagram API with Instagram Login.
+"""Instagram Direct adapter — connected via Facebook Login for Business.
 
-Uses graph.instagram.com directly (no Facebook Page). One IG Professional
-account per channel. Credentials come from env:
-  INBOX_INSTAGRAM_ACCESS_TOKEN  — long-lived IG user token (refreshable, ~60d)
-  INBOX_INSTAGRAM_APP_SECRET    — Meta app secret, for X-Hub-Signature-256
+Uses graph.facebook.com with a per-channel Page Access Token (the Page the IG
+Business account is linked to) — see app/services/messaging/facebook_oauth.py
+for how a channel gets connected (OAuth, no manual token copying).
+  channel.external_id                     — IG-scoped account id
+  channel.fb_page_id                      — linked Facebook Page id
+  channel.fb_page_access_token_encrypted  — Page Access Token, Fernet-encrypted
+  INBOX_INSTAGRAM_APP_SECRET (env)        — Meta app secret, for X-Hub-Signature-256
 
 The channel's `webhook_secret` doubles as the `hub.verify_token` for the
-GET subscription handshake. `channel.external_id` holds the IG account id
-(needed as the path when sending), learned from the first webhook `entry.id`.
+GET subscription handshake.
 
 Constraints (Meta): replies are only deliverable within 24h of the user's
 last message (standard messaging window). Outbound attachments require a
@@ -23,6 +25,7 @@ import uuid
 import requests
 from flask import current_app
 
+from app.services.messaging import session_crypto
 from app.services.messaging.adapter import InboundEvent, SentResult
 
 _TIMEOUT = 30
@@ -34,7 +37,13 @@ def _cfg(key: str) -> str:
 
 
 def _graph_root() -> str:
-    return f'https://graph.instagram.com/{_cfg("INBOX_INSTAGRAM_GRAPH_VERSION") or "v23.0"}'
+    return f'https://graph.facebook.com/{_cfg("INBOX_INSTAGRAM_GRAPH_VERSION") or "v23.0"}'
+
+
+def _page_token(channel) -> str:
+    if not channel.fb_page_access_token_encrypted:
+        raise RuntimeError('Канал не підключено через Facebook — перепідключіть у /settings/messaging')
+    return session_crypto.decrypt(channel.fb_page_access_token_encrypted)
 
 
 class InstagramDMAdapter:
@@ -104,8 +113,9 @@ class InstagramDMAdapter:
 
     def enrich_contact(self, channel, external_chat_id: str) -> dict:
         """Best-effort profile lookup (name/username). Never raises."""
-        token = _cfg('INBOX_INSTAGRAM_ACCESS_TOKEN')
-        if not token:
+        try:
+            token = _page_token(channel)
+        except RuntimeError:
             return {}
         try:
             r = requests.get(f'{_graph_root()}/{external_chat_id}',
@@ -118,10 +128,11 @@ class InstagramDMAdapter:
 
     # --- outbound --------------------------------------------------------
     def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
-        token = _cfg('INBOX_INSTAGRAM_ACCESS_TOKEN')
-        if not token:
-            return SentResult(ok=False, error='INBOX_INSTAGRAM_ACCESS_TOKEN не налаштовано')
-        account_id = channel.external_id or 'me'
+        try:
+            token = _page_token(channel)
+        except RuntimeError as exc:
+            return SentResult(ok=False, error=str(exc))
+        account_id = channel.external_id
         try:
             r = requests.post(
                 f'{_graph_root()}/{account_id}/messages',
@@ -147,13 +158,16 @@ class InstagramDMAdapter:
 
     # --- config ---------------------------------------------------------
     def register_webhook(self, channel, webhook_url: str) -> None:
-        """Instagram webhooks are configured in the Meta App dashboard, not via
-        an API call. This is a no-op; the URL/verify-token are shown in the UI."""
-        return None
-
-    def refresh_token(self) -> dict:
-        token = _cfg('INBOX_INSTAGRAM_ACCESS_TOKEN')
-        r = requests.get(f'{_graph_root()}/refresh_access_token',
-                         params={'grant_type': 'ig_refresh_token', 'access_token': token},
-                         timeout=_TIMEOUT)
-        return r.json()
+        """Subscribe this Page to the App's webhook (the callback URL itself is
+        configured once, app-wide, in the Meta App Dashboard by the developer —
+        this call just tells Meta to start sending this Page's IG events)."""
+        token = _page_token(channel)
+        r = requests.post(
+            f'{_graph_root()}/{channel.fb_page_id}/subscribed_apps',
+            params={'subscribed_fields': 'messages', 'access_token': token},
+            timeout=_TIMEOUT,
+        )
+        body = r.json()
+        if r.status_code >= 400 or body.get('error'):
+            err = (body.get('error') or {}).get('message') or f'HTTP {r.status_code}'
+            raise RuntimeError(err)

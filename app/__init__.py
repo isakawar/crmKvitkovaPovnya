@@ -133,6 +133,7 @@ def create_app(config_class=DevelopmentConfig):
             'auth.login', 'static', 'changelog', 'settings.serve_sale_option_icon',
             'integrations.wix_order_webhook',
             'inbox.telegram_webhook', 'inbox.instagram_webhook', 'inbox.viber_webhook',
+            'inbox.whatsapp_webhook',
         ]
         if request.endpoint and not current_user.is_authenticated:
             if not any(endpoint == request.endpoint for endpoint in public_endpoints):
@@ -392,18 +393,20 @@ def create_app(config_class=DevelopmentConfig):
         except Exception as exc:  # noqa: BLE001
             click.echo(f'❌ Помилка: {exc}')
 
-    @app.cli.command('messaging-refresh-instagram')
+    @app.cli.command('messaging-reconnect-instagram')
     @click.argument('channel_id', type=int)
-    def messaging_refresh_instagram(channel_id):
-        """Оновити довготривалий Instagram-токен (діє ~60 днів)."""
+    def messaging_reconnect_instagram(channel_id):
+        """Перевірити, чи Instagram-канал ще підключено (Page Access Token не протухає,
+        але власник міг відкликати доступ у Facebook — тоді перепідключіть через UI)."""
         from app.models.messaging_channel import MessagingChannel
-        from app.services.messaging.instagram_dm import InstagramDMAdapter
-
         channel = MessagingChannel.query.get(channel_id)
         if not channel or channel.channel_type != 'instagram':
             click.echo('Instagram-канал не знайдено.')
             return
-        click.echo(InstagramDMAdapter().refresh_token())
+        if not channel.fb_page_access_token_encrypted:
+            click.echo('⚠ Канал не підключено — перепідключіть через /settings/messaging.')
+            return
+        click.echo(f'✅ Підключено: Page {channel.fb_page_id}, IG account {channel.external_id}.')
 
     @app.cli.command('messaging-backfill-telegram-personal')
     @click.argument('channel_id', type=int)

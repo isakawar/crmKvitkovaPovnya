@@ -189,3 +189,11 @@ def viber_webhook(channel_id):
     if channel is None or channel.channel_type != 'viber':
         abort(404)
     return _handle_webhook(channel)
+
+
+@inbox_bp.route('/api/messaging/whatsapp/<int:channel_id>/webhook', methods=['GET', 'POST'])
+def whatsapp_webhook(channel_id):
+    channel = MessagingChannel.query.get(channel_id)
+    if channel is None or channel.channel_type != 'whatsapp':
+        abort(404)
+    return _handle_webhook(channel)

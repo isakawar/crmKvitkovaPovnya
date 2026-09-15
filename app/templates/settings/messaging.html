@@ -4,6 +4,17 @@
 {% block head %}
 {{ super() }}
 {% include 'settings/_styles.html' %}
+<style>
+  .add-channel-card {
+    display: flex; flex-direction: column; align-items: center; gap: 0.35rem;
+    text-align: center; padding: 1rem 0.75rem; border: 1px solid #e7e5e4; border-radius: 0.75rem;
+    background: #fff; cursor: pointer; transition: 0.15s; text-decoration: none;
+  }
+  .add-channel-card:hover { border-color: #d6d3d1; background: #fafaf9; transform: translateY(-1px); }
+  .add-channel-card i { font-size: 1.5rem; }
+  .add-channel-card__title { font-size: 0.85rem; font-weight: 600; color: #292524; }
+  .add-channel-card__hint { font-size: 0.72rem; color: #a8a29e; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -30,19 +41,50 @@
   </div>
   {% endif %}
 
-  <section class="mb-6 flex items-center gap-3">
-    <input id="new-channel-name" type="text" placeholder="Назва каналу"
-           class="border rounded-lg px-3 py-2 text-sm w-64">
-    <select id="new-channel-type" class="border rounded-lg px-3 py-2 text-sm">
-      <option value="telegram">Telegram (бот-секретар)</option>
-      <option value="telegram_personal">Telegram (особистий номер)</option>
-      <option value="instagram">Instagram</option>
-      <option value="viber">Viber</option>
-    </select>
-    <button id="btn-create-channel"
-            class="rounded-lg bg-stone-800 text-white text-sm px-4 py-2 hover:bg-stone-700">
-      + Додати канал
-    </button>
+  <section class="mb-6">
+    <p class="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-2">Додати канал</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <a href="{{ url_for('settings.messaging_facebook_start') }}" class="add-channel-card">
+        <i class="bi bi-instagram" style="color:#d6249f;"></i>
+        <span class="add-channel-card__title">Instagram</span>
+        <span class="add-channel-card__hint">Через Facebook Login</span>
+      </a>
+      <button type="button" class="add-channel-card" data-channel-type="telegram" data-channel-label="Telegram (бот-секретар)">
+        <i class="bi bi-telegram" style="color:#0088cc;"></i>
+        <span class="add-channel-card__title">Telegram</span>
+        <span class="add-channel-card__hint">Бот-секретар (Business API)</span>
+      </button>
+      <button type="button" class="add-channel-card" data-channel-type="telegram_personal" data-channel-label="Telegram (особистий номер)">
+        <i class="bi bi-telegram" style="color:#0088cc;"></i>
+        <span class="add-channel-card__title">Telegram</span>
+        <span class="add-channel-card__hint">Особистий номер</span>
+      </button>
+      <button type="button" class="add-channel-card" data-channel-type="viber" data-channel-label="Viber">
+        <span class="inline-flex items-center justify-center w-7 h-7 rounded-full text-white font-bold"
+              style="background:#7360F2; font-size:0.85rem;">V</span>
+        <span class="add-channel-card__title">Viber</span>
+        <span class="add-channel-card__hint">Бот через partners.viber.com</span>
+      </button>
+      <button type="button" class="add-channel-card" id="btn-connect-whatsapp">
+        <i class="bi bi-whatsapp" style="color:#25D366;"></i>
+        <span class="add-channel-card__title">WhatsApp</span>
+        <span class="add-channel-card__hint">Через Facebook Login</span>
+      </button>
+    </div>
+
+    <div id="new-channel-form" class="hidden mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <span id="new-channel-type-label" class="text-sm font-medium text-stone-600"></span>
+      <input id="new-channel-type" type="hidden" value="telegram">
+      <input id="new-channel-name" type="text" placeholder="Назва каналу"
+             class="border rounded-lg px-3 py-2 text-sm w-64">
+      <button id="btn-create-channel"
+              class="rounded-lg bg-stone-800 text-white text-sm px-4 py-2 hover:bg-stone-700">
+        Додати
+      </button>
+      <button type="button" id="btn-cancel-channel" class="text-xs text-stone-400 hover:text-stone-600">
+        Скасувати
+      </button>
+    </div>
   </section>
 
   <div class="flex flex-col gap-4">
@@ -55,6 +97,8 @@
             {% if ch.channel_type == 'viber' %}
             <span class="inline-flex items-center justify-center w-4 h-4 rounded-full text-white font-bold"
                   style="background:#7360F2; font-size:0.6rem;">V</span>
+            {% elif ch.channel_type == 'whatsapp' %}
+            <i class="bi bi-whatsapp" style="color:#25D366;"></i>
             {% else %}
             <i class="bi bi-{{ 'telegram text-sky-500' if ch.channel_type == 'telegram' else ('telegram text-indigo-500' if ch.channel_type == 'telegram_personal' else 'instagram text-pink-500') }}"></i>
             {% endif %}
@@ -73,9 +117,16 @@
             <div>Webhook URL: <code class="bg-stone-50 px-1 rounded select-all">{{ webhooks[ch.id] }}</code></div>
             {% endif %}
             {% if ch.channel_type == 'instagram' %}
-            <div>Verify token: <code class="bg-stone-50 px-1 rounded select-all">{{ ch.webhook_secret }}</code></div>
-            {% if not ig_token_set %}<div class="text-amber-700">⚠ INBOX_INSTAGRAM_ACCESS_TOKEN не заданий у .env</div>{% endif %}
+            <div>Facebook Page: {{ ch.fb_page_id or '—' }} · IG account: {{ ch.external_id or '—' }}</div>
+            {% if not ch.fb_page_access_token_encrypted %}
+            <div class="text-amber-700">⚠ Не підключено через Facebook — натисніть «Continue with Facebook» вище</div>
+            {% endif %}
             {% if not ig_secret_set %}<div class="text-amber-700">⚠ INBOX_INSTAGRAM_APP_SECRET не заданий у .env</div>{% endif %}
+            {% elif ch.channel_type == 'whatsapp' %}
+            <div>Номер: {{ ch.name }} · WABA: {{ ch.wa_waba_id or '—' }}</div>
+            {% if not ch.wa_access_token_encrypted %}
+            <div class="text-amber-700">⚠ Не підключено через Facebook — натисніть WhatsApp-картку вище</div>
+            {% endif %}
             {% elif ch.channel_type == 'telegram_personal' %}
             {% if ch.phone_number %}<div>Номер: {{ ch.phone_number }}</div>{% endif %}
             {% if not tg_personal_creds_set %}<div class="text-amber-700">⚠ MESSAGING_TG_API_ID / MESSAGING_TG_API_HASH / MESSAGING_SESSION_KEY не задані у .env</div>{% endif %}
@@ -87,9 +138,9 @@
           </div>
         </div>
         <div class="flex items-center gap-2 flex-shrink-0">
-          {% if ch.channel_type in ('telegram', 'viber') %}
+          {% if ch.channel_type in ('telegram', 'viber', 'instagram', 'whatsapp') and ch.is_connected %}
           <button class="btn-webhook text-xs rounded-lg border px-3 py-1.5 hover:bg-stone-50">
-            Підключити webhook
+            {{ 'Переідключити webhook' if ch.channel_type in ('instagram', 'whatsapp') else 'Підключити webhook' }}
           </button>
           {% endif %}
           <button class="btn-delete text-xs rounded-lg border border-red-200 text-red-600 px-3 py-1.5 hover:bg-red-50">
@@ -98,12 +149,7 @@
         </div>
       </div>
 
-      {% if ch.channel_type == 'instagram' %}
-      <p class="mt-2 text-xs text-stone-400">
-        Instagram webhook налаштовується в Meta App Dashboard → Webhooks → Instagram: вставте URL і
-        Verify token вище, підпишіться на поле <code>messages</code>.
-      </p>
-      {% elif ch.channel_type == 'telegram_personal' and not ch.is_connected %}
+      {% if ch.channel_type == 'telegram_personal' and not ch.is_connected %}
       <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 tg-personal-auth">
         <p class="text-xs text-amber-800 mb-2">
           ⚠ Це вхід в особистий Telegram-акаунт (не бот). Telegram може обмежити акаунт, якщо
@@ -147,7 +193,10 @@
       </div>
     </div>
     {% else %}
-    <p class="text-sm text-stone-400">Каналів ще немає.</p>
+    <div class="rounded-xl border border-dashed border-stone-200 bg-stone-50 p-8 text-center">
+      <i class="bi bi-chat-square-dots text-3xl text-stone-300"></i>
+      <p class="text-sm text-stone-500 mt-2">Каналів ще немає — оберіть один з варіантів вище, щоб підключити перший.</p>
+    </div>
     {% endfor %}
   </div>
 </div>
@@ -159,6 +208,12 @@
 {{ super() }}
 {{ toast_script() }}
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+  {% if fb_error %}showToast({{ fb_error|tojson }}, 'error');{% endif %}
+  {% if fb_success %}showToast(
+    {{ ('Instagram підключено' + (' (webhook: ' + fb_webhook_error + ')' if fb_webhook_error else ''))|tojson }},
+    {{ ('error' if fb_webhook_error else 'success')|tojson }});{% endif %}
+});
 async function api(url, body) {
   const r = await fetch(url, {
     method: 'POST',
@@ -167,6 +222,84 @@ async function api(url, body) {
   });
   return r.json();
 }
+
+// --- WhatsApp Embedded Signup (Facebook JS SDK popup) ----------------
+const FB_APP_ID = {{ facebook_app_id|tojson }};
+const WA_CONFIG_ID = {{ whatsapp_config_id|tojson }};
+const GRAPH_VERSION = {{ graph_version|tojson }};
+let fbSdkLoaded = false;
+let waSignupData = null;   // {waba_id, phone_number_id} from the popup's postMessage
+let waSignupCode = null;   // code from FB.login's callback
+
+function loadFacebookSdk() {
+  if (fbSdkLoaded) return;
+  fbSdkLoaded = true;
+  window.fbAsyncInit = function () {
+    FB.init({ appId: FB_APP_ID, autoLogAppEvents: true, xfbml: false, version: GRAPH_VERSION });
+  };
+  const s = document.createElement('script');
+  s.src = 'https://connect.facebook.net/en_US/sdk.js';
+  s.async = true;
+  s.defer = true;
+  document.body.appendChild(s);
+}
+
+window.addEventListener('message', (event) => {
+  if (!event.origin.endsWith('facebook.com')) return;
+  try {
+    const data = JSON.parse(event.data);
+    if (data.type === 'WA_EMBEDDED_SIGNUP' && data.event === 'FINISH') {
+      waSignupData = { waba_id: data.data.waba_id, phone_number_id: data.data.phone_number_id };
+      maybeCompleteWhatsappSignup();
+    }
+  } catch (e) { /* not a WhatsApp signup message — ignore */ }
+});
+
+async function maybeCompleteWhatsappSignup() {
+  if (!waSignupData || !waSignupCode) return;
+  const res = await api('/settings/messaging/whatsapp/complete',
+    { code: waSignupCode, waba_id: waSignupData.waba_id, phone_number_id: waSignupData.phone_number_id });
+  waSignupData = null; waSignupCode = null;
+  if (res.success) location.reload();
+  else showToast(res.error || 'Помилка', 'error');
+}
+
+document.getElementById('btn-connect-whatsapp').addEventListener('click', () => {
+  if (!FB_APP_ID || !WA_CONFIG_ID) {
+    showToast('WhatsApp-підключення ще не готове, зверніться до розробника', 'error');
+    return;
+  }
+  loadFacebookSdk();
+  const start = () => {
+    FB.login((response) => {
+      if (response.authResponse && response.authResponse.code) {
+        waSignupCode = response.authResponse.code;
+        maybeCompleteWhatsappSignup();
+      }
+    }, {
+      config_id: WA_CONFIG_ID,
+      response_type: 'code',
+      override_default_response_type: true,
+      extras: { featureType: '', sessionInfoVersion: '3' },
+    });
+  };
+  if (window.FB) start(); else setTimeout(function retry() { window.FB ? start() : setTimeout(retry, 200); }, 200);
+});
+
+const newChannelForm = document.getElementById('new-channel-form');
+document.querySelectorAll('.add-channel-card[data-channel-type]').forEach(card => {
+  card.addEventListener('click', () => {
+    document.getElementById('new-channel-type').value = card.dataset.channelType;
+    document.getElementById('new-channel-type-label').textContent = card.dataset.channelLabel;
+    newChannelForm.classList.remove('hidden');
+    const nameInput = document.getElementById('new-channel-name');
+    nameInput.value = '';
+    nameInput.focus();
+  });
+});
+document.getElementById('btn-cancel-channel').addEventListener('click', () => {
+  newChannelForm.classList.add('hidden');
+});
 
 document.getElementById('btn-create-channel').addEventListener('click', async () => {
   const name = document.getElementById('new-channel-name').value.trim();

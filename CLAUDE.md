@@ -113,29 +113,74 @@ Use `expense_type_id` FK — not the legacy `expense_type` string column.
 
 ## Omnichannel Inbox (chat)
 
+**Status**: on branch `feature/messaging-service` (not yet merged to `main`). Code-complete for
+Telegram (both variants), Viber, Instagram and WhatsApp; the Facebook-based connect flows
+(Instagram OAuth, WhatsApp Embedded Signup) are untested end-to-end with a real Meta App — waiting
+on the client to create it (see `tasks/2026-09-03_omnichannel-inbox-telegram.md`). No automated
+tests for the Viber/Telegram-personal adapters yet (Telegram Business + Instagram + WhatsApp +
+Facebook OAuth + `inbox_service` are covered, 49 tests).
+
 In-CRM chat where dialogs from corporate accounts land and managers reply. Page `/inbox`
 (blueprint `app/blueprints/inbox/`). Config in `/settings/messaging`.
 
 - **Channel adapters**: `app/services/messaging/adapter.py` defines `ChannelAdapter` Protocol +
-  `InboundEvent` / `SentResult`. `get_adapter(channel)` resolves by `channel_type`. Telegram =
-  `telegram_business.py` (Telegram **Business API** over plain `requests`, no PTB — separate bot
-  from the courier bot, token `INBOX_TELEGRAM_BOT_TOKEN`). Instagram = `instagram_dm.py`
-  (Instagram API with Instagram Login, `graph.instagram.com`, no FB Page; token + app secret in
-  env, channel `webhook_secret` is the `hub.verify_token`; webhook configured in the Meta App
-  dashboard, not via API; outbound text only for now). Add Viber/WhatsApp as new adapter modules
-  + webhook route; models stay unchanged.
+  `InboundEvent` / `SentResult`. `get_adapter(channel)` resolves by `channel_type` — 5 implemented:
+  - `telegram` → `telegram_business.py` — Telegram **Business API** over plain `requests`, no PTB;
+    separate bot from the courier bot, token `INBOX_TELEGRAM_BOT_TOKEN`.
+  - `telegram_personal` → `telegram_personal.py` (+ `telegram_personal_auth.py`,
+    `telegram_personal_backfill.py`) — MTProto login (Telethon) as a real personal account, **no
+    HTTP webhook**. Runs as a separate persistent process, `scripts/run_telegram_personal_worker.py`
+    (one Telethon client per active channel, shared asyncio loop, pushes straight into
+    `inbox_service.ingest_event` inside an app context). Session string is bearer-equivalent to
+    full account access, so it's encrypted at rest via `session_crypto.py`
+    (`MESSAGING_SESSION_KEY`, Fernet). History import: `flask messaging-backfill-telegram-personal
+    <id> [--days]`.
+  - `instagram` → `instagram_dm.py` — connected via **Facebook Login for Business** (OAuth, no
+    manual token copying): manager clicks "Continue with Facebook" in `/settings/messaging`,
+    picks a Page, `app/services/messaging/facebook_oauth.py` exchanges the code for a long-lived
+    user token, lists Pages via `/me/accounts`, and the Page's `instagram_business_account` +
+    Page Access Token become the channel (`channel.external_id` = IG-scoped id,
+    `channel.fb_page_id`, `channel.fb_page_access_token_encrypted` — same Fernet pattern as
+    `session_encrypted`). Sends/receives over `graph.facebook.com` (not `graph.instagram.com`)
+    using the Page token. `channel.webhook_secret` is still the `hub.verify_token` for the GET
+    handshake; `INBOX_INSTAGRAM_APP_SECRET` (env, App-level) verifies `X-Hub-Signature-256`.
+    `register_webhook()` now does real work — `POST /{page_id}/subscribed_apps` — but the App's
+    webhook **callback URL itself** is still a one-time manual paste in Meta App Dashboard by
+    whoever owns the Meta App (not per-business-owner). **Outbound photo not implemented** —
+    `send_media` returns an error (needs a public media URL); text-only for now.
+  - `viber` → `viber.py` — Viber Bot API, token `INBOX_VIBER_BOT_TOKEN`.
+  - `whatsapp` → `whatsapp.py` — connected via **Facebook Embedded Signup** (same Meta App as
+    Instagram, JS-SDK popup instead of a redirect — see `messaging.html`'s `launchWhatsAppSignup`,
+    config id `FACEBOOK_WHATSAPP_CONFIG_ID`, created once in the App Dashboard). The popup posts
+    back `{code, waba_id, phone_number_id}`; `POST /settings/messaging/whatsapp/complete`
+    (`settings/routes.py`) exchanges the code (via
+    `facebook_oauth.exchange_embedded_signup_code` — no `redirect_uri`, unlike the Instagram
+    exchange), registers the phone number with the Cloud API (`POST
+    /{phone_number_id}/register` with a throwaway PIN — one-time, only needed again for
+    re-registration), and creates the channel (`channel.external_id` = phone_number_id,
+    `channel.wa_waba_id`, `channel.wa_access_token_encrypted`). 24h customer-service window
+    applies (no template-message support); outbound media not implemented (text-only, v1).
 - **Domain logic**: `inbox_service.py` (no Flask) — `ingest_event`, `send_reply`,
   `list_conversations`, `total_unread`, `ensure_media_downloaded` (lazy — webhook never downloads
-  media, only stores `tg_file_id`, to avoid Telegram retry storms).
+  media, only stores `tg_file_id`, to avoid Telegram retry storms). `media_cleanup.py` — daily
+  purge of media older than `INBOX_MEDIA_RETENTION_DAYS` (14), CLI `flask
+  messaging-purge-old-media [--days]`.
 - **Models**: `MessagingChannel`, `MessagingChannelAccess` (per-manager access), `Conversation`,
   `Message`. Tables `messaging_channel` / `messaging_channel_access` / `messaging_conversation` /
   `messaging_message`.
-- **Webhooks** (both in `public_endpoints`): `POST /api/messaging/telegram/<channel_id>/webhook`
-  (verified by `X-Telegram-Bot-Api-Secret-Token`); `GET|POST /api/messaging/instagram/<channel_id>/webhook`
-  (GET = `hub.challenge` handshake vs `channel.webhook_secret`; POST verified by `X-Hub-Signature-256`
-  with `INBOX_INSTAGRAM_APP_SECRET`). Shared handler `inbox_bp._handle_webhook`.
+- **Webhooks** (all in `public_endpoints`, shared handler `inbox_bp._handle_webhook`):
+  `POST /api/messaging/telegram/<channel_id>/webhook` (verified by
+  `X-Telegram-Bot-Api-Secret-Token`); `GET|POST /api/messaging/instagram/<channel_id>/webhook` and
+  `GET|POST /api/messaging/whatsapp/<channel_id>/webhook` (GET = `hub.challenge` handshake vs
+  `channel.webhook_secret`; POST verified by `X-Hub-Signature-256` with the same
+  `INBOX_INSTAGRAM_APP_SECRET` — one Meta App secret for both); `POST
+  /api/messaging/viber/<channel_id>/webhook`. `telegram_personal` has no webhook — see worker
+  above.
 - **Live updates**: JS polling (`app/static/js/inbox.js`, `setTimeout` chain), no WebSocket/SSE.
-- CLI: `flask messaging-set-webhook <id>` (Telegram), `flask messaging-refresh-instagram <id>`.
+- CLI: `flask messaging-set-webhook <id>` (generic `register_webhook`, Telegram/Viber/Instagram),
+  `flask messaging-reconnect-instagram <id>` (checks a channel still has a stored Page token),
+  `flask messaging-backfill-telegram-personal <id> [--days]`,
+  `flask messaging-purge-old-media [--days]`.
 
 ## Key Concepts
 

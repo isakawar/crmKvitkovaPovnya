@@ -1,6 +1,8 @@
 import os
+import secrets
 import uuid
-from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app
+import requests
+from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, redirect, session, url_for
 from flask_login import login_required, current_user
 from app.models import Settings, Price
 from app.models.price_preset import PricePreset
@@ -73,13 +75,18 @@ def messaging_page():
         'settings/messaging.html',
         channels=channels, managers=managers, webhooks=webhooks,
         tg_token_set=bool(current_app.config.get('INBOX_TELEGRAM_BOT_TOKEN')),
-        ig_token_set=bool(current_app.config.get('INBOX_INSTAGRAM_ACCESS_TOKEN')),
         ig_secret_set=bool(current_app.config.get('INBOX_INSTAGRAM_APP_SECRET')),
         tg_personal_creds_set=bool(current_app.config.get('MESSAGING_TG_API_ID')
                                     and current_app.config.get('MESSAGING_TG_API_HASH')
                                     and current_app.config.get('MESSAGING_SESSION_KEY')),
         viber_token_set=bool(current_app.config.get('INBOX_VIBER_BOT_TOKEN')),
         public_url_set=bool(base),
+        facebook_app_id=current_app.config.get('FACEBOOK_APP_ID') or '',
+        whatsapp_config_id=current_app.config.get('FACEBOOK_WHATSAPP_CONFIG_ID') or '',
+        graph_version=current_app.config.get('INBOX_INSTAGRAM_GRAPH_VERSION') or 'v23.0',
+        fb_error=request.args.get('fb_error'),
+        fb_success=request.args.get('fb_success'),
+        fb_webhook_error=request.args.get('fb_webhook_error'),
     )
 
 
@@ -93,7 +100,7 @@ def messaging_create_channel():
     if not name:
         return jsonify({'success': False, 'error': 'Вкажіть назву'}), 400
     channel_type = data.get('channel_type') or 'telegram'
-    if channel_type not in ('telegram', 'telegram_personal', 'instagram', 'viber'):
+    if channel_type not in ('telegram', 'telegram_personal', 'viber'):
         return jsonify({'success': False, 'error': 'Непідтримуваний тип каналу'}), 400
     channel = ccs.create_channel(name, channel_type)
     return jsonify({'success': True, 'id': channel.id})
@@ -135,6 +142,138 @@ def messaging_register_webhook(channel_id):
         return jsonify({'success': True, 'url': ccs.webhook_url(channel)})
     except Exception as exc:  # noqa: BLE001
         return jsonify({'success': False, 'error': str(exc)}), 400
+
+
+@bp.route('/settings/messaging/facebook/start')
+@login_required
+@permission_required('edit_settings')
+def messaging_facebook_start():
+    """Kick off Facebook Login for Business — connects Instagram without any
+    manual token copying (see app/services/messaging/facebook_oauth.py)."""
+    from app.services.messaging import facebook_oauth
+    state = secrets.token_urlsafe(24)
+    session['fb_oauth_state'] = state
+    try:
+        return redirect(facebook_oauth.authorize_url(state))
+    except RuntimeError as exc:
+        current_app.logger.warning('Facebook OAuth not configured: %s', exc)
+        return redirect(url_for('settings.messaging_page',
+                                 fb_error='Facebook-підключення ще не готове, зверніться до розробника'))
+
+
+@bp.route('/settings/messaging/facebook/callback')
+@login_required
+@permission_required('edit_settings')
+def messaging_facebook_callback():
+    from app.services.messaging import facebook_oauth, session_crypto
+
+    error = request.args.get('error_description') or request.args.get('error')
+    if error:
+        return redirect(url_for('settings.messaging_page', fb_error=error))
+
+    state = request.args.get('state')
+    expected_state = session.pop('fb_oauth_state', None)
+    if not state or not expected_state or state != expected_state:
+        return redirect(url_for('settings.messaging_page', fb_error='Недійсний OAuth-стан, спробуйте ще раз'))
+
+    code = request.args.get('code')
+    if not code:
+        return redirect(url_for('settings.messaging_page', fb_error='Facebook не повернув код авторизації'))
+
+    try:
+        short_token = facebook_oauth.exchange_code_for_user_token(code)
+        long_token = facebook_oauth.exchange_long_lived_token(short_token)
+        pages = facebook_oauth.list_connected_pages(long_token)
+    except RuntimeError as exc:
+        return redirect(url_for('settings.messaging_page', fb_error=str(exc)))
+
+    if not pages:
+        return redirect(url_for('settings.messaging_page',
+                                 fb_error='Жодна зі сторінок не має підключеного Instagram Business акаунту'))
+
+    # Encrypt each Page token now so it round-trips through the picker form
+    # without ever sitting in the (unencrypted) session cookie.
+    for p in pages:
+        p['encrypted_token'] = session_crypto.encrypt(p.pop('page_access_token'))
+
+    return render_template('settings/messaging_facebook_pages.html', pages=pages)
+
+
+@bp.route('/settings/messaging/facebook/select-page', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_facebook_select_page():
+    from app.services.messaging import channel_config_service as ccs
+
+    page_id = request.form.get('page_id')
+    page_name = request.form.get('page_name')
+    ig_id = request.form.get('ig_id')
+    ig_username = request.form.get('ig_username')
+    encrypted_token = request.form.get('encrypted_token')
+    if not (page_id and ig_id and encrypted_token):
+        return redirect(url_for('settings.messaging_page', fb_error='Некоректні дані сторінки'))
+
+    channel = ccs.create_instagram_channel_from_page(
+        page_id=page_id, page_name=page_name or page_id,
+        ig_id=ig_id, ig_username=ig_username or '',
+        page_access_token_encrypted=encrypted_token,
+    )
+    try:
+        ccs.register_webhook(channel)
+        return redirect(url_for('settings.messaging_page', fb_success='1'))
+    except Exception as exc:  # noqa: BLE001
+        return redirect(url_for('settings.messaging_page', fb_success='1',
+                                 fb_webhook_error=str(exc)))
+
+
+@bp.route('/settings/messaging/whatsapp/complete', methods=['POST'])
+@login_required
+@permission_required('edit_settings')
+def messaging_whatsapp_complete():
+    """Finish WhatsApp Embedded Signup — called by JS after Meta's popup posts
+    back {code, waba_id, phone_number_id} (see messaging.html)."""
+    from app.services.messaging import facebook_oauth, session_crypto, channel_config_service as ccs
+
+    data = request.get_json(silent=True) or {}
+    code = data.get('code')
+    waba_id = data.get('waba_id')
+    phone_number_id = data.get('phone_number_id')
+    if not (code and waba_id and phone_number_id):
+        return jsonify({'success': False, 'error': 'Некоректні дані від Facebook'}), 400
+
+    try:
+        token = facebook_oauth.exchange_embedded_signup_code(code)
+    except RuntimeError as exc:
+        current_app.logger.warning('WhatsApp Embedded Signup token exchange failed: %s', exc)
+        return jsonify({'success': False, 'error': 'Не вдалось підключити WhatsApp, зверніться до розробника'}), 400
+
+    graph_root = f'https://graph.facebook.com/{current_app.config.get("INBOX_INSTAGRAM_GRAPH_VERSION") or "v23.0"}'
+
+    display_phone_number = phone_number_id
+    try:
+        r = requests.get(f'{graph_root}/{phone_number_id}',
+                          params={'fields': 'display_phone_number', 'access_token': token}, timeout=30)
+        display_phone_number = r.json().get('display_phone_number') or phone_number_id
+    except Exception:  # noqa: BLE001
+        pass
+
+    channel = ccs.create_whatsapp_channel_from_signup(
+        waba_id=waba_id, phone_number_id=phone_number_id,
+        display_phone_number=display_phone_number,
+        access_token_encrypted=session_crypto.encrypt(token),
+    )
+
+    # A newly connected number must be registered with the Cloud API before it
+    # can send/receive — a one-time call, PIN is only needed for re-registration.
+    try:
+        pin = f'{secrets.randbelow(1000000):06d}'
+        requests.post(f'{graph_root}/{phone_number_id}/register',
+                       headers={'Authorization': f'Bearer {token}'},
+                       json={'messaging_product': 'whatsapp', 'pin': pin}, timeout=30)
+        ccs.register_webhook(channel)
+        return jsonify({'success': True})
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({'success': True, 'warning': str(exc)})
 
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/send-code', methods=['POST'])

@@ -36,10 +36,10 @@
   var newModal = $('ib-new-modal');
   var ME = window.IB_USER_ID;
 
-  function chIcon(t) { return t === 'instagram' ? 'instagram' : 'telegram'; }
+  function chIcon(t) { return t === 'instagram' ? 'instagram' : (t === 'whatsapp' ? 'whatsapp' : 'telegram'); }
   function chBadge(t) {
     if (t === 'viber') return '<span title="Viber" style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#7360F2;color:#fff;font-size:0.55rem;font-weight:700;">V</span>';
-    var label = t === 'instagram' ? 'Instagram' : (t === 'telegram_personal' ? 'Telegram (особистий)' : 'Telegram');
+    var label = t === 'instagram' ? 'Instagram' : (t === 'whatsapp' ? 'WhatsApp' : (t === 'telegram_personal' ? 'Telegram (особистий)' : 'Telegram'));
     return '<i class="bi bi-' + chIcon(t) + '" title="' + label + '"></i>';
   }
 

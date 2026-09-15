@@ -44,6 +44,7 @@
               display: flex; align-items: center; justify-content: center; font-size: 0.6rem; border: 1px solid var(--ib-border); }
   .conv__ch.telegram { color: #0088cc; }
   .conv__ch.instagram { color: #d6249f; }
+  .conv__ch.whatsapp { color: #25D366; }
   .conv__body { min-width: 0; flex: 1; }
   .conv__top { display: flex; justify-content: space-between; gap: 0.4rem; align-items: baseline; }
   .conv__name { font-weight: 600; font-size: 0.85rem; color: var(--ib-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -117,7 +118,7 @@
       <div class="ib-chips">
         {% for ch in channels %}
         <span class="ib-chip {{ '' if ch.is_connected and ch.is_active else 'off' }}">
-          <i class="bi bi-{{ 'instagram' if ch.channel_type == 'instagram' else 'telegram' }}"></i>
+          <i class="bi bi-{{ 'instagram' if ch.channel_type == 'instagram' else ('whatsapp' if ch.channel_type == 'whatsapp' else 'telegram') }}"></i>
           {{ ch.name }}
         </span>
         {% endfor %}
@@ -130,6 +131,12 @@
       <button class="ib-icon-btn" id="ib-sound" title="Звук нових повідомлень">
         <i class="bi bi-bell"></i>
       </button>
+      {% if current_user.has_permission('edit_settings') %}
+      <a class="ib-icon-btn" href="{{ url_for('settings.messaging_page') }}" title="Налаштування каналів"
+         style="text-decoration:none; display:inline-flex; align-items:center;">
+        <i class="bi bi-gear"></i>
+      </a>
+      {% endif %}
     </div>
   </div>
 
