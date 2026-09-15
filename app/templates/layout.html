@@ -135,6 +135,22 @@
             pointer-events: auto;
         }
 
+        /* ── Mobile nav groups (collapsible sections) ──────────────── */
+        .nav-group__header {
+            cursor: pointer;
+        }
+        .nav-group__chevron {
+            transition: transform 0.2s ease;
+        }
+        .nav-group__items.collapsed {
+            display: none;
+        }
+        .nav-group__items {
+            margin-left: 0.6rem;
+            border-left: 1px solid var(--br-200, #e7e5e4);
+            padding-left: 0.4rem;
+        }
+
         /* ── CSS Design Tokens (used by orders, deliveries, etc.) ── */
         :root {
             --br-950: #1A0A03; --br-900: #2C1008; --br-800: #3D1F0D;
@@ -208,36 +224,59 @@
             <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
             <span>Дашборд</span>
         </a>
-        <a href="/clients" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-people text-lg flex-shrink-0"></i>
-            <span>Клієнти</span>
-        </a>
-        <a href="/subscriptions" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/subscriptions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-box-seam text-lg flex-shrink-0"></i>
-            <span>Підписки</span>
-        </a>
-        <a href="/orders" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-truck text-lg flex-shrink-0"></i>
-            <span>Замовлення</span>
-        </a>
-        <a href="/route-generator" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-bezier2 text-lg flex-shrink-0"></i>
-            <span>Маршрути</span>
-        </a>
-        <a href="/routes" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/routes') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
-            <span>Збережені</span>
-        </a>
+
+        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders')) %}
+        <div class="nav-group" data-group="sales">
+          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if sales_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
+            <i class="bi bi-bag text-lg flex-shrink-0"></i>
+            <span class="flex-1">Продажі</span>
+            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
+          </button>
+          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if sales_active else 'collapsed' }}">
+            <a href="/clients" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/clients') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-people text-lg flex-shrink-0"></i>
+                <span>Клієнти</span>
+            </a>
+            <a href="/subscriptions" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/subscriptions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-box-seam text-lg flex-shrink-0"></i>
+                <span>Підписки</span>
+            </a>
+            <a href="/orders" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-truck text-lg flex-shrink-0"></i>
+                <span>Замовлення</span>
+            </a>
+          </div>
+        </div>
+
+        {% set logistics_active = request.path.startswith(('/route-generator', '/routes')) %}
+        <div class="nav-group" data-group="logistics">
+          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if logistics_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
+            <i class="bi bi-signpost-split text-lg flex-shrink-0"></i>
+            <span class="flex-1">Логістика</span>
+            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
+          </button>
+          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if logistics_active else 'collapsed' }}">
+            <a href="/route-generator" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/route-generator') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-bezier2 text-lg flex-shrink-0"></i>
+                <span>Маршрути</span>
+            </a>
+            <a href="/routes" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/routes') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-geo-alt text-lg flex-shrink-0"></i>
+                <span>Збережені</span>
+            </a>
+          </div>
+        </div>
+
         {% if current_user.has_permission('view_reports') %}
         <a href="/reports" onclick="closeMobileSidebar()"
            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
@@ -246,54 +285,88 @@
             <span>Звіти</span>
         </a>
         {% endif %}
-        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        <a href="/florist" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
-            <span>Флорист</span>
-        </a>
+
+        {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
+        {% set business_active = request.path.startswith(('/florist', '/certificates', '/transactions')) %}
+        <div class="nav-group" data-group="business">
+          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if business_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
+            <i class="bi bi-shop text-lg flex-shrink-0"></i>
+            <span class="flex-1">Бізнес</span>
+            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
+          </button>
+          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if business_active else 'collapsed' }}">
+            {% if is_admin %}
+            <a href="/florist" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/florist') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-flower1 text-lg flex-shrink-0"></i>
+                <span>Флорист</span>
+            </a>
+            {% endif %}
+            <a href="/certificates" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/certificates') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-award text-lg flex-shrink-0"></i>
+                <span>Сертифікати</span>
+            </a>
+            <a href="/transactions" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
+                <span>Транзакції</span>
+            </a>
+          </div>
+        </div>
+
+        {% if is_admin %}
+        {% set admin_active = request.path.startswith(('/activity-log', '/notifications')) %}
+        <div class="nav-group" data-group="admin">
+          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if admin_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
+            <i class="bi bi-shield-lock text-lg flex-shrink-0"></i>
+            <span class="flex-1">Адміністрування</span>
+            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
+          </button>
+          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if admin_active else 'collapsed' }}">
+            <a href="/activity-log" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/activity-log') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
+                <span>Лог змін</span>
+            </a>
+            <a href="{{ url_for('notifications.index') }}" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/notifications') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-check2-square text-lg flex-shrink-0"></i>
+                <span>Завдання</span>
+            </a>
+          </div>
+        </div>
         {% endif %}
-        <a href="/certificates" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/certificates') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-award text-lg flex-shrink-0"></i>
-            <span>Сертифікати</span>
-        </a>
-        <a href="/transactions" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
-            <span>Транзакції</span>
-        </a>
-        {% if current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        <a href="/activity-log" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/activity-log') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-shield-check text-lg flex-shrink-0"></i>
-            <span>Лог змін</span>
-        </a>
-        <a href="{{ url_for('notifications.index') }}" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/notifications') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-check2-square text-lg flex-shrink-0"></i>
-            <span>Завдання</span>
-        </a>
-        {% endif %}
+
         {% if current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
-        <a href="{{ url_for('inbox.index') }}" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
-            <span>Чат / Інбокс</span>
-            <span id="inbox-nav-badge" class="conv-item__badge" style="{% if not inbox_unread %}display:none;{% endif %}background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread and inbox_unread <= 99 else ('99+' if inbox_unread else 0) }}</span>
-        </a>
-        <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
-            <span>Заявки з сайту</span>
-        </a>
+        {% set comms_active = request.path.startswith(('/inbox', '/integrations')) %}
+        <div class="nav-group" data-group="comms">
+          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if comms_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
+            <i class="bi bi-broadcast text-lg flex-shrink-0"></i>
+            <span class="flex-1">Комунікації</span>
+            {% if inbox_unread %}<span id="inbox-nav-badge" class="conv-item__badge" style="background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
+            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
+          </button>
+          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if comms_active else 'collapsed' }}">
+            <a href="{{ url_for('inbox.index') }}" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
+                <span>Чат / Інбокс</span>
+            </a>
+            <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+                <span>Заявки з сайту</span>
+            </a>
+          </div>
+        </div>
         {% endif %}
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
@@ -708,6 +781,38 @@ function closeMobileSidebar() {
 // Close mobile sidebar on Escape key
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeMobileSidebar();
+});
+
+// Collapsible nav groups — remembers each group's state per browser (localStorage),
+// but always forces a group open if it contains the current page, regardless of
+// what was remembered, so navigating never hides where you are.
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.nav-group').forEach(function(group) {
+        var header = group.querySelector('.nav-group__header');
+        var items = group.querySelector('.nav-group__items');
+        var chevron = group.querySelector('.nav-group__chevron');
+        if (!header || !items) return;
+        var key = 'nav-group-collapsed:' + group.dataset.group;
+
+        function apply(collapsed) {
+            items.classList.toggle('collapsed', collapsed);
+            if (chevron) chevron.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+        }
+
+        var isActiveGroup = !items.classList.contains('collapsed');
+        if (isActiveGroup) {
+            apply(false);
+        } else {
+            var stored = localStorage.getItem(key);
+            apply(stored === null ? true : stored === '1');
+        }
+
+        header.addEventListener('click', function() {
+            var collapsedNow = items.classList.contains('collapsed');
+            apply(!collapsedNow);
+            localStorage.setItem(key, collapsedNow ? '0' : '1');
+        });
+    });
 });
 </script>
 {% block scripts %}{% endblock %}
