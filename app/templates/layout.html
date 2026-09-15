@@ -212,10 +212,13 @@
 <div id="mobile-sidebar"
      class="fixed left-0 top-0 bottom-0 w-64 bg-stone-100 border-r border-stone-200 flex flex-col z-50 -translate-x-full transition-transform duration-300 ease-in-out md:hidden overflow-y-auto">
     <div class="flex items-center gap-3 py-4 px-4 border-b border-stone-200 flex-shrink-0">
-        <div class="sidebar-logo-box flex-shrink-0">
-            <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
-        </div>
-        <span class="text-sm font-semibold text-stone-900">Kvitkova CRM</span>
+        <a href="{{ '/florist' if current_user.user_type == 'florist' else '/dashboard' }}"
+           onclick="closeMobileSidebar()" class="flex items-center gap-3 min-w-0">
+            <div class="sidebar-logo-box flex-shrink-0">
+                <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
+            </div>
+            <span class="text-sm font-semibold text-stone-900">Kvitkova CRM</span>
+        </a>
         <button onclick="closeMobileSidebar()" class="ml-auto p-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-200 transition-colors flex-shrink-0">
             <i class="bi bi-x-lg text-base"></i>
         </button>
@@ -241,14 +244,7 @@
             <span>Калькулятор</span>
         </a>
         {% else %}
-        <a href="/dashboard" onclick="closeMobileSidebar()"
-           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-            <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
-            <span>Дашборд</span>
-        </a>
-
-        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders')) %}
+        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/transactions')) %}
         <div class="nav-group" data-group="sales">
           <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if sales_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-bag text-lg flex-shrink-0"></i>
@@ -273,6 +269,12 @@
                       {% if request.path.startswith('/orders') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
                 <i class="bi bi-truck text-lg flex-shrink-0"></i>
                 <span>Замовлення</span>
+            </a>
+            <a href="/transactions" onclick="closeMobileSidebar()"
+               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
+                <span>Транзакції</span>
             </a>
           </div>
         </div>
@@ -310,7 +312,8 @@
         {% endif %}
 
         {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        {% set business_active = request.path.startswith(('/florist', '/certificates', '/transactions')) %}
+        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        {% set business_active = request.path.startswith(('/florist', '/certificates', '/integrations')) %}
         <div class="nav-group" data-group="business">
           <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if business_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-shop text-lg flex-shrink-0"></i>
@@ -332,12 +335,14 @@
                 <i class="bi bi-award text-lg flex-shrink-0"></i>
                 <span>Сертифікати</span>
             </a>
-            <a href="/transactions" onclick="closeMobileSidebar()"
+            {% if can_see_leads %}
+            <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
                class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-                <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
-                <span>Транзакції</span>
+                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+                <span>Заявки з сайту</span>
             </a>
+            {% endif %}
           </div>
         </div>
 
@@ -366,30 +371,14 @@
         </div>
         {% endif %}
 
-        {% if current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
-        {% set comms_active = request.path.startswith(('/inbox', '/integrations')) %}
-        <div class="nav-group" data-group="comms">
-          <button type="button" class="nav-group__header flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if comms_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
-            <i class="bi bi-broadcast text-lg flex-shrink-0"></i>
-            <span class="flex-1">Комунікації</span>
-            {% if inbox_unread %}<span id="inbox-nav-badge" class="conv-item__badge" style="background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
-            <i class="bi bi-chevron-down nav-group__chevron text-xs flex-shrink-0"></i>
-          </button>
-          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if comms_active else 'collapsed' }}">
-            <a href="{{ url_for('inbox.index') }}" onclick="closeMobileSidebar()"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-                <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
-                <span>Чат / Інбокс</span>
-            </a>
-            <a href="{{ url_for('integrations.wix_leads_list') }}" onclick="closeMobileSidebar()"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
-                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
-                <span>Заявки з сайту</span>
-            </a>
-          </div>
-        </div>
+        {% if can_see_leads %}
+        <a href="{{ url_for('inbox.index') }}" onclick="closeMobileSidebar()"
+           class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}">
+            <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
+            <span>Чат / Інбокс</span>
+            <span id="inbox-nav-badge" class="conv-item__badge" style="{% if not inbox_unread %}display:none;{% endif %}background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread and inbox_unread <= 99 else ('99+' if inbox_unread else 0) }}</span>
+        </a>
         {% endif %}
         <div class="flex-1"></div>
         <a href="/settings" onclick="closeMobileSidebar()"
@@ -413,12 +402,13 @@
 <div class="sidebar fixed left-0 top-0 bottom-0 w-16 bg-stone-100 border-r border-stone-200 hidden md:flex flex-col items-center z-50 overflow-hidden">
 
     <!-- Logo -->
-    <div class="sidebar-logo-row flex items-center gap-3 py-5 px-3 w-full">
+    <a href="{{ '/florist' if current_user.user_type == 'florist' else '/dashboard' }}"
+       class="sidebar-logo-row flex items-center gap-3 py-5 px-3 w-full" title="Дашборд">
         <div class="sidebar-logo-box flex-shrink-0">
             <img src="{{ url_for('static', filename='img/logoKvitkova.jpg') }}" alt="Logo">
         </div>
         <span class="sidebar-logo-text text-sm font-semibold text-stone-900">Kvitkova CRM</span>
-    </div>
+    </a>
 
     <!-- Nav -->
     <nav class="flex flex-col w-full px-2 gap-0.5 flex-1">
@@ -445,15 +435,7 @@
             <span class="nav-label">Калькулятор</span>
         </a>
         {% else %}
-        <a href="/dashboard"
-           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                  {% if request.path.startswith('/dashboard') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-           title="Дашборд">
-            <i class="bi bi-grid-1x2 text-lg flex-shrink-0"></i>
-            <span class="nav-label">Дашборд</span>
-        </a>
-
-        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders')) %}
+        {% set sales_active = request.path.startswith(('/clients', '/subscriptions', '/orders', '/transactions')) %}
         <div class="nav-group" data-group="sales">
           <button type="button" title="Продажі" class="nav-group__header flex items-center gap-3 px-2 py-2 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if sales_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-bag text-lg flex-shrink-0"></i>
@@ -481,6 +463,13 @@
                title="Замовлення">
                 <i class="bi bi-truck text-lg flex-shrink-0"></i>
                 <span class="nav-label">Замовлення</span>
+            </a>
+            <a href="/transactions"
+               class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                      {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+               title="Транзакції">
+                <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
+                <span class="nav-label">Транзакції</span>
             </a>
           </div>
         </div>
@@ -521,7 +510,8 @@
         {% endif %}
 
         {% set is_admin = current_user.user_type == 'admin' or current_user.has_role('admin') %}
-        {% set business_active = request.path.startswith(('/florist', '/certificates', '/transactions')) %}
+        {% set can_see_leads = current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
+        {% set business_active = request.path.startswith(('/florist', '/certificates', '/integrations')) %}
         <div class="nav-group" data-group="business">
           <button type="button" title="Бізнес" class="nav-group__header flex items-center gap-3 px-2 py-2 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if business_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
             <i class="bi bi-shop text-lg flex-shrink-0"></i>
@@ -545,13 +535,15 @@
                 <i class="bi bi-award text-lg flex-shrink-0"></i>
                 <span class="nav-label">Сертифікати</span>
             </a>
-            <a href="/transactions"
+            {% if can_see_leads %}
+            <a href="{{ url_for('integrations.wix_leads_list') }}"
                class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/transactions') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-               title="Транзакції">
-                <i class="bi bi-wallet2 text-lg flex-shrink-0"></i>
-                <span class="nav-label">Транзакції</span>
+                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+               title="Заявки з сайту">
+                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
+                <span class="nav-label">Заявки з сайту</span>
             </a>
+            {% endif %}
           </div>
         </div>
 
@@ -582,32 +574,15 @@
         </div>
         {% endif %}
 
-        {% if current_user.user_type in ('admin', 'manager') or current_user.has_role('admin') %}
-        {% set comms_active = request.path.startswith(('/inbox', '/integrations')) %}
-        <div class="nav-group" data-group="comms">
-          <button type="button" title="Комунікації" class="nav-group__header flex items-center gap-3 px-2 py-2 rounded-lg text-sm w-full text-left transition-colors {{ 'text-stone-900' if comms_active else 'text-stone-500' }} hover:bg-stone-200 hover:text-stone-900">
-            <i class="bi bi-broadcast text-lg flex-shrink-0"></i>
-            <span class="nav-label flex-1">Комунікації</span>
-            {% if inbox_unread %}<span id="inbox-nav-badge-desktop" class="nav-label conv-item__badge" style="background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
-            <i class="bi bi-chevron-down nav-group__chevron nav-label text-xs"></i>
-          </button>
-          <div class="nav-group__items flex flex-col gap-0.5 mt-0.5 {{ '' if comms_active else 'collapsed' }}">
-            <a href="{{ url_for('inbox.index') }}"
-               class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-               title="Чат / Інбокс">
-                <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
-                <span class="nav-label">Чат / Інбокс</span>
-            </a>
-            <a href="{{ url_for('integrations.wix_leads_list') }}"
-               class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
-                      {% if request.path.startswith('/integrations') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
-               title="Заявки з сайту">
-                <i class="bi bi-cloud-arrow-down text-lg flex-shrink-0"></i>
-                <span class="nav-label">Заявки з сайту</span>
-            </a>
-          </div>
-        </div>
+        {% if can_see_leads %}
+        <a href="{{ url_for('inbox.index') }}"
+           class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
+                  {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
+           title="Чат / Інбокс">
+            <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
+            <span class="nav-label">Чат / Інбокс</span>
+            {% if inbox_unread %}<span class="nav-label conv-item__badge" style="background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
+        </a>
         {% endif %}
         <!-- Spacer -->
         <div class="flex-1"></div>
