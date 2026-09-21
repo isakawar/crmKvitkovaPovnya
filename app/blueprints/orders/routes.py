@@ -39,6 +39,12 @@ from app.services.route_service import save_routes as svc_save_routes, remove_de
 import csv
 import io
 from sqlalchemy.orm import joinedload
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -91,7 +97,7 @@ def orders_list():
         Order.created_at >= datetime.combine(_month_start, datetime.min.time())
     ).count()
     delivered_this_month_count = Delivery.query.filter(
-        Delivery.status == 'Доставлено',
+        Delivery.status == DELIVERY_DONE,
         Delivery.delivery_date >= _month_start,
         Delivery.delivery_date <= _today,
     ).count()
@@ -523,7 +529,7 @@ def order_edit(order_id):
 
         import datetime as _dt
         active_before = sorted(
-            [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']],
+            [d for d in order.deliveries if d.status not in [DELIVERY_DONE, DELIVERY_CANCELLED]],
             key=lambda d: d.delivery_date or _dt.date.min,
         )
         first_delivery = active_before[0] if active_before else None
@@ -588,7 +594,7 @@ def order_edit(order_id):
     delivery_composition_type = next((d.composition_type for d in order.deliveries if d.composition_type), None)
     first_pending = next(
         (d for d in sorted(order.deliveries, key=lambda d: d.delivery_date or date.min)
-         if d.status not in ('Доставлено', 'Скасовано')),
+         if d.status not in (DELIVERY_DONE, DELIVERY_CANCELLED)),
         None,
     )
 
@@ -733,10 +739,10 @@ def delivery_delete(delivery_id):
 @login_required
 def delivery_mark_delivered(delivery_id):
     delivery = Delivery.query.get_or_404(delivery_id)
-    if delivery.status in ('Доставлено', 'Скасовано'):
+    if delivery.status in (DELIVERY_DONE, DELIVERY_CANCELLED):
         return jsonify({'success': False, 'error': 'Статус вже фінальний'}), 400
     from app.services.delivery_service import set_delivery_status
-    set_delivery_status(delivery, 'Доставлено')
+    set_delivery_status(delivery, DELIVERY_DONE)
     return jsonify({'success': True})
 
 
@@ -792,18 +798,18 @@ def update_delivery_times():
         if clear_time:
             if delivery.florist_status == 'Затверджено':
                 delivery.florist_status = None
-        elif time_from and delivery.florist_status not in ('Зібрано', "Передано кур'єру", 'Доставлено'):
+        elif time_from and delivery.florist_status not in ('Зібрано', "Передано кур'єру", DELIVERY_DONE):
             delivery.florist_status = 'Затверджено'
         if delivery_date:
             delivery.delivery_date = delivery_date
-            if delivery.status == 'Розподілено':
+            if delivery.status == DELIVERY_ASSIGNED:
                 RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
-                delivery.status = 'Очікує'
+                delivery.status = DELIVERY_PENDING
             if delivery.order_id:
                 _order = Order.query.get(delivery.order_id)
                 if _order:
                     active = sorted(
-                        [d for d in _order.deliveries if d.status not in ('Доставлено', 'Скасовано')],
+                        [d for d in _order.deliveries if d.status not in (DELIVERY_DONE, DELIVERY_CANCELLED)],
                         key=lambda d: d.delivery_date or date.min,
                     )
                     if active and active[0].id == delivery.id:
@@ -876,11 +882,11 @@ def reschedule_subsequent_deliveries():
             if not target_order:
                 continue
             for d in target_order.deliveries:
-                if d.status not in ('Доставлено', 'Скасовано'):
+                if d.status not in (DELIVERY_DONE, DELIVERY_CANCELLED):
                     d.delivery_date = new_date
-                    if d.status == 'Розподілено':
+                    if d.status == DELIVERY_ASSIGNED:
                         RouteDelivery.query.filter_by(delivery_id=d.id).delete()
-                        d.status = 'Очікує'
+                        d.status = DELIVERY_PENDING
                     count += 1
         db.session.commit()
         return jsonify({'success': True, 'rescheduled': count})
@@ -1093,7 +1099,7 @@ def route_generator():
             .filter(
                 Delivery.delivery_date == selected_date,
                 Delivery.is_pickup == False,
-                Delivery.status.in_(['Очікує', 'Розподілено']),
+                Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED]),
                 Delivery.delivery_method != 'nova_poshta',
                 ~Delivery.id.in_(already_routed)
             )
@@ -1213,7 +1219,7 @@ def route_generator_deliveries():
         .filter(
             Delivery.delivery_date == selected_date,
             Delivery.is_pickup == False,
-            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED]),
             Delivery.delivery_method != 'nova_poshta',
             db.or_(
                 db.and_(Delivery.time_from != None, Delivery.time_from != ''),
@@ -1358,7 +1364,7 @@ def route_generator_distribute_page():
             Delivery.delivery_date == selected_date,
             Delivery.is_pickup == False,
             Delivery.delivery_method != 'nova_poshta',
-            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED]),
             ~Delivery.id.in_(already_routed),
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
@@ -1477,8 +1483,8 @@ def route_generator_distribute_apply():
                     )
                     db.session.add(rd)
                     delivery = Delivery.query.get(delivery_id)
-                    if delivery and delivery.status == 'Очікує':
-                        delivery.status = 'Розподілено'
+                    if delivery and delivery.status == DELIVERY_PENDING:
+                        delivery.status = DELIVERY_ASSIGNED
 
             dr.deliveries_count = len(stops)
             dr.total_distance_km = route_data.get('totalDistanceKm')
@@ -1529,8 +1535,8 @@ def route_generator_distribute_apply():
                 )
                 db.session.add(rd)
                 delivery = Delivery.query.get(delivery_id)
-                if delivery and delivery.status == 'Очікує':
-                    delivery.status = 'Розподілено'
+                if delivery and delivery.status == DELIVERY_PENDING:
+                    delivery.status = DELIVERY_ASSIGNED
 
         applied_route_ids.append(dr.id)
 

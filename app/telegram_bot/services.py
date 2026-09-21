@@ -13,6 +13,11 @@ from app.models.order import Order
 from app.models.client import Client
 from app.models.user import User
 from app.extensions import db
+from app.constants import (
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +49,7 @@ class TelegramService:
             List of Delivery objects
         """
         today = datetime.now().date()
-        base_query = Delivery.query.filter_by(courier_id=courier.id).filter(Delivery.status != 'Скасовано')
+        base_query = Delivery.query.filter_by(courier_id=courier.id).filter(Delivery.status != DELIVERY_CANCELLED)
         
         if period == "today":
             return base_query.filter_by(delivery_date=today).all()
@@ -169,17 +174,17 @@ class TelegramService:
                 logger.error(f"Delivery {delivery_id} not found for courier {courier.id}")
                 return False
             
-            if delivery.status == 'Доставлено':
+            if delivery.status == DELIVERY_DONE:
                 logger.warning(f"Delivery {delivery_id} already completed")
                 return True
             
             # Update delivery status
-            delivery.status = 'Доставлено'
+            delivery.status = DELIVERY_DONE
             delivery.delivered_at = datetime.utcnow()
             delivery.status_changed_at = datetime.utcnow()
             
             # Update courier statistics
-            if delivery.status != 'Доставлено':  # Avoid double counting
+            if delivery.status != DELIVERY_DONE:  # Avoid double counting
                 courier.deliveries_count += 1
             
             db.session.commit()
@@ -255,27 +260,27 @@ class TelegramService:
         all_deliveries = Delivery.query.filter_by(courier_id=courier.id).all()
         
         # Filter by status
-        completed = [d for d in all_deliveries if d.status == 'Доставлено']
-        pending = [d for d in all_deliveries if d.status == 'Очікує']
-        cancelled = [d for d in all_deliveries if d.status == 'Скасовано']
+        completed = [d for d in all_deliveries if d.status == DELIVERY_DONE]
+        pending = [d for d in all_deliveries if d.status == DELIVERY_PENDING]
+        cancelled = [d for d in all_deliveries if d.status == DELIVERY_CANCELLED]
         
         # Today's deliveries
         today_deliveries = [d for d in all_deliveries if d.delivery_date == today]
-        today_completed = [d for d in today_deliveries if d.status == 'Доставлено']
-        today_pending = [d for d in today_deliveries if d.status == 'Очікує']
+        today_completed = [d for d in today_deliveries if d.status == DELIVERY_DONE]
+        today_pending = [d for d in today_deliveries if d.status == DELIVERY_PENDING]
         
         # This week
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
         week_deliveries = [d for d in all_deliveries 
                           if week_start <= d.delivery_date <= week_end]
-        week_completed = [d for d in week_deliveries if d.status == 'Доставлено']
+        week_completed = [d for d in week_deliveries if d.status == DELIVERY_DONE]
         
         # This month
         month_start = today.replace(day=1)
         month_deliveries = [d for d in all_deliveries 
                            if d.delivery_date >= month_start]
-        month_completed = [d for d in month_deliveries if d.status == 'Доставлено']
+        month_completed = [d for d in month_deliveries if d.status == DELIVERY_DONE]
         
         return {
             'total_deliveries': len(all_deliveries),

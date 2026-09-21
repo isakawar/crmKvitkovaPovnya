@@ -1,13 +1,25 @@
 from decimal import Decimal
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
-from app.constants import PAYMENT_CASH, PAYMENT_TYPES, TXN_CREDIT
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.delivery import Delivery
 from app.extensions import db
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func
 from datetime import date, datetime, timedelta
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+    FLORIST_ACTIVE_STATUSES,
+    FLORIST_APPROVED,
+    FLORIST_ASSEMBLED,
+    FLORIST_HANDED_OVER,
+    PAYMENT_CASH,
+    PAYMENT_TYPES,
+    TXN_CREDIT,
+)
 
 florist_bp = Blueprint('florist', __name__)
 
@@ -21,16 +33,14 @@ WEEKDAY_MAP = {
     6: 'Неділя',
 }
 
-FLORIST_STATUS_APPROVED = 'Затверджено'
-FLORIST_STATUS_ASSEMBLED = 'Зібрано'
-FLORIST_STATUS_HANDOFF = "Передано кур'єру"
-FLORIST_STATUS_DELIVERED = 'Доставлено'
+# Статуси флориста живуть в app.constants; тут лишається тільки мапа
+# «ключ із фронтенду → статус».
+FLORIST_STATUS_DELIVERED = DELIVERY_DONE
 FLORIST_STATUS_OPTIONS = {
-    'assembled': FLORIST_STATUS_ASSEMBLED,
-    'handoff': FLORIST_STATUS_HANDOFF,
+    'assembled': FLORIST_ASSEMBLED,
+    'handoff': FLORIST_HANDED_OVER,
     'delivered': FLORIST_STATUS_DELIVERED,
 }
-FLORIST_ACTIVE_STATUSES = (FLORIST_STATUS_APPROVED, FLORIST_STATUS_ASSEMBLED, FLORIST_STATUS_HANDOFF)
 
 
 def _parse_selected_date(raw_value, fallback_date):
@@ -54,7 +64,7 @@ def _build_subscription_delivery_index(order_ids):
         .filter(
             Delivery.order_id.in_(order_ids),
             _Order.sequence_number.isnot(None),
-            Delivery.status != 'Скасовано',
+            Delivery.status != DELIVERY_CANCELLED,
         )
         .all()
     )
@@ -98,23 +108,23 @@ def florist_bulk_update_status():
     for delivery in deliveries:
         if status_key == 'cancel':
             from app.services.delivery_service import set_delivery_status
-            set_delivery_status(delivery, 'Скасовано')
+            set_delivery_status(delivery, DELIVERY_CANCELLED)
             updated_count += 1
             continue
 
         if status_key == 'delivered':
             from app.services.delivery_service import set_delivery_status
-            set_delivery_status(delivery, 'Доставлено')
+            set_delivery_status(delivery, DELIVERY_DONE)
             delivery.florist_status = FLORIST_STATUS_DELIVERED
             updated_count += 1
             continue
 
-        if delivery.status == 'Скасовано':
+        if delivery.status == DELIVERY_CANCELLED:
             continue
 
         if status_key == 'reset':
             delivery.florist_status = None
-            delivery.status = 'Очікує'
+            delivery.status = DELIVERY_PENDING
             delivery.status_changed_at = now_utc
             updated_count += 1
             continue
@@ -122,8 +132,8 @@ def florist_bulk_update_status():
         delivery.florist_status = florist_status
         updated_count += 1
 
-        if status_key == 'handoff' and delivery.status != 'Доставлено':
-            delivery.status = 'Розподілено'
+        if status_key == 'handoff' and delivery.status != DELIVERY_DONE:
+            delivery.status = DELIVERY_ASSIGNED
             delivery.status_changed_at = now_utc
 
     try:
@@ -175,14 +185,14 @@ def florist_routes():
         )
         .filter(
             Delivery.delivery_date == selected_date,
-            Delivery.status != 'Скасовано'
+            Delivery.status != DELIVERY_CANCELLED
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
         .all()
     )
 
     routed_deliveries_count = len(route_delivery_ids)
-    delivered_count = sum(1 for d in all_deliveries if d.status == 'Доставлено')
+    delivered_count = sum(1 for d in all_deliveries if d.status == DELIVERY_DONE)
 
     courier_deliveries = [
         d for d in all_deliveries

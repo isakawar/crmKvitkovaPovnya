@@ -17,6 +17,12 @@ from app.models.client import Client
 from app.models.courier import Courier
 from app.models.ai_log import AIAgentLog
 from app.services import delivery_service, order_service, client_service
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 from app.services.redis_chat_service import (
     get_history, save_history,
     save_pending_action, get_pending_action,
@@ -417,7 +423,7 @@ def _tool_preview_reschedule_delivery(args: dict, user_id: int) -> str:
     d = Delivery.query.get(args['delivery_id'])
     if not d:
         return f"Помилка: доставку #{args['delivery_id']} не знайдено."
-    if d.status == 'Доставлено':
+    if d.status == DELIVERY_DONE:
         return "Помилка: доставка вже виконана, перенесення неможливе."
 
     try:
@@ -486,7 +492,7 @@ def _tool_preview_update_delivery(args: dict, user_id: int) -> str:
 
 
 def _tool_preview_set_delivery_status(args: dict, user_id: int) -> str:
-    valid_statuses = ['Очікує', 'Доставлено', 'Скасовано', 'Розподілено']
+    valid_statuses = [DELIVERY_PENDING, DELIVERY_DONE, DELIVERY_CANCELLED, DELIVERY_ASSIGNED]
     if args['new_status'] not in valid_statuses:
         return f"Помилка: невірний статус '{args['new_status']}'. Допустимі: {', '.join(valid_statuses)}"
 
@@ -658,7 +664,7 @@ def validate_before_execute(action: dict) -> list:
         if not d:
             errors.append(f"Доставку #{action.get('delivery_id')} не знайдено")
         else:
-            if d.status == 'Доставлено':
+            if d.status == DELIVERY_DONE:
                 errors.append("Доставка вже виконана, перенесення неможливе")
             try:
                 new_date = datetime.strptime(action['new_date'], '%Y-%m-%d').date()
@@ -676,7 +682,7 @@ def validate_before_execute(action: dict) -> list:
         d = Delivery.query.get(action.get('delivery_id'))
         if not d:
             errors.append(f"Доставку #{action.get('delivery_id')} не знайдено")
-        valid = ['Очікує', 'Доставлено', 'Скасовано', 'Розподілено']
+        valid = [DELIVERY_PENDING, DELIVERY_DONE, DELIVERY_CANCELLED, DELIVERY_ASSIGNED]
         if action.get('new_status') not in valid:
             errors.append(f"Невірний статус: {action.get('new_status')}")
 

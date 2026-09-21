@@ -11,6 +11,11 @@ import urllib.parse
 import requests as http_requests
 
 from app.services.url_shortener_service import shorten_url
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 
 def _route_log(action, route, description, before_data=None, after_data=None):
@@ -140,7 +145,7 @@ def saved_routes():
             Delivery.delivery_date == np_date,
             Delivery.is_pickup == False,
             Delivery.delivery_method != 'nova_poshta',
-            Delivery.status.in_(['Очікує', 'Розподілено']),
+            Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED]),
             ~Delivery.id.in_(already_routed),
         )
         .order_by(Delivery.time_from.asc().nullslast(), Delivery.id.asc())
@@ -529,7 +534,7 @@ def change_route_status(route_id):
         from app.services.delivery_service import set_delivery_status
         for stop in route.stops:
             if stop.delivery:
-                set_delivery_status(stop.delivery, 'Доставлено')
+                set_delivery_status(stop.delivery, DELIVERY_DONE)
     db.session.commit()
     _route_log('status_change', route,
         f"Статус маршруту {route.route_date.strftime('%d.%m.%Y')}: {old_status} → {new_status}",
@@ -560,7 +565,7 @@ def delete_route(route_id):
     if delivery_ids:
         from app.models.delivery import Delivery
         for delivery in Delivery.query.filter(Delivery.id.in_(delivery_ids)).all():
-            delivery.status = 'Очікує'
+            delivery.status = DELIVERY_PENDING
 
     db.session.delete(route)
 

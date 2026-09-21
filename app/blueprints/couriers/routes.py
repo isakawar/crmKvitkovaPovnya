@@ -6,6 +6,10 @@ from app.models.courier import Courier
 from app.models.delivery import Delivery
 from app.services.courier_service import create_courier, update_courier
 from app.extensions import db
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +125,7 @@ def delete_courier(courier_id):
         # Перевіряємо чи є активні доставки
         active_deliveries = Delivery.query.filter(
             Delivery.courier_id == courier_id,
-            Delivery.status.in_(['Очікує', 'Розподілено'])
+            Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED])
         ).count()
         
         if active_deliveries > 0:

@@ -19,6 +19,12 @@ from app.extensions import db
 from app.services.csv_import_service import normalize_phone
 from .keyboards import CourierKeyboards
 from .services import TelegramService, find_manager_by_phone
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -334,12 +340,12 @@ class CourierHandlers:
         
         # Get courier statistics
         total_deliveries = len(courier.deliveries)
-        completed_deliveries = len([d for d in courier.deliveries if d.status == 'Доставлено'])
-        pending_deliveries = len([d for d in courier.deliveries if d.status == 'Очікує'])
+        completed_deliveries = len([d for d in courier.deliveries if d.status == DELIVERY_DONE])
+        pending_deliveries = len([d for d in courier.deliveries if d.status == DELIVERY_PENDING])
         
         # Today's deliveries
         today = datetime.now().date()
-        today_deliveries = len([d for d in courier.deliveries if d.delivery_date == today and d.status != 'Скасовано'])
+        today_deliveries = len([d for d in courier.deliveries if d.delivery_date == today and d.status != DELIVERY_CANCELLED])
         
         profile_text = f"""
 👤 **Профіль кур'єра**
@@ -514,19 +520,19 @@ class CourierHandlers:
         
         # Filter deliveries by period
         if period == "today":
-            deliveries = [d for d in courier.deliveries if d.delivery_date == today and d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.delivery_date == today and d.status != DELIVERY_CANCELLED]
             title = f"📦 Доставки на сьогодні ({today.strftime('%d.%m.%Y')})"
         elif period == "tomorrow":
             tomorrow = today + timedelta(days=1)
-            deliveries = [d for d in courier.deliveries if d.delivery_date == tomorrow and d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.delivery_date == tomorrow and d.status != DELIVERY_CANCELLED]
             title = f"📅 Доставки на завтра ({tomorrow.strftime('%d.%m.%Y')})"
         elif period == "week":
             week_end = today + timedelta(days=7)
             deliveries = [d for d in courier.deliveries 
-                         if today <= d.delivery_date <= week_end and d.status != 'Скасовано']
+                         if today <= d.delivery_date <= week_end and d.status != DELIVERY_CANCELLED]
             title = f"📅 Доставки на тиждень ({today.strftime('%d.%m')} - {week_end.strftime('%d.%m')})"
         else:  # all
-            deliveries = [d for d in courier.deliveries if d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.status != DELIVERY_CANCELLED]
             title = "📋 Всі доставки"
         
         if not deliveries:
@@ -538,7 +544,7 @@ class CourierHandlers:
             return
         
         # Sort by date and status
-        deliveries.sort(key=lambda x: (x.delivery_date, x.status != 'Очікує'))
+        deliveries.sort(key=lambda x: (x.delivery_date, x.status != DELIVERY_PENDING))
         
         # Format deliveries list
         text = f"{title}\n\n"
@@ -577,14 +583,14 @@ class CourierHandlers:
         today = datetime.now().date()
         
         if period == "today":
-            deliveries = [d for d in courier.deliveries if d.delivery_date == today and d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.delivery_date == today and d.status != DELIVERY_CANCELLED]
             title = f"📦 Доставки на сьогодні"
         elif period == "tomorrow":
             tomorrow = today + timedelta(days=1)
-            deliveries = [d for d in courier.deliveries if d.delivery_date == tomorrow and d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.delivery_date == tomorrow and d.status != DELIVERY_CANCELLED]
             title = f"📅 Доставки на завтра"
         else:  # all
-            deliveries = [d for d in courier.deliveries if d.status != 'Скасовано']
+            deliveries = [d for d in courier.deliveries if d.status != DELIVERY_CANCELLED]
             title = "📋 Всі доставки"
         
         if not deliveries:
@@ -595,8 +601,8 @@ class CourierHandlers:
             return
         
         # Show summary
-        pending = len([d for d in deliveries if d.status == 'Очікує'])
-        completed = len([d for d in deliveries if d.status == 'Доставлено'])
+        pending = len([d for d in deliveries if d.status == DELIVERY_PENDING])
+        completed = len([d for d in deliveries if d.status == DELIVERY_DONE])
         
         text = f"{title}\n\n"
         text += f"📊 **Статистика:**\n"
@@ -621,7 +627,7 @@ class CourierHandlers:
         """Send formatted list of today's delivery addresses"""
         today = datetime.now().date()
         deliveries = [d for d in courier.deliveries 
-                     if d.delivery_date == today and d.status != 'Скасовано']
+                     if d.delivery_date == today and d.status != DELIVERY_CANCELLED]
         
         if not deliveries:
             await query.edit_message_text(
@@ -631,7 +637,7 @@ class CourierHandlers:
             return
         
         # Сортуємо доставки за часом та статусом
-        deliveries.sort(key=lambda x: (x.status == 'Доставлено', x.time_from or '00:00'))
+        deliveries.sort(key=lambda x: (x.status == DELIVERY_DONE, x.time_from or '00:00'))
         
         text = f"📍 **Адреси доставок на {today.strftime('%d.%m.%Y')}**\n\n"
         
@@ -688,8 +694,8 @@ class CourierHandlers:
             text += "\n"
         
         text += f"📦 **Всього доставок:** {len(deliveries)}\n"
-        text += f"⏳ **Очікує:** {len([d for d in deliveries if d.status == 'Очікує'])}\n"
-        text += f"✅ **Доставлено:** {len([d for d in deliveries if d.status == 'Доставлено'])}"
+        text += f"⏳ **Очікує:** {len([d for d in deliveries if d.status == DELIVERY_PENDING])}\n"
+        text += f"✅ **Доставлено:** {len([d for d in deliveries if d.status == DELIVERY_DONE])}"
         
         await query.edit_message_text(
             text,
@@ -791,7 +797,7 @@ class CourierHandlers:
             )
             return
         
-        if delivery.status == 'Доставлено':
+        if delivery.status == DELIVERY_DONE:
             await query.edit_message_text(
                 "✅ Ця доставка вже відмічена як виконана",
                 reply_markup=self.keyboards.back_to_main()
@@ -830,12 +836,12 @@ class CourierHandlers:
         try:
             # Оновлюємо статус доставки (charge_delivery викликається всередині)
             from app.services.delivery_service import set_delivery_status
-            set_delivery_status(delivery, 'Доставлено')
+            set_delivery_status(delivery, DELIVERY_DONE)
 
             # Оновлюємо статистику кур'єра
             courier.deliveries_count = Delivery.query.filter_by(
                 courier_id=courier.id,
-                status='Доставлено'
+                status=DELIVERY_DONE
             ).count()
 
             db.session.commit()
@@ -1054,7 +1060,7 @@ class CourierHandlers:
         from app.services.delivery_service import set_delivery_status
         for stop in stops:
             if stop.delivery:
-                set_delivery_status(stop.delivery, 'Доставлено')
+                set_delivery_status(stop.delivery, DELIVERY_DONE)
         db.session.commit()
         await query.edit_message_text(
             f"✅ <b>Маршрут завершено!</b>\n\n"
@@ -1224,7 +1230,7 @@ class CourierHandlers:
             for stop in stops:
                 if stop.delivery:
                     stop.delivery.courier_id = courier.id
-                    stop.delivery.status = 'Розподілено'
+                    stop.delivery.status = DELIVERY_ASSIGNED
             db.session.commit()
 
             num_emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']

@@ -8,6 +8,10 @@ from sqlalchemy.orm import joinedload
 from app.extensions import db
 from app.models import Delivery
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -121,8 +125,8 @@ def save_routes(
             db.session.add(rd)
 
             delivery = Delivery.query.get(delivery_id)
-            if delivery and delivery.status == 'Очікує':
-                delivery.status = 'Розподілено'
+            if delivery and delivery.status == DELIVERY_PENDING:
+                delivery.status = DELIVERY_ASSIGNED
 
             client_name = ''
             if delivery:
@@ -244,7 +248,7 @@ def _upsert_delivery_route(route_db_id, route_data, selected_date, stops, cached
 def remove_delivery_from_route(delivery) -> dict:
     """Remove a single delivery from its assigned route.
 
-    Resets delivery status to 'Очікує', deletes the RouteDelivery stop,
+    Resets delivery status to DELIVERY_PENDING, deletes the RouteDelivery stop,
     and either deletes the now-empty route or marks it as changed if already sent.
     Returns a dict with info about the affected route.
     """
@@ -260,7 +264,7 @@ def remove_delivery_from_route(delivery) -> dict:
     route_status = route.status
 
     db.session.delete(stop)
-    delivery.status = 'Очікує'
+    delivery.status = DELIVERY_PENDING
     delivery.courier_id = None
 
     if remaining == 0:
@@ -279,7 +283,7 @@ def _reset_route_deliveries(dr: DeliveryRoute):
     old_delivery_ids = [s.delivery_id for s in dr.stops]
     if old_delivery_ids:
         Delivery.query.filter(Delivery.id.in_(old_delivery_ids)).update(
-            {'status': 'Очікує'}, synchronize_session=False
+            {'status': DELIVERY_PENDING}, synchronize_session=False
         )
     RouteDelivery.query.filter_by(route_id=dr.id).delete()
 

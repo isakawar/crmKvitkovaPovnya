@@ -10,6 +10,12 @@ from app.models.subscription import Subscription
 from app.models.settings import Settings
 from app.models.delivery_route import DeliveryRoute
 from app.services.subscription_service import get_draft_subscriptions, get_subscriptions_needing_renewal
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 
 @dashboard_bp.route('/dashboard')
@@ -17,21 +23,21 @@ from app.services.subscription_service import get_draft_subscriptions, get_subsc
 def dashboard_page():
     today = date.today()
     last_week = today - timedelta(days=7)
-    pending_statuses = ['Очікує', 'Розподілено']
+    pending_statuses = [DELIVERY_PENDING, DELIVERY_ASSIGNED]
 
     totals_row = db.session.query(
         func.count(Delivery.id),
-        func.coalesce(func.sum(case((Delivery.status == 'Доставлено', 1), else_=0)), 0),
+        func.coalesce(func.sum(case((Delivery.status == DELIVERY_DONE, 1), else_=0)), 0),
         func.coalesce(func.sum(case((and_(Delivery.courier_id.isnot(None), Delivery.status.in_(pending_statuses)), 1), else_=0)), 0),
         func.coalesce(func.sum(case((and_(Delivery.courier_id.is_(None), Delivery.status.in_(pending_statuses)), 1), else_=0)), 0),
     ).filter(
         Delivery.delivery_date == today,
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).first()
 
     deliveries_last_week = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == last_week,
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
 
     deliveries_total = totals_row[0] or 0
@@ -43,30 +49,30 @@ def dashboard_page():
     pickup_today = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == today,
         Delivery.is_pickup.is_(True),
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
     pickup_last_week = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == last_week,
         Delivery.is_pickup.is_(True),
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
 
     nova_today = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == today,
         Delivery.delivery_method == 'nova_poshta',
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
     nova_last_week = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == last_week,
         Delivery.delivery_method == 'nova_poshta',
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
 
     courier_today = db.session.query(func.count(Delivery.id)).filter(
         Delivery.delivery_date == today,
         Delivery.is_pickup.is_(False),
         Delivery.delivery_method != 'nova_poshta',
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).scalar() or 0
 
     new_orders_today = db.session.query(func.count(Order.id)).filter(
@@ -93,7 +99,7 @@ def dashboard_page():
     ).filter(
         Delivery.delivery_date >= trend_start,
         Delivery.delivery_date <= today,
-        Delivery.status != 'Скасовано'
+        Delivery.status != DELIVERY_CANCELLED
     ).group_by(Delivery.delivery_date).all()
     trend_map = {row[0]: row[1] for row in trend_rows}
     deliveries_trend = []

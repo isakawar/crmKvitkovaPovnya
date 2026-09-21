@@ -5,6 +5,12 @@ from app.extensions import db
 from app.models import Client, Order, Settings
 from app.models.subscription import Subscription
 from app.models.user import User
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 
 # ── Label normalization ────────────────────────────────────────────────────────
@@ -328,8 +334,8 @@ def get_deliveries_analytics(date_from_str=None, date_to_str=None):
     # SQL aggregation — avoids loading full objects into memory
     status_row = base.with_entities(
         func.count(Delivery.id).label('total'),
-        func.sum(case((Delivery.status == 'Доставлено', 1), else_=0)).label('completed'),
-        func.sum(case((Delivery.status == 'Скасовано', 1), else_=0)).label('cancelled'),
+        func.sum(case((Delivery.status == DELIVERY_DONE, 1), else_=0)).label('completed'),
+        func.sum(case((Delivery.status == DELIVERY_CANCELLED, 1), else_=0)).label('cancelled'),
     ).one()
 
     total = status_row.total or 0
@@ -672,7 +678,7 @@ def get_pl_data(date_from_str=None, date_to_str=None):
 
     delivery_count = (
         db.session.query(func.count(Delivery.id))
-        .filter(Delivery.status != 'Скасовано', *_build_date_filters(Delivery.delivery_date, d_from, d_to))
+        .filter(Delivery.status != DELIVERY_CANCELLED, *_build_date_filters(Delivery.delivery_date, d_from, d_to))
         .scalar() or 0
     )
 
@@ -1274,8 +1280,8 @@ def get_dashboard_kpis(date_from_str=None, date_to_str=None, pl=None):
     del_row = (
         db.session.query(
             func.count(Delivery.id).label('total'),
-            func.sum(case((Delivery.status == 'Доставлено', 1), else_=0)).label('done'),
-            func.sum(case((Delivery.status == 'Скасовано', 1), else_=0)).label('cancelled'),
+            func.sum(case((Delivery.status == DELIVERY_DONE, 1), else_=0)).label('done'),
+            func.sum(case((Delivery.status == DELIVERY_CANCELLED, 1), else_=0)).label('cancelled'),
         )
         .filter(*del_filters)
         .one()
@@ -1292,7 +1298,7 @@ def get_dashboard_kpis(date_from_str=None, date_to_str=None, pl=None):
         .join(Delivery, Delivery.order_id == Order.id)
         .filter(
             Subscription.status == 'active',
-            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+            Delivery.status.notin_([DELIVERY_DONE, DELIVERY_CANCELLED]),
         )
         .scalar() or 0
     )
@@ -1373,8 +1379,8 @@ def get_wedding_analytics(date_from_str=None, date_to_str=None):
         .group_by(Delivery.status)
         .all()
     )
-    deliveries_done = del_by_status.get('Доставлено', 0)
-    deliveries_pending = del_by_status.get('Очікує', 0) + del_by_status.get('Розподілено', 0)
+    deliveries_done = del_by_status.get(DELIVERY_DONE, 0)
+    deliveries_pending = del_by_status.get(DELIVERY_PENDING, 0) + del_by_status.get(DELIVERY_ASSIGNED, 0)
 
     revenue = (
         db.session.query(func.sum(Transaction.amount))
@@ -1450,7 +1456,7 @@ def get_subscription_record_card(subscription_id):
     deliveries_done = (
         db.session.query(func.count(Delivery.id))
         .join(Order, Delivery.order_id == Order.id)
-        .filter(Order.subscription_id == sub.id, Delivery.status == 'Доставлено')
+        .filter(Order.subscription_id == sub.id, Delivery.status == DELIVERY_DONE)
         .scalar() or 0
     )
     # Lifetime charged for this client (all subscriptions + one-time)
@@ -1499,8 +1505,6 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     from app.models.delivery import Delivery
     from app.models.transaction import Transaction
 
-    DELIVERED = 'Доставлено'
-
     def _client_label(c):
         return c.display_name  # instagram → telegram → phone → name → #id
 
@@ -1511,7 +1515,7 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     # Partial legacy subscriptions (imported mid-cycle, fewer than a full
     # 4-delivery cycle) are excluded — they were never real full subscriptions
     # and would drag the average down.
-    NOT_CANCELLED = Delivery.status != 'Скасовано'
+    NOT_CANCELLED = Delivery.status != DELIVERY_CANCELLED
 
     full_sub_ids = [
         r[0] for r in (
@@ -1564,7 +1568,7 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
     top_del = (
         db.session.query(Client, func.count(Delivery.id).label('c'))
         .join(Delivery, Delivery.client_id == Client.id)
-        .filter(Delivery.status == DELIVERED)
+        .filter(Delivery.status == DELIVERY_DONE)
         .group_by(Client.id)
         .order_by(func.count(Delivery.id).desc())
         .limit(10)
@@ -1617,13 +1621,13 @@ def get_ltv_data(date_from_str=None, date_to_str=None):
             func.min(Delivery.delivery_date).label('first'),
             func.max(Delivery.delivery_date).label('last'),
         )
-        .filter(Delivery.status == DELIVERED)
+        .filter(Delivery.status == DELIVERY_DONE)
         .group_by(Delivery.client_id)
         .all()
     )
     active_client_ids = {
         r[0] for r in db.session.query(Delivery.client_id)
-        .filter(Delivery.status.in_(['Очікує', 'Розподілено']))
+        .filter(Delivery.status.in_([DELIVERY_PENDING, DELIVERY_ASSIGNED]))
         .distinct()
         .all()
     }

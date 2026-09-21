@@ -11,6 +11,7 @@ from app.services.action_item_service import (
     delete_action_item,
 )
 from app.services.notification_service import get_notifications_for_user
+from app.constants import DELIVERY_CANCELLED, DELIVERY_DONE
 from app.services.delivery_service import (
     get_overdue_unclosed_deliveries,
     get_stuck_deliveries_count,
@@ -68,7 +69,7 @@ def florist_pending_api():
         .options(joinedload(Delivery.client))
         .filter(
             Delivery.delivery_date <= today,
-            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+            Delivery.status.notin_([DELIVERY_DONE, DELIVERY_CANCELLED]),
         )
         .order_by(Delivery.delivery_date.asc())
         .limit(20)
@@ -78,7 +79,7 @@ def florist_pending_api():
         Delivery.query
         .filter(
             Delivery.delivery_date <= today,
-            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+            Delivery.status.notin_([DELIVERY_DONE, DELIVERY_CANCELLED]),
         )
         .count()
     )

@@ -23,6 +23,12 @@ from app.services.subscription_service import (
     schedule_single_delivery,
 )
 import logging
+from app.constants import (
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +67,7 @@ def subscriptions_list():
     for sub in subscriptions:
         all_deliveries = [d for order in sub.orders for d in order.deliveries]
         total = len(all_deliveries)
-        completed = sum(1 for d in all_deliveries if d.status == 'Доставлено')
+        completed = sum(1 for d in all_deliveries if d.status == DELIVERY_DONE)
         data.append({'subscription': sub, 'total': total, 'completed': completed})
 
     all_count = len(data)
@@ -205,8 +211,8 @@ def subscription_detail(subscription_id):
         key=lambda d: (d.delivery_date, d.id)
     )
     total_deliveries = len(all_deliveries)
-    completed_deliveries = sum(1 for d in all_deliveries if d.status == 'Доставлено')
-    next_delivery = next((d for d in all_deliveries if d.status in ['Очікує', 'Розподілено']), None)
+    completed_deliveries = sum(1 for d in all_deliveries if d.status == DELIVERY_DONE)
+    next_delivery = next((d for d in all_deliveries if d.status in [DELIVERY_PENDING, DELIVERY_ASSIGNED]), None)
     final_delivery = all_deliveries[-1] if all_deliveries else None
 
     # First order date = subscription start
@@ -222,7 +228,7 @@ def subscription_detail(subscription_id):
     related_orders = []
     for order in orders_sorted:
         order_deliveries = sorted(order.deliveries, key=lambda d: d.delivery_date)
-        completed_count = sum(1 for d in order_deliveries if d.status == 'Доставлено')
+        completed_count = sum(1 for d in order_deliveries if d.status == DELIVERY_DONE)
         related_orders.append({
             'id': order.id,
             'is_current': order == orders_sorted[-1],
@@ -487,7 +493,7 @@ def subscription_declined_list():
         .join(Delivery, Delivery.order_id == Order.id)
         .filter(
             Order.subscription_id.isnot(None),
-            Delivery.status != 'Скасовано'
+            Delivery.status != DELIVERY_CANCELLED
         )
         .group_by(Order.subscription_id)
         .subquery()
