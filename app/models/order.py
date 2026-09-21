@@ -39,7 +39,7 @@ class Order(db.Model):
     charged_amount = db.Column(db.Integer, nullable=True)  # ціна зафіксована при створенні (після знижки)
 
     # Дата та час
-    delivery_date = db.Column(db.Date, nullable=False)
+    delivery_date = db.Column(db.Date, nullable=False, index=True)
     time_from = db.Column(db.String(8))
     time_to = db.Column(db.String(8))
 
@@ -57,7 +57,7 @@ class Order(db.Model):
     promo_code_id = db.Column(db.Integer, db.ForeignKey('promo_codes.id'), nullable=True)
 
     # Системні поля
-    created_at = db.Column(db.DateTime, default=db.func.now())
+    created_at = db.Column(db.DateTime, default=db.func.now(), index=True)
 
     # Зв'язки
     deliveries = db.relationship('Delivery', back_populates='order', lazy=True)

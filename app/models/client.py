@@ -6,7 +6,7 @@ class Client(db.Model):
     name = db.Column(db.String(128), nullable=True)
     instagram = db.Column(db.String(128), nullable=True, index=True)
     telegram = db.Column(db.String(128), nullable=True)
-    phone = db.Column(db.String(32), nullable=True)
+    phone = db.Column(db.String(32), nullable=True, index=True)
     phone_viber = db.Column(db.Boolean, nullable=False, default=False)
     phone_telegram = db.Column(db.Boolean, nullable=False, default=False)
     phone_whatsapp = db.Column(db.Boolean, nullable=False, default=False)

@@ -6,7 +6,7 @@ class OrderPhoto(db.Model):
     __tablename__ = 'order_photos'
 
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id', ondelete='CASCADE'), nullable=False, index=True)
     filename = db.Column(db.String(255), nullable=False)
     original_name = db.Column(db.String(255), nullable=False)
     uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

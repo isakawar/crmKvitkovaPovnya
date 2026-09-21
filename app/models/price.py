@@ -6,7 +6,9 @@ class Price(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     preset_id = db.Column(db.Integer, db.ForeignKey('price_presets.id', ondelete='CASCADE'), nullable=False)
     order_type = db.Column(db.String(20), nullable=False)  # 'one_time' | 'subscription'
-    size_id = db.Column(db.Integer, db.ForeignKey('settings.id', ondelete='CASCADE'), nullable=False)
+    # RESTRICT, а не CASCADE: видалення розміру в Налаштуваннях не має тихо
+    # зносити прайси по всіх пресетах.
+    size_id = db.Column(db.Integer, db.ForeignKey('settings.id', ondelete='RESTRICT'), nullable=False)
     price = db.Column(db.Integer, nullable=False, default=0)
 
     size = db.relationship('Settings', foreign_keys=[size_id])

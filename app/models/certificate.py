@@ -26,7 +26,7 @@ class Certificate(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     used_at = db.Column(db.DateTime, nullable=True)
 
-    order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=True)
+    order_id = db.Column(db.Integer, db.ForeignKey('order.id', ondelete='SET NULL'), nullable=True)
     order = db.relationship('Order', backref=db.backref('certificate', uselist=False))
 
     comment = db.Column(db.Text, nullable=True)

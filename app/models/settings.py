@@ -10,5 +10,11 @@ class Settings(db.Model):
 
     category = db.relationship('ExpenseCategory', backref='expense_types')
 
+    #: Довідник має бути однозначним: get_order_price шукає розмір через
+    #: filter_by(type='size', value=...).first(), і дубль тихо змінював би ціну.
+    __table_args__ = (
+        db.UniqueConstraint('type', 'value', name='uq_settings_type_value'),
+    )
+
     def __repr__(self):
         return f'<Settings {self.type}: {self.value}>' 

@@ -6,11 +6,12 @@ class Subscription(db.Model):
     __tablename__ = 'subscription'
 
     id = db.Column(db.Integer, primary_key=True)
-    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=False, index=True)
 
     # Тип і статус
     type = db.Column(db.String(32), nullable=False)  # Weekly, Monthly, Bi-weekly
-    status = db.Column(db.String(32), default='active', nullable=False)  # active, completed, cancelled, draft
+    #: Канонічний перелік — app.constants.SUBSCRIPTION_STATUSES.
+    status = db.Column(db.String(32), default='active', nullable=False, index=True)
 
     # Розклад
     delivery_day = db.Column(db.String(16), nullable=False)  # ПН/ВТ/СР/ЧТ/ПТ/СБ/НД

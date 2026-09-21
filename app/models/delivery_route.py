@@ -40,8 +40,8 @@ class RouteDelivery(db.Model):
     __tablename__ = 'route_deliveries'
 
     id = db.Column(db.Integer, primary_key=True)
-    route_id = db.Column(db.Integer, db.ForeignKey('delivery_routes.id'), nullable=False)
-    delivery_id = db.Column(db.Integer, db.ForeignKey('delivery.id'), nullable=False)
+    route_id = db.Column(db.Integer, db.ForeignKey('delivery_routes.id'), nullable=False, index=True)
+    delivery_id = db.Column(db.Integer, db.ForeignKey('delivery.id'), nullable=False, index=True)
     stop_order = db.Column(db.Integer, nullable=False)
 
     distance_from_previous_km = db.Column(db.Float, nullable=True)
@@ -54,3 +54,8 @@ class RouteDelivery(db.Model):
 
     route = db.relationship('DeliveryRoute', back_populates='stops')
     delivery = db.relationship('Delivery', backref='route_stops')
+
+    #: Одна доставка не може стояти двічі в одному маршруті.
+    __table_args__ = (
+        db.UniqueConstraint('route_id', 'delivery_id', name='uq_route_delivery_pair'),
+    )
