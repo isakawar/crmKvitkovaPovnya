@@ -26,6 +26,34 @@ After implementation always: describe how to test, expected behavior, edge cases
 - Read only relevant files — don't scan the whole project
 - If behavior is unclear — ask before implementing
 
+### Git
+
+- **Never `git add -A` or `git add .`** — stage only the files you changed, by name.
+  The working tree routinely holds the owner's own untracked scratch files, and a
+  blanket add sweeps them into the commit.
+- Run `git status --short` before committing and confirm nothing unrelated is staged.
+- Commit messages must describe everything in the commit. If the staged set grew
+  past what the message says, split the commit or rewrite the message.
+
+### Before saying "done"
+
+- Always run `pytest tests/ -q` and report the actual numbers. A `Stop` hook runs it
+  too whenever there are uncommitted `.py` changes, so red tests surface regardless.
+- If a test marked `@pytest.mark.xfail` starts passing because of your change, remove
+  the marker — the repo uses xfail to document known bugs, so an XPASS means you fixed
+  one and the marker is now a lie.
+- Touching migrations? `./scripts/verify_migrations.sh` runs the whole chain from
+  scratch on a throwaway Postgres in Docker. SQLite tests never execute migrations, so
+  this is the only thing that actually proves they apply. Alembic's `version_num`
+  column is `varchar(32)` — a longer revision id fails *after* the DDL has run.
+
+### Do not vibe-code money
+
+Any change to `billing_service`, `transaction_service`, `client.credits` or
+`transaction.*` ships with a test in the same commit. See the billing section below
+for why: the balance is denormalized, and the client-balance report derives the whole
+history backwards from it, so one bad write silently rewrites every past month.
+
 ---
 
 ## Service Navigation

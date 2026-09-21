@@ -1,5 +1,35 @@
 {
   "enabledPlugins": {
     "codex@openai-codex": true
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "statusMessage": "Прогоняю тести…",
+            "timeout": 180,
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; { git diff --name-only HEAD -- '*.py'; git ls-files --others --exclude-standard -- '*.py'; } | grep -q . || exit 0; out=$(pytest tests/ -q 2>&1 | tail -1); jq -n --arg m \"$out\" '{systemMessage: (\"pytest: \" + $m)}'"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pytest *)",
+      "Bash(python3 -m pytest *)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch *)",
+      "Bash(git ls-files *)",
+      "Bash(git ls-remote *)",
+      "Bash(./scripts/verify_migrations.sh*)",
+      "Bash(bash scripts/verify_migrations.sh*)"
+    ]
   }
 }

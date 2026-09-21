@@ -33,7 +33,7 @@ Revises: add_billing_performance_indexes
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'add_referential_integrity_constraints'
+revision = 'add_referential_integrity'
 down_revision = 'add_billing_performance_indexes'
 branch_labels = None
 depends_on = None
