@@ -299,7 +299,6 @@ def test_update_order_changes_client(session):
     assert order.client_id == new_client.id
 
 
-@pytest.mark.xfail(reason='BUG: update_order does not sync delivery.client_id when client changes')
 def test_update_order_changes_client_syncs_delivery_client_id(session):
     """
     When order client changes, delivery.client_id should also be updated

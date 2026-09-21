@@ -6,6 +6,11 @@ import logging
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 
+from app.constants import (
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+    DELIVERY_TERMINAL_STATUSES,
+)
 from app.utils.address_utils import coords_from_form, copy_coords
 
 logger = logging.getLogger(__name__)
@@ -110,7 +115,7 @@ def create_order_and_deliveries(client, form):
         order_id=order.id,
         client_id=client.id,
         delivery_date=delivery_date,
-        status='Очікує',
+        status=DELIVERY_PENDING,
         comment=order.comment,
         preferences=order.preferences,
         street=order.street if not order.is_pickup else None,
@@ -158,7 +163,7 @@ def get_orders(q=None, phone=None, instagram=None, city=None, size=None, deliver
         ).correlate(Order).exists()
         has_delivered = _db.session.query(Delivery.id).filter(
             Delivery.order_id == Order.id,
-            Delivery.status == 'Доставлено',
+            Delivery.status == DELIVERY_DONE,
         ).correlate(Order).exists()
         has_individually_resumed = _db.session.query(Delivery.id).filter(
             Delivery.order_id == Order.id,
@@ -231,8 +236,13 @@ def sync_order_to_active_deliveries(order):
     Does NOT touch delivery_date — callers own their own date logic.
     """
     for delivery in order.deliveries:
-        if delivery.status in ('Доставлено', 'Скасовано'):
+        if delivery.status in DELIVERY_TERMINAL_STATUSES:
             continue
+        # Delivery.client_id дублює Order.client_id, і при зміні клієнта в
+        # замовленні дублікат лишався від старого клієнта. Частина екранів
+        # (флористський список) джойнить клієнта саме через Delivery.client_id,
+        # тож доставка показувалась не тому клієнту, якому йшли гроші.
+        delivery.client_id = order.client_id
         delivery.comment = order.comment
         delivery.preferences = order.preferences
         delivery.address_comment = order.address_comment
@@ -314,8 +324,26 @@ def update_order(order, form):
     order.for_whom = form.get('for_whom') or order.for_whom
     if form.get('delivery_method'):
         order.delivery_method = form.get('delivery_method')
+    # Знижка приходить із того самого композера, що й при створенні, але
+    # update_order її не читав — менеджер міняв знижку, зберігав, і вона зникала.
+    # Пишемо лише коли поле реально в формі: інші пости (інлайнові селектори)
+    # його не несуть і не мають обнуляти знижку.
+    if 'discount' in form:
+        discount_raw = (form.get('discount') or '').strip()
+        order.discount = int(discount_raw) if discount_raw else None
 
-    active_deliveries = [d for d in order.deliveries if d.status not in ['Доставлено', 'Скасовано']]
+    # Перерахунок замороженої ціни: розмір, знижка чи custom_amount могли
+    # змінитись, а charged_amount лишався від попередньої редакції — і саме його
+    # списував білінг. update_subscription це вже робив, разові замовлення були
+    # пропущені. Тільки якщо лишились несписані доставки: після списання ціну
+    # переписувати не можна, інакше історія розійдеться з фактом.
+    active_deliveries = [
+        d for d in order.deliveries if d.status not in DELIVERY_TERMINAL_STATUSES
+    ]
+    if active_deliveries:
+        from app.services.billing_service import get_order_price
+        order.charged_amount = get_order_price(order)
+
     earliest_active = min(
         active_deliveries, key=lambda d: d.delivery_date or datetime.date.min, default=None
     )
@@ -337,6 +365,42 @@ def update_order(order, form):
     return order
 
 
+def detach_order_dependents(order_id):
+    """Прибрати посилання на замовлення з таблиць, які видалення не чистило.
+
+    ``order_photos.order_id`` і ``certificates.order_id`` — звичайні FK без
+    ``ON DELETE``, і жоден шлях видалення їх не торкався: замовлення з фото або
+    застосованим сертифікатом падало на IntegrityError уже в БД.
+
+    Фото видаляються разом із замовленням (без нього вони безадресні), а
+    сертифікат — ні: це окрема цінність, яку клієнт може застосувати ще раз,
+    тож він відв'язується і повертається в обіг.
+    """
+    import os
+    from flask import current_app
+    from app.models.order_photo import OrderPhoto
+    from app.models.certificate import Certificate
+    from app.constants import CERT_ACTIVE
+
+    photos = OrderPhoto.query.filter_by(order_id=order_id).all()
+    upload_folder = current_app.config.get('UPLOAD_FOLDER')
+    for photo in photos:
+        if upload_folder:
+            # Best-effort: проблема з диском не має блокувати видалення замовлення.
+            try:
+                filepath = os.path.join(upload_folder, photo.filename)
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except OSError:
+                logger.warning('Не вдалося видалити файл фото %s', photo.filename, exc_info=True)
+        db.session.delete(photo)
+
+    (Certificate.query
+     .filter_by(order_id=order_id)
+     .update({'order_id': None, 'status': CERT_ACTIVE, 'used_at': None},
+             synchronize_session=False))
+
+
 def delete_order(order):
     logger.warning(f'Deleting order {order.id}')
     order_id = order.id
@@ -348,6 +412,7 @@ def delete_order(order):
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
         db.session.delete(delivery)
     RecipientPhone.query.filter_by(order_id=order.id).delete()
+    detach_order_dependents(order.id)
     db.session.flush()
     db.session.delete(order)
     db.session.commit()

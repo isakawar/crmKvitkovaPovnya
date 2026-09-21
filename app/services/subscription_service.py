@@ -6,11 +6,20 @@ import logging
 from sqlalchemy import or_, func
 from sqlalchemy.orm import joinedload
 
+from app.constants import (
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+    DELIVERY_ASSIGNED,
+    DELIVERY_CANCELLED,
+    DELIVERY_TERMINAL_STATUSES,
+    SUBSCRIPTION_ACTIVE,
+    SUBSCRIPTION_DRAFT,
+    SUBSCRIPTION_TYPES,
+)
 from app.utils.address_utils import coords_from_form, copy_coords, COORD_FIELDS
 
 logger = logging.getLogger(__name__)
 
-SUBSCRIPTION_TYPES = ['Weekly', 'Monthly', 'Bi-weekly']
 WEEKDAY_MAP = {'ПН': 0, 'ВТ': 1, 'СР': 2, 'ЧТ': 3, 'ПТ': 4, 'СБ': 5, 'НД': 6}
 REVERSE_WEEKDAY_MAP = {v: k for k, v in WEEKDAY_MAP.items()}
 
@@ -158,13 +167,13 @@ def calculate_reschedule_plan(delivery, old_date, new_date):
     )
     pending_next = [
         o for o in next_orders
-        if any(d.status not in ('Доставлено', 'Скасовано') for d in o.deliveries)
+        if any(d.status not in DELIVERY_TERMINAL_STATUSES for d in o.deliveries)
     ]
     if not pending_next:
         return None
 
     def get_delivery_date(o):
-        pending = [d for d in o.deliveries if d.status not in ('Доставлено', 'Скасовано')]
+        pending = [d for d in o.deliveries if d.status not in DELIVERY_TERMINAL_STATUSES]
         return pending[0].delivery_date if pending else o.delivery_date
 
     interval = 7 if subscription.type == 'Weekly' else 14
@@ -242,11 +251,11 @@ def apply_reschedule_plan(delivery):
     current = first_valid
     for next_order in next_orders:
         for d in next_order.deliveries:
-            if d.status not in ('Доставлено', 'Скасовано'):
+            if d.status not in DELIVERY_TERMINAL_STATUSES:
                 d.delivery_date = current
-                if d.status == 'Розподілено':
+                if d.status == DELIVERY_ASSIGNED:
                     RouteDelivery.query.filter_by(delivery_id=d.id).delete()
-                    d.status = 'Очікує'
+                    d.status = DELIVERY_PENDING
                 count += 1
         current += datetime.timedelta(days=interval)
 
@@ -259,7 +268,7 @@ def _create_delivery_for_order(order, client_id, is_first):
         order_id=order.id,
         client_id=client_id,
         delivery_date=order.delivery_date,
-        status='Очікує',
+        status=DELIVERY_PENDING,
         comment=order.comment,
         preferences=order.preferences,
         street=order.street if not order.is_pickup else None,
@@ -280,6 +289,8 @@ def _create_delivery_for_order(order, client_id, is_first):
 
 
 def create_subscription(client, form):
+    from app.services.billing_service import get_order_price
+
     logger.info(f'Creating subscription for client {client.id}')
 
     is_pickup = form.get('is_pickup') == 'on'
@@ -309,7 +320,7 @@ def create_subscription(client, form):
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
-        status='active',
+        status=SUBSCRIPTION_ACTIVE,
         delivery_day=delivery_day,
         time_from=form.get('time_from') or None,
         time_to=form.get('time_to') or None,
@@ -374,6 +385,13 @@ def create_subscription(client, form):
         db.session.add(order)
         db.session.flush()
 
+        # Фіксуємо ціну одразу при створенні — як це вже роблять усі інші шляхи
+        # (разове замовлення, імпорт, продовження). Без цього charged_amount
+        # лишався NULL, resolve_charge_amount падав у фолбек на живий прайс, і
+        # підняття цін у довіднику переоцінювало вже створені підписки заднім
+        # числом — рівно те, що docstring resolve_charge_amount обіцяє не робити.
+        order.charged_amount = get_order_price(order)
+
         if i == 0:
             first_order_id = order.id
             additional_phones = (
@@ -435,7 +453,7 @@ def create_subscription_from_import(client, form, delivery_number):
     subscription = Subscription(
         client_id=client.id,
         type=sub_type,
-        status='active',
+        status=SUBSCRIPTION_ACTIVE,
         delivery_day=delivery_day,
         time_from=form.get('time_from') or None,
         time_to=form.get('time_to') or None,
@@ -540,7 +558,7 @@ def build_resume_plan(subscription, new_first_date):
     pending_deliveries = sorted(
         [d for order in subscription.orders
            for d in order.deliveries
-           if d.status not in ('Доставлено', 'Скасовано')],
+           if d.status not in DELIVERY_TERMINAL_STATUSES],
         key=lambda d: (d.order.sequence_number or 0, d.delivery_date)
     )
     if not pending_deliveries:
@@ -573,9 +591,9 @@ def apply_resume_plan(subscription, plan):
         if d:
             d.delivery_date = datetime.datetime.strptime(item['new_date_iso'], '%Y-%m-%d').date()
             d.individually_resumed = False
-            if d.status == 'Розподілено':
+            if d.status == DELIVERY_ASSIGNED:
                 RouteDelivery.query.filter_by(delivery_id=d.id).delete()
-                d.status = 'Очікує'
+                d.status = DELIVERY_PENDING
     subscription.is_stopped = False
 
 
@@ -589,13 +607,13 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
     delivery = delivery_map.get(delivery_id)
     if not delivery:
         raise ValueError('Доставку не знайдено')
-    if delivery.status in ('Доставлено', 'Скасовано'):
+    if delivery.status in DELIVERY_TERMINAL_STATUSES:
         raise ValueError('Доставка вже завершена або скасована')
     delivery.delivery_date = new_date
     delivery.individually_resumed = True
-    if delivery.status == 'Розподілено':
+    if delivery.status == DELIVERY_ASSIGNED:
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
-        delivery.status = 'Очікує'
+        delivery.status = DELIVERY_PENDING
 
 
 def _chain_depth(subscription):
@@ -675,7 +693,15 @@ def extend_subscription(subscription, overrides=None):
         first_next = calculate_next_delivery_date(today, subscription.type, desired_weekday)
 
     delivery_day = overrides.get('delivery_day') or subscription.delivery_day
-    dates = build_delivery_dates(first_next, subscription.type, delivery_day)
+    # Кількість доставок береться з підписки, а не фіксовані 4: підписка на 6
+    # доставок при продовженні давала 4 замовлення, але поле delivery_count=6 —
+    # тобто нова підписка одразу суперечила сама собі.
+    new_delivery_count = (
+        overrides.get('delivery_count') or subscription.delivery_count or 4
+    )
+    dates = build_delivery_dates_n(
+        first_next, subscription.type, delivery_day, new_delivery_count
+    )
 
     # determine discount for the new subscription
     client = subscription.client
@@ -689,7 +715,7 @@ def extend_subscription(subscription, overrides=None):
         client_id=subscription.client_id,
         parent_subscription_id=subscription.id,
         type=overrides.get('type') or subscription.type,
-        status='active',
+        status=SUBSCRIPTION_ACTIVE,
         delivery_day=delivery_day,
         time_from=overrides.get('time_from') or subscription.time_from,
         time_to=overrides.get('time_to') or subscription.time_to,
@@ -716,7 +742,7 @@ def extend_subscription(subscription, overrides=None):
         is_extended=False,
         followup_status=None,
         is_stopped=False,
-        delivery_count=subscription.delivery_count or 4,
+        delivery_count=new_delivery_count,
         created_at=datetime.datetime.utcnow(),
         **{f: overrides.get(f) if overrides.get(f) is not None else getattr(subscription, f)
            for f in COORD_FIELDS},
@@ -788,7 +814,7 @@ def delete_subscription(subscription):
     from app.models.recipient_phone import RecipientPhone
 
     has_delivered = any(
-        d.status == 'Доставлено'
+        d.status == DELIVERY_DONE
         for order in subscription.orders
         for d in order.deliveries
     )
@@ -826,7 +852,7 @@ def create_draft_subscription(client, contact_date, draft_comment=None, draft_ba
     logger.info(f'Creating draft subscription for client {client.id}')
     subscription = Subscription(
         client_id=client.id,
-        status='draft',
+        status=SUBSCRIPTION_DRAFT,
         type='',
         delivery_day='',
         recipient_name='',
@@ -850,7 +876,7 @@ def get_draft_subscriptions(contact_date_to=None, q=None):
         Subscription.query
         .options(joinedload(Subscription.client))
         .join(Client)
-        .filter(Subscription.status == 'draft')
+        .filter(Subscription.status == SUBSCRIPTION_DRAFT)
     )
 
     if contact_date_to is not None:
@@ -933,7 +959,7 @@ def update_subscription(subscription, form):
     # propagates to every delivery in the cycle.
     eligible_orders = [
         o for o in subscription.orders
-        if not all(d.status == 'Доставлено' for d in o.deliveries)
+        if not all(d.status == DELIVERY_DONE for d in o.deliveries)
     ]
     first_order = min(
         eligible_orders,
@@ -941,7 +967,7 @@ def update_subscription(subscription, form):
     ) if eligible_orders else None
 
     for order in subscription.orders:
-        all_delivered = all(d.status == 'Доставлено' for d in order.deliveries)
+        all_delivered = all(d.status == DELIVERY_DONE for d in order.deliveries)
         if all_delivered:
             continue
 
@@ -1000,7 +1026,7 @@ def get_subscriptions_needing_renewal(today):
         .join(Delivery, Delivery.order_id == Order.id)
         .filter(
             Order.subscription_id.isnot(None),
-            Delivery.status != 'Скасовано',
+            Delivery.status != DELIVERY_CANCELLED,
         )
         .group_by(Order.subscription_id)
         .subquery()
@@ -1030,7 +1056,7 @@ def get_subscriptions_needing_renewal(today):
             last_delivery_subq.c.last_delivery_date <= today - datetime.timedelta(days=4),
             or_(Subscription.followup_status.is_(None), Subscription.followup_status == 'pending'),
             or_(Subscription.snooze_until.is_(None), Subscription.snooze_until <= today),
-            Subscription.status != 'draft',
+            Subscription.status != SUBSCRIPTION_DRAFT,
         )
         .order_by(last_delivery_subq.c.last_delivery_date.asc())
         .limit(30)
@@ -1050,7 +1076,7 @@ def get_subscriptions_needing_renewal(today):
 
 
 def get_subscriptions(q=None, city=None, sub_type=None):
-    query = Subscription.query.join(Client).filter(Subscription.status != 'draft')
+    query = Subscription.query.join(Client).filter(Subscription.status != SUBSCRIPTION_DRAFT)
     if q:
         q_stripped = q.lstrip('@')
         like_q = f'%{q}%'
