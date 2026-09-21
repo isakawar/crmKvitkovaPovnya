@@ -1,0 +1,570 @@
+Table client {
+  id integer [pk]
+  name varchar
+  instagram varchar
+  telegram varchar
+  phone varchar
+  phone_viber boolean [not null]
+  phone_telegram boolean [not null]
+  phone_whatsapp boolean [not null]
+  email varchar
+  credits decimal
+  marketing_source varchar
+  personal_discount varchar
+  discount integer
+  created_at date
+}
+
+Table courier {
+  id integer [pk]
+  name varchar [not null]
+  phone varchar [unique]
+  is_taxi boolean
+  active boolean
+  communication_channel varchar
+  nickname varchar
+  working_days varchar
+  comment text
+  rating integer
+  deliveries_count integer
+  telegram_chat_id bigint [unique]
+  telegram_username varchar
+  telegram_registered boolean
+  telegram_notifications_enabled boolean
+  last_telegram_activity timestamp
+}
+
+Table expense_category {
+  id integer [pk]
+  name varchar [not null, unique]
+  slug varchar [not null, unique]
+}
+
+Table messaging_channel {
+  id integer [pk]
+  channel_type varchar [not null]
+  name varchar [not null]
+  is_active boolean [not null]
+  external_id varchar
+  webhook_secret varchar [not null]
+  config json [not null]
+  created_at timestamp [not null]
+  phone_number varchar
+  session_encrypted text
+  pending_session_encrypted text
+  pending_phone_code_hash varchar
+  fb_page_id varchar
+  fb_page_access_token_encrypted text
+  wa_waba_id varchar
+  wa_access_token_encrypted text
+}
+
+Table price_presets {
+  id integer [pk]
+  name varchar [not null]
+  is_active boolean [not null]
+  created_at timestamp
+}
+
+Table roles {
+  id integer [pk]
+  name varchar [not null, unique]
+  description varchar
+}
+
+Table sale_option {
+  id integer [pk]
+  name varchar [not null]
+  tiers_json text [not null]
+  is_active boolean [not null]
+  sort_order integer
+  icon_filename varchar
+  created_at timestamp [not null]
+}
+
+Table user {
+  id integer [pk]
+  email varchar [not null, unique]
+  username varchar [not null, unique]
+  display_name varchar
+  password_hash varchar [not null]
+  is_active boolean [not null]
+  created_at timestamp
+  last_login timestamp
+  last_seen timestamp
+  user_type varchar
+  calculator_prefs text
+  phone varchar [unique]
+  telegram_chat_id bigint [unique]
+  telegram_username varchar
+  telegram_registered boolean [not null]
+  telegram_notifications_enabled boolean [not null]
+  last_telegram_activity timestamp
+}
+
+Table wix_product_mapping {
+  id integer [pk]
+  catalog_item_id varchar [not null, unique]
+  wix_item_name varchar
+  order_scenario varchar [not null]
+  delivery_type varchar
+  size varchar [not null]
+  is_active boolean [not null]
+}
+
+Table action_item {
+  id integer [pk]
+  title varchar [not null]
+  description text
+  due_at timestamp
+  completion_mode varchar [not null]
+  created_at timestamp [not null]
+  created_by integer
+}
+
+Table activity_log {
+  id integer [pk]
+  user_id integer
+  user_label varchar
+  action varchar
+  entity_type varchar
+  entity_id integer
+  description varchar
+  before_data json
+  after_data json
+  created_at timestamp
+}
+
+Table ai_agent_log {
+  id integer [pk]
+  user_id integer [not null]
+  action_type varchar
+  entity_type varchar
+  entity_id integer
+  before_data json
+  after_data json
+  ai_message text
+  status varchar
+  error_msg text
+  created_at timestamp
+}
+
+Table delivery_routes {
+  id integer [pk]
+  courier_id integer
+  route_date date [not null]
+  status varchar [not null]
+  delivery_price integer
+  deliveries_count integer
+  total_distance_km float
+  estimated_duration_min integer
+  telegram_message_id bigint
+  sent_at timestamp
+  accepted_at timestamp
+  rejected_at timestamp
+  start_time time
+  cached_result_json text
+  cached_at timestamp
+  content_changed_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table messaging_channel_access {
+  id integer [pk]
+  channel_id integer [not null]
+  user_id integer [not null]
+  created_at timestamp [not null]
+}
+
+Table messaging_conversation {
+  id integer [pk]
+  channel_id integer [not null]
+  external_chat_id varchar [not null]
+  contact_name varchar
+  contact_username varchar
+  contact_phone varchar
+  client_id integer
+  assigned_user_id integer
+  status varchar [not null]
+  last_message_at timestamp
+  last_message_preview varchar
+  last_message_direction varchar
+  unread_count integer [not null]
+  created_at timestamp [not null]
+}
+
+Table promo_codes {
+  id integer [pk]
+  code varchar [not null, unique]
+  name varchar [not null]
+  description text
+  discount_percent integer [not null]
+  is_active boolean [not null]
+  created_at timestamp
+  created_by_user_id integer
+}
+
+Table settings {
+  id integer [pk]
+  type varchar [not null]
+  value varchar [not null]
+  sort_order integer
+  category_id integer
+}
+
+Table user_roles {
+  user_id integer [pk]
+  role_id integer [pk]
+}
+
+Table action_item_recipient {
+  id integer [pk]
+  action_item_id integer [not null]
+  user_id integer [not null]
+  status varchar [not null]
+  completed_at timestamp
+}
+
+Table messaging_message {
+  id integer [pk]
+  conversation_id integer [not null]
+  direction varchar [not null]
+  external_message_id varchar
+  sender_user_id integer
+  text text
+  media json [not null]
+  status varchar [not null]
+  error varchar
+  tg_date timestamp
+  created_at timestamp [not null]
+}
+
+Table prices {
+  id integer [pk]
+  preset_id integer [not null]
+  order_type varchar [not null]
+  size_id integer [not null]
+  price integer [not null]
+}
+
+Table route_dispatch_logs {
+  id integer [pk]
+  route_id integer [not null]
+  courier_id integer
+  sent_by_user_id integer
+  sent_at timestamp [not null]
+  status varchar [not null]
+  responded_at timestamp
+  message_text text
+  delivery_price integer
+  deliveries_count integer
+  total_distance_km float
+}
+
+Table subscription {
+  id integer [pk]
+  client_id integer [not null]
+  type varchar [not null]
+  status varchar [not null]
+  delivery_day varchar [not null]
+  time_from varchar
+  time_to varchar
+  recipient_name varchar [not null]
+  recipient_phone varchar [not null]
+  recipient_social varchar
+  city varchar [not null]
+  street varchar [not null]
+  building_number varchar
+  floor varchar
+  entrance varchar
+  is_pickup boolean
+  address_comment text
+  latitude decimal
+  longitude decimal
+  google_place_id varchar
+  formatted_address varchar
+  delivery_method varchar [not null]
+  size varchar [not null]
+  custom_amount integer
+  bouquet_type varchar
+  composition_type varchar
+  for_whom varchar [not null]
+  comment text
+  preferences text
+  is_wedding boolean [not null]
+  is_extended boolean
+  followup_status varchar
+  planned_contact_date timestamp
+  is_renewal_reminder boolean [not null]
+  contact_date date
+  draft_comment text
+  draft_bank_link varchar
+  draft_wedding_date date
+  snooze_until date
+  snooze_comment varchar
+  discount integer
+  promo_code_id integer
+  parent_subscription_id integer
+  is_stopped boolean [not null]
+  delivery_count integer [not null]
+  created_at timestamp
+}
+
+Table order {
+  id integer [pk]
+  client_id integer [not null]
+  subscription_id integer
+  sequence_number integer
+  cycle_number integer
+  recipient_name varchar [not null]
+  recipient_phone varchar [not null]
+  recipient_social varchar
+  city varchar [not null]
+  street varchar [not null]
+  building_number varchar
+  floor varchar
+  entrance varchar
+  is_pickup boolean
+  address_comment text
+  latitude decimal
+  longitude decimal
+  google_place_id varchar
+  formatted_address varchar
+  delivery_method varchar [not null]
+  size varchar [not null]
+  custom_amount integer
+  charged_amount integer
+  delivery_date date [not null]
+  time_from varchar
+  time_to varchar
+  bouquet_type varchar
+  composition_type varchar
+  for_whom varchar [not null]
+  comment text
+  preferences text
+  discount integer
+  promo_code_id integer
+  created_at timestamp
+}
+
+Table revenue_adjustment {
+  id integer [pk]
+  client_id integer [not null]
+  subscription_id integer
+  month date [not null]
+  adj_charged integer [not null]
+  adj_paid integer [not null]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table certificates {
+  id integer [pk]
+  code varchar [not null, unique]
+  type varchar [not null]
+  value_amount decimal
+  value_size varchar
+  expires_at date [not null]
+  status varchar [not null]
+  created_at timestamp
+  used_at timestamp
+  order_id integer
+  comment text
+  created_by_user_id integer
+}
+
+Table delivery {
+  id integer [pk]
+  order_id integer [not null]
+  client_id integer [not null]
+  delivery_date date [not null]
+  status varchar
+  comment text
+  created_at timestamp
+  updated_at timestamp
+  street varchar
+  building_number varchar
+  floor varchar
+  entrance varchar
+  is_pickup boolean
+  latitude decimal
+  longitude decimal
+  google_place_id varchar
+  formatted_address varchar
+  time_from varchar
+  time_to varchar
+  size varchar
+  phone varchar
+  courier_id integer
+  delivered_at timestamp
+  status_changed_at timestamp
+  delivery_method varchar [not null]
+  florist_status varchar
+  preferences text
+  address_comment text
+  individually_resumed boolean [not null]
+  bouquet_type varchar
+  composition_type varchar
+}
+
+Table order_photos {
+  id integer [pk]
+  order_id integer [not null]
+  filename varchar [not null]
+  original_name varchar [not null]
+  uploaded_by integer
+  comment varchar
+  created_at timestamp [not null]
+}
+
+Table recipient_phone {
+  id integer [pk]
+  order_id integer [not null]
+  phone varchar [not null]
+  position integer
+}
+
+Table wix_lead {
+  id integer [pk]
+  wix_order_id varchar [not null, unique]
+  wix_order_number varchar
+  raw_payload json [not null]
+  status varchar [not null]
+  received_at timestamp [not null]
+  contact_name varchar
+  contact_phone varchar
+  contact_email varchar
+  city varchar
+  street varchar
+  postal_code varchar
+  address_comment text
+  item_name varchar
+  catalog_item_id varchar
+  quantity integer
+  amount decimal
+  currency varchar
+  payment_status varchar
+  line_items_count integer
+  buyer_note text
+  custom_fields json
+  matched_client_id integer
+  mapping_matched boolean [not null]
+  processed_order_id integer
+  processed_subscription_id integer
+  processed_at timestamp
+  processed_by_user_id integer
+}
+
+Table route_deliveries {
+  id integer [pk]
+  route_id integer [not null]
+  delivery_id integer [not null]
+  stop_order integer [not null]
+  distance_from_previous_km float
+  duration_from_previous_min integer
+  planned_arrival timestamp
+  actual_arrival timestamp
+  created_at timestamp
+}
+
+Table transaction {
+  id integer [pk]
+  transaction_type varchar [not null]
+  client_id integer
+  amount decimal [not null]
+  payment_type varchar
+  expense_type varchar
+  comment text
+  date date [not null]
+  created_at timestamp
+  created_by_id integer
+  expense_type_id integer
+  payment_account_id integer
+  target_payment_account_id integer
+  delivery_id integer
+  order_id integer
+  subscription_id integer
+}
+
+Table wix_lead_notification {
+  id integer [pk]
+  wix_lead_id integer [not null]
+  user_id integer [not null]
+  telegram_chat_id bigint [not null]
+  telegram_message_id integer [not null]
+  sent_at timestamp [not null]
+}
+
+Table florist_sale {
+  id integer [pk]
+  florist_id integer [not null]
+  created_by integer [not null]
+  amount decimal [not null]
+  bonus_percent decimal [not null]
+  bonus_amount decimal [not null]
+  payment_type varchar
+  payment_account_id integer
+  transaction_id integer
+  comment text
+  created_at timestamp [not null]
+}
+
+Ref: action_item.created_by > user.id
+Ref: activity_log.user_id > user.id
+Ref: ai_agent_log.user_id > user.id
+Ref: delivery_routes.courier_id > courier.id
+Ref: messaging_channel_access.channel_id > messaging_channel.id
+Ref: messaging_channel_access.user_id > user.id
+Ref: messaging_conversation.channel_id > messaging_channel.id
+Ref: messaging_conversation.client_id > client.id
+Ref: messaging_conversation.assigned_user_id > user.id
+Ref: promo_codes.created_by_user_id > user.id
+Ref: settings.category_id > expense_category.id
+Ref: user_roles.user_id > user.id
+Ref: user_roles.role_id > roles.id
+Ref: action_item_recipient.action_item_id > action_item.id
+Ref: action_item_recipient.user_id > user.id
+Ref: messaging_message.conversation_id > messaging_conversation.id
+Ref: messaging_message.sender_user_id > user.id
+Ref: prices.preset_id > price_presets.id
+Ref: prices.size_id > settings.id
+Ref: route_dispatch_logs.route_id > delivery_routes.id
+Ref: route_dispatch_logs.courier_id > courier.id
+Ref: route_dispatch_logs.sent_by_user_id > user.id
+Ref: subscription.client_id > client.id
+Ref: subscription.promo_code_id > promo_codes.id
+Ref: subscription.parent_subscription_id > subscription.id
+Ref: order.client_id > client.id
+Ref: order.subscription_id > subscription.id
+Ref: order.promo_code_id > promo_codes.id
+Ref: revenue_adjustment.client_id > client.id
+Ref: revenue_adjustment.subscription_id > subscription.id
+Ref: certificates.order_id > order.id
+Ref: certificates.created_by_user_id > user.id
+Ref: delivery.order_id > order.id
+Ref: delivery.client_id > client.id
+Ref: delivery.courier_id > courier.id
+Ref: order_photos.order_id > order.id
+Ref: order_photos.uploaded_by > user.id
+Ref: recipient_phone.order_id > order.id
+Ref: wix_lead.matched_client_id > client.id
+Ref: wix_lead.processed_order_id > order.id
+Ref: wix_lead.processed_subscription_id > subscription.id
+Ref: wix_lead.processed_by_user_id > user.id
+Ref: route_deliveries.route_id > delivery_routes.id
+Ref: route_deliveries.delivery_id > delivery.id
+Ref: transaction.client_id > client.id
+Ref: transaction.created_by_id > user.id
+Ref: transaction.expense_type_id > settings.id
+Ref: transaction.payment_account_id > settings.id
+Ref: transaction.target_payment_account_id > settings.id
+Ref: transaction.delivery_id > delivery.id
+Ref: transaction.order_id > order.id
+Ref: transaction.subscription_id > subscription.id
+Ref: wix_lead_notification.wix_lead_id > wix_lead.id
+Ref: wix_lead_notification.user_id > user.id
+Ref: florist_sale.florist_id > user.id
+Ref: florist_sale.created_by > user.id
+Ref: florist_sale.payment_account_id > settings.id
+Ref: florist_sale.transaction_id > transaction.id
