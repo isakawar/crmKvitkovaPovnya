@@ -33,9 +33,10 @@ def _conversation_or_404(conversation_id: int) -> Conversation:
 @login_required
 def index():
     _require_manager()
-    channel_ids = set(inbox_service.accessible_channel_ids(current_user))
-    channels = [c for c in MessagingChannel.query.order_by(MessagingChannel.name).all()
-                if c.id in channel_ids]
+    channel_ids = inbox_service.accessible_channel_ids(current_user)
+    channels = (MessagingChannel.query
+                .filter(MessagingChannel.id.in_(channel_ids))
+                .order_by(MessagingChannel.name).all()) if channel_ids else []
     personal_channels = [c for c in channels if c.channel_type == 'telegram_personal' and c.is_connected]
     return render_template('inbox/index.html', channels=channels, personal_channels=personal_channels)
 

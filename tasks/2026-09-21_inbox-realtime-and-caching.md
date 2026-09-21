@@ -19,6 +19,12 @@ done
 - [x] `Cache-Control`/ETag на `/inbox/media/<id>/<idx>` (файли незмінні — uuid-імена)
 - [x] Індекс `messaging_message(conversation_id, external_message_id)` — дедуп/edit/delete запити
 - [x] Обмежений `ThreadPoolExecutor` замість необмежених `threading.Thread` для префетчу медіа
+- [x] `/inbox` фільтрує канали доступу в SQL (`WHERE id IN (...)`), а не в Python
+- [ ] ~~Звести дві admin-перевірки (`user_type` / `has_role`) в одну~~ — перевірив: це не дрейф,
+  а свідомий репо-вайд патерн (той самий дубль є в `activity_log/routes.py:41`,
+  `notifications/routes.py:21`), обидва поля виставляються разом при створенні юзера
+  (`settings/routes.py:827-830`). Консолідація лише тут внесла б непослідовність із рештою
+  кодбази — свідомо не чіпали.
 
 ## Реалізація
 - `app/services/messaging/events.py` (новий) — `publish(event_type, channel_id, conversation_id)`,
