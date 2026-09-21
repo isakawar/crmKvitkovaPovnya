@@ -186,8 +186,9 @@ def test_create_order_rejects_past_delivery_date(session):
     yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
     form = _base_form(first_delivery_date=yesterday)
 
-    # After fix: should raise ValueError or return an error
-    with pytest.raises((ValueError, Exception)):
+    # Після фіксу має бути саме ValueError: `Exception` ловив би будь-яку
+    # випадкову помилку, і тест позеленів би не через те, що баг закрито.
+    with pytest.raises(ValueError):
         create_order_and_deliveries(client, form)
 
 
@@ -200,5 +201,5 @@ def test_create_order_rejects_invalid_time_range(session):
     client = _make_client(session, 'time_range_client')
     form = _base_form(time_from='18:00', time_to='10:00')  # invalid range
 
-    with pytest.raises((ValueError, Exception)):
+    with pytest.raises(ValueError):
         create_order_and_deliveries(client, form)
