@@ -35,6 +35,8 @@ After implementation always: describe how to test, expected behavior, edge cases
 | Orders | `app/services/order_service.py` |
 | Deliveries | `app/services/delivery_service.py` |
 | Clients | `app/services/client_service.py` |
+| Billing (charge / reversal / price freeze) | `app/services/billing_service.py` |
+| Transactions & client balance | `app/services/transaction_service.py` |
 | Route optimization | `app/services/route_optimizer_service.py` |
 | CSV import | `app/services/csv_import_service.py` |
 | Reports / Statistics / P&L | `app/services/reports_service.py` |
@@ -187,13 +189,37 @@ In-CRM chat where dialogs from corporate accounts land and managers reply. Page 
   `flask messaging-backfill-telegram-personal <id> [--days]`,
   `flask messaging-purge-old-media [--days]`.
 
+## Billing & client balance (gotcha)
+
+`client.credits` is a **denormalized running balance**, and the «Баланс клієнтів» report
+derives the whole month-by-month history *backwards* from it
+(`reports_service.py` → `balance = client.credits - post_paid + post_charged`). One wrong
+write therefore rewrites every previously displayed month, silently. Rules:
+
+- Never touch `client.credits` directly. Go through `billing_service.charge_delivery` /
+  `reverse_delivery_charge`, or `transaction_service.apply_balance_delta` /
+  `change_transaction_amount` / `delete_transaction`, all of which use
+  `constants.balance_delta()` so every balance-affecting type is handled.
+- A delivery is charged when its status becomes `Доставлено` and **reversed** when it
+  leaves that status. The reversal is another `delivery_charge` row with a negative
+  amount, dated today — so every report that sums `delivery_charge` nets out for free.
+  Consequently «is this delivery charged?» is a question about the **net sum**
+  (`net_charged_for_delivery`), never about a row existing.
+- `Order.charged_amount` is the **frozen** price at creation/edit time; changing the
+  active `PricePreset` must never re-price existing orders. Every creation path sets it,
+  and edits recompute it only while the order still has uncharged deliveries.
+- `delivery_charge` and `adjustment` rows are system-owned: they can't be edited or
+  deleted from the transactions screen.
+
 ## Key Concepts
 
-**Subscriptions** — not a separate model. A subscription is an `Order` with `delivery_type` in `('Weekly', 'Monthly', 'Bi-weekly')`. On creation, 4 deliveries are auto-generated. Requires both type + size.
+**Subscriptions** — a real model (`app/models/subscription.py`, table `subscription`), not an `Order` flag. `Order.delivery_type` does **not** exist; periodicity lives on `Subscription.type` (`Weekly` / `Bi-weekly` / `Monthly`) and an order belongs to a subscription via `Order.subscription_id`. On creation N orders are generated, one delivery each, where N is `Subscription.delivery_count` (1–52, default 4) — not a hardcoded 4. Requires both type + size.
 
-**Certificates** — types: `amount` (UAH value), `size` (bouquet size), `subscription` (type + size). Auto-expire in 1 year. Status: `active` → `used` after applying to an order.
+**Certificates** — types: `amount` (UAH value), `size` (bouquet size), `subscription` (type + size). Auto-expire in 1 year. Status: `active` → `used` after applying to an order. Deleting the order releases the certificate back to `active`.
 
-**Order sizes** — `S`, `M`, `L`, `XL`, `XXL`, `Власний` (requires `custom_amount`).
+**Order sizes** — `S`, `M`, `L`, `XL`, `XXL`, `Власний` (requires `custom_amount`). The real list is editable in Settings (`Settings(type='size')`), so never validate a size against a hardcoded set.
+
+**Statuses and types** — every status/type string (delivery status, transaction type, subscription status, route status, payment type…) is declared once in `app/constants.py`. Never write the literal. `Transaction.transaction_type` has **five** values — `credit`, `debit`, `delivery_charge`, `transfer`, `adjustment` — and which of them move `client.credits` is `BALANCE_SIGN_BY_TXN_TYPE` / `balance_delta()`; go through those rather than branching on the type by hand. There are no DB-level CHECK constraints yet: run `flask audit-enum-values` against a real database first to confirm nothing legacy is stored, otherwise the constraint migration will fail on deploy.
 
 **Roles** — `admin`/`manager`: full access. `florist`: `/florist` routes only. `courier`: Telegram bot only.
 
