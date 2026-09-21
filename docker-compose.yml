@@ -31,7 +31,12 @@ services:
   web:
     build: .
     ports:
-      - "8002:8000"
+      # Bound to loopback only — Docker's own iptables rules for published
+      # ports bypass ufw/DOCKER-USER entirely, so "8002:8000" would stay
+      # reachable from the internet even with no ufw rule allowing it.
+      # A reverse proxy (nginx + TLS) on the host talks to 127.0.0.1:8002;
+      # nothing outside the host should ever hit this port directly.
+      - "127.0.0.1:8002:8000"
     volumes:
       - ./app:/app/app
       - ./scripts:/app/scripts
