@@ -12,10 +12,14 @@ from datetime import datetime
 from sqlalchemy.orm.attributes import flag_modified
 
 from app.extensions import db
+from app.models.client import Client
 from app.models.conversation import Conversation
+from app.models.delivery import Delivery
 from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
 from app.models.messaging_channel_access import MessagingChannelAccess
+from app.models.subscription import Subscription
+from app.services import client_service
 from app.services.messaging import events
 from app.services.messaging.adapter import get_adapter
 
@@ -147,6 +151,13 @@ def _get_or_create_conversation(channel: MessagingChannel, event) -> Conversatio
             contact_username=contact.get('username'),
             contact_phone=contact.get('phone'),
         )
+        try:
+            client = client_service.find_client_for_contact(
+                channel.channel_type, username=contact.get('username'), phone=contact.get('phone'))
+            if client:
+                conv.client_id = client.id
+        except Exception:  # noqa: BLE001
+            log.exception('find_client_for_contact failed')
         db.session.add(conv)
         db.session.flush()
     return conv
@@ -340,7 +351,67 @@ def serialize_conversation(conv: Conversation) -> dict:
         'unread': conv.unread_count or 0,
         'status': conv.status,
         'assigned_user_id': conv.assigned_user_id,
+        'client_id': conv.client_id,
         'last_message_at': conv.last_message_at.isoformat() if conv.last_message_at else None,
+    }
+
+
+# --- CRM client linking --------------------------------------------
+def link_client(conversation: Conversation, client_id: int) -> Client | None:
+    client = db.session.get(Client, client_id)
+    if not client:
+        return None
+    conversation.client_id = client.id
+    db.session.commit()
+    return client
+
+
+def unlink_client(conversation: Conversation) -> None:
+    conversation.client_id = None
+    db.session.commit()
+
+
+def get_client_panel(conversation: Conversation) -> dict:
+    """Client summary + recent deliveries for the inbox's side panel.
+
+    Deliveries are fetched directly by `Delivery.client_id` — cheap, and
+    independent of which of the client's orders/subscriptions they belong to.
+    """
+    client = conversation.client
+    if not client:
+        return {'linked': False, 'client': None, 'deliveries': []}
+
+    deliveries = (Delivery.query.filter_by(client_id=client.id)
+                 .order_by(Delivery.delivery_date.desc()).limit(8).all())
+    subscription = (Subscription.query.filter_by(client_id=client.id, status='active')
+                    .order_by(Subscription.id.desc()).first())
+    return {
+        'linked': True,
+        'client': {
+            'id': client.id,
+            'name': client.display_name,
+            'phone': client.phone or '',
+            'instagram': client.instagram or '',
+            'telegram': client.telegram or '',
+            'credits': float(client.credits or 0),
+            'personal_discount': client.personal_discount or '',
+        },
+        'subscription': {
+            'type': subscription.type,
+            'delivery_day': subscription.delivery_day,
+            'size': subscription.size,
+            'is_wedding': subscription.is_wedding,
+        } if subscription else None,
+        'deliveries': [
+            {
+                'id': d.id,
+                'date': d.delivery_date.isoformat() if d.delivery_date else None,
+                'status': d.status,
+                'address': ', '.join(p for p in [d.street, d.building_number] if p) or ('Самовивіз' if d.is_pickup else ''),
+                'size': d.size or '',
+            }
+            for d in deliveries
+        ],
     }
 
 

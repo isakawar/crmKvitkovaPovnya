@@ -6,7 +6,7 @@ Covers: create_client (happy path, duplicates, phone validation),
 """
 import pytest
 from app.models import Client
-from app.services.client_service import create_client, search_clients
+from app.services.client_service import create_client, find_client_for_contact, search_clients
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,3 +123,56 @@ def test_search_clients_by_phone(session):
     result = search_clients(q='1112233')
     found_instagrams = [c.instagram for c in result.items]
     assert 'phone_search_user' in found_instagrams
+
+
+# ── find_client_for_contact ───────────────────────────────────────────────
+
+def test_find_by_instagram_handle_with_or_without_at(session):
+    c = _make_client(session, instagram='flower_shop')
+    assert find_client_for_contact('instagram', username='flower_shop').id == c.id
+    assert find_client_for_contact('instagram', username='@flower_shop').id == c.id
+    assert find_client_for_contact('instagram', username='FLOWER_shop').id == c.id
+
+
+def test_find_by_telegram_handle(session):
+    c = _make_client(session, instagram=None, telegram='oksana_tg')
+    assert find_client_for_contact('telegram', username='oksana_tg').id == c.id
+    assert find_client_for_contact('telegram_personal', username='@oksana_tg').id == c.id
+
+
+def test_find_by_phone_requires_matching_channel_flag(session):
+    c = Client(phone='+380991112233', phone_whatsapp=True)
+    session.add(c)
+    session.commit()
+
+    assert find_client_for_contact('whatsapp', phone='380991112233').id == c.id
+    # same phone, but the client isn't flagged as reachable on viber
+    assert find_client_for_contact('viber', phone='380991112233') is None
+
+
+def test_find_by_phone_normalizes_raw_format(session):
+    c = Client(phone='+380671234567', phone_viber=True)
+    session.add(c)
+    session.commit()
+    assert find_client_for_contact('viber', phone='0671234567').id == c.id
+
+
+def test_find_returns_none_on_no_match(session):
+    _make_client(session, instagram='someone_else')
+    assert find_client_for_contact('instagram', username='nobody_here') is None
+
+
+def test_find_returns_none_on_ambiguous_match(session):
+    # Two clients somehow sharing the same telegram handle (e.g. a stale
+    # dup) — must not guess between them.
+    session.add(Client(telegram='shared_handle'))
+    session.add(Client(telegram='shared_handle'))
+    session.commit()
+    assert find_client_for_contact('telegram', username='shared_handle') is None
+
+
+def test_find_telegram_falls_back_to_phone_when_no_username_match(session):
+    c = Client(telegram='someone_else', phone='+380991112233', phone_telegram=True)
+    session.add(c)
+    session.commit()
+    assert find_client_for_contact('telegram', username=None, phone='380991112233').id == c.id

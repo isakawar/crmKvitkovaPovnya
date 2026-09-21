@@ -6,8 +6,12 @@ from app.extensions import db
 class Conversation(db.Model):
     """One dialog with a contact on a messaging channel.
 
-    Channel-agnostic. `client_id` is a nullable hook for linking to a CRM
-    Client later — not populated in v1.
+    Channel-agnostic. `client_id` links to a CRM Client — set automatically
+    on first contact when `client_service.find_client_for_contact` finds an
+    unambiguous match (by Instagram/Telegram handle or phone, gated by the
+    client's `phone_viber`/`phone_telegram`/`phone_whatsapp` flags), or by a
+    manager by hand via `inbox_service.link_client`. Stays null otherwise —
+    never guessed between multiple candidates.
     """
     __tablename__ = 'messaging_conversation'
     __table_args__ = (

@@ -11,6 +11,7 @@ from app.blueprints.inbox import inbox_bp
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
+from app.services import client_service
 from app.services.messaging import inbox_service
 from app.services.messaging.adapter import get_adapter
 from app.services.messaging.events import CHANNEL as INBOX_EVENTS_CHANNEL
@@ -126,6 +127,51 @@ def messages(conversation_id):
         'messages': [inbox_service.serialize_message(m, channel_type=conv.channel.channel_type) for m in msgs],
         'has_more': has_more,
     })
+
+
+@inbox_bp.route('/inbox/conversations/<int:conversation_id>/client-panel')
+@login_required
+def client_panel(conversation_id):
+    _require_manager()
+    conv = _conversation_or_404(conversation_id)
+    return jsonify(inbox_service.get_client_panel(conv))
+
+
+@inbox_bp.route('/inbox/conversations/<int:conversation_id>/link-client', methods=['POST'])
+@login_required
+def link_client(conversation_id):
+    _require_manager()
+    conv = _conversation_or_404(conversation_id)
+    data = request.get_json(silent=True) or {}
+    client_id = data.get('client_id')
+    client = inbox_service.link_client(conv, client_id) if client_id else None
+    if not client:
+        return jsonify({'ok': False, 'error': 'Клієнта не знайдено'}), 400
+    return jsonify({'ok': True, 'panel': inbox_service.get_client_panel(conv)})
+
+
+@inbox_bp.route('/inbox/conversations/<int:conversation_id>/unlink-client', methods=['POST'])
+@login_required
+def unlink_client(conversation_id):
+    _require_manager()
+    conv = _conversation_or_404(conversation_id)
+    inbox_service.unlink_client(conv)
+    return jsonify({'ok': True})
+
+
+@inbox_bp.route('/inbox/clients/search')
+@login_required
+def search_clients_for_link():
+    _require_manager()
+    q = (request.args.get('q') or '').strip()
+    if not q:
+        return jsonify({'clients': []})
+    pagination = client_service.search_clients(q=q, page=1, per_page=8)
+    return jsonify({'clients': [
+        {'id': c.id, 'name': c.display_name, 'phone': c.phone or '',
+         'instagram': c.instagram or '', 'telegram': c.telegram or ''}
+        for c in pagination.items
+    ]})
 
 
 @inbox_bp.route('/inbox/conversations/<int:conversation_id>/reply', methods=['POST'])

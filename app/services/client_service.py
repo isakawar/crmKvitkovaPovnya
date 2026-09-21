@@ -6,6 +6,41 @@ import re
 PHONE_PATTERN = re.compile(r'^\+380[0-9]{9}$')
 
 
+def _handle_match(column, raw: str):
+    """Case-insensitive match on a @handle-style column, with or without '@'."""
+    normalized = raw.strip().lstrip('@').lower()
+    return or_(func.lower(column) == normalized, func.lower(column) == f'@{normalized}')
+
+
+def find_client_for_contact(channel_type: str, username: str | None = None,
+                            phone: str | None = None) -> Client | None:
+    """Best-effort exact match for an inbox conversation's contact info.
+
+    Only auto-links on an unambiguous match (exactly one candidate) — a
+    channel-appropriate identifier only, never free-text name, and never a
+    guess between multiple plausible clients. Returns None otherwise; the
+    conversation stays unlinked for a manager to link by hand.
+    """
+    from app.services.csv_import_service import normalize_phone
+
+    norm_phone = normalize_phone(phone) if phone else None
+    candidates = []
+
+    if channel_type == 'instagram' and username:
+        candidates = Client.query.filter(_handle_match(Client.instagram, username)).all()
+    elif channel_type in ('telegram', 'telegram_personal'):
+        if username:
+            candidates = Client.query.filter(_handle_match(Client.telegram, username)).all()
+        if not candidates and norm_phone:
+            candidates = Client.query.filter_by(phone=norm_phone, phone_telegram=True).all()
+    elif channel_type == 'whatsapp' and norm_phone:
+        candidates = Client.query.filter_by(phone=norm_phone, phone_whatsapp=True).all()
+    elif channel_type == 'viber' and norm_phone:
+        candidates = Client.query.filter_by(phone=norm_phone, phone_viber=True).all()
+
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _client_snapshot(client) -> dict:
     return {
         'name': client.name,

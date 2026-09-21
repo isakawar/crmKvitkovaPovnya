@@ -73,6 +73,8 @@
 
   /* thread */
   .ib-thread { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #ib-thread-body { display: flex; }
+  .ib-thread__main { display: flex; flex-direction: column; flex: 1; min-width: 0; }
   .ib-thread__head { padding: 0.65rem 1rem; border-bottom: 1px solid var(--ib-border); display: flex;
                      align-items: center; justify-content: space-between; gap: 0.75rem; }
   .ib-thread__who { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
@@ -132,6 +134,38 @@
   .ib-filepreview { padding: 0 0.9rem 0.5rem; font-size: 0.75rem; color: var(--ib-muted); display: none; align-items: center; gap: 0.4rem; background: #fff; }
   .ib-filepreview button { border: none; background: none; color: #ef4444; cursor: pointer; }
 
+  /* client panel */
+  .ib-client-panel { width: 264px; flex-shrink: 0; border-left: 1px solid var(--ib-border);
+                     background: #fff; overflow-y: auto; padding: 1rem; font-size: 0.82rem;
+                     scrollbar-width: thin; scrollbar-color: #d6d3d1 transparent; }
+  .ib-client-panel::-webkit-scrollbar { width: 6px; }
+  .ib-client-panel::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 999px; }
+  .icp-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+              color: #a8a29e; margin-bottom: 0.6rem; }
+  .icp-name { font-weight: 700; font-size: 0.92rem; color: var(--ib-ink); margin-bottom: 0.15rem; }
+  .icp-row { display: flex; align-items: center; gap: 0.4rem; color: var(--ib-muted); margin-top: 0.3rem; }
+  .icp-link { color: var(--ib-accent); font-weight: 600; font-size: 0.8rem; }
+  .icp-stats { display: flex; gap: 0.6rem; margin: 0.8rem 0; }
+  .icp-stat { flex: 1; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.45rem 0.5rem; text-align: center; }
+  .icp-stat b { display: block; font-size: 0.95rem; color: var(--ib-ink); }
+  .icp-stat span { font-size: 0.65rem; color: var(--ib-muted); }
+  .icp-sub { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; border-radius: 0.6rem;
+            padding: 0.5rem 0.6rem; margin-bottom: 0.3rem; font-weight: 600; }
+  .icp-sub .icp-delivery__addr { color: #166534; opacity: 0.8; font-weight: 500; }
+  .icp-delivery { border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; }
+  .icp-delivery__top { display: flex; justify-content: space-between; font-weight: 600; color: var(--ib-ink); }
+  .icp-delivery__addr { color: var(--ib-muted); margin-top: 0.15rem; }
+  .icp-empty { color: #a8a29e; text-align: center; margin-top: 2rem; }
+  .icp-search input { width: 100%; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.4rem 0.6rem;
+                     font-size: 0.82rem; margin-bottom: 0.5rem;
+                     transition: border-color .15s var(--ib-ease), box-shadow .15s var(--ib-ease); }
+  .icp-search input:focus { outline: none; border-color: var(--ib-accent); box-shadow: 0 0 0 3px rgba(180,83,9,.1); }
+  .icp-result { padding: 0.45rem 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: background-color .12s var(--ib-ease); }
+  .icp-result:hover { background: var(--ib-bg); }
+  .icp-result__name { font-weight: 600; color: var(--ib-ink); font-size: 0.82rem; }
+  .icp-result__sub { color: var(--ib-muted); font-size: 0.72rem; }
+  .icp-unlink { color: #ef4444; font-size: 0.75rem; cursor: pointer; margin-top: 0.8rem; display: inline-block; }
+
   .ib-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.7rem; color: #a8a29e; }
   .ib-empty i { font-size: 1.9rem; width: 74px; height: 74px; display: flex; align-items: center; justify-content: center;
                border-radius: 50%; background: var(--ib-bg); border: 1px solid var(--ib-border); }
@@ -152,6 +186,7 @@
     .ib-wrap.mobile-thread .ib-list { display: none; }
     .ib-wrap:not(.mobile-thread) .ib-thread { display: none; }
     .msg { max-width: 86%; }
+    .ib-client-panel { display: none; }
   }
 </style>
 {% endblock %}
@@ -207,30 +242,33 @@
         <i class="bi bi-chat-square-text"></i>
         <span>Оберіть діалог зі списку</span>
       </div>
-      <div id="ib-thread-body" style="display:none; flex:1; flex-direction:column; min-height:0;">
-        <div class="ib-thread__head">
-          <div class="ib-thread__who">
-            <button class="ib-btn" id="ib-back" style="display:none;"><i class="bi bi-arrow-left"></i></button>
-            <div class="conv__avatar" id="ib-th-avatar" style="width:34px;height:34px;font-size:0.78rem;"></div>
-            <div style="min-width:0;">
-              <div class="ib-thread__name" id="ib-th-name"></div>
-              <div class="ib-thread__sub" id="ib-th-sub"></div>
+      <div id="ib-thread-body" style="display:none; flex:1; min-height:0;">
+        <div class="ib-thread__main">
+          <div class="ib-thread__head">
+            <div class="ib-thread__who">
+              <button class="ib-btn" id="ib-back" style="display:none;"><i class="bi bi-arrow-left"></i></button>
+              <div class="conv__avatar" id="ib-th-avatar" style="width:34px;height:34px;font-size:0.78rem;"></div>
+              <div style="min-width:0;">
+                <div class="ib-thread__name" id="ib-th-name"></div>
+                <div class="ib-thread__sub" id="ib-th-sub"></div>
+              </div>
             </div>
           </div>
+          <div class="ib-msgs" id="ib-msgs"></div>
+          <div class="ib-filepreview" id="ib-filepreview">
+            <i class="bi bi-image"></i><span id="ib-filename"></span>
+            <button id="ib-fileclear" title="Прибрати">✕</button>
+          </div>
+          <form class="ib-compose" id="ib-compose">
+            <label class="ib-compose__attach" title="Додати фото">
+              <i class="bi bi-paperclip"></i>
+              <input type="file" id="ib-file" accept="image/*" hidden>
+            </label>
+            <textarea id="ib-text" rows="1" placeholder="Повідомлення... (Enter — надіслати, Shift+Enter — новий рядок)"></textarea>
+            <button type="submit" class="ib-compose__send" id="ib-send">Надіслати</button>
+          </form>
         </div>
-        <div class="ib-msgs" id="ib-msgs"></div>
-        <div class="ib-filepreview" id="ib-filepreview">
-          <i class="bi bi-image"></i><span id="ib-filename"></span>
-          <button id="ib-fileclear" title="Прибрати">✕</button>
-        </div>
-        <form class="ib-compose" id="ib-compose">
-          <label class="ib-compose__attach" title="Додати фото">
-            <i class="bi bi-paperclip"></i>
-            <input type="file" id="ib-file" accept="image/*" hidden>
-          </label>
-          <textarea id="ib-text" rows="1" placeholder="Повідомлення... (Enter — надіслати, Shift+Enter — новий рядок)"></textarea>
-          <button type="submit" class="ib-compose__send" id="ib-send">Надіслати</button>
-        </form>
+        <div class="ib-client-panel" id="ib-client-panel"></div>
       </div>
     </div>
   </div>

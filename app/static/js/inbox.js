@@ -34,6 +34,7 @@
   var soundBtn = $('ib-sound');
   var lightbox = $('ib-lightbox');
   var newModal = $('ib-new-modal');
+  var clientPanelEl = $('ib-client-panel');
   var ME = window.IB_USER_ID;
 
   function chIcon(t) { return t === 'instagram' ? 'instagram' : (t === 'whatsapp' ? 'whatsapp' : 'telegram'); }
@@ -320,6 +321,7 @@
     }
     fetchThread(true);
     scheduleThread();
+    fetchClientPanel(id);
   }
 
   function fetchThread(initial) {
@@ -343,6 +345,113 @@
       if (!document.hidden && S.activeId) fetchThread(false);
       scheduleThread();
     }, 5000);
+  }
+
+  // ---- client panel -----------------------------------------------
+  var clientSearchDebounce = null;
+
+  function fetchClientPanel(convId) {
+    clientPanelEl.innerHTML = '';
+    fetch('/inbox/conversations/' + convId + '/client-panel')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (convId === S.activeId) renderClientPanel(data);
+      })
+      .catch(function () {});
+  }
+
+  function ddmmyyyy(iso) {
+    if (!iso) return '';
+    var p = iso.split('-');
+    return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
+  }
+  function deliveryNode(d) {
+    return '<div class="icp-delivery">' +
+      '<div class="icp-delivery__top"><span>' + esc(ddmmyyyy(d.date)) + '</span><span>' + esc(d.status || '') + '</span></div>' +
+      '<div class="icp-delivery__addr">' + esc([d.size, d.address].filter(Boolean).join(' · ')) + '</div></div>';
+  }
+
+  function renderClientPanel(data) {
+    if (data.linked && data.client) {
+      var c = data.client;
+      var html = '<div class="icp-title">Клієнт</div>' +
+        '<div class="icp-name">' + esc(c.name) + '</div>';
+      if (c.phone) html += '<div class="icp-row"><i class="bi bi-telephone"></i> ' + esc(c.phone) + '</div>';
+      if (c.instagram) html += '<div class="icp-row"><i class="bi bi-instagram"></i> ' + esc(c.instagram) + '</div>';
+      if (c.telegram) html += '<div class="icp-row"><i class="bi bi-telegram"></i> ' + esc(c.telegram) + '</div>';
+      html += '<div class="icp-stats">' +
+        '<div class="icp-stat"><b>' + esc(c.personal_discount || '0') + '%</b><span>знижка</span></div>' +
+        '<div class="icp-stat"><b>' + c.credits.toFixed(0) + '</b><span>баланс</span></div>' +
+        '</div>' +
+        '<a class="icp-link" href="/clients/' + c.id + '" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Картка клієнта</a>';
+      if (data.subscription) {
+        var s = data.subscription;
+        html += '<div class="icp-title" style="margin-top:1rem;">Підписка</div>' +
+          '<div class="icp-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(s.type) +
+          (s.is_wedding ? ' · весільна' : '') + ', ' + esc(s.size) +
+          '<div class="icp-delivery__addr">Доставка щотижня: ' + esc(s.delivery_day) + '</div></div>';
+      }
+      html += '<div class="icp-title" style="margin-top:1rem;">Доставки</div>';
+      if (data.deliveries.length) {
+        html += data.deliveries.map(deliveryNode).join('');
+      } else {
+        html += '<div class="icp-empty" style="margin-top:0.5rem;">Ще не було доставок</div>';
+      }
+      html += '<span class="icp-unlink" id="icp-unlink"><i class="bi bi-x-circle"></i> Відв\'язати клієнта</span>';
+      clientPanelEl.innerHTML = html;
+      $('icp-unlink').addEventListener('click', function () {
+        if (!S.activeId) return;
+        fetch('/inbox/conversations/' + S.activeId + '/unlink-client', { method: 'POST' })
+          .then(function () { fetchClientPanel(S.activeId); });
+      });
+    } else {
+      clientPanelEl.innerHTML = '<div class="icp-title">Клієнт не привʼязаний</div>' +
+        '<div class="icp-search"><input type="text" id="icp-search-input" placeholder="Пошук за іменем/телефоном..."></div>' +
+        '<div id="icp-search-results"></div>';
+      var input = $('icp-search-input');
+      input.addEventListener('input', function () {
+        var q = input.value.trim();
+        clearTimeout(clientSearchDebounce);
+        clientSearchDebounce = setTimeout(function () { runClientSearch(q); }, 300);
+      });
+    }
+  }
+
+  function runClientSearch(q) {
+    var resEl = $('icp-search-results');
+    if (!resEl) return;
+    if (!q) { resEl.innerHTML = ''; return; }
+    fetch('/inbox/clients/search?q=' + encodeURIComponent(q))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!resEl) return;
+        var again = $('icp-search-results');
+        if (!again) return;
+        var clients = data.clients || [];
+        if (!clients.length) { again.innerHTML = '<div class="icp-empty">Нічого не знайдено</div>'; return; }
+        again.innerHTML = clients.map(function (c) {
+          var sub = [c.phone, c.instagram, c.telegram].filter(Boolean).join(' · ');
+          return '<div class="icp-result" data-id="' + c.id + '">' +
+            '<div class="icp-result__name">' + esc(c.name) + '</div>' +
+            (sub ? '<div class="icp-result__sub">' + esc(sub) + '</div>' : '') + '</div>';
+        }).join('');
+        [].forEach.call(again.querySelectorAll('.icp-result'), function (el) {
+          el.addEventListener('click', function () {
+            if (!S.activeId) return;
+            fetch('/inbox/conversations/' + S.activeId + '/link-client', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ client_id: +el.dataset.id }),
+            })
+              .then(function (r) { return r.json(); })
+              .then(function (resp) {
+                if (resp.ok) renderClientPanel(resp.panel);
+                else showToast(resp.error || 'Помилка', 'error');
+              });
+          });
+        });
+      })
+      .catch(function () {});
   }
 
   // ---- composer -------------------------------------------------

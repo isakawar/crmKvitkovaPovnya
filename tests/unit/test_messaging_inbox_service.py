@@ -31,6 +31,21 @@ def _msg_event(chat='555', mid='1', text='hi', media=None):
                         media=media or [])
 
 
+def _logged_in_client(app, session):
+    """A test client authenticated as an admin (sees every channel, so
+    _conversation_or_404's access check doesn't need per-channel grants
+    for these route tests)."""
+    admin = User(username='route_admin', email='route_admin@x.com', user_type='admin', is_active=True)
+    admin.set_password('p')
+    session.add(admin)
+    session.commit()
+    c = app.test_client()
+    with c.session_transaction() as sess:
+        sess['_user_id'] = str(admin.id)
+        sess['_fresh'] = True
+    return c
+
+
 def test_ingest_creates_conversation_and_message(session):
     ch = _channel(session)
     msg = inbox_service.ingest_event(ch, _msg_event())
@@ -265,3 +280,88 @@ def test_get_thread_before_id_page_is_chronological(session):
     first_id = Message.query.filter_by(text='d').one().id
     msgs, has_more = inbox_service.get_thread(conv, before_id=first_id, limit=2)
     assert [m.text for m in msgs] == ['b', 'c']
+
+
+# ── CRM client linking ─────────────────────────────────────────────────────
+
+def test_ingest_auto_links_client_by_instagram_handle(session):
+    from app.models import Client
+    client = Client(instagram='ann')
+    session.add(client)
+    session.commit()
+
+    ch = MessagingChannel(name='IG', channel_type='instagram', webhook_secret='x')
+    session.add(ch)
+    session.commit()
+
+    inbox_service.ingest_event(ch, _msg_event())  # _msg_event contact username='ann'
+    conv = Conversation.query.one()
+    assert conv.client_id == client.id
+
+
+def test_ingest_does_not_link_on_no_match(session):
+    ch = MessagingChannel(name='IG', channel_type='instagram', webhook_secret='x')
+    session.add(ch)
+    session.commit()
+    inbox_service.ingest_event(ch, _msg_event())  # no Client with instagram='ann' exists
+    conv = Conversation.query.one()
+    assert conv.client_id is None
+
+
+def test_link_client_route_and_unlink(app, session):
+    from app.models import Client
+    client = Client(name='Тестовий Клієнт')  # no instagram/telegram/phone — display_name falls back to name
+    session.add(client)
+    ch = _channel(session)
+    conv = Conversation(channel_id=ch.id, external_chat_id='c1')
+    session.add(conv)
+    session.commit()
+
+    c = _logged_in_client(app, session)
+    resp = c.post(f'/inbox/conversations/{conv.id}/link-client',
+                  json={'client_id': client.id})
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body['ok'] is True
+    assert body['panel']['linked'] is True
+    assert body['panel']['client']['name'] == 'Тестовий Клієнт'
+
+    resp2 = c.post(f'/inbox/conversations/{conv.id}/unlink-client')
+    assert resp2.status_code == 200
+    assert Conversation.query.get(conv.id).client_id is None
+
+
+def test_link_client_route_rejects_unknown_client(app, session):
+    ch = _channel(session)
+    conv = Conversation(channel_id=ch.id, external_chat_id='c2')
+    session.add(conv)
+    session.commit()
+
+    c = _logged_in_client(app, session)
+    resp = c.post(f'/inbox/conversations/{conv.id}/link-client', json={'client_id': 999999})
+    assert resp.status_code == 400
+    assert resp.get_json()['ok'] is False
+
+
+def test_client_panel_route_unlinked(app, session):
+    ch = _channel(session)
+    conv = Conversation(channel_id=ch.id, external_chat_id='c3')
+    session.add(conv)
+    session.commit()
+
+    c = _logged_in_client(app, session)
+    resp = c.get(f'/inbox/conversations/{conv.id}/client-panel')
+    assert resp.status_code == 200
+    assert resp.get_json() == {'linked': False, 'client': None, 'deliveries': []}
+
+
+def test_clients_search_route(app, session):
+    from app.models import Client
+    session.add(Client(instagram='searchable_from_inbox'))
+    session.commit()
+
+    c = _logged_in_client(app, session)
+    resp = c.get('/inbox/clients/search?q=searchable_from_inbox')
+    assert resp.status_code == 200
+    names = [x['instagram'] for x in resp.get_json()['clients']]
+    assert 'searchable_from_inbox' in names
