@@ -131,7 +131,11 @@ def update_delivery(d, data):
         if d.order:
             d.order.custom_amount = int(data['custom_amount']) if data['custom_amount'] else None
             logger.info(f'Оновлено custom_amount в замовленні {d.order.id}: {d.order.custom_amount}')
-    
+
+    if 'delivery_date' in data and d.order:
+        from app.services.order_service import sync_order_delivery_date
+        sync_order_delivery_date(d.order)
+
     db.session.commit()
     return d
 

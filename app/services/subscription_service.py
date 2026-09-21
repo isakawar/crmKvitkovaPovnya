@@ -228,6 +228,7 @@ def apply_reschedule_plan(delivery):
     Returns count of updated Delivery records.
     """
     from app.models.delivery_route import RouteDelivery
+    from app.services.order_service import sync_order_delivery_date
 
     order = delivery.order
     subscription = order.subscription
@@ -257,6 +258,7 @@ def apply_reschedule_plan(delivery):
                     RouteDelivery.query.filter_by(delivery_id=d.id).delete()
                     d.status = DELIVERY_PENDING
                 count += 1
+        sync_order_delivery_date(next_order)
         current += datetime.timedelta(days=interval)
 
     db.session.commit()
@@ -581,6 +583,7 @@ def build_resume_plan(subscription, new_first_date):
 
 def apply_resume_plan(subscription, plan):
     from app.models.delivery_route import RouteDelivery
+    from app.services.order_service import sync_order_delivery_date
     delivery_map = {
         d.id: d
         for order in subscription.orders
@@ -594,11 +597,14 @@ def apply_resume_plan(subscription, plan):
             if d.status == DELIVERY_ASSIGNED:
                 RouteDelivery.query.filter_by(delivery_id=d.id).delete()
                 d.status = DELIVERY_PENDING
+    for order in subscription.orders:
+        sync_order_delivery_date(order)
     subscription.is_stopped = False
 
 
 def schedule_single_delivery(subscription, delivery_id, new_date):
     from app.models.delivery_route import RouteDelivery
+    from app.services.order_service import sync_order_delivery_date
     delivery_map = {
         d.id: d
         for order in subscription.orders
@@ -614,6 +620,7 @@ def schedule_single_delivery(subscription, delivery_id, new_date):
     if delivery.status == DELIVERY_ASSIGNED:
         RouteDelivery.query.filter_by(delivery_id=delivery.id).delete()
         delivery.status = DELIVERY_PENDING
+    sync_order_delivery_date(delivery.order)
 
 
 def _chain_depth(subscription):

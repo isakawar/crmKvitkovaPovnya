@@ -1,6 +1,7 @@
 from decimal import Decimal
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
+from app.constants import PAYMENT_CASH, PAYMENT_TYPES, TXN_CREDIT
 from app.models.delivery_route import DeliveryRoute, RouteDelivery
 from app.models.delivery import Delivery
 from app.extensions import db
@@ -377,9 +378,23 @@ def florist_sales_add():
     if amount <= 0:
         return jsonify({'success': False, 'error': 'Сума має бути більше нуля'}), 400
 
-    payment_type = data.get('payment_type', 'cash')
-    if payment_type not in ('monobank', 'cash'):
-        payment_type = 'cash'
+    payment_type = data.get('payment_type', PAYMENT_CASH)
+    if payment_type not in PAYMENT_TYPES:
+        payment_type = PAYMENT_CASH
+
+    # Дата продажу була жорстко прибита до today, тож внести вчорашній продаж
+    # було неможливо взагалі. Тепер приймається опційно; за замовчуванням —
+    # сьогодні, тож наявний фронтенд працює як раніше.
+    raw_date = (data.get('date') or '').strip()
+    if raw_date:
+        try:
+            sale_date = date.fromisoformat(raw_date)
+        except ValueError:
+            return jsonify({'success': False, 'error': 'Некоректна дата'}), 400
+        if sale_date > date.today():
+            return jsonify({'success': False, 'error': 'Дата не може бути в майбутньому'}), 400
+    else:
+        sale_date = date.today()
 
     raw_account = data.get('payment_account_id')
     payment_account_id = int(raw_account) if raw_account else None
@@ -402,13 +417,15 @@ def florist_sales_add():
     db.session.flush()
 
     txn = Transaction(
-        transaction_type='credit',
+        transaction_type=TXN_CREDIT,
         client_id=None,
-        amount=float(amount),
+        # Decimal, а не float: amount — Numeric(10,2), і зайва конвертація через
+        # float вносила похибку в грошову суму на рівному місці.
+        amount=amount,
         payment_type=payment_type,
         payment_account_id=payment_account_id,
         comment='Офлайн продаж',
-        date=date.today(),
+        date=sale_date,
         created_by_id=current_user.id,
     )
     db.session.add(txn)

@@ -29,17 +29,23 @@ class PromoCode(db.Model):
 
 
 def generate_promo_code():
-    """Generate sequential code: PROMO0001, PROMO0002, ..."""
+    """Generate sequential code: PROMO0001, PROMO0002, ...
+
+    Нумерація рахується за самим кодом, а не за ``id`` — див. пояснення в
+    ``generate_certificate_code``: сортування за id давало неправильний
+    «останній», а ``code`` унікальний, тож вставка падала.
+    """
     prefix = 'PROMO'
-    last = (PromoCode.query
-            .filter(PromoCode.code.like(f'{prefix}%'))
-            .order_by(PromoCode.id.desc())
-            .first())
-    if last:
+    taken = set()
+    for (code,) in db.session.query(PromoCode.code).filter(
+        PromoCode.code.like(f'{prefix}%')
+    ):
         try:
-            num = int(last.code[len(prefix):]) + 1
+            taken.add(int(code[len(prefix):]))
         except (ValueError, IndexError):
-            num = 1
-    else:
-        num = 1
+            continue
+
+    num = 1
+    while num in taken:
+        num += 1
     return f'{prefix}{num:04d}'

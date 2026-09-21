@@ -299,33 +299,39 @@ def find_existing_client(instagram=None, phone=None, telegram=None) -> Client | 
     """
     Try to find an existing client by any of the three identifiers.
     Also checks stripped suffix variants.
+
+    Пошук за хендлами делегується ``client_service.find_client_by_handle`` — тій
+    самій реалізації, якою користується форма створення клієнта. Раніше тут був
+    власний ``filter_by(instagram=...)`` (точний збіг із урахуванням регістру),
+    тож імпорт заводив другого клієнта там, де форма показала б дублікат.
+    Додаткові евристики імпорту — зняття суфікса «(2)» і перехресна перевірка
+    instagram/telegram/телефону — лишаються: у форми їх немає.
     """
+    from app.services.client_service import find_client_by_handle
+
     if instagram:
-        # Try exact match
-        c = Client.query.filter_by(instagram=instagram).first()
+        c = find_client_by_handle(Client.instagram, instagram)
         if c:
             return c
-        # Try stripped suffix
         stripped = _strip_suffix(instagram)
         if stripped != instagram:
-            c = Client.query.filter_by(instagram=stripped).first()
+            c = find_client_by_handle(Client.instagram, stripped)
             if c:
                 return c
-        # Try phone-as-instagram
     if phone:
         c = Client.query.filter_by(phone=phone).first()
         if c:
             return c
         # Also try matching instagram that looks like this phone
-        c = Client.query.filter_by(instagram=phone).first()
+        c = find_client_by_handle(Client.instagram, phone)
         if c:
             return c
     if telegram:
-        c = Client.query.filter_by(telegram=telegram).first()
+        c = find_client_by_handle(Client.telegram, telegram)
         if c:
             return c
         # Also try instagram = telegram handle
-        c = Client.query.filter_by(instagram=telegram).first()
+        c = find_client_by_handle(Client.instagram, telegram)
         if c:
             return c
     return None

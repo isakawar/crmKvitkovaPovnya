@@ -4,6 +4,8 @@ import uuid
 import requests
 from flask import Blueprint, render_template, request, jsonify, send_from_directory, current_app, redirect, session, url_for
 from flask_login import login_required, current_user
+from sqlalchemy import or_
+from app.constants import SETTING_EXPENSE_TYPE, SETTING_PAYMENT_ACCOUNT, SETTING_SIZE
 from app.models import Settings, Price
 from app.models.price_preset import PricePreset
 from app.models.courier import Courier
@@ -602,10 +604,34 @@ def add_expense_type():
 def delete_setting(item_id):
     from app.models.transaction import Transaction
     item = Settings.query.get_or_404(item_id)
-    if item.type == 'expense_type':
-        in_use = Transaction.query.filter_by(expense_type=item.value).first()
+    if item.type == SETTING_EXPENSE_TYPE:
+        # Перевіряти треба FK, а не legacy-рядок expense_type: саме expense_type_id
+        # використовують звіти, і саме він тримає посилання на цей рядок. Стара
+        # перевірка дивилась лише на текстову копію, тож тип, привʼязаний тільки
+        # по FK, вважався невикористаним — і видалення падало вже на рівні БД.
+        in_use = Transaction.query.filter(
+            or_(
+                Transaction.expense_type_id == item.id,
+                Transaction.expense_type == item.value,
+            )
+        ).first()
         if in_use:
             return jsonify({'success': False, 'error': 'Тип витрати використовується в транзакціях і не може бути видалений'}), 400
+    if item.type == SETTING_SIZE:
+        # Прайси тепер захищені RESTRICT на рівні БД — повідомляємо зрозуміло,
+        # замість того щоб віддавати IntegrityError у трасуванні.
+        from app.models.price import Price
+        if Price.query.filter_by(size_id=item.id).first():
+            return jsonify({'success': False, 'error': 'Розмір використовується в прайсах і не може бути видалений'}), 400
+    if item.type == SETTING_PAYMENT_ACCOUNT:
+        linked = Transaction.query.filter(
+            or_(
+                Transaction.payment_account_id == item.id,
+                Transaction.target_payment_account_id == item.id,
+            )
+        ).first()
+        if linked:
+            return jsonify({'success': False, 'error': 'Рахунок використовується в транзакціях і не може бути видалений'}), 400
     db.session.delete(item)
     db.session.commit()
     return jsonify({'success': True})

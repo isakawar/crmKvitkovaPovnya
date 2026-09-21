@@ -13,7 +13,13 @@ class Transaction(db.Model):
     client_id = db.Column(db.Integer, db.ForeignKey('client.id'), nullable=True, index=True)
     amount = db.Column(db.Numeric(10, 2), nullable=False)
     payment_type = db.Column(db.String(32), nullable=True)   # 'monobank' | 'cash' (credits only)
-    expense_type = db.Column(db.String(64), nullable=True)   # for debits (future parameters)
+    #: LEGACY. Текстова копія назви типу витрати, залишена з часів, коли FK ще не
+    #: було. Джерело правди — expense_type_id; уся звітність рахує витрати ТІЛЬКИ
+    #: по ньому. Ця колонка лишається як денормалізований підпис для списку
+    #: транзакцій і CSV-експорту (там показується назва на момент операції, яка
+    #: не змінюється, якщо тип потім перейменують). Нової логіки на неї вішати
+    #: не можна — тільки читання для відображення.
+    expense_type = db.Column(db.String(64), nullable=True)
     comment = db.Column(db.Text, nullable=True)
     date = db.Column(db.Date, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

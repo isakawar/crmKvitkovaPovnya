@@ -1,5 +1,6 @@
 from datetime import datetime, date
 
+from app.constants import CERT_TYPE_SUBSCRIPTION
 from app.extensions import db
 
 
@@ -69,17 +70,28 @@ class Certificate(db.Model):
 
 
 def generate_certificate_code(cert_type):
-    """Generate sequential code: П0001 for subscription, Р0001 for others."""
-    prefix = 'П' if cert_type == 'subscription' else 'Р'
-    last = (Certificate.query
-            .filter(Certificate.code.like(f'{prefix}%'))
-            .order_by(Certificate.id.desc())
-            .first())
-    if last:
+    """Generate sequential code: П0001 for subscription, Р0001 for others.
+
+    Нумерація рахується за САМИМ КОДОМ, а не за ``id``: сортування за id давало
+    неправильний «останній», щойно коди створювались не в порядку id (імпорт,
+    ручна правка, відкат нумерації) — і наступний код збігався з наявним, а
+    ``code`` унікальний, тож вставка падала.
+
+    Гонку двох одночасних створень це не прибирає — вона лишається на совісті
+    UNIQUE-констрейнта; тому перебираємо перший вільний номер, а не просто
+    «максимум + 1».
+    """
+    prefix = 'П' if cert_type == CERT_TYPE_SUBSCRIPTION else 'Р'
+    taken = set()
+    for (code,) in db.session.query(Certificate.code).filter(
+        Certificate.code.like(f'{prefix}%')
+    ):
         try:
-            num = int(last.code[1:]) + 1
+            taken.add(int(code[len(prefix):]))
         except (ValueError, IndexError):
-            num = 1
-    else:
-        num = 1
+            continue
+
+    num = 1
+    while num in taken:
+        num += 1
     return f'{prefix}{num:04d}'

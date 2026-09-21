@@ -262,6 +262,28 @@ def sync_order_to_active_deliveries(order):
         delivery.time_to = order.time_to
 
 
+def sync_order_delivery_date(order):
+    """Підтягнути ``order.delivery_date`` під фактичні дати доставок.
+
+    Джерело правди для дат — ``Delivery.delivery_date``: перенос, відновлення
+    після стопу та індивідуальне перепланування пишуть саме туди. Копія на
+    ``Order`` при цьому лишалась від первинного створення й тихо протухала, а її
+    читають у 4 місцях (картка підписки, привʼязка транзакцій до замовлень),
+    тож там показувалась стара дата.
+
+    Береться найраніша НЕзавершена доставка; якщо всіх уже завершили — найпізніша
+    завершена, щоб поле лишалось осмисленим, а не порожнім.
+    """
+    dates = [d.delivery_date for d in order.deliveries
+             if d.status not in DELIVERY_TERMINAL_STATUSES and d.delivery_date]
+    if dates:
+        order.delivery_date = min(dates)
+        return
+    done = [d.delivery_date for d in order.deliveries if d.delivery_date]
+    if done:
+        order.delivery_date = max(done)
+
+
 def update_order(order, form):
     before = _order_snapshot(order)
     new_client_id = form.get('client_id', '').strip()

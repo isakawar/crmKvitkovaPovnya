@@ -96,19 +96,34 @@ def get_client_by_id(client_id):
     return Client.query.get_or_404(client_id)
 
 
+def find_client_by_handle(column, value, exclude_client_id=None):
+    """Знайти клієнта за instagram/telegram-хендлом без урахування регістру і '@'.
+
+    Єдина реалізація цього пошуку на весь проєкт. CSV-імпорт раніше мав власну,
+    через ``filter_by(instagram=...)`` — тобто точний збіг із урахуванням
+    регістру. Через це «Ivanna» та «ivanna» не збігались, і імпорт заводив
+    другого клієнта там, де форма створення показала б дублікат. Оскільки на
+    клієнті висить баланс, це роздвоювало гроші.
+
+    ``column`` — ``Client.instagram`` або ``Client.telegram``.
+    """
+    if not value:
+        return None
+    normalized = value.strip().lstrip('@').lower()
+    if not normalized:
+        return None
+    q = Client.query.filter(
+        or_(func.lower(column) == normalized, func.lower(column) == f'@{normalized}')
+    )
+    if exclude_client_id:
+        q = q.filter(Client.id != exclude_client_id)
+    return q.first()
+
+
 def _validate_contact_fields(instagram, telegram, phone, exclude_client_id=None):
     """Validate uniqueness of contact fields. Returns error dict or None."""
     if instagram:
-        normalized = instagram.lstrip('@')
-        q = Client.query.filter(
-            or_(
-                func.lower(Client.instagram) == normalized.lower(),
-                func.lower(Client.instagram) == f'@{normalized.lower()}'
-            )
-        )
-        if exclude_client_id:
-            q = q.filter(Client.id != exclude_client_id)
-        existing = q.first()
+        existing = find_client_by_handle(Client.instagram, instagram, exclude_client_id)
         if existing:
             return {
                 'type': 'duplicate',
@@ -118,16 +133,7 @@ def _validate_contact_fields(instagram, telegram, phone, exclude_client_id=None)
             }
 
     if telegram:
-        normalized = telegram.lstrip('@')
-        q = Client.query.filter(
-            or_(
-                func.lower(Client.telegram) == normalized.lower(),
-                func.lower(Client.telegram) == f'@{normalized.lower()}'
-            )
-        )
-        if exclude_client_id:
-            q = q.filter(Client.id != exclude_client_id)
-        existing = q.first()
+        existing = find_client_by_handle(Client.telegram, telegram, exclude_client_id)
         if existing:
             return {
                 'type': 'duplicate',
