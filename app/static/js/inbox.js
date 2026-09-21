@@ -141,15 +141,41 @@
 
   function setNavBadge(n) {
     var b = $('inbox-nav-badge');
-    if (b) { b.textContent = n > 99 ? '99+' : n; b.style.display = n > 0 ? '' : 'none'; }
+    if (!b) return;
+    var next = n > 99 ? '99+' : String(n);
+    if (b.textContent !== next) {
+      b.textContent = next;
+      b.classList.remove('ib-pop');
+      void b.offsetWidth; // restart the animation even if it's already mid-play
+      b.classList.add('ib-pop');
+    }
+    b.style.display = n > 0 ? '' : 'none';
   }
 
   // ---- thread -----------------------------------------------------
-  function msgNode(m) {
+  // Consecutive messages from the same sender within a minute are visually
+  // grouped (tighter spacing) — checked against whatever is currently the
+  // last rendered node, so it stays correct across SSE/poll/optimistic races
+  // without any extra state to keep in sync.
+  function shouldGroup(m) {
+    var last = msgsEl.lastElementChild;
+    if (!last || !last.classList.contains('msg')) return false;
+    if (last.dataset.dir !== m.direction) return false;
+    if (m.direction === 'out' && last.dataset.sender !== String(m.sender_user_id == null ? '' : m.sender_user_id)) return false;
+    var gap = new Date(m.created_at).getTime() - (+last.dataset.ts || 0);
+    return gap >= 0 && gap < 60000;
+  }
+
+  function msgNode(m, opts) {
+    opts = opts || {};
     var wrapEl = document.createElement('div');
     wrapEl.className = 'msg ' + m.direction + (m.status === 'failed' ? ' failed' : '') +
-      (m.status === 'pending' ? ' pending' : '');
+      (m.status === 'pending' ? ' pending' : '') + (opts.grouped ? ' grouped' : '') + (opts.animate === false ? ' no-anim' : '');
     if (m.id != null) wrapEl.dataset.mid = m.id;
+    wrapEl.dataset.dir = m.direction;
+    wrapEl.dataset.sender = m.sender_user_id == null ? '' : String(m.sender_user_id);
+    wrapEl.dataset.ts = String(new Date(m.created_at).getTime());
+    if (m.direction === 'out') wrapEl.dataset.text = m.text || '';
     var inner = '<div class="msg__bubble">';
     if (m.text) inner += esc(m.text);
     (m.media || []).forEach(function (md) {
@@ -170,7 +196,15 @@
     return wrapEl;
   }
 
-  function appendMsgs(list) {
+  function scrollToBottom(smooth) {
+    if (smooth) msgsEl.scrollTo({ top: msgsEl.scrollHeight, behavior: 'smooth' });
+    else msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  // animate=false for the initial page of a just-opened thread (a wall of
+  // fade-ins looks like jank, not polish); true for genuinely new messages
+  // arriving live (poll/SSE/reply response).
+  function appendMsgs(list, animate) {
     var atBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
     list.forEach(function (m) {
       // A message can reach us twice — once via the SSE-triggered refetch,
@@ -181,30 +215,34 @@
         if (!S.firstMsgId || m.id < S.firstMsgId) S.firstMsgId = m.id;
         return;
       }
+      var grouped = shouldGroup(m);
       var dk = dateKey(m.created_at);
       if (dk !== S.lastDateKey) {
+        grouped = false;
         var sep = document.createElement('div'); sep.className = 'ib-date'; sep.textContent = dk;
         msgsEl.appendChild(sep); S.lastDateKey = dk;
       }
-      msgsEl.appendChild(msgNode(m));
+      msgsEl.appendChild(msgNode(m, { grouped: grouped, animate: animate }));
       if (m.id > S.lastMsgId) S.lastMsgId = m.id;
       if (!S.firstMsgId || m.id < S.firstMsgId) { S.firstMsgId = m.id; S.firstDateKey = dk; }
     });
-    if (atBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    if (atBottom) scrollToBottom(!!animate);
   }
 
   // ---- optimistic outbound bubble ----------------------------------
   function appendOptimistic(m) {
     var atBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
+    var grouped = shouldGroup(m);
     var dk = dateKey(m.created_at);
     if (dk !== S.lastDateKey) {
+      grouped = false;
       var sep = document.createElement('div'); sep.className = 'ib-date'; sep.textContent = dk;
       msgsEl.appendChild(sep); S.lastDateKey = dk;
     }
-    var node = msgNode(m);
+    var node = msgNode(m, { grouped: grouped, animate: true });
     node.dataset.tid = m.tid;
     msgsEl.appendChild(node);
-    if (atBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+    if (atBottom) scrollToBottom(true);
   }
   function removeOptimistic(tid) {
     var node = msgsEl.querySelector('[data-tid="' + tid + '"]');
@@ -235,7 +273,7 @@
         }
         localLastDateKey = dk;
       }
-      frag.appendChild(msgNode(m));
+      frag.appendChild(msgNode(m, { animate: false }));
     });
     msgsEl.insertBefore(frag, msgsEl.firstChild);
     S.firstMsgId = list[0].id;
@@ -294,7 +332,7 @@
       .then(function (data) {
         if (!data.conversation || data.conversation.id !== S.activeId) return;
         if (initial) S.hasMore = !!data.has_more;
-        appendMsgs(data.messages || []);
+        appendMsgs(data.messages || [], !initial);
       })
       .catch(function () {})
       .finally(function () { S.threadBusy = false; });
@@ -334,7 +372,7 @@
     // once the real response (or the SSE ping for it) comes back.
     var tid = 'tmp' + Date.now() + Math.random().toString(36).slice(2);
     appendOptimistic({
-      tid: tid, direction: 'out', status: 'pending',
+      tid: tid, direction: 'out', status: 'pending', sender_user_id: ME,
       text: txt || null,
       media: file ? [{ type: 'uploading', filename: file.name }] : [],
       channel_type: S.activeConv ? S.activeConv.channel_type : '',
@@ -349,7 +387,7 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         removeOptimistic(tid);
-        if (data.message) appendMsgs([data.message]);
+        if (data.message) appendMsgs([data.message], true);
         if (!data.ok) showToast(data.error || 'Не вдалося надіслати', 'error');
         else pollList();
       })
@@ -377,10 +415,10 @@
   if (newConvBtn && newModal) {
     newConvBtn.addEventListener('click', function () {
       $('ib-new-query').value = '';
-      newModal.style.display = 'flex';
+      newModal.classList.add('show');
     });
-    newModal.addEventListener('click', function (e) { if (e.target === newModal) newModal.style.display = 'none'; });
-    $('ib-new-cancel').addEventListener('click', function () { newModal.style.display = 'none'; });
+    newModal.addEventListener('click', function (e) { if (e.target === newModal) newModal.classList.remove('show'); });
+    $('ib-new-cancel').addEventListener('click', function () { newModal.classList.remove('show'); });
     $('ib-new-submit').addEventListener('click', function () {
       var channelId = +$('ib-new-channel').value;
       var query = $('ib-new-query').value.trim();
@@ -393,7 +431,7 @@
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (!data.ok) { showToast(data.error || 'Помилка', 'error'); return; }
-          newModal.style.display = 'none';
+          newModal.classList.remove('show');
           var existing = S.convs.some(function (c) { return c.id === data.conversation.id; });
           if (!existing) S.convs.unshift(data.conversation);
           renderList();
@@ -423,14 +461,31 @@
     } catch (e) {}
   }
 
-  // ---- lightbox ----------------------------------------------
+  // ---- lightbox / failed-message retry ------------------------
   msgsEl.addEventListener('click', function (e) {
     if (e.target.classList.contains('msg__img')) {
       lightbox.querySelector('img').src = e.target.dataset.full;
-      lightbox.style.display = 'flex';
+      lightbox.classList.add('show');
+      return;
+    }
+    // Tap a failed outgoing bubble to get its text back in the composer —
+    // the original File object (if any) is gone after upload, so a photo
+    // send still needs re-attaching by hand.
+    var failedEl = e.target.closest('.msg.failed');
+    if (failedEl && S.activeId) {
+      var text = failedEl.dataset.text || '';
+      if (text) {
+        textEl.value = text;
+        autoGrow();
+        textEl.focus();
+      }
+      showToast(text ? 'Текст повернуто в поле — надішліть ще раз' : 'Прикріпіть файл і надішліть ще раз', 'error');
     }
   });
-  lightbox.addEventListener('click', function () { lightbox.style.display = 'none'; lightbox.querySelector('img').src = ''; });
+  lightbox.addEventListener('click', function () {
+    lightbox.classList.remove('show');
+    setTimeout(function () { lightbox.querySelector('img').src = ''; }, 200);
+  });
 
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) { pollList(); if (S.activeId) fetchThread(false); }
