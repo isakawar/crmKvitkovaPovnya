@@ -129,6 +129,47 @@ def test_register_webhook_subscribes_waba(app, monkeypatch):
     assert calls['url'].endswith('/WABA_1/subscribed_apps')
 
 
-def test_send_media_not_supported():
-    res = adapter.send_media(_channel(), 'U', '/tmp/x.jpg')
+def _jpeg_file(tmp_path, name='photo.jpg', color='red'):
+    from PIL import Image
+    path = tmp_path / name
+    Image.new('RGB', (4, 4), color=color).save(path, format='JPEG')
+    return str(path)
+
+
+def test_send_media_requires_connected_channel(tmp_path):
+    res = adapter.send_media(_channel(), 'U', _jpeg_file(tmp_path))
     assert res.ok is False
+    assert 'перепідключіть' in res.error
+
+
+def test_send_media_uploads_then_sends(app, monkeypatch, tmp_path):
+    ch = _connected_channel(app)
+    calls = []
+
+    def fake_post(url, headers=None, data=None, files=None, json=None, timeout=None):
+        calls.append({'url': url, 'headers': headers, 'data': data, 'files': files, 'json': json})
+        if url.endswith('/media'):
+            return SimpleNamespace(status_code=200, json=lambda: {'id': 'MEDIA_OUT_1'})
+        return SimpleNamespace(status_code=200, json=lambda: {'messages': [{'id': 'wamid.out.2'}]})
+
+    monkeypatch.setattr('app.services.messaging.whatsapp.requests.post', fake_post)
+    res = adapter.send_media(ch, '380991112233', _jpeg_file(tmp_path), caption='ось букет')
+    assert res.ok is True
+    assert res.external_message_id == 'wamid.out.2'
+    assert len(calls) == 2
+    assert calls[0]['url'].endswith('/PHONE_ID_1/media')
+    assert calls[0]['headers'] == {'Authorization': 'Bearer wa-token-123'}
+    assert calls[1]['json'] == {'messaging_product': 'whatsapp', 'to': '380991112233',
+                                 'type': 'image', 'image': {'id': 'MEDIA_OUT_1', 'caption': 'ось букет'}}
+
+
+def test_send_media_fails_when_upload_errors(app, monkeypatch, tmp_path):
+    ch = _connected_channel(app)
+
+    def fake_post(url, headers=None, data=None, files=None, json=None, timeout=None):
+        return SimpleNamespace(status_code=400, json=lambda: {'error': {'message': 'bad token'}})
+
+    monkeypatch.setattr('app.services.messaging.whatsapp.requests.post', fake_post)
+    res = adapter.send_media(ch, 'U', _jpeg_file(tmp_path))
+    assert res.ok is False
+    assert 'bad token' in res.error

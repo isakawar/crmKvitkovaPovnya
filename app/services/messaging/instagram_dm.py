@@ -12,20 +12,22 @@ The channel's `webhook_secret` doubles as the `hub.verify_token` for the
 GET subscription handshake.
 
 Constraints (Meta): replies are only deliverable within 24h of the user's
-last message (standard messaging window). Outbound attachments require a
-publicly reachable URL, so v1 sends text only.
+last message (standard messaging window). Outbound photos go through the
+Attachment Upload API (POST /{page_id}/message_attachments, is_reusable) —
+no public URL needed, we upload the binary directly with the Page token.
 """
 from __future__ import annotations
 
 import hashlib
 import hmac
+import json
 import os
 import uuid
 
 import requests
 from flask import current_app
 
-from app.services.messaging import session_crypto
+from app.services.messaging import media_convert, session_crypto
 from app.services.messaging.adapter import InboundEvent, SentResult
 
 _TIMEOUT = 30
@@ -151,10 +153,58 @@ class InstagramDMAdapter:
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
                    caption: str | None = None) -> SentResult:
-        return SentResult(
-            ok=False,
-            error='Instagram: надсилання фото поки не підтримується (потрібен публічний URL)',
-        )
+        try:
+            token = _page_token(channel)
+        except RuntimeError as exc:
+            return SentResult(ok=False, error=str(exc))
+        if not channel.fb_page_id:
+            return SentResult(ok=False, error='Канал не підключено через Facebook — перепідключіть у /settings/messaging')
+        try:
+            jpeg = media_convert.to_jpeg_bytes(file_path)
+        except Exception as exc:  # noqa: BLE001
+            return SentResult(ok=False, error=f'Не вдалося обробити зображення: {exc}')
+        try:
+            # Attachment Upload API: reusable, no public URL needed — the
+            # binary goes straight to Meta over our own Page-token request.
+            up = requests.post(
+                f'{_graph_root()}/{channel.fb_page_id}/message_attachments',
+                params={'access_token': token},
+                data={'message': json.dumps(
+                    {'attachment': {'type': 'image', 'payload': {'is_reusable': True}}})},
+                files={'filedata': ('image.jpg', jpeg, 'image/jpeg')},
+                timeout=_TIMEOUT,
+            )
+            up_body = up.json()
+            attachment_id = up_body.get('attachment_id')
+            if up.status_code >= 400 or up_body.get('error') or not attachment_id:
+                err = (up_body.get('error') or {}).get('message') or f'HTTP {up.status_code}'
+                return SentResult(ok=False, error=f'Завантаження медіа: {err}')
+
+            r = requests.post(
+                f'{_graph_root()}/{channel.external_id}/messages',
+                params={'access_token': token},
+                json={'recipient': {'id': external_chat_id},
+                      'message': {'attachment': {'type': 'image',
+                                                 'payload': {'attachment_id': attachment_id}}}},
+                timeout=_TIMEOUT,
+            )
+            body = r.json()
+            if r.status_code >= 400 or body.get('error'):
+                err = (body.get('error') or {}).get('message') or f'HTTP {r.status_code}'
+                return SentResult(ok=False, error=err)
+            result = SentResult(ok=True, external_message_id=str(body.get('message_id') or ''))
+        except Exception as exc:  # noqa: BLE001
+            return SentResult(ok=False, error=str(exc))
+
+        # Instagram/Messenger attachment messages can't carry inline caption
+        # text the way Telegram/WhatsApp do — best-effort follow-up text
+        # message so a caption typed alongside the photo still reaches the
+        # contact. The photo already sent; a failure here doesn't flip the
+        # reply to failed (the CRM message row's own `text` still shows the
+        # caption regardless).
+        if caption:
+            self.send_text(channel, external_chat_id, caption)
+        return result
 
     # --- config ---------------------------------------------------------
     def register_webhook(self, channel, webhook_url: str) -> None:

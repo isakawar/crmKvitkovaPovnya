@@ -117,8 +117,8 @@ Use `expense_type_id` FK — not the legacy `expense_type` string column.
 Telegram (both variants), Viber, Instagram and WhatsApp; the Facebook-based connect flows
 (Instagram OAuth, WhatsApp Embedded Signup) are untested end-to-end with a real Meta App — waiting
 on the client to create it (see `tasks/2026-09-03_omnichannel-inbox-telegram.md`). No automated
-tests for the Viber/Telegram-personal adapters yet (Telegram Business + Instagram + WhatsApp +
-Facebook OAuth + `inbox_service` are covered, 49 tests).
+tests for the Telegram-personal adapter yet (Telegram Business, Viber, Instagram, WhatsApp,
+Facebook OAuth, `inbox_service` and `media_cleanup` are covered, 65 tests).
 
 In-CRM chat where dialogs from corporate accounts land and managers reply. Page `/inbox`
 (blueprint `app/blueprints/inbox/`). Config in `/settings/messaging`.
@@ -146,8 +146,11 @@ In-CRM chat where dialogs from corporate accounts land and managers reply. Page 
     handshake; `INBOX_INSTAGRAM_APP_SECRET` (env, App-level) verifies `X-Hub-Signature-256`.
     `register_webhook()` now does real work — `POST /{page_id}/subscribed_apps` — but the App's
     webhook **callback URL itself** is still a one-time manual paste in Meta App Dashboard by
-    whoever owns the Meta App (not per-business-owner). **Outbound photo not implemented** —
-    `send_media` returns an error (needs a public media URL); text-only for now.
+    whoever owns the Meta App (not per-business-owner). Outbound photos go through the
+    Attachment Upload API (`POST /{page_id}/message_attachments`, `is_reusable`) — no public URL
+    needed, uploaded straight from the CRM with the Page token; re-encoded to JPEG first via
+    `media_convert.to_jpeg_bytes` (Meta doesn't accept heic). Captions ride as a best-effort
+    follow-up text message — Instagram/Messenger attachment messages can't carry inline captions.
   - `viber` → `viber.py` — Viber Bot API, token `INBOX_VIBER_BOT_TOKEN`.
   - `whatsapp` → `whatsapp.py` — connected via **Facebook Embedded Signup** (same Meta App as
     Instagram, JS-SDK popup instead of a redirect — see `messaging.html`'s `launchWhatsAppSignup`,
@@ -159,7 +162,9 @@ In-CRM chat where dialogs from corporate accounts land and managers reply. Page 
     /{phone_number_id}/register` with a throwaway PIN — one-time, only needed again for
     re-registration), and creates the channel (`channel.external_id` = phone_number_id,
     `channel.wa_waba_id`, `channel.wa_access_token_encrypted`). 24h customer-service window
-    applies (no template-message support); outbound media not implemented (text-only, v1).
+    applies (no template-message support). Outbound photos upload via `POST
+    /{phone_number_id}/media` (re-encoded to JPEG via `media_convert.to_jpeg_bytes`) then send by
+    `media_id` through `POST /{phone_number_id}/messages` (`image.id`, native `image.caption`).
 - **Domain logic**: `inbox_service.py` (no Flask) — `ingest_event`, `send_reply`,
   `list_conversations`, `total_unread`, `ensure_media_downloaded` (lazy — webhook never downloads
   media, only stores `tg_file_id`, to avoid Telegram retry storms). `media_cleanup.py` — daily

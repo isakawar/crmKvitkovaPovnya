@@ -87,11 +87,6 @@ def test_parse_ignores_non_instagram_object():
     assert adapter.parse_events({'object': 'page', 'entry': []}) == []
 
 
-def test_send_media_not_supported():
-    res = adapter.send_media(_channel(), 'U', '/tmp/x.jpg')
-    assert res.ok is False
-
-
 def test_send_text_requires_connected_channel():
     res = adapter.send_text(_channel(), 'U', 'hi')
     assert res.ok is False
@@ -144,3 +139,67 @@ def test_register_webhook_raises_on_error(app, monkeypatch):
         assert False, 'expected RuntimeError'
     except RuntimeError as exc:
         assert 'boom' in str(exc)
+
+
+def _jpeg_file(tmp_path, name='photo.jpg', color='green'):
+    from PIL import Image
+    path = tmp_path / name
+    Image.new('RGB', (4, 4), color=color).save(path, format='JPEG')
+    return str(path)
+
+
+def test_send_media_requires_connected_channel(tmp_path):
+    res = adapter.send_media(_channel(), 'U', _jpeg_file(tmp_path))
+    assert res.ok is False
+    assert 'перепідключіть' in res.error
+
+
+def test_send_media_uploads_then_sends(app, monkeypatch, tmp_path):
+    ch = _connected_channel(app)
+    calls = []
+
+    def fake_post(url, params=None, data=None, files=None, json=None, timeout=None):
+        calls.append({'url': url, 'params': params, 'data': data, 'files': files, 'json': json})
+        if url.endswith('/message_attachments'):
+            return SimpleNamespace(status_code=200, json=lambda: {'attachment_id': 'ATT_1'})
+        return SimpleNamespace(status_code=200, json=lambda: {'message_id': 'mid_out_1'})
+
+    monkeypatch.setattr('app.services.messaging.instagram_dm.requests.post', fake_post)
+    res = adapter.send_media(ch, 'IGSID_9', _jpeg_file(tmp_path))
+    assert res.ok is True
+    assert res.external_message_id == 'mid_out_1'
+    assert len(calls) == 2
+    assert calls[0]['url'].endswith('/PAGE_1/message_attachments')
+    assert calls[0]['params']['access_token'] == 'page-token-123'
+    assert calls[1]['json'] == {'recipient': {'id': 'IGSID_9'},
+                                'message': {'attachment': {'type': 'image',
+                                                           'payload': {'attachment_id': 'ATT_1'}}}}
+
+
+def test_send_media_sends_caption_as_followup_text(app, monkeypatch, tmp_path):
+    ch = _connected_channel(app)
+    calls = []
+
+    def fake_post(url, params=None, data=None, files=None, json=None, timeout=None):
+        calls.append({'url': url, 'json': json})
+        if url.endswith('/message_attachments'):
+            return SimpleNamespace(status_code=200, json=lambda: {'attachment_id': 'ATT_1'})
+        return SimpleNamespace(status_code=200, json=lambda: {'message_id': 'mid_out_1'})
+
+    monkeypatch.setattr('app.services.messaging.instagram_dm.requests.post', fake_post)
+    res = adapter.send_media(ch, 'IGSID_9', _jpeg_file(tmp_path), caption='ось фото')
+    assert res.ok is True
+    assert len(calls) == 3  # upload, media message, follow-up caption text
+    assert calls[2]['json'] == {'recipient': {'id': 'IGSID_9'}, 'message': {'text': 'ось фото'}}
+
+
+def test_send_media_fails_when_upload_errors(app, monkeypatch, tmp_path):
+    ch = _connected_channel(app)
+
+    def fake_post(url, params=None, data=None, files=None, json=None, timeout=None):
+        return SimpleNamespace(status_code=400, json=lambda: {'error': {'message': 'bad token'}})
+
+    monkeypatch.setattr('app.services.messaging.instagram_dm.requests.post', fake_post)
+    res = adapter.send_media(ch, 'U', _jpeg_file(tmp_path))
+    assert res.ok is False
+    assert 'bad token' in res.error

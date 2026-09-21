@@ -25,7 +25,7 @@ import uuid
 import requests
 from flask import current_app
 
-from app.services.messaging import session_crypto
+from app.services.messaging import media_convert, session_crypto
 from app.services.messaging.adapter import InboundEvent, SentResult
 
 _TIMEOUT = 30
@@ -150,10 +150,46 @@ class WhatsAppAdapter:
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
                    caption: str | None = None) -> SentResult:
-        return SentResult(
-            ok=False,
-            error='WhatsApp: надсилання файлів поки не підтримується',
-        )
+        try:
+            headers = _auth_headers(channel)
+        except RuntimeError as exc:
+            return SentResult(ok=False, error=str(exc))
+        try:
+            jpeg = media_convert.to_jpeg_bytes(file_path)
+        except Exception as exc:  # noqa: BLE001
+            return SentResult(ok=False, error=f'Не вдалося обробити зображення: {exc}')
+        try:
+            up = requests.post(
+                f'{_graph_root()}/{channel.external_id}/media',
+                headers=headers,
+                data={'messaging_product': 'whatsapp', 'type': 'image/jpeg'},
+                files={'file': ('image.jpg', jpeg, 'image/jpeg')},
+                timeout=_TIMEOUT,
+            )
+            up_body = up.json()
+            media_id = up_body.get('id')
+            if up.status_code >= 400 or up_body.get('error') or not media_id:
+                err = (up_body.get('error') or {}).get('message') or f'HTTP {up.status_code}'
+                return SentResult(ok=False, error=f'Завантаження медіа: {err}')
+
+            image_payload = {'id': media_id}
+            if caption:
+                image_payload['caption'] = caption
+            r = requests.post(
+                f'{_graph_root()}/{channel.external_id}/messages',
+                headers=headers,
+                json={'messaging_product': 'whatsapp', 'to': external_chat_id,
+                      'type': 'image', 'image': image_payload},
+                timeout=_TIMEOUT,
+            )
+            body = r.json()
+            if r.status_code >= 400 or body.get('error'):
+                err = (body.get('error') or {}).get('message') or f'HTTP {r.status_code}'
+                return SentResult(ok=False, error=err)
+            msg_id = ((body.get('messages') or [{}])[0]).get('id', '')
+            return SentResult(ok=True, external_message_id=msg_id)
+        except Exception as exc:  # noqa: BLE001
+            return SentResult(ok=False, error=str(exc))
 
     # --- config ---------------------------------------------------------
     def register_webhook(self, channel, webhook_url: str) -> None:
