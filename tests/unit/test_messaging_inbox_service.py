@@ -224,3 +224,44 @@ def test_webhook_route_ingests_with_valid_secret(app, session):
     assert resp.status_code == 200
     assert Message.query.count() == 1
     assert Conversation.query.one().last_message_preview == 'hello from webhook'
+
+
+def _conv_with_messages(session, ch, n, texts=None):
+    conv = Conversation(channel_id=ch.id, external_chat_id='555')
+    session.add(conv)
+    session.commit()
+    for i in range(n):
+        session.add(Message(conversation_id=conv.id, direction='in',
+                            text=(texts[i] if texts else f'msg{i}')))
+    session.commit()
+    return conv
+
+
+def test_get_thread_initial_page_is_chronological_not_reversed(session):
+    # Regression: conversation.messages is a dynamic relationship with its
+    # own baked-in `ORDER BY id ASC`; get_thread used to append `.desc()`
+    # without resetting it first, which SQLAlchemy silently ignores (the
+    # unique `id` column means the first ORDER BY clause wins outright) —
+    # so it returned the OLDEST page, reversed, instead of the newest page
+    # in chronological order.
+    ch = _channel(session)
+    conv = _conv_with_messages(session, ch, 5, texts=['a', 'b', 'c', 'd', 'e'])
+    msgs, has_more = inbox_service.get_thread(conv, limit=3)
+    assert [m.text for m in msgs] == ['c', 'd', 'e']  # newest 3, oldest-first
+    assert has_more is True
+
+
+def test_get_thread_no_pagination_needed_when_under_limit(session):
+    ch = _channel(session)
+    conv = _conv_with_messages(session, ch, 3, texts=['a', 'b', 'c'])
+    msgs, has_more = inbox_service.get_thread(conv, limit=50)
+    assert [m.text for m in msgs] == ['a', 'b', 'c']
+    assert has_more is False
+
+
+def test_get_thread_before_id_page_is_chronological(session):
+    ch = _channel(session)
+    conv = _conv_with_messages(session, ch, 5, texts=['a', 'b', 'c', 'd', 'e'])
+    first_id = Message.query.filter_by(text='d').one().id
+    msgs, has_more = inbox_service.get_thread(conv, before_id=first_id, limit=2)
+    assert [m.text for m in msgs] == ['b', 'c']

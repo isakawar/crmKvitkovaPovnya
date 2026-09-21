@@ -275,7 +275,12 @@ def get_thread(conversation: Conversation, after_id: int | None = None,
     q = conversation.messages
     if before_id:
         q = q.filter(Message.id < before_id)
-    msgs = q.order_by(Message.id.desc()).limit(limit).all()
+    # `conversation.messages` is a dynamic relationship with its own baked-in
+    # `ORDER BY id ASC` (see Conversation.messages) — appending `.desc()`
+    # without resetting first produces `ORDER BY id ASC, id DESC`, and since
+    # `id` is unique the first clause wins outright, silently ignoring the
+    # `.desc()` and returning the OLDEST `limit` rows instead of the newest.
+    msgs = q.order_by(None).order_by(Message.id.desc()).limit(limit).all()
     msgs.reverse()
     return msgs, len(msgs) == limit
 
