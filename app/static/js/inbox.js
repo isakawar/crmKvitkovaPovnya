@@ -73,6 +73,22 @@
   }
 
   // ---- conversation list -------------------------------------------
+  // Patches existing .conv nodes in place (keyed by data-id) instead of
+  // tearing down and rebuilding the whole list on every poll/SSE tick —
+  // avoids the flicker and re-bound-listener churn of a full innerHTML swap.
+  function convBody(c) {
+    return '<div class="conv__avatar" style="background:' + avaColor(c.name) + '">' + esc(initials(c.name)) +
+      '<span class="conv__ch ' + esc(c.channel_type) + '"><i class="bi bi-' +
+      chIcon(c.channel_type) + '"></i></span></div>' +
+      '<div class="conv__body">' +
+      '<div class="conv__top"><span class="conv__name">' + esc(c.name) + '</span>' +
+      '<span class="conv__time">' + relTime(c.last_message_at) + '</span></div>' +
+      '<div class="conv__preview">' + (c.direction === 'out' ? '<i class="bi bi-reply"></i> ' : '') +
+      esc(c.preview) + (c.unread ? '<span class="conv__badge">' + c.unread + '</span>' : '') + '</div>' +
+      (c.assigned_user_id ? '<div class="conv__assigned"><i class="bi bi-person-fill"></i>' +
+        (c.assigned_user_id === ME ? 'ви' : 'інший менеджер') + '</div>' : '') +
+      '</div>';
+  }
   function renderList() {
     var items = S.convs.filter(function (c) {
       return !S.search || (c.name || '').toLowerCase().indexOf(S.search) !== -1
@@ -82,23 +98,26 @@
       listEl.innerHTML = '<p style="padding:1.2rem;color:#a8a29e;font-size:0.85rem;text-align:center;">Порожньо</p>';
       return;
     }
-    listEl.innerHTML = items.map(function (c) {
-      return '<div class="conv' + (c.id === S.activeId ? ' active' : '') + (c.unread ? ' unread' : '') +
-        '" data-id="' + c.id + '">' +
-        '<div class="conv__avatar" style="background:' + avaColor(c.name) + '">' + esc(initials(c.name)) +
-        '<span class="conv__ch ' + esc(c.channel_type) + '"><i class="bi bi-' +
-        chIcon(c.channel_type) + '"></i></span></div>' +
-        '<div class="conv__body">' +
-        '<div class="conv__top"><span class="conv__name">' + esc(c.name) + '</span>' +
-        '<span class="conv__time">' + relTime(c.last_message_at) + '</span></div>' +
-        '<div class="conv__preview">' + (c.direction === 'out' ? '<i class="bi bi-reply"></i> ' : '') +
-        esc(c.preview) + (c.unread ? '<span class="conv__badge">' + c.unread + '</span>' : '') + '</div>' +
-        (c.assigned_user_id ? '<div class="conv__assigned"><i class="bi bi-person-fill"></i>' +
-          (c.assigned_user_id === ME ? 'ви' : 'інший менеджер') + '</div>' : '') +
-        '</div></div>';
-    }).join('');
-    [].forEach.call(listEl.querySelectorAll('.conv'), function (el) {
-      el.addEventListener('click', function () { openConv(+el.dataset.id); });
+    var existing = {};
+    [].forEach.call(listEl.querySelectorAll('.conv'), function (el) { existing[el.dataset.id] = el; });
+    var seen = {}, prev = null;
+    items.forEach(function (c) {
+      var key = String(c.id);
+      seen[key] = true;
+      var el = existing[key];
+      if (!el) {
+        el = document.createElement('div');
+        el.dataset.id = c.id;
+        el.addEventListener('click', function () { openConv(+el.dataset.id); });
+      }
+      el.className = 'conv' + (c.id === S.activeId ? ' active' : '') + (c.unread ? ' unread' : '');
+      el.innerHTML = convBody(c);
+      var wantAfter = prev ? prev.nextSibling : listEl.firstChild;
+      if (wantAfter !== el) listEl.insertBefore(el, wantAfter);
+      prev = el;
+    });
+    Object.keys(existing).forEach(function (key) {
+      if (!seen[key]) existing[key].remove();
     });
   }
 
@@ -128,17 +147,21 @@
   // ---- thread -----------------------------------------------------
   function msgNode(m) {
     var wrapEl = document.createElement('div');
-    wrapEl.className = 'msg ' + m.direction + (m.status === 'failed' ? ' failed' : '');
+    wrapEl.className = 'msg ' + m.direction + (m.status === 'failed' ? ' failed' : '') +
+      (m.status === 'pending' ? ' pending' : '');
+    if (m.id != null) wrapEl.dataset.mid = m.id;
     var inner = '<div class="msg__bubble">';
     if (m.text) inner += esc(m.text);
     (m.media || []).forEach(function (md) {
-      if (md.expired) inner += '<div class="msg__file" style="color:#a8a29e"><i class="bi bi-slash-circle"></i> Вкладення видалено (14 днів)</div>';
+      if (md.type === 'uploading') inner += '<div class="msg__file"><i class="bi bi-arrow-repeat"></i> ' + esc(md.filename || 'файл') + '</div>';
+      else if (md.expired) inner += '<div class="msg__file" style="color:#a8a29e"><i class="bi bi-slash-circle"></i> Вкладення видалено (14 днів)</div>';
       else if (md.type === 'photo') inner += '<img class="msg__img" data-full="/inbox/media/' + m.id + '/' + md.idx + '" src="/inbox/media/' + m.id + '/' + md.idx + '" alt="">';
       else inner += '<a class="msg__file" href="/inbox/media/' + m.id + '/' + md.idx + '" target="_blank"><i class="bi bi-paperclip"></i> ' + esc(md.type) + '</a>';
     });
     inner += '</div>';
     var tick = m.direction === 'out'
       ? (m.status === 'failed' ? '<i class="bi bi-exclamation-circle" style="color:#ef4444"></i>'
+        : m.status === 'pending' ? '<i class="bi bi-clock" style="opacity:.5"></i>'
         : '<i class="bi bi-check2"></i>') : '';
     inner += '<div class="msg__meta">' + chBadge(m.channel_type) + ' ' +
       new Date(m.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
@@ -150,6 +173,14 @@
   function appendMsgs(list) {
     var atBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
     list.forEach(function (m) {
+      // A message can reach us twice — once via the SSE-triggered refetch,
+      // once via the reply request's own response — whichever lands first
+      // wins, the other is a cursor-bookkeeping no-op.
+      if (m.id != null && msgsEl.querySelector('[data-mid="' + m.id + '"]')) {
+        if (m.id > S.lastMsgId) S.lastMsgId = m.id;
+        if (!S.firstMsgId || m.id < S.firstMsgId) S.firstMsgId = m.id;
+        return;
+      }
       var dk = dateKey(m.created_at);
       if (dk !== S.lastDateKey) {
         var sep = document.createElement('div'); sep.className = 'ib-date'; sep.textContent = dk;
@@ -160,6 +191,31 @@
       if (!S.firstMsgId || m.id < S.firstMsgId) { S.firstMsgId = m.id; S.firstDateKey = dk; }
     });
     if (atBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  // ---- optimistic outbound bubble ----------------------------------
+  function appendOptimistic(m) {
+    var atBottom = msgsEl.scrollHeight - msgsEl.scrollTop - msgsEl.clientHeight < 80;
+    var dk = dateKey(m.created_at);
+    if (dk !== S.lastDateKey) {
+      var sep = document.createElement('div'); sep.className = 'ib-date'; sep.textContent = dk;
+      msgsEl.appendChild(sep); S.lastDateKey = dk;
+    }
+    var node = msgNode(m);
+    node.dataset.tid = m.tid;
+    msgsEl.appendChild(node);
+    if (atBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+  function removeOptimistic(tid) {
+    var node = msgsEl.querySelector('[data-tid="' + tid + '"]');
+    if (node) node.remove();
+  }
+  function markOptimisticFailed(tid, errText) {
+    var node = msgsEl.querySelector('[data-tid="' + tid + '"]');
+    if (!node) return;
+    node.className = 'msg out failed';
+    var meta = node.querySelector('.msg__meta');
+    if (meta) meta.innerHTML += ' <span style="color:#ef4444">' + esc(errText) + '</span>';
   }
 
   // Older messages, prepended on scroll-to-top (see loadOlderMessages).
@@ -267,23 +323,40 @@
     e.preventDefault();
     if (!S.activeId) return;
     var txt = textEl.value.trim();
-    if (!txt && !fileEl.files[0]) return;
+    var file = fileEl.files[0];
+    if (!txt && !file) return;
     var fd = new FormData();
     fd.append('text', textEl.value);
-    if (fileEl.files[0]) fd.append('file', fileEl.files[0]);
+    if (file) fd.append('file', file);
+
+    // Show the bubble immediately (Telegram-Desktop-style instant echo)
+    // instead of waiting for the round trip; reconciled or marked failed
+    // once the real response (or the SSE ping for it) comes back.
+    var tid = 'tmp' + Date.now() + Math.random().toString(36).slice(2);
+    appendOptimistic({
+      tid: tid, direction: 'out', status: 'pending',
+      text: txt || null,
+      media: file ? [{ type: 'uploading', filename: file.name }] : [],
+      channel_type: S.activeConv ? S.activeConv.channel_type : '',
+      created_at: new Date().toISOString(),
+    });
+
     sendBtn.disabled = true;
+    textEl.value = ''; autoGrow();
+    fileEl.value = ''; filePrev.style.display = 'none';
+
     fetch('/inbox/conversations/' + S.activeId + '/reply', { method: 'POST', body: fd })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        removeOptimistic(tid);
         if (data.message) appendMsgs([data.message]);
         if (!data.ok) showToast(data.error || 'Не вдалося надіслати', 'error');
-        else {
-          textEl.value = ''; autoGrow();
-          fileEl.value = ''; filePrev.style.display = 'none';
-          pollList();
-        }
+        else pollList();
       })
-      .catch(function () { showToast('Помилка мережі', 'error'); })
+      .catch(function () {
+        markOptimisticFailed(tid, 'Помилка мережі');
+        showToast('Помилка мережі', 'error');
+      })
       .finally(function () { sendBtn.disabled = false; });
   });
 
@@ -362,6 +435,30 @@
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) { pollList(); if (S.activeId) fetchThread(false); }
   });
+
+  // ---- live push (SSE) ------------------------------------------
+  // Carries no payload beyond channel/conversation ids — just tells us
+  // *something* changed so we refetch instantly instead of waiting up to
+  // 10s/5s for the next poll. The polling loops above stay as-is and keep
+  // things correct even if this connection is unavailable or drops.
+  var sseListTimer = null, sseThreadTimer = null;
+  function connectStream() {
+    if (!window.EventSource) return;
+    var es = new EventSource('/inbox/stream');
+    es.onmessage = function (e) {
+      if (!e.data) return;
+      var data;
+      try { data = JSON.parse(e.data); } catch (err) { return; }
+      clearTimeout(sseListTimer);
+      sseListTimer = setTimeout(pollList, 200);
+      if (data.conversation_id && data.conversation_id === S.activeId) {
+        clearTimeout(sseThreadTimer);
+        sseThreadTimer = setTimeout(function () { fetchThread(false); }, 200);
+      }
+    };
+    // EventSource retries on its own; nothing to do on error besides let it.
+  }
+  connectStream();
 
   pollList();
 })();

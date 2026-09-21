@@ -12,6 +12,9 @@ class Message(db.Model):
     Media files are downloaded lazily (see inbox_service.ensure_media_downloaded).
     """
     __tablename__ = 'messaging_message'
+    __table_args__ = (
+        db.Index('ix_messaging_message_conv_extmsg', 'conversation_id', 'external_message_id'),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(

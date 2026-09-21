@@ -6,6 +6,7 @@ Flask-Migrate
 pytest
 python-dotenv
 gunicorn
+gevent
 python-telegram-bot==20.7
 APScheduler==3.10.4
 Flask-Login==0.6.3

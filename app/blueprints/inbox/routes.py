@@ -1,8 +1,10 @@
+import json
 import os
 import uuid
 
-from flask import (abort, current_app, jsonify, render_template, request,
-                   send_from_directory)
+import redis as redis_lib
+from flask import (Response, abort, current_app, jsonify, render_template,
+                   request, send_from_directory, stream_with_context)
 from flask_login import current_user, login_required
 
 from app.blueprints.inbox import inbox_bp
@@ -11,6 +13,7 @@ from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
 from app.services.messaging import inbox_service
 from app.services.messaging.adapter import get_adapter
+from app.services.messaging.events import CHANNEL as INBOX_EVENTS_CHANNEL
 
 
 def _require_manager():
@@ -48,6 +51,43 @@ def conversations():
         'conversations': [inbox_service.serialize_conversation(c) for c in convs],
         'total_unread': inbox_service.total_unread(current_user, channel_ids=channel_ids),
     })
+
+
+@inbox_bp.route('/inbox/stream')
+@login_required
+def stream():
+    """SSE feed: pushes a tiny 'a message changed' ping so the UI can refetch
+    instantly instead of waiting for its next poll. Carries no message
+    content itself — the client re-fetches via the existing JSON endpoints,
+    which keeps this stream generic across every channel/event kind and
+    re-checks access on every payload it emits.
+    """
+    _require_manager()
+    allowed = set(inbox_service.accessible_channel_ids(current_user._get_current_object()))
+    redis_url = current_app.config['REDIS_URL']
+
+    def gen():
+        r = redis_lib.from_url(redis_url)
+        pubsub = r.pubsub()
+        pubsub.subscribe(INBOX_EVENTS_CHANNEL)
+        try:
+            yield ': connected\n\n'
+            while True:
+                msg = pubsub.get_message(timeout=15)
+                if msg is None or msg.get('type') != 'message':
+                    yield ': ping\n\n'
+                    continue
+                try:
+                    data = json.loads(msg['data'])
+                except (TypeError, ValueError):
+                    continue
+                if data.get('channel_id') in allowed:
+                    yield 'data: ' + json.dumps(data) + '\n\n'
+        finally:
+            pubsub.close()
+
+    return Response(stream_with_context(gen()), mimetype='text/event-stream',
+                    headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'})
 
 
 @inbox_bp.route('/inbox/conversations/new', methods=['POST'])
@@ -137,7 +177,11 @@ def media(message_id, idx):
     stored = inbox_service.ensure_media_downloaded(msg, idx)
     if not stored:
         abort(404)
-    return send_from_directory(current_app.config['INBOX_MEDIA_FOLDER'], stored)
+    # Stored under a random uuid filename and never overwritten in place, so
+    # it's safe to let the browser cache it hard and skip refetching on
+    # every scroll/reopen — only revalidated via ETag when the tab is fresh.
+    return send_from_directory(current_app.config['INBOX_MEDIA_FOLDER'], stored,
+                               max_age=2592000, conditional=True)
 
 
 # --- inbound webhooks (public) -------------------------------------

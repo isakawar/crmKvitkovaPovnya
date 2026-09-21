@@ -6,7 +6,7 @@ inbound webhook can always return 200 fast (Telegram retries on timeout).
 from __future__ import annotations
 
 import logging
-import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 from sqlalchemy.orm.attributes import flag_modified
@@ -16,12 +16,17 @@ from app.models.conversation import Conversation
 from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
 from app.models.messaging_channel_access import MessagingChannelAccess
+from app.services.messaging import events
 from app.services.messaging.adapter import get_adapter
 
 log = logging.getLogger(__name__)
 
 _ADMIN_TYPES = ('admin',)
 _MANAGER_TYPES = ('admin', 'manager')
+
+# Bounds concurrent background media downloads (webhook bursts, backfills) so
+# a flood of inbound attachments can't spawn unbounded OS threads.
+_MEDIA_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix='inbox-media')
 
 
 # --- access -------------------------------------------------------------
@@ -66,6 +71,7 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
                      Message.external_message_id.in_(event.deleted_message_ids))
              .update({'status': 'deleted'}, synchronize_session=False))
             db.session.commit()
+            events.publish('message', channel.id, conv.id)
             return None
 
         if event.kind == 'edited':
@@ -74,6 +80,7 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
             if msg:
                 msg.text = event.text
                 db.session.commit()
+                events.publish('message', channel.id, conv.id)
             return msg
 
         # kind == 'message'
@@ -111,6 +118,7 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         conv.last_message_direction = 'in'
         conv.unread_count = (conv.unread_count or 0) + 1
         db.session.commit()
+        events.publish('message', channel.id, conv.id)
         return msg
     except Exception:  # noqa: BLE001
         db.session.rollback()
@@ -195,7 +203,7 @@ def prefetch_message_media(app, message_id: int) -> None:
                 return
             for i in range(len(msg.media or [])):
                 ensure_media_downloaded(msg, i)
-    threading.Thread(target=_run, daemon=True).start()
+    _MEDIA_POOL.submit(_run)
 
 
 # --- outbound -------------------------------------------------------
@@ -230,6 +238,7 @@ def send_reply(conversation: Conversation, user, text: str | None,
         conversation.last_message_direction = 'out'
         conversation.unread_count = 0
     db.session.commit()
+    events.publish('message', conversation.channel_id, conversation.id)
     return msg
 
 
