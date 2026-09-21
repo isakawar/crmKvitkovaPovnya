@@ -2,65 +2,65 @@ name: Deploy to Dev
 
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Branch or tag to deploy to the staging VPS'
+        required: false
+        default: 'feature/messaging-service'
 
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Get latest tag
-        id: version
-        run: |
-          git fetch --tags
-          LATEST_TAG=$(git tag --sort=-v:refname | head -n 1)
-          echo "tag=${LATEST_TAG}" >> $GITHUB_OUTPUT
-
       - name: Deploy to Dev via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEV_SERVER_HOST }}
           username: ${{ secrets.DEV_SERVER_USER }}
           key: ${{ secrets.DEV_SERVER_SSH_KEY }}
+          envs: DEPLOY_REF
           script: |
             set -e
 
-            echo "🚀 Starting DEV deploy..."
+            echo "🚀 Starting DEV deploy of ${DEPLOY_REF}..."
 
-            cd /home/bilobrov_vladyslav/apps/crmKvitkovaPovnya
+            cd /opt/crm
 
-            echo "📥 Pulling latest code..."
-            git pull
+            echo "📥 Fetching and checking out ${DEPLOY_REF}..."
+            git fetch origin
+            git checkout "$DEPLOY_REF"
+            git pull origin "$DEPLOY_REF" || true  # no-op for a tag/detached ref
+
+            DEPLOYED_SHA=$(git rev-parse --short HEAD)
 
             echo "🐳 Rebuilding containers..."
             docker compose up -d --build
 
-            echo "⏳ Waiting..."
-            sleep 6
-
-            echo "🩺 Health check..."
-
-            if curl -f http://localhost:8002; then
-              echo "✅ DEV OK"
-            else
-              echo "❌ DEV FAILED"
-              exit 1
-            fi
+            echo "⏳ Waiting for the app to come up..."
+            for i in $(seq 1 15); do
+              if curl -sf http://localhost:8002/auth/login >/dev/null; then
+                echo "✅ DEV OK (${DEPLOY_REF} @ ${DEPLOYED_SHA})"
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "❌ DEV FAILED — health check never passed"
+            docker compose logs --tail=80 web
+            exit 1
+        env:
+          DEPLOY_REF: ${{ github.event.inputs.ref }}
 
       - name: Notify Telegram (dev success)
         if: success()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ secrets.TG_CHAT_ID }} \
-            -d text="🧪 DEV Deploy SUCCESS ${{ steps.version.outputs.tag }} | http://34.162.233.78:8000"
+            -d text="🧪 DEV Deploy SUCCESS — ${{ github.event.inputs.ref }} | http://${{ secrets.DEV_SERVER_HOST }}:8002"
 
       - name: Notify Telegram (dev fail)
         if: failure()
         run: |
           curl -s -X POST https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendMessage \
             -d chat_id=${{ secrets.TG_CHAT_ID }} \
-            -d text="❌ DEV Deploy FAILED | Check GitHub Actions"
+            -d text="❌ DEV Deploy FAILED (${{ github.event.inputs.ref }}) | Check GitHub Actions"
