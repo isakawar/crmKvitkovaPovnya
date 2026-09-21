@@ -62,9 +62,15 @@ done (гілка `refactor/db-integrity-and-billing-fixes`, не змердже�
 
 ## Як тестувати
 
-**Автотести**: `pytest tests/ -q` → 465 passed, 2 xfailed (було 436 passed, 3 xfailed).
+**Автотести**: `pytest tests/ -q` → 497 passed, 2 xfailed (було 436 passed, 3 xfailed).
 Нові файли: `test_billing_reversal.py`, `test_order_lifecycle_integrity.py`,
-`test_data_consistency_fixes.py`.
+`test_data_consistency_fixes.py`, `test_reports_balance.py`, `test_business_rules.py`.
+
+**Міграції**: `./scripts/verify_migrations.sh` — піднімає одноразовий Postgres у
+Docker і проганяє весь ланцюг із нуля. Цим уже спіймано баг: revision id
+`add_referential_integrity_constraints` (37 символів) не вліз у
+`alembic_version.version_num varchar(32)` — міграція виконувала весь DDL і падала
+на записі head, тобто впала б на проді після часткового застосування.
 
 **Вручну, до деплою на прод:**
 1. `flask audit-enum-values` — має бути «Відхилень немає». Якщо ні — CHECK-констрейнти
