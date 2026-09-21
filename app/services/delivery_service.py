@@ -1,4 +1,13 @@
 from app.extensions import db
+from app.constants import (
+    DELIVERY_CANCELLED,
+    DELIVERY_DONE,
+    DELIVERY_PENDING,
+    DELIVERY_ASSIGNED,
+    DELIVERY_TERMINAL_STATUSES,
+    FLORIST_ACTIVE_STATUSES,
+    SIZE_CUSTOM,
+)
 from app.models import Delivery, Courier
 from datetime import datetime, timedelta
 import logging
@@ -118,7 +127,7 @@ def update_delivery(d, data):
     
     # Оновлюємо custom_amount в замовленні якщо розмір "Власний"
     current_size = data.get('size', d.size)
-    if 'custom_amount' in data and current_size == 'Власний':
+    if 'custom_amount' in data and current_size == SIZE_CUSTOM:
         if d.order:
             d.order.custom_amount = int(data['custom_amount']) if data['custom_amount'] else None
             logger.info(f'Оновлено custom_amount в замовленні {d.order.id}: {d.order.custom_amount}')
@@ -131,18 +140,37 @@ def set_delivery_status(d, new_status):
     prev_status = d.status
     d.status = new_status
     d.status_changed_at = datetime.utcnow()
-    # Якщо статус змінюється з 'Розподілено' на 'Доставлено' і є кур'єр
-    if prev_status == 'Розподілено' and new_status == 'Доставлено' and d.courier_id:
+
+    from app.services.billing_service import charge_delivery, reverse_delivery_charge
+
+    was_delivered = prev_status == DELIVERY_DONE
+    now_delivered = new_status == DELIVERY_DONE
+
+    # Лічильник кур'єра має рухатись в обидва боки — інакше помилковий тап у боті
+    # назавжди завищує статистику кур'єра.
+    if not was_delivered and now_delivered and d.courier_id:
         courier = Courier.query.get(d.courier_id)
         if courier:
             courier.deliveries_count = (courier.deliveries_count or 0) + 1
-    # Якщо статус стає 'Доставлено', фіксуємо час доставки і списуємо з балансу клієнта
-    if new_status == 'Доставлено' and not d.delivered_at:
-        d.delivered_at = datetime.utcnow()
-        from app.services.billing_service import charge_delivery
+    elif was_delivered and not now_delivered and d.courier_id:
+        courier = Courier.query.get(d.courier_id)
+        if courier:
+            courier.deliveries_count = max(0, (courier.deliveries_count or 0) - 1)
+
+    # Списання і сторно симетричні: доставку провели — списали, відкотили —
+    # повернули. Без сторно баланс клієнта лишався зміщеним назавжди.
+    if now_delivered:
+        if not d.delivered_at:
+            d.delivered_at = datetime.utcnow()
         charge_delivery(d)
+    elif was_delivered:
+        reverse_delivery_charge(d)
+        # Скидаємо час доставки, щоб повторне проведення її як доставленої
+        # виставило актуальний час, а не старий.
+        d.delivered_at = None
+
     db.session.commit()
-    if new_status in ('Доставлено', 'Скасовано'):
+    if new_status in (DELIVERY_DONE, DELIVERY_CANCELLED):
         try:
             from flask_login import current_user
             from app.services.activity_log_service import log as _log
@@ -174,7 +202,7 @@ def assign_deliveries(assignments):
     # Скидаємо тільки доставки з поточного розподілу
     if all_ids:
         Delivery.query.filter(Delivery.id.in_(all_ids)).update(
-            {'courier_id': None, 'status': 'Очікує'},
+            {'courier_id': None, 'status': DELIVERY_PENDING},
             synchronize_session='fetch',
         )
     db.session.flush()
@@ -189,7 +217,7 @@ def assign_deliveries(assignments):
                 continue
             if d:
                 d.courier_id = int(courier_id)
-                d.status = 'Розподілено'
+                d.status = DELIVERY_ASSIGNED
     db.session.commit()
     return True
 
@@ -211,7 +239,7 @@ def get_overdue_unclosed_deliveries(today, include_today: bool = False, limit: i
         .join(Client, Client.id == Order.client_id)
         .filter(
             date_filter,
-            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+            Delivery.status.notin_(list(DELIVERY_TERMINAL_STATUSES)),
         )
         .order_by(Delivery.delivery_date.asc())
     )
@@ -226,13 +254,10 @@ def get_stuck_deliveries_count(today) -> int:
         Delivery.query
         .filter(
             Delivery.delivery_date <= today,
-            Delivery.status.notin_(['Доставлено', 'Скасовано']),
+            Delivery.status.notin_(list(DELIVERY_TERMINAL_STATUSES)),
         )
         .count()
     )
-
-
-_FLORIST_ACTIVE_STATUSES = ('Затверджено', 'Зібрано', "Передано кур'єру")
 
 
 def get_florist_approved_pending(today, limit: int | None = None):
@@ -245,8 +270,8 @@ def get_florist_approved_pending(today, limit: int | None = None):
         .join(Client, Client.id == Delivery.client_id)
         .filter(
             Delivery.delivery_date == today,
-            Delivery.status != 'Скасовано',
-            Delivery.florist_status.in_(_FLORIST_ACTIVE_STATUSES),
+            Delivery.status != DELIVERY_CANCELLED,
+            Delivery.florist_status.in_(FLORIST_ACTIVE_STATUSES),
         )
         .order_by(Delivery.time_from.asc().nullslast())
     )
@@ -261,8 +286,8 @@ def get_florist_approved_pending_count(today) -> int:
         Delivery.query
         .filter(
             Delivery.delivery_date == today,
-            Delivery.status != 'Скасовано',
-            Delivery.florist_status.in_(_FLORIST_ACTIVE_STATUSES),
+            Delivery.status != DELIVERY_CANCELLED,
+            Delivery.florist_status.in_(FLORIST_ACTIVE_STATUSES),
         )
         .count()
     )
@@ -277,7 +302,7 @@ def assign_courier_to_deliveries(delivery_ids, courier_id):
             d = Delivery.query.get(int(d_id))
             if d:
                 d.courier_id = int(courier_id)
-                d.status = 'Розподілено'
+                d.status = DELIVERY_ASSIGNED
         db.session.commit()
         return True, None
     except Exception as e:

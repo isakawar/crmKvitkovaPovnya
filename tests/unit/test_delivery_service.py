@@ -137,20 +137,29 @@ def test_set_delivery_status_rozpodileno_to_dostavleno_increments_count(session)
     assert courier.deliveries_count == initial_count + 1
 
 
-def test_set_delivery_status_ochikuye_to_dostavleno_does_not_increment(session):
-    """
-    Documented behaviour (SUSPICIOUS #4 / BUG-like):
-    deliveries_count is incremented ONLY on the Розподілено→Доставлено transition.
-    Direct Очікує→Доставлено does NOT increment the counter.
-    This test documents the current behaviour — if the bug is ever fixed,
-    this test should be updated to expect count + 1.
+def test_set_delivery_status_ochikuye_to_dostavleno_increments(session):
+    """Лічильник кур'єра рахує факт доставки, а не конкретний перехід статусів.
+
+    Раніше інкремент спрацьовував лише на Розподілено→Доставлено, тож пряме
+    Очікує→Доставлено (звичайний шлях із телеграм-бота) кур'єру не зараховувалось.
     """
     delivery, courier = _make_delivery_with_courier(session, 'Очікує')
     initial_count = courier.deliveries_count
 
     set_delivery_status(delivery, 'Доставлено')
 
-    # Current (known) behaviour: count is NOT incremented
+    assert courier.deliveries_count == initial_count + 1
+
+
+def test_set_delivery_status_undelivering_decrements_courier_count(session):
+    """Відкат із «Доставлено» знімає й зарахування кур'єру."""
+    delivery, courier = _make_delivery_with_courier(session, 'Розподілено')
+    initial_count = courier.deliveries_count
+
+    set_delivery_status(delivery, 'Доставлено')
+    assert courier.deliveries_count == initial_count + 1
+
+    set_delivery_status(delivery, 'Скасовано')
     assert courier.deliveries_count == initial_count
 
 

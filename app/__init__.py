@@ -436,6 +436,48 @@ def create_app(config_class=DevelopmentConfig):
         click.echo(f"✅ Видалено {result['files_deleted']} файлів "
                    f"({result['messages_touched']} повідомлень позначено).")
 
+    @app.cli.command('audit-enum-values')
+    def audit_enum_values():
+        """Показати фактичні значення статусів/типів у БД і відхилення від канону.
+
+        Статусні поля — вільні varchar без CHECK-констрейнтів. Перш ніж вішати
+        констрейнт міграцією, треба переконатись, що в проді немає легасі-значень,
+        інакше `flask db upgrade` впаде вже на деплої. Ця команда — саме та
+        перевірка; вона нічого не змінює.
+
+        Вихід 0 — усе чисто, можна додавати CHECK. Вихід 1 — є відхилення.
+        """
+        from sqlalchemy import func as _func
+        from app.constants import enum_fields
+
+        has_deviations = False
+        for label, column, allowed in enum_fields():
+            rows = (
+                db.session.query(column, _func.count())
+                .group_by(column)
+                .order_by(_func.count().desc())
+                .all()
+            )
+            # NULL — окремий випадок: для nullable-колонок це норма, не відхилення.
+            unexpected = [
+                (value, count) for value, count in rows
+                if value is not None and value not in allowed
+            ]
+            total = sum(count for _, count in rows)
+            if unexpected:
+                has_deviations = True
+                click.echo(f'⚠ {label}: {len(unexpected)} невідомих значень із {total} рядків')
+                for value, count in unexpected:
+                    click.echo(f'    {value!r} × {count}')
+            else:
+                click.echo(f'✓ {label}: OK ({len(rows)} значень, {total} рядків)')
+
+        if has_deviations:
+            click.echo('\nЄ відхилення — CHECK-констрейнти додавати ЗАРАНО. '
+                       'Спершу почистити дані або розширити канон в app/constants.py.')
+            raise SystemExit(1)
+        click.echo('\nВідхилень немає — можна додавати CHECK-констрейнти міграцією.')
+
     @app.context_processor
     def inject_feature_flags():
         if not current_user.is_authenticated:

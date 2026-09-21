@@ -1,7 +1,11 @@
 import datetime
 import logging
+from decimal import Decimal
+
+from sqlalchemy import func
 
 from app.extensions import db
+from app.constants import TXN_DELIVERY_CHARGE
 from app.models import Order, Delivery
 from app.models.client import Client
 from app.models.price import Price
@@ -66,18 +70,37 @@ def resolve_charge_amount(order: Order) -> int | None:
     return get_order_price(order)
 
 
+def net_charged_for_delivery(delivery_id: int) -> Decimal:
+    """Скільки зараз списано за доставку — СУМА, а не факт наявності транзакції.
+
+    Сторно (``reverse_delivery_charge``) пишеться окремим рядком ``delivery_charge``
+    з від'ємною сумою, щоб не ламати жоден звіт: усі вони підсумовують
+    ``delivery_charge``, тож сторно занулюється саме там, де треба, без
+    спеціального типу транзакції.
+
+    Через це «чи списано за доставку» — це питання про НЕТТО-суму, а не про
+    існування рядка: після сторно рядки є, але нетто == 0, і доставку можна
+    списати знову, якщо її повторно проведуть як доставлену.
+    """
+    total = (
+        db.session.query(func.sum(Transaction.amount))
+        .filter(
+            Transaction.delivery_id == delivery_id,
+            Transaction.transaction_type == 'delivery_charge',
+        )
+        .scalar()
+    )
+    return Decimal(total or 0)
+
+
 def charge_delivery(delivery: Delivery) -> Transaction | None:
     """Create a delivery_charge transaction for a completed delivery.
 
-    Guard: if a delivery_charge already exists for this delivery, skip.
+    Guard: if the delivery is already charged (net non-zero), skip.
     Updates client.credits and creates a Transaction record.
     Returns the created Transaction or None if skipped.
     """
-    existing = Transaction.query.filter_by(
-        delivery_id=delivery.id,
-        transaction_type='delivery_charge',
-    ).first()
-    if existing:
+    if net_charged_for_delivery(delivery.id) != 0:
         logger.debug('charge_delivery: delivery %d already charged, skipping', delivery.id)
         return None
 
@@ -111,6 +134,48 @@ def charge_delivery(delivery: Delivery) -> Transaction | None:
     return txn
 
 
+def reverse_delivery_charge(delivery: Delivery) -> Transaction | None:
+    """Сторнувати списання за доставку, яку перестали вважати доставленою.
+
+    Списання за доставку раніше було однобічним: статус «Доставлено» знімав гроші
+    з балансу, а повернення в «Скасовано»/«Очікує» їх не повертало. Оскільки
+    статус міняє кур'єр із телеграм-бота, помилковий тап цілком реальний, і
+    баланс клієнта лишався зміщеним назавжди.
+
+    Сторно — окремий рядок ``delivery_charge`` з від'ємною сумою, **поточною
+    датою**: закритий місяць не переписується заднім числом, а виправлення видно
+    там, де його зробили. Оригінальний рядок лишається на місці, тож історія
+    списань читається як є.
+
+    Ідемпотентна: якщо нетто вже 0 (не списували або вже сторнували) — no-op.
+    Повертає створену транзакцію або None.
+    """
+    net = net_charged_for_delivery(delivery.id)
+    if net == 0:
+        logger.debug('reverse_delivery_charge: delivery %d has nothing to reverse', delivery.id)
+        return None
+
+    client_id = delivery.order.client_id if delivery.order else delivery.client_id
+    client = Client.query.get(client_id) if client_id else None
+    if not client:
+        logger.warning('reverse_delivery_charge: no client for delivery %d', delivery.id)
+        return None
+
+    txn = Transaction(
+        transaction_type=TXN_DELIVERY_CHARGE,
+        client_id=client.id,
+        delivery_id=delivery.id,
+        amount=-net,
+        date=datetime.date.today(),
+        comment=f'Сторно списання за доставку #{delivery.id}',
+    )
+    db.session.add(txn)
+    client.credits = (client.credits or 0) + net
+    logger.info('reverse_delivery_charge: delivery %d → client %d refunded %s',
+                delivery.id, client.id, net)
+    return txn
+
+
 def reconcile_historical_charges(dry_run: bool = True) -> dict:
     """Backfill delivery_charge transactions for all past completed deliveries.
 
@@ -125,14 +190,18 @@ def reconcile_historical_charges(dry_run: bool = True) -> dict:
         .all()
     )
 
+    # Нетто, а не просто наявність рядка: у доставки зі сторно транзакції є, але
+    # нетто == 0, тобто вона фактично не списана і має потрапити в добірку.
     charged_delivery_ids = {
-        row[0] for row in
-        db.session.query(Transaction.delivery_id)
+        delivery_id for delivery_id, net in
+        db.session.query(Transaction.delivery_id, func.sum(Transaction.amount))
         .filter(
             Transaction.transaction_type == 'delivery_charge',
             Transaction.delivery_id.isnot(None),
         )
+        .group_by(Transaction.delivery_id)
         .all()
+        if net
     }
 
     to_charge = [d for d in completed_deliveries if d.id not in charged_delivery_ids]

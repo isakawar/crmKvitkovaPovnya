@@ -7,6 +7,14 @@ from sqlalchemy.orm import joinedload
 from flask_login import login_required, current_user
 
 from app.blueprints.transactions import transactions_bp
+from app.constants import (
+    TXN_CREDIT,
+    TXN_DEBIT,
+    TXN_TRANSFER,
+    TXN_DELIVERY_CHARGE,
+    TXN_ADJUSTMENT,
+    PAYMENT_TYPES,
+)
 from app.extensions import db
 from app.models.transaction import Transaction
 from app.models.client import Client
@@ -51,10 +59,10 @@ def transactions_list():
     filtered_query = Transaction.query.filter(
         Transaction.date >= date_from,
         Transaction.date <= date_to,
-        Transaction.transaction_type != 'delivery_charge',
+        Transaction.transaction_type != TXN_DELIVERY_CHARGE,
     )
 
-    if txn_type_filter in ('debit', 'credit', 'transfer'):
+    if txn_type_filter in (TXN_DEBIT, TXN_CREDIT, TXN_TRANSFER):
         filtered_query = filtered_query.filter(Transaction.transaction_type == txn_type_filter)
 
     if account_filter and account_filter.isdigit():
@@ -87,15 +95,15 @@ def transactions_list():
                   .paginate(page=page, per_page=per_page, error_out=False))
 
     all_transactions = Transaction.query.filter(
-        Transaction.transaction_type.in_(('credit', 'debit'))
+        Transaction.transaction_type.in_((TXN_CREDIT, TXN_DEBIT))
     ).all()
     total_balance = sum(
-        t.amount if t.transaction_type == 'credit' else -t.amount
+        t.amount if t.transaction_type == TXN_CREDIT else -t.amount
         for t in all_transactions
     )
 
     period_transactions = filtered_query.all()
-    period_revenue = sum(t.amount for t in period_transactions if t.transaction_type == 'credit')
+    period_revenue = sum(t.amount for t in period_transactions if t.transaction_type == TXN_CREDIT)
 
     return render_template(
         'transactions/list.html',
@@ -124,11 +132,11 @@ def balance_breakdown():
     rows = (
         db.session.query(
             Transaction.payment_account_id,
-            func.sum(case((Transaction.transaction_type == 'credit', Transaction.amount), else_=0)).label('credits'),
-            func.sum(case((Transaction.transaction_type.in_(('debit', 'transfer')), Transaction.amount), else_=0)).label('debits'),
+            func.sum(case((Transaction.transaction_type == TXN_CREDIT, Transaction.amount), else_=0)).label('credits'),
+            func.sum(case((Transaction.transaction_type.in_((TXN_DEBIT, TXN_TRANSFER)), Transaction.amount), else_=0)).label('debits'),
         )
         .filter(
-            Transaction.transaction_type != 'delivery_charge',
+            Transaction.transaction_type != TXN_DELIVERY_CHARGE,
             Transaction.payment_account_id.isnot(None),
         )
         .group_by(Transaction.payment_account_id)
@@ -141,7 +149,7 @@ def balance_breakdown():
             func.sum(Transaction.amount).label('incoming'),
         )
         .filter(
-            Transaction.transaction_type == 'transfer',
+            Transaction.transaction_type == TXN_TRANSFER,
             Transaction.target_payment_account_id.isnot(None),
         )
         .group_by(Transaction.target_payment_account_id)
@@ -198,7 +206,7 @@ def export_transactions():
         .filter(
             Transaction.date >= date_from,
             Transaction.date <= date_to,
-            Transaction.transaction_type != 'delivery_charge',
+            Transaction.transaction_type != TXN_DELIVERY_CHARGE,
         )
         .order_by(Transaction.date.asc(), Transaction.created_at.asc())
         .all()
@@ -207,12 +215,12 @@ def export_transactions():
     headers_row = ['Дата', 'Тип', 'Клієнт', 'Телефон', 'Сума (грн)',
                    'Спосіб оплати', 'Рахунок оплати', 'Тип витрати', 'Коментар', 'Хто вніс']
 
-    type_labels = {'credit': 'Поповнення', 'debit': 'Списання', 'transfer': 'Переказ'}
+    type_labels = {TXN_CREDIT: 'Поповнення', TXN_DEBIT: 'Списання', TXN_TRANSFER: 'Переказ'}
 
     def make_row(t):
         creator = t.created_by.display_name if t.created_by and t.created_by.display_name else (
             t.created_by.username if t.created_by else '')
-        if t.transaction_type == 'transfer':
+        if t.transaction_type == TXN_TRANSFER:
             source = t.payment_account_setting.value if t.payment_account_setting else ''
             target = t.target_payment_account_setting.value if t.target_payment_account_setting else ''
             payment_account = f'{source} → {target}'
@@ -403,7 +411,7 @@ def create_transaction():
         amount_val = 0
     if amount_val <= 0:
         errors.append('Введіть суму більше 0')
-    if payment_type not in ('monobank', 'cash'):
+    if payment_type not in PAYMENT_TYPES:
         errors.append('Оберіть тип оплати')
     if not date_str:
         errors.append('Вкажіть дату')
@@ -434,7 +442,7 @@ def create_transaction():
         linked_subscription_id = order.subscription_id
 
     txn = Transaction(
-        transaction_type='credit',
+        transaction_type=TXN_CREDIT,
         client_id=client.id,
         amount=amount_val,
         payment_type=payment_type,
@@ -517,7 +525,18 @@ def update_transaction(txn_id):
     txn = Transaction.query.get_or_404(txn_id)
     data = request.get_json()
 
-    if txn.transaction_type == 'transfer':
+    # Ці два типи створює система / вкладка «Баланс клієнтів»: у них немає
+    # рахунку оплати й типу витрати, яких вимагає форма нижче, тож редагування
+    # звідси або впало б на валідації, або записало б сміття в expense_type.
+    if txn.transaction_type in (TXN_DELIVERY_CHARGE, TXN_ADJUSTMENT):
+        return jsonify({
+            'success': False,
+            'errors': ['Цю транзакцію звідси не редагують: списання за доставку '
+                       'керується статусом доставки, коригування балансу — '
+                       'вкладкою «Баланс клієнтів» у звітах.'],
+        }), 400
+
+    if txn.transaction_type == TXN_TRANSFER:
         try:
             txn_date = datetime.strptime(data.get('date'), '%Y-%m-%d').date()
         except (ValueError, TypeError):
@@ -553,9 +572,9 @@ def update_transaction(txn_id):
     if not payment_account_id:
         errors.append('Оберіть рахунок оплати')
 
-    if txn.transaction_type == 'credit':
+    if txn.transaction_type == TXN_CREDIT:
         payment_type = data.get('payment_type')
-        if payment_type not in ('monobank', 'cash'):
+        if payment_type not in PAYMENT_TYPES:
             errors.append('Оберіть тип оплати')
     else:
         expense_type = data.get('expense_type', '').strip()
@@ -570,16 +589,15 @@ def update_transaction(txn_id):
     except ValueError:
         return jsonify({'success': False, 'errors': ['Невірний формат дати']}), 400
 
-    if txn.transaction_type == 'credit' and txn.client:
-        delta = Decimal(str(amount_val)) - (txn.amount or Decimal(0))
-        txn.client.credits = (txn.client.credits or Decimal(0)) + delta
-
-    txn.amount = amount_val
+    # Підтягує баланс для будь-якого типу, що на нього впливає (credit,
+    # adjustment, delivery_charge) — раніше тут був захардкоджений лише 'credit',
+    # через що редагування суми коригування тихо розсинхронізовувало credits.
+    transaction_service.change_transaction_amount(txn, amount_val)
     txn.date = txn_date
     txn.comment = data.get('comment', '').strip() or None
     txn.payment_account_id = int(payment_account_id)
 
-    if txn.transaction_type == 'credit':
+    if txn.transaction_type == TXN_CREDIT:
         txn.payment_type = data.get('payment_type')
     else:
         txn.expense_type = data.get('expense_type', '').strip()
@@ -607,6 +625,16 @@ def delete_transaction(txn_id):
         abort(403)
 
     txn = Transaction.query.get_or_404(txn_id)
+    # Списання за доставку створює система і мусить сторнувати теж вона — інакше
+    # рядок зникне, а статус доставки лишиться «Доставлено», і білінг розійдеться
+    # зі станом доставки. Правильний шлях — змінити статус доставки.
+    if txn.transaction_type == TXN_DELIVERY_CHARGE:
+        return jsonify({
+            'success': False,
+            'errors': ['Списання за доставку не видаляється вручну. '
+                       'Щоб повернути гроші — змініть статус доставки.'],
+        }), 400
+
     transaction_service.delete_transaction(txn)
     return jsonify({'success': True})
 
@@ -646,7 +674,7 @@ def create_writeoff():
 
     expense_type_id = data.get('expense_type_id')
     txn = Transaction(
-        transaction_type='debit',
+        transaction_type=TXN_DEBIT,
         client_id=None,
         amount=amount_val,
         expense_type=expense_type,
