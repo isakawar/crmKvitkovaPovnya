@@ -115,8 +115,24 @@ async def _backfill_dialog(client, dialog_entity, conv, days: int) -> int:
 
 async def backfill_conversation(client, conv, days: int) -> int:
     """Backfill one already-existing conversation using the live worker's
-    already-connected client — never opens a second MTProto connection."""
-    entity = await client.get_entity(int(conv.external_chat_id))
+    already-connected client — never opens a second MTProto connection.
+
+    Resolves the entity by scanning `iter_dialogs()` rather than
+    `client.get_entity(chat_id)` — a bare id lookup fails with "Could not
+    find the input entity" whenever that chat isn't already in Telethon's
+    session-level entity cache (e.g. a contact the account hasn't
+    interacted with recently). Dialogs are always resolvable this way,
+    same as the whole-account backfill above.
+    """
+    target_id = int(conv.external_chat_id)
+    entity = None
+    async for dialog in client.iter_dialogs():
+        if dialog.id == target_id:
+            entity = dialog.entity
+            break
+    if entity is None:
+        raise RuntimeError(f'Чат #{target_id} не знайдено серед діалогів акаунта')
+
     contact = contact_from_entity(entity)
     contact['name'] = contact.get('name') or conv.contact_name or None
     apply_contact(conv, contact)
