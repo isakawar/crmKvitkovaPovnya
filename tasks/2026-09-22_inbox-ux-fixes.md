@@ -183,6 +183,20 @@ textarea (не відправляє одразу) — так само, як пр
 `(message_id, idx)`, щоб два запити на ОДИН і той самий файл не тягнули його
 з Telegram двічі паралельно (окрема проблема від asyncio-гонки, про всяк
 випадок).
+
+**Виправлення №2 (той самий день, після деплою фіксу №1):** переніс виклику
+в окремий OS-тред прибрав гонку, але зламав інше — `client_for(channel)`
+всередині корутини читає `current_app.config[...]`, а `current_app` це
+thread-local proxy, прив'язаний до Flask app context, якого в новому
+`ThreadPoolExecutor`-треді просто немає → `RuntimeError: Working outside of
+application context`, кружечок так само не грав (тепер вже без traceback
+в консолі браузера, тільки 404 в мережевій вкладці). Фікс:
+`_run_async()` тепер захоплює `current_app._get_current_object()` в
+оригінальному (виклик) контексті, і явно робить `with app.app_context():`
+всередині pool-треда перед `asyncio.run(coro)`. Перевірено, що жодна з
+5 корутин у `telegram_personal.py` не торкається `db.session` (тільки
+Telethon + `current_app.config`) — тому передавати сесію БД між тредами не
+треба.
 **Важливо**: `_ASYNC_POOL` (telegram_personal.py) навмисно ОКРЕМИЙ від
 `_MEDIA_POOL` (inbox_service.py) — `prefetch_message_media()` виконує
 `ensure_media_downloaded()` вже ВСЕРЕДИНІ `_MEDIA_POOL`-воркера; якби

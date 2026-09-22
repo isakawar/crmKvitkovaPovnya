@@ -44,7 +44,17 @@ _ASYNC_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix='tg-personal-
 
 
 def _run_async(coro):
-    return _ASYNC_POOL.submit(asyncio.run, coro).result()
+    # current_app is a thread-local proxy — the pool worker is a brand new OS
+    # thread with no Flask application context of its own, so config lookups
+    # inside the coroutine (e.g. client_for()'s current_app.config[...]) would
+    # raise "Working outside of application context" without pushing one here.
+    app = current_app._get_current_object()
+
+    def _runner():
+        with app.app_context():
+            return asyncio.run(coro)
+
+    return _ASYNC_POOL.submit(_runner).result()
 
 
 def _api_creds() -> tuple[int, str]:
