@@ -66,13 +66,20 @@ async def run_channel(app, channel_id: int):
     async def _on_message(event):
         if not event.is_private:
             return  # skip channel posts / group messages — inbox is 1:1 only
+        # Only here, inside the live loop, can the sender be resolved cheaply —
+        # without it the conversation has no name and can't be matched to a client.
+        try:
+            sender = await event.get_sender()
+        except Exception:
+            logger.exception('Channel #%s: failed to resolve sender', channel_id)
+            sender = None
         with app.app_context():
             from app.models.messaging_channel import MessagingChannel
             ch = MessagingChannel.query.get(channel_id)
             if not ch or not ch.is_active:
                 return
             try:
-                inbound = build_inbound_event(event.message)
+                inbound = build_inbound_event(event.message, sender=sender)
                 msg = inbox_service.ingest_event(ch, inbound)
                 if msg is not None and inbound.media:
                     inbox_service.prefetch_message_media(app, msg.id)

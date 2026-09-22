@@ -75,3 +75,30 @@ def test_parse_deleted_messages():
 
 def test_parse_unknown_update_returns_empty():
     assert adapter.parse_events({'message': {'text': 'courier bot stuff'}}) == []
+
+
+# ── telegram_personal: contact from the resolved sender ───────────────────
+
+def test_build_inbound_event_takes_contact_from_sender():
+    from types import SimpleNamespace
+    from datetime import datetime
+    from app.services.messaging.telegram_personal import build_inbound_event
+
+    message = SimpleNamespace(chat_id=321803091, id=7, message='привіт',
+                              photo=None, document=None, date=datetime(2026, 9, 22, 8, 0))
+    sender = SimpleNamespace(first_name='Оксана', last_name='П', username='oksana_tg',
+                             phone='380991112233')
+
+    ev = build_inbound_event(message, sender=sender)
+    assert ev.external_chat_id == '321803091'
+    assert ev.contact == {'name': 'Оксана П', 'username': 'oksana_tg', 'phone': '380991112233'}
+
+
+def test_build_inbound_event_without_sender_has_empty_contact():
+    from types import SimpleNamespace
+    from datetime import datetime
+    from app.services.messaging.telegram_personal import build_inbound_event
+
+    message = SimpleNamespace(chat_id=1, id=2, message='x', photo=None, document=None,
+                              date=datetime(2026, 9, 22, 8, 0))
+    assert build_inbound_event(message).contact == {}

@@ -112,10 +112,7 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         )
         db.session.add(msg)
 
-        if event.contact:
-            conv.contact_name = event.contact.get('name') or conv.contact_name
-            conv.contact_username = event.contact.get('username') or conv.contact_username
-            conv.contact_phone = event.contact.get('phone') or conv.contact_phone
+        apply_contact(conv, event.contact)
 
         conv.last_message_at = event.date or datetime.utcnow()
         conv.last_message_preview = _preview(event.text, media)
@@ -128,6 +125,38 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         db.session.rollback()
         log.exception('ingest_event failed for channel %s', getattr(channel, 'id', '?'))
         return None
+
+
+def apply_contact(conv: Conversation, contact: dict | None) -> None:
+    """Fill in whatever contact fields the event carries, then retry auto-link.
+
+    Contact info doesn't always arrive with the first message (a
+    telegram_personal conversation created before the worker learned to
+    resolve senders has none at all), so both the fields and the CRM-client
+    match are re-attempted on every event rather than only at creation.
+    """
+    if not contact:
+        return
+    conv.contact_name = contact.get('name') or conv.contact_name
+    conv.contact_username = contact.get('username') or conv.contact_username
+    conv.contact_phone = contact.get('phone') or conv.contact_phone
+    _try_auto_link(conv)
+
+
+def _try_auto_link(conv: Conversation) -> None:
+    """Link an unlinked conversation to a CRM client, if exactly one matches."""
+    if conv.client_id or not (conv.contact_username or conv.contact_phone):
+        return
+    try:
+        client = client_service.find_client_for_contact(
+            conv.channel.channel_type,
+            username=conv.contact_username,
+            phone=conv.contact_phone,
+        )
+        if client:
+            conv.client_id = client.id
+    except Exception:  # noqa: BLE001
+        log.exception('find_client_for_contact failed')
 
 
 def _get_or_create_conversation(channel: MessagingChannel, event) -> Conversation:
@@ -151,13 +180,8 @@ def _get_or_create_conversation(channel: MessagingChannel, event) -> Conversatio
             contact_username=contact.get('username'),
             contact_phone=contact.get('phone'),
         )
-        try:
-            client = client_service.find_client_for_contact(
-                channel.channel_type, username=contact.get('username'), phone=contact.get('phone'))
-            if client:
-                conv.client_id = client.id
-        except Exception:  # noqa: BLE001
-            log.exception('find_client_for_contact failed')
+        conv.channel = channel  # _try_auto_link needs channel_type before flush
+        _try_auto_link(conv)
         db.session.add(conv)
         db.session.flush()
     return conv

@@ -176,3 +176,16 @@ def test_find_telegram_falls_back_to_phone_when_no_username_match(session):
     session.add(c)
     session.commit()
     assert find_client_for_contact('telegram', username=None, phone='380991112233').id == c.id
+
+
+def test_find_by_handle_stored_as_profile_link(session):
+    c = _make_client(session, instagram=None, telegram='https://t.me/oksana_tg')
+    assert find_client_for_contact('telegram_personal', username='oksana_tg').id == c.id
+
+    c2 = _make_client(session, instagram='instagram.com/flower_shop/')
+    assert find_client_for_contact('instagram', username='@flower_shop').id == c2.id
+
+
+def test_find_by_handle_ignores_unrelated_link(session):
+    _make_client(session, instagram=None, telegram='https://t.me/someone_else')
+    assert find_client_for_contact('telegram_personal', username='oksana_tg') is None

@@ -15,10 +15,11 @@ import asyncio
 from datetime import datetime, timedelta, timezone
 
 from app.extensions import db
+from app.models.conversation import Conversation
 from app.models.message import Message
 from app.services.messaging.adapter import InboundEvent
-from app.services.messaging.inbox_service import _get_or_create_conversation
-from app.services.messaging.telegram_personal import client_for, _media_dicts
+from app.services.messaging.inbox_service import _get_or_create_conversation, apply_contact
+from app.services.messaging.telegram_personal import client_for, _media_dicts, contact_from_entity
 
 
 def run(channel, days: int = 30) -> dict:
@@ -34,19 +35,33 @@ async def _run_async(channel, days: int) -> dict:
         messages_imported = 0
 
         async for dialog in client.iter_dialogs():
-            if not dialog.is_user or getattr(dialog.entity, 'bot', False):
+            if not dialog.is_user:
+                continue
+
+            contact = contact_from_entity(dialog.entity)
+            contact['name'] = contact.get('name') or dialog.name or None
+
+            if getattr(dialog.entity, 'bot', False):
+                # A bot's history is noise, so no conversation is created for it
+                # here — but if the live worker already made one, it deserves a
+                # name instead of a bare chat id.
+                conv = Conversation.query.filter_by(
+                    channel_id=channel.id, external_chat_id=str(dialog.id)).first()
+                if conv:
+                    apply_contact(conv, contact)
+                    db.session.commit()
                 continue
 
             fake_event = InboundEvent(
                 kind='message',
                 external_chat_id=str(dialog.id),
-                contact={
-                    'name': dialog.name or None,
-                    'username': getattr(dialog.entity, 'username', None),
-                    'phone': getattr(dialog.entity, 'phone', None),
-                },
+                contact=contact,
             )
             conv = _get_or_create_conversation(channel, fake_event)
+            # Also repairs conversations created before the live worker passed
+            # contact info through — they exist with a bare chat id and no client.
+            apply_contact(conv, contact)
+            db.session.commit()
 
             imported_this_dialog = []
             async for message in client.iter_messages(dialog.entity):

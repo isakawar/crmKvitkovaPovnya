@@ -11,7 +11,8 @@ from app.services.messaging.adapter import InboundEvent, SentResult
 
 def _channel(session, **kw):
     kw.setdefault('external_id', 'BC1')
-    ch = MessagingChannel(name='TG', channel_type='telegram', webhook_secret='x', **kw)
+    kw.setdefault('channel_type', 'telegram')
+    ch = MessagingChannel(name='TG', webhook_secret='x', **kw)
     session.add(ch)
     session.commit()
     return ch
@@ -365,3 +366,57 @@ def test_clients_search_route(app, session):
     assert resp.status_code == 200
     names = [x['instagram'] for x in resp.get_json()['clients']]
     assert 'searchable_from_inbox' in names
+
+
+# ── contact enrichment / deferred auto-link ───────────────────────────────
+
+def _bare_event(chat='777', mid='1', text='hi'):
+    """An event with no contact info — what telegram_personal used to send."""
+    return InboundEvent(kind='message', external_chat_id=chat, external_message_id=mid,
+                        text=text, contact={}, media=[])
+
+
+def test_contact_arriving_later_fills_name_and_links_client(session):
+    from app.models.client import Client
+
+    client = Client(telegram='@oksana_tg')
+    session.add(client)
+    ch = _channel(session, channel_type='telegram_personal')
+    session.commit()
+
+    inbox_service.ingest_event(ch, _bare_event(mid='1'))
+    conv = Conversation.query.one()
+    assert conv.display_name == '#777'
+    assert conv.client_id is None
+
+    # the worker now resolves the sender — the next message carries the contact
+    inbox_service.ingest_event(ch, InboundEvent(
+        kind='message', external_chat_id='777', external_message_id='2', text='hi again',
+        contact={'name': 'Оксана', 'username': 'oksana_tg'}, media=[]))
+
+    session.refresh(conv)
+    assert conv.contact_name == 'Оксана'
+    assert conv.contact_username == 'oksana_tg'
+    assert conv.display_name == 'Оксана'
+    assert conv.client_id == client.id
+
+
+def test_manual_link_is_not_overwritten_by_auto_link(session):
+    from app.models.client import Client
+
+    auto = Client(telegram='@oksana_tg')
+    manual = Client(telegram='@somebody')
+    session.add_all([auto, manual])
+    ch = _channel(session, channel_type='telegram_personal')
+    session.commit()
+
+    inbox_service.ingest_event(ch, _bare_event(mid='1'))
+    conv = Conversation.query.one()
+    inbox_service.link_client(conv, manual.id)
+
+    inbox_service.ingest_event(ch, InboundEvent(
+        kind='message', external_chat_id='777', external_message_id='2', text='x',
+        contact={'username': 'oksana_tg'}, media=[]))
+
+    session.refresh(conv)
+    assert conv.client_id == manual.id

@@ -73,14 +73,38 @@ def _media_dicts(message) -> list[dict]:
     return media
 
 
-def build_inbound_event(message) -> InboundEvent:
-    """Normalize a Telethon `events.NewMessage.Event.message` into InboundEvent."""
+def contact_from_entity(entity) -> dict:
+    """Telethon User entity -> the contact dict InboundEvent/Conversation expect.
+
+    Without this the conversation has no name at all and shows as its raw chat
+    id, and `client_service.find_client_for_contact` has no handle/phone to
+    match a CRM client on.
+    """
+    if entity is None:
+        return {}
+    name = ' '.join(p for p in [getattr(entity, 'first_name', None),
+                                getattr(entity, 'last_name', None)] if p) or None
+    return {
+        'name': name or getattr(entity, 'title', None),
+        'username': getattr(entity, 'username', None),
+        'phone': getattr(entity, 'phone', None),
+    }
+
+
+def build_inbound_event(message, sender=None) -> InboundEvent:
+    """Normalize a Telethon `events.NewMessage.Event.message` into InboundEvent.
+
+    `sender` is the resolved Telethon entity of the person who wrote the
+    message — the worker awaits `event.get_sender()` and passes it in, since
+    only it runs inside the live asyncio loop. Omitted (None) the conversation
+    falls back to `TelegramPersonalAdapter.enrich_contact`.
+    """
     return InboundEvent(
         kind='message',
         external_chat_id=str(message.chat_id),
         external_message_id=str(message.id),
         text=message.message or None,
-        contact={},
+        contact=contact_from_entity(sender),
         media=_media_dicts(message),
         date=message.date.replace(tzinfo=None) if message.date else None,
     )
@@ -189,6 +213,23 @@ class TelegramPersonalAdapter:
                 'username': getattr(entity, 'username', None),
                 'phone': getattr(entity, 'phone', None),
             }
+        finally:
+            await client.disconnect()
+
+    # --- contact lookup (duck-typed, see inbox_service._get_or_create_conversation) ---
+    def enrich_contact(self, channel, external_chat_id: str) -> dict:
+        """Best-effort name/username/phone lookup by chat id. Never raises."""
+        try:
+            return asyncio.run(self._enrich_contact_async(channel, external_chat_id))
+        except Exception:  # noqa: BLE001
+            return {}
+
+    async def _enrich_contact_async(self, channel, external_chat_id: str) -> dict:
+        client = client_for(channel)
+        await client.connect()
+        try:
+            entity = await client.get_entity(int(external_chat_id))
+            return contact_from_entity(entity)
         finally:
             await client.disconnect()
 

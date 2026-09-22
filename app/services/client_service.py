@@ -1,15 +1,34 @@
 from app.extensions import db
 from app.models import Client
-from sqlalchemy import func, or_
+from sqlalchemy import false, func, or_
 import re
 
 PHONE_PATTERN = re.compile(r'^\+380[0-9]{9}$')
 
 
+def _normalize_handle(raw: str) -> str:
+    """'@Name', 't.me/Name', 'https://instagram.com/Name/' -> 'name'."""
+    handle = raw.strip().rstrip('/')
+    if '/' in handle:
+        handle = handle.rsplit('/', 1)[-1]
+    return handle.split('?')[0].lstrip('@').lower()
+
+
 def _handle_match(column, raw: str):
-    """Case-insensitive match on a @handle-style column, with or without '@'."""
-    normalized = raw.strip().lstrip('@').lower()
-    return or_(func.lower(column) == normalized, func.lower(column) == f'@{normalized}')
+    """Case-insensitive match on a @handle-style column.
+
+    Clients are entered by hand, so the stored value may be a bare handle, an
+    '@handle', or a pasted profile link — all of them must match.
+    """
+    normalized = _normalize_handle(raw)
+    if not normalized:
+        return false()
+    bases = [normalized, f'@{normalized}',
+             f't.me/{normalized}', f'https://t.me/{normalized}',
+             f'instagram.com/{normalized}', f'https://instagram.com/{normalized}',
+             f'www.instagram.com/{normalized}', f'https://www.instagram.com/{normalized}']
+    variants = [v for base in bases for v in (base, f'{base}/')]
+    return func.lower(func.trim(column)).in_(variants)
 
 
 def find_client_for_contact(channel_type: str, username: str | None = None,
