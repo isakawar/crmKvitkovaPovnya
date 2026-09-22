@@ -5,6 +5,9 @@
 **Task file**: `tasks/2026-09-22_db-integrity-and-billing-refactor.md`
 **Total Tests**: 31 (P0: 13, P1: 11, P2: 7)
 **Estimated Time**: ~4 години на повний прогін
+**Інтерактивний чек-лист**: https://claude.ai/artifact/UzXMyCZEeNECwjgEKPLRkw
+(прогрес, нотатки й номери багів зберігаються між сесіями; джерело сторінки —
+`08-REGRESSION-CHECKLIST.html` поряд із цим файлом)
 
 ---
 

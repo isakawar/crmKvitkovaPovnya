@@ -19,6 +19,7 @@
 | [05-DELIVERIES-COURIERS-TEST-CASES.md](05-DELIVERIES-COURIERS-TEST-CASES.md) | DEL | 14 | Delivery status, couriers, routes, Telegram |
 | [06-CERTIFICATES-TEST-CASES.md](06-CERTIFICATES-TEST-CASES.md) | CERT | 10 | Certificate lifecycle, types, validation |
 | [07-SECURITY-TEST-CASES.md](07-SECURITY-TEST-CASES.md) | SEC | 15 | OWASP Top 10, injection, access control |
+| [08-REGRESSION-REFACTOR-TEST-CASES.md](08-REGRESSION-REFACTOR-TEST-CASES.md) | REG | 31 | Регресія після рефакторингу білінгу та цілісності БД ([інтерактивний чек-лист](https://claude.ai/artifact/UzXMyCZEeNECwjgEKPLRkw)) |
 
 ---
 

@@ -1,0 +1,845 @@
+<title>Регресія після рефакторингу</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+  :root {
+    --ground:   #f6f8f5;
+    --surface:  #ffffff;
+    --raised:   #eef2ec;
+    --line:     #dde3dc;
+    --line-soft:#e9eee8;
+    --ink:      #17211b;
+    --ink-2:    #4a564e;
+    --ink-3:    #77837b;
+    --accent:   #2f6f4e;
+    --accent-w: #e4f0e8;
+    --p0:       #b3261e;
+    --p0-w:     #fbe9e7;
+    --p1:       #a8621b;
+    --p1-w:     #fbefe0;
+    --p2:       #5c6670;
+    --p2-w:     #eceff1;
+    --fail:     #b3261e;
+    --block:    #8a6d1f;
+    --shadow:   0 1px 2px rgba(23,33,27,.06), 0 4px 16px rgba(23,33,27,.05);
+    --radius:   10px;
+  }
+  :root:not([data-theme="light"]) { }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #10150f;
+      --surface:  #171d18;
+      --raised:   #1f2720;
+      --line:     #2c352d;
+      --line-soft:#232b24;
+      --ink:      #e7ece6;
+      --ink-2:    #aab5ac;
+      --ink-3:    #7d8a80;
+      --accent:   #6dbd8e;
+      --accent-w: #1b2b21;
+      --p0:       #f08a80;
+      --p0-w:     #33201e;
+      --p1:       #e0a260;
+      --p1-w:     #302519;
+      --p2:       #9aa7b0;
+      --p2-w:     #23292d;
+      --fail:     #f08a80;
+      --block:    #d4b25e;
+      --shadow:   0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #10150f;
+    --surface:  #171d18;
+    --raised:   #1f2720;
+    --line:     #2c352d;
+    --line-soft:#232b24;
+    --ink:      #e7ece6;
+    --ink-2:    #aab5ac;
+    --ink-3:    #7d8a80;
+    --accent:   #6dbd8e;
+    --accent-w: #1b2b21;
+    --p0:       #f08a80;
+    --p0-w:     #33201e;
+    --p1:       #e0a260;
+    --p1-w:     #302519;
+    --p2:       #9aa7b0;
+    --p2-w:     #23292d;
+    --fail:     #f08a80;
+    --block:    #d4b25e;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.3);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 0 64px; }
+
+  h1, h2, h3 { font-family: Bitter, Georgia, serif; text-wrap: balance; margin: 0; }
+  code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  /* ── Header ───────────────────────────────────────────── */
+  header.top {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+    background: color-mix(in srgb, var(--ground) 92%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .top-inner { max-width: 980px; margin: 0 auto; padding-inline: 16px; padding-block: 12px 12px; }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600;
+  }
+  h1 { font-size: clamp(20px, 3.4vw, 27px); font-weight: 700; letter-spacing: -.01em; margin-top: 2px; }
+  .sub { color: var(--ink-2); font-size: 14px; margin-top: 3px; }
+
+  .progress-row { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+  .bar { flex: 1 1 220px; height: 8px; border-radius: 99px; background: var(--raised); overflow: hidden; display: flex; }
+  .bar span { height: 100%; transition: width .25s ease; }
+  .bar .b-pass  { background: var(--accent); }
+  .bar .b-fail  { background: var(--fail); }
+  .bar .b-block { background: var(--block); }
+  .count { font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .count b { color: var(--ink); font-weight: 600; }
+
+  /* ── Verdict ──────────────────────────────────────────── */
+  .verdict {
+    margin-top: 14px; padding: 13px 15px; border-radius: var(--radius);
+    border: 1px solid var(--line); background: var(--surface);
+    display: flex; gap: 12px; align-items: flex-start; box-shadow: var(--shadow);
+  }
+  .verdict .dot { width: 9px; height: 9px; border-radius: 99px; margin-top: 7px; flex: none; background: var(--ink-3); }
+  .verdict.ok   .dot { background: var(--accent); }
+  .verdict.bad  .dot { background: var(--fail); }
+  .verdict.wait .dot { background: var(--block); }
+  .verdict h3 { font-size: 15px; font-weight: 600; }
+  .verdict p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink-2); }
+
+  /* ── Gates ────────────────────────────────────────────── */
+  .gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+  .gate {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 11px 13px;
+  }
+  .gate .g-label { font-size: 11.5px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+  .gate .g-val { font-family: Bitter, Georgia, serif; font-size: 20px; font-weight: 600; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .gate.met .g-val { color: var(--accent); }
+  .gate.unmet .g-val { color: var(--fail); }
+
+  /* ── Sections ─────────────────────────────────────────── */
+  section.grp { margin-top: 34px; }
+  .grp-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 2px solid var(--line); }
+  .grp-head h2 { font-size: 18px; font-weight: 600; }
+  .grp-head .risk {
+    font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 99px;
+  }
+  .risk.r-crit { background: var(--p0-w); color: var(--p0); }
+  .risk.r-high { background: var(--p1-w); color: var(--p1); }
+  .grp-head .g-count { margin-left: auto; font-size: 13px; color: var(--ink-3); }
+  .grp-desc { font-size: 13.5px; color: var(--ink-2); margin: 9px 0 0; max-width: 68ch; }
+
+  /* ── Case rows ────────────────────────────────────────── */
+  .case {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--p2);
+    border-radius: var(--radius); margin-top: 9px; overflow: hidden;
+  }
+  .case.pri-P0 { border-left-color: var(--p0); }
+  .case.pri-P1 { border-left-color: var(--p1); }
+  .case.st-pass   { background: color-mix(in srgb, var(--accent-w) 55%, var(--surface)); }
+  .case.st-fail   { background: color-mix(in srgb, var(--p0-w) 55%, var(--surface)); }
+  .case.st-block  { background: color-mix(in srgb, var(--p1-w) 40%, var(--surface)); }
+
+  .case-head { display: flex; gap: 11px; align-items: flex-start; padding: 11px 13px; cursor: pointer; }
+  .case-head:hover { background: color-mix(in srgb, var(--raised) 45%, transparent); }
+  .case-main { flex: 1; min-width: 0; }
+  .case-id { font-size: 11.5px; font-weight: 600; color: var(--ink-3); letter-spacing: .02em; }
+  .case-title { font-weight: 600; font-size: 14.5px; margin-top: 1px; }
+  .case-title .star { color: var(--p1); font-weight: 400; }
+  .case-meta { display: flex; gap: 7px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+  .pill {
+    font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px;
+    letter-spacing: .03em;
+  }
+  .pill.P0 { background: var(--p0-w); color: var(--p0); }
+  .pill.P1 { background: var(--p1-w); color: var(--p1); }
+  .pill.P2 { background: var(--p2-w); color: var(--p2); }
+  .pill.time { background: var(--raised); color: var(--ink-3); }
+  .chev { flex: none; color: var(--ink-3); font-size: 12px; margin-top: 4px; transition: transform .18s ease; }
+  .case.open .chev { transform: rotate(90deg); }
+
+  /* Status control */
+  .status-set { display: flex; gap: 4px; flex: none; }
+  .st-btn {
+    font: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-3);
+    border-radius: 7px; padding: 4px 8px; line-height: 1.3; transition: all .12s ease;
+  }
+  .st-btn:hover { border-color: var(--ink-3); color: var(--ink-2); }
+  .st-btn[aria-pressed="true"].v-pass  { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .st-btn[aria-pressed="true"].v-fail  { background: var(--fail);   border-color: var(--fail);   color: #fff; }
+  .st-btn[aria-pressed="true"].v-block { background: var(--block);  border-color: var(--block);  color: #fff; }
+  :root[data-theme="dark"] .st-btn[aria-pressed="true"] { color: #10150f; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .st-btn[aria-pressed="true"] { color: #10150f; } }
+  .st-btn:focus-visible, .case-head:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  /* Case body */
+  .case-body { padding: 0 13px 14px 13px; border-top: 1px solid var(--line-soft); }
+  .case-body h4 {
+    font-family: "Source Sans 3", sans-serif; font-size: 11.5px; font-weight: 600;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3);
+    margin: 14px 0 5px;
+  }
+  .case-body ol, .case-body ul { margin: 0; padding-left: 20px; font-size: 14px; color: var(--ink-2); }
+  .case-body li { margin-bottom: 3px; }
+  .case-body ul.expect { list-style: none; padding-left: 0; }
+  .case-body ul.expect li { padding-left: 21px; position: relative; }
+  .case-body ul.expect li::before {
+    content: "✓"; position: absolute; left: 3px; color: var(--accent); font-weight: 700;
+  }
+  .prereq { font-size: 13.5px; color: var(--ink-2); margin: 0; }
+  .failhint {
+    margin-top: 12px; padding: 9px 11px; border-radius: 8px;
+    background: var(--p0-w); color: var(--p0); font-size: 13px; border: 1px solid transparent;
+  }
+  .failhint b { font-weight: 600; }
+  .why {
+    margin-top: 12px; padding: 9px 11px; border-radius: 8px; background: var(--raised);
+    font-size: 13px; color: var(--ink-2); border-left: 2px solid var(--ink-3);
+  }
+
+  .record { display: grid; grid-template-columns: 1fr 150px; gap: 9px; margin-top: 14px; }
+  @media (max-width: 560px) { .record { grid-template-columns: 1fr; } }
+  .record label { display: block; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; margin-bottom: 4px; }
+  .record textarea, .record input {
+    width: 100%; font: inherit; font-size: 14px; color: var(--ink);
+    background: var(--ground); border: 1px solid var(--line); border-radius: 8px;
+    padding: 7px 9px; resize: vertical;
+  }
+  .record textarea { min-height: 62px; }
+
+  /* ── Automated strip ──────────────────────────────────── */
+  .auto { margin-top: 26px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px; box-shadow: var(--shadow); }
+  .auto h2 { font-size: 16px; font-weight: 600; }
+  .auto p { font-size: 13.5px; color: var(--ink-2); margin: 5px 0 0; }
+  table.cmds { width: 100%; border-collapse: collapse; margin-top: 11px; font-size: 13.5px; }
+  table.cmds td { padding: 7px 0; border-top: 1px solid var(--line-soft); vertical-align: top; }
+  table.cmds td:first-child { padding-right: 14px; white-space: nowrap; }
+  table.cmds code { font-size: 12.5px; background: var(--raised); padding: 2px 6px; border-radius: 5px; }
+
+  /* ── Rollback ─────────────────────────────────────────── */
+  .rollback { margin-top: 26px; border: 1px solid var(--p1); background: var(--p1-w); border-radius: var(--radius); padding: 15px; }
+  .rollback h2 { font-size: 16px; font-weight: 600; color: var(--p1); }
+  .rollback ol { margin: 9px 0 0; padding-left: 20px; font-size: 13.5px; color: var(--ink-2); }
+  .rollback li { margin-bottom: 5px; }
+  .rollback code { font-size: 12.5px; background: color-mix(in srgb, var(--surface) 60%, transparent); padding: 1px 5px; border-radius: 4px; }
+
+  /* ── Toolbar ──────────────────────────────────────────── */
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 13px; }
+  .tbtn {
+    font: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink-2);
+    border-radius: 8px; padding: 6px 11px;
+  }
+  .tbtn:hover { border-color: var(--ink-3); color: var(--ink); }
+  .sync { font-size: 12.5px; color: var(--ink-3); margin-left: auto; display: flex; align-items: center; gap: 6px; }
+  .sync .dot { width: 7px; height: 7px; border-radius: 99px; background: var(--ink-3); flex: none; }
+  .sync.live .dot { background: var(--accent); }
+  .sync.local .dot { background: var(--block); }
+
+  footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-3); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="eyebrow">CRM Kvitkova Povnya · перед деплоєм</div>
+    <h1>Регресія після рефакторингу</h1>
+    <div class="sub">Цілісність БД і білінгу · гілка <code class="mono">refactor/db-integrity-and-billing-fixes</code></div>
+    <div class="progress-row">
+      <div class="bar" role="img" aria-label="Прогрес прогону">
+        <span class="b-pass"  id="barPass"  style="width:0%"></span>
+        <span class="b-fail"  id="barFail"  style="width:0%"></span>
+        <span class="b-block" id="barBlock" style="width:0%"></span>
+      </div>
+      <div class="count" id="countLine"><b>0</b> з 31 перевірено</div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="verdict" id="verdict">
+    <div class="dot"></div>
+    <div>
+      <h3 id="verdictTitle">Прогін не починався</h3>
+      <p id="verdictText">Спершу виконайте автоматичні перевірки, потім TC-REG-030 і TC-REG-010 на копії прод-даних.</p>
+    </div>
+  </div>
+
+  <div class="gates" id="gates"></div>
+
+  <div class="toolbar">
+    <button class="tbtn" id="btnExpand">Розгорнути все</button>
+    <button class="tbtn" id="btnOpenFails">Показати проблемні</button>
+    <button class="tbtn" id="btnCopy">Скопіювати звіт</button>
+    <button class="tbtn" id="btnReset">Скинути прогін</button>
+    <div class="sync" id="sync"><span class="dot"></span><span id="syncText">підключення…</span></div>
+  </div>
+
+  <div class="auto">
+    <h2>Спершу — автоматичні перевірки</h2>
+    <p>Якщо тут червоне, ручне тестування не починати.</p>
+    <table class="cmds">
+      <tr><td><code>pytest tests/ -q</code></td><td>очікується <b>498 passed, 2 xfailed</b></td></tr>
+      <tr><td><code>./scripts/verify_migrations.sh</code></td><td>ланцюг міграцій застосовується з нуля на одноразовому Postgres</td></tr>
+      <tr><td><code>flask audit-enum-values</code></td><td>див. TC-REG-030 — виконати на копії прод-даних</td></tr>
+    </table>
+  </div>
+
+  <main id="groups"></main>
+
+  <div class="rollback">
+    <h2>Якщо після деплою виявлено розсинхрон балансу</h2>
+    <ol>
+      <li><b>Не видаляти рядки сторно вручну</b> — це збільшить розбіжність, а не прибере її.</li>
+      <li>Відкотити код на попередній тег. Міграції відкочувати не обовʼязково — індекси й констрейнти сумісні зі старим кодом.</li>
+      <li>Якщо треба відкотити й схему: <code>flask db downgrade add_messaging_message_indexes</code></li>
+      <li>Звірка: у звіті «Баланс клієнтів» за всі місяці кінцевий баланс має збігатись із карткою клієнта. Розбіжність — і є розмір проблеми.</li>
+    </ol>
+  </div>
+
+  <footer>
+    Повний опис кейсів — <code class="mono">tests/qa/tests/docs/08-REGRESSION-REFACTOR-TEST-CASES.md</code> ·
+    контекст змін — <code class="mono">tasks/2026-09-22_db-integrity-and-billing-refactor.md</code>
+  </footer>
+</div>
+
+<script>
+const GROUPS = [
+  { id: "A", title: "Гроші та баланс клієнта", risk: "crit",
+    desc: "client.credits — денормалізований баланс, а звіт «Баланс клієнтів» виводить із нього всю помісячну історію назад. Тому розсинхрон на одну гривню зсуває не один рядок, а всі показані місяці — мовчки й заднім числом." },
+  { id: "B", title: "Життєвий цикл замовлень і підписок", risk: "high",
+    desc: "Тут видима поведінка змінилась навмисне: ціна фіксується при створенні, редагування зберігає знижку, видалення більше не падає на фото й сертифікаті." },
+  { id: "C", title: "Рефакторинг статусів", risk: "crit",
+    desc: "~180 порівнянь статусів переведено на константи. Поведінка мала лишитись ІДЕНТИЧНОЮ — будь-яка зміна тут є регресією, а не покращенням. Зачеплено телеграм-бот кур'єра, екран флориста, дашборд і маршрути." },
+  { id: "D", title: "Довідники та схема БД", risk: "high",
+    desc: "Нові заборони на видалення того, що використовується, унікальності в довіднику й міграції, які можуть впасти на реальних даних." }
+];
+
+const CASES = [
+  // ── A ──
+  { id: "REG-001", g: "A", p: "P0", t: "Списання за доставку при переході в «Доставлено»", m: 5,
+    pre: "Клієнт із відомим балансом (записати ДО тесту); доставка в «Очікує» або «Розподілено», замовлення має ціну.",
+    steps: ["Відкрити картку клієнта, записати баланс", "У /deliveries знайти доставку цього клієнта", "Змінити статус на «Доставлено»", "Повернутись у картку клієнта і в список транзакцій"],
+    exp: ["Баланс зменшився рівно на ціну замовлення", "Створено транзакцію з коментарем «Списання за доставку #N»", "Дата транзакції = дата доставки, не сьогоднішня", "У доставці проставився час доставки"],
+    fail: "Баланс не змінився, змінився на іншу суму, або створено дві транзакції." },
+
+  { id: "REG-002", g: "A", p: "P0", t: "Сторно при відкаті зі стану «Доставлено»", m: 7, star: true,
+    pre: "Доставка в «Доставлено», за яку вже списано (після REG-001).",
+    steps: ["Записати поточний (уже зменшений) баланс", "Змінити статус з «Доставлено» на «Скасовано»", "Перевірити баланс клієнта", "Відкрити список транзакцій клієнта"],
+    exp: ["Баланс повернувся до значення ДО списання", "Зʼявився окремий рядок із відʼємною сумою", "Коментар: «Сторно списання за доставку #N»", "Дата сторно — сьогоднішня, не дата доставки", "Оригінальний рядок списання лишився на місці", "Лічильник доставок кур'єра зменшився на 1"],
+    why: "До рефакторингу баланс не повертався взагалі. Це основна причина всієї роботи.",
+    fail: "Баланс не повернувся, або оригінальний рядок зник." },
+
+  { id: "REG-003", g: "A", p: "P0", t: "Повторне проведення після сторно списує знову", m: 5,
+    pre: "Доставка після REG-002 (сторнована).",
+    steps: ["Записати баланс", "Змінити статус назад на «Доставлено»", "Перевірити баланс і транзакції"],
+    exp: ["Баланс знову зменшився на ціну замовлення", "Зʼявився третій рядок; сумарно нетто = одне списання", "Час доставки проставився заново, актуальний"],
+    fail: "Списання не відбулось — система вважає доставку вже оплаченою." },
+
+  { id: "REG-004", g: "A", p: "P0", t: "Подвійне «Доставлено» не задвоює списання", m: 4,
+    pre: "Доставка в «Розподілено».",
+    steps: ["Записати баланс", "Перевести в «Доставлено»", "Ще раз зберегти статус «Доставлено»"],
+    exp: ["Списання відбулось рівно один раз", "Баланс зменшився один раз"],
+    fail: "Дві транзакції, баланс зменшився двічі." },
+
+  { id: "REG-005", g: "A", p: "P0", t: "Звіт «Баланс клієнтів» — минулі місяці не переписуються", m: 12, star: true,
+    pre: "Клієнт з історією за 2–3 місяці; доставка, проведена МИНУЛОГО місяця, за яку списано.",
+    steps: ["/reports → «Баланс клієнтів», діапазон 3 місяці", "Зробити скріншот усього рядка клієнта", "Скасувати доставку минулого місяця", "Повернутись у звіт із тим самим діапазоном", "Порівняти зі скріншотом"],
+    exp: ["Колонки минулого місяця не змінились", "Компенсація зʼявилась у ПОТОЧНОМУ місяці як відʼємне нарахування", "Кінцевий баланс останнього місяця = баланс у картці клієнта", "Баланс на початок місяця = баланс на кінець попереднього"],
+    why: "Найважливіший кейс прогону: він перевіряє ту саму властивість, що й автотести, але наскрізно через UI.",
+    fail: "Цифри за минулий місяць поїхали, або кінцевий баланс ≠ картці клієнта." },
+
+  { id: "REG-006", g: "A", p: "P0", t: "Видалення коригування балансу повертає баланс", m: 7, star: true,
+    pre: "Доступ admin або manager.",
+    steps: ["/reports → «Баланс клієнтів» → внести коригування +500", "Перевірити, що баланс зріс на 500", "У /transactions знайти цей рядок", "Видалити його", "Перевірити баланс"],
+    exp: ["Баланс повернувся до значення до коригування", "Звіт більше не показує це коригування"],
+    why: "До рефакторингу видалення відкочувало баланс тільки для поповнень; коригування лишало баланс зміщеним назавжди.",
+    fail: "Рядок зник, а баланс лишився зміщеним." },
+
+  { id: "REG-007", g: "A", p: "P0", t: "Списання за доставку не видаляється вручну", m: 4, star: true,
+    pre: "Транзакція типу «списання за доставку».",
+    steps: ["Спробувати видалити її через UI або API DELETE /transactions/<id>"],
+    exp: ["Відмова: «Списання за доставку не видаляється вручну. Щоб повернути гроші — змініть статус доставки.»", "Транзакція лишилась, баланс не змінився"],
+    fail: "Транзакцію видалено." },
+
+  { id: "REG-008", g: "A", p: "P1", t: "Коригування балансу не редагується зі сторінки транзакцій", m: 4, star: true,
+    pre: "Рядок коригування балансу у /transactions.",
+    steps: ["Спробувати відредагувати суму"],
+    exp: ["Відмова з поясненням, що коригування керується вкладкою «Баланс клієнтів», а списання — статусом доставки", "Сума не змінилась"],
+    fail: "Сума змінилась, або помилка 500 без пояснення." },
+
+  { id: "REG-009", g: "A", p: "P0", t: "Зміна цін не переоцінює вже створені підписки", m: 10, star: true,
+    pre: "Активний прайс-пресет; доступ до Налаштування → Прайси.",
+    steps: ["Створити підписку розміру M, записати очікувану ціну за доставку", "Підняти ціну підписки для M (напр. 4000 → 8000)", "Провести одну доставку цієї підписки в «Доставлено»", "Перевірити суму списання"],
+    exp: ["Списано за СТАРОЮ ціною — тією, що діяла при створенні", "Нова ціна діє лише для підписок, створених після зміни"],
+    why: "До рефакторингу підписки, створені через UI, взагалі не фіксували ціну.",
+    fail: "Списано нову суму — підписки переоцінені заднім числом." },
+
+  { id: "REG-010", g: "A", p: "P0", t: "Міграції застосовуються на копії прод-даних", m: 20, star: true,
+    pre: "Staging зі свіжою копією прод-дампу; знятий бекап. ВИКОНАТИ ОДНИМ ІЗ ПЕРШИХ.",
+    steps: ["Зняти бекап БД staging", "flask db upgrade", "Якщо зупинилось із переліком дублікатів у settings — це ОЧІКУВАНА поведінка: почистити дублі вручну, перепривʼязавши prices і transaction, повторити", "flask db current", "Відкрити /reports і /orders"],
+    exp: ["Обидві міграції застосувались", "Head = add_referential_integrity", "Сторінки відкриваються без помилок", "Час відгуку /reports не погіршився — індекси мають його покращити"],
+    fail: "Міграція впала з непередбаченою помилкою → відкотити з бекапу, не деплоїти." },
+
+  // ── B ──
+  { id: "REG-011", g: "B", p: "P1", t: "Продовження підписки поважає кількість доставок", m: 7, star: true,
+    pre: "Можливість задати кількість доставок при створенні.",
+    steps: ["Створити підписку з кількістю доставок 6 (не 4)", "Продовжити її"],
+    exp: ["Нова підписка має 6 замовлень, а не 4", "Поле «кількість доставок» = 6", "Знижка за лояльність = 5% (перше продовження)"],
+    fail: "4 замовлення при полі 6 — підписка суперечить сама собі." },
+
+  { id: "REG-012", g: "B", p: "P1", t: "Знижка в редагуванні замовлення зберігається", m: 6, star: true,
+    pre: "Разове замовлення без знижки.",
+    steps: ["Записати ціну замовлення", "Відкрити на редагування, виставити знижку 20%, зберегти", "Знову відкрити замовлення", "Провести доставку в «Доставлено»"],
+    exp: ["Знижка 20% збереглась і не зникла після збереження", "Сума перерахована з урахуванням знижки", "Списано суму зі знижкою"],
+    why: "До рефакторингу update_order взагалі не читав поле знижки — менеджер міняв її, зберігав, і вона мовчки зникала.",
+    fail: "Знижка зникла після збереження." },
+
+  { id: "REG-013", g: "B", p: "P1", t: "Зміна розміру перераховує суму до списання", m: 6,
+    pre: "Разове замовлення розміру S, доставка ще не проведена.",
+    steps: ["Змінити розмір на XL, зберегти", "Провести доставку"],
+    exp: ["Списано ціну XL, а не стару ціну S"],
+    fail: "Списано стару суму." },
+
+  { id: "REG-014", g: "B", p: "P1", t: "Ціна вже проведеного списання не переписується", m: 6,
+    pre: "Замовлення, доставку якого вже проведено в «Доставлено».",
+    steps: ["Відредагувати замовлення — змінити розмір або знижку, зберегти", "Перевірити суму вже створеної транзакції списання"],
+    exp: ["Сума вже проведеного списання не змінилась", "Історія не розійшлась із фактом"],
+    fail: "Сума списання заднім числом змінилась." },
+
+  { id: "REG-015", g: "B", p: "P1", t: "Видалення замовлення з фото", m: 5, star: true,
+    pre: "Замовлення без проведених доставок.",
+    steps: ["Прикріпити фото до замовлення", "Видалити замовлення"],
+    exp: ["Замовлення видалено без помилки", "Фото видалені разом із файлами з диска", "Немає помилки 500 / IntegrityError"],
+    fail: "Помилка БД — до рефакторингу падало саме тут." },
+
+  { id: "REG-016", g: "B", p: "P1", t: "Видалення замовлення повертає сертифікат в обіг", m: 6, star: true,
+    pre: "Замовлення із застосованим сертифікатом.",
+    steps: ["Записати код сертифіката", "Видалити замовлення", "Знайти сертифікат у /certificates"],
+    exp: ["Замовлення видалено без помилки", "Сертифікат НЕ видалений", "Статус «Активний», привʼязку до замовлення знято", "Сертифікат можна застосувати до нового замовлення"],
+    fail: "Помилка БД, або сертифікат зник чи лишився «використаним»." },
+
+  { id: "REG-017", g: "B", p: "P1", t: "Зміна клієнта в замовленні оновлює екран флориста", m: 8, star: true,
+    pre: "Два різні клієнти; замовлення з непроведеною доставкою на сьогодні.",
+    steps: ["Створити замовлення для клієнта A з доставкою на сьогодні", "Відредагувати, змінити клієнта на B", "Відкрити /florist", "Відкрити /deliveries"],
+    exp: ["На екрані флориста показано клієнта B", "У списку доставок — теж B", "Обидва екрани показують одного клієнта"],
+    fail: "Різні екрани показують різних клієнтів." },
+
+  { id: "REG-018", g: "B", p: "P2", t: "Перенос дат підписки оновлює дату в картці", m: 7,
+    pre: "Підписка з 4 доставками.",
+    steps: ["Перенести першу доставку на 2 тижні вперед", "Прийняти запропонований каскад", "Відкрити картку підписки і картки замовлень"],
+    exp: ["Дати доставок зсунулись", "Дата в картці замовлення збігається з фактичною датою доставки"],
+    fail: "Картка показує стару дату." },
+
+  // ── C ──
+  { id: "REG-019", g: "C", p: "P0", t: "Телеграм-бот кур'єра — проведення доставки", m: 10, star: true,
+    pre: "Кур'єр із привʼязаним телеграм-акаунтом; маршрут на сьогодні.",
+    steps: ["У боті відкрити «Мої доставки на сьогодні»", "Позначити доставку як доставлену", "Перевірити статус у CRM", "Перевірити баланс клієнта"],
+    exp: ["Бот показує список доставок — не порожній, не помилка", "Статус у CRM змінився на «Доставлено»", "Клієнту списано гроші", "Лічильник доставок кур'єра зріс"],
+    why: "Найбільший ризик усього рефакторингу: якщо помилка в одному порівнянні статусу, бот мовчки покаже порожній список.",
+    fail: "Бот не бачить доставок, статус не змінюється, або не списується." },
+
+  { id: "REG-020", g: "C", p: "P1", t: "Телеграм-бот — фільтри «сьогодні / завтра / тиждень»", m: 8,
+    pre: "Кур'єр із доставками на кілька днів.",
+    steps: ["У боті по черзі відкрити: сьогодні, завтра, на тиждень", "Порівняти з /deliveries у CRM за тими самими датами"],
+    exp: ["Кількість доставок збігається з CRM", "Скасовані доставки НЕ показані", "Лічильники «очікує / доставлено» правильні"],
+    fail: "Розбіжність із CRM або порожні списки." },
+
+  { id: "REG-021", g: "C", p: "P1", t: "Екран флориста — масова зміна статусів", m: 10,
+    pre: "Кілька доставок на сьогодні.",
+    steps: ["/florist, обрати кілька доставок", "По черзі застосувати: «Зібрано», «Передано кур'єру», «Доставлено»", "Перевірити статуси в /deliveries"],
+    exp: ["Кожен статус застосовується до всіх обраних", "«Передано кур'єру» переводить доставку в «Розподілено»", "«Доставлено» списує гроші з клієнта", "Скасовані доставки не змінюються"],
+    fail: "Статус не застосовується або застосовується не до всіх." },
+
+  { id: "REG-021a", g: "C", p: "P0", t: "«Скинути» на доставленій доставці сторнує списання", m: 7, star: true,
+    pre: "Доставка, проведена в «Доставлено» через екран флориста, за неї списано; кур'єр призначений.",
+    steps: ["Записати баланс клієнта і лічильник доставок кур'єра", "/florist → обрати цю доставку → «Скинути»", "Перевірити статус, баланс, лічильник"],
+    exp: ["Статус повернувся в «Очікує», флористичний статус очищено", "Баланс клієнта відновлено — створено рядок сторно", "Лічильник доставок кур'єра зменшився на 1", "Час доставки очищено"],
+    why: "Кнопка «Скинути» виставляла статус в обхід загального механізму — тобто мала той самий однобічний білінг, який лагодив увесь рефакторинг. Знайдено при написанні цього плану, виправлено, покрито автотестом.",
+    fail: "Статус скинуто, а гроші лишились списаними." },
+
+  { id: "REG-022", g: "C", p: "P1", t: "Дашборд і лічильники в навбарі", m: 6,
+    pre: "Є зависли доставки й доставки флориста на сьогодні.",
+    steps: ["Відкрити дашборд", "Звірити: «зависли» доставки, доставки флориста на сьогодні, черга продовжень", "Перевірити ті самі цифри вручну через /deliveries з фільтрами"],
+    exp: ["Усі лічильники збігаються з ручним підрахунком", "«Зависли» = дата ≤ сьогодні, не «Доставлено» і не «Скасовано»"],
+    fail: "Будь-яка розбіжність." },
+
+  { id: "REG-023", g: "C", p: "P1", t: "Маршрути — розподіл і скасування", m: 10,
+    pre: "Кілька нерозподілених доставок; активний кур'єр.",
+    steps: ["Створити маршрут, додати доставки, відправити кур'єру", "Перевірити, що статуси доставок = «Розподілено»", "Скасувати або перерозподілити", "Спробувати додати ту саму доставку у два маршрути"],
+    exp: ["Розподіл виставляє «Розподілено», скасування повертає «Очікує»", "Одна доставка НЕ може опинитись у двох маршрутах одночасно (нове обмеження)"],
+    fail: "Статуси не змінюються або дубль у маршрутах можливий." },
+
+  // ── D ──
+  { id: "REG-024", g: "D", p: "P1", t: "Видалення розміру, що використовується в прайсах", m: 5, star: true,
+    pre: "Розмір, для якого заповнені ціни.",
+    steps: ["Налаштування → Довідники → спробувати видалити цей розмір"],
+    exp: ["Помилка: «Розмір використовується в прайсах і не може бути видалений»", "Розмір і прайси на місці"],
+    fail: "Розмір видалено РАЗОМ із прайсами — стара поведінка тихого знесення." },
+
+  { id: "REG-025", g: "D", p: "P2", t: "Видалення типу витрати, привʼязаного до транзакцій", m: 5, star: true,
+    pre: "Витрата, створена після переходу на довідник типів.",
+    steps: ["Створити витрату з типом із довідника", "Спробувати видалити цей тип витрати"],
+    exp: ["Помилка: «Тип витрати використовується в транзакціях і не може бути видалений»"],
+    fail: "Помилка БД 500 — стара перевірка дивилась не на те поле." },
+
+  { id: "REG-026", g: "D", p: "P2", t: "Видалення рахунку оплати, що використовується", m: 4,
+    pre: "Рахунок оплати, на який є транзакції або перекази.",
+    steps: ["Спробувати видалити цей рахунок"],
+    exp: ["Помилка: «Рахунок використовується в транзакціях і не може бути видалений»"],
+    fail: "Помилка 500 замість зрозумілої відмови." },
+
+  { id: "REG-027", g: "D", p: "P2", t: "Дублікат у довіднику неможливий", m: 4,
+    pre: "Наявні записи в довідниках.",
+    steps: ["Налаштування → Довідники → додати розмір із назвою, що вже існує", "Те саме для типу витрати й рахунку оплати"],
+    exp: ["Створення відхилено", "Другий рядок не зʼявився"],
+    fail: "Створено другий рядок із тією самою назвою." },
+
+  { id: "REG-028", g: "D", p: "P1", t: "CSV-імпорт не створює дубль клієнта через регістр", m: 8, star: true,
+    pre: "У базі є клієнт з Instagram, напр. «Ivanna».",
+    steps: ["Підготувати CSV, де той самий клієнт написаний як «ivanna»", "Прогнати імпорт", "Перевірити кількість клієнтів"],
+    exp: ["Новий клієнт НЕ створений — імпорт знайшов наявного", "Замовлення привʼязано до наявного клієнта", "Так само працює для «@ivanna» і «IVANNA»"],
+    fail: "Два клієнти з однаковим Instagram — баланс роздвоєно." },
+
+  { id: "REG-029", g: "D", p: "P2", t: "Генерація кодів сертифікатів без колізій", m: 6,
+    pre: "Можливість створювати й видаляти сертифікати.",
+    steps: ["Створити 2–3 сертифікати, запамʼятати коди", "Видалити сертифікат із СЕРЕДНІМ номером", "Створити новий сертифікат"],
+    exp: ["Новий код не збігається з жодним наявним", "Створення не падає з помилкою унікальності"],
+    fail: "Помилка унікальності коду." },
+
+  { id: "REG-030", g: "D", p: "P0", t: "Аудит значень статусів на прод-даних", m: 5, star: true,
+    pre: "Staging із копією прод-дампу. ВИКОНАТИ ПЕРШИМ.",
+    steps: ["Виконати flask audit-enum-values"],
+    exp: ["Команда відпрацювала", "Вивід показує фактичні значення статусів у БД"],
+    why: "«Відхилень немає» → можна додавати CHECK-констрейнти окремою міграцією. Є невідомі значення → це НЕ блокер релізу, але перелік треба передати розробнику; констрейнти поки не додавати.",
+    fail: "Команда падає з помилкою." }
+];
+
+const STATUSES = { pass: "Пройдено", fail: "Провалено", block: "Заблоковано" };
+const PATH = "runs/current/cases";
+
+let state = {};      // id -> {status, note, bug}
+let db = null;
+let canWrite = true;
+const pending = {};
+
+/* ── Render ─────────────────────────────────────────────── */
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+function buildGroups() {
+  const host = document.getElementById("groups");
+  host.innerHTML = "";
+  GROUPS.forEach(g => {
+    const cases = CASES.filter(c => c.g === g.id);
+    const sec = document.createElement("section");
+    sec.className = "grp";
+    sec.innerHTML =
+      '<div class="grp-head">' +
+        '<h2>' + esc(g.id) + ". " + esc(g.title) + '</h2>' +
+        '<span class="risk r-' + g.risk + '">' + (g.risk === "crit" ? "найвищий ризик" : "високий ризик") + '</span>' +
+        '<span class="g-count" id="gc-' + g.id + '"></span>' +
+      '</div>' +
+      '<p class="grp-desc">' + esc(g.desc) + '</p>';
+    cases.forEach(c => sec.appendChild(caseEl(c)));
+    host.appendChild(sec);
+  });
+}
+
+function caseEl(c) {
+  const el = document.createElement("article");
+  el.className = "case pri-" + c.p;
+  el.dataset.id = c.id;
+
+  const head = document.createElement("div");
+  head.className = "case-head";
+  head.setAttribute("role", "button");
+  head.setAttribute("tabindex", "0");
+  head.innerHTML =
+    '<span class="chev">▶</span>' +
+    '<div class="case-main">' +
+      '<div class="case-id mono">TC-' + esc(c.id) + '</div>' +
+      '<div class="case-title">' + esc(c.t) + (c.star ? ' <span class="star" title="Виправлений баг або нова поведінка">★</span>' : '') + '</div>' +
+      '<div class="case-meta">' +
+        '<span class="pill ' + c.p + '">' + c.p + '</span>' +
+        '<span class="pill time">' + c.m + ' хв</span>' +
+      '</div>' +
+    '</div>';
+
+  const set = document.createElement("div");
+  set.className = "status-set";
+  Object.keys(STATUSES).forEach(k => {
+    const b = document.createElement("button");
+    b.className = "st-btn v-" + k;
+    b.dataset.status = k;
+    b.type = "button";
+    b.textContent = k === "pass" ? "✓" : k === "fail" ? "✕" : "‖";
+    b.title = STATUSES[k];
+    b.setAttribute("aria-label", STATUSES[k] + " — TC-" + c.id);
+    b.addEventListener("click", e => { e.stopPropagation(); toggle(c.id, k); });
+    set.appendChild(b);
+  });
+  head.appendChild(set);
+
+  const body = document.createElement("div");
+  body.className = "case-body";
+  body.hidden = true;
+  body.innerHTML =
+    '<h4>Передумови</h4><p class="prereq">' + esc(c.pre) + '</p>' +
+    '<h4>Кроки</h4><ol>' + c.steps.map(s => "<li>" + esc(s) + "</li>").join("") + '</ol>' +
+    '<h4>Очікуваний результат</h4><ul class="expect">' + c.exp.map(s => "<li>" + esc(s) + "</li>").join("") + '</ul>' +
+    (c.why ? '<div class="why">' + esc(c.why) + '</div>' : '') +
+    '<div class="failhint"><b>Провал, якщо:</b> ' + esc(c.fail) + '</div>' +
+    '<div class="record">' +
+      '<div><label for="note-' + c.id + '">Нотатка</label>' +
+        '<textarea id="note-' + c.id + '" placeholder="Що саме побачили, якщо відхилення"></textarea></div>' +
+      '<div><label for="bug-' + c.id + '">Баг</label>' +
+        '<input id="bug-' + c.id + '" placeholder="BUG-001"></div>' +
+    '</div>';
+
+  head.addEventListener("click", () => { el.classList.toggle("open"); body.hidden = !el.classList.contains("open"); });
+  head.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); head.click(); }
+  });
+
+  el.appendChild(head);
+  el.appendChild(body);
+
+  body.querySelector("#note-" + CSS.escape(c.id)).addEventListener("input", e => field(c.id, "note", e.target.value));
+  body.querySelector("#bug-" + CSS.escape(c.id)).addEventListener("input", e => field(c.id, "bug", e.target.value));
+  return el;
+}
+
+/* ── State ──────────────────────────────────────────────── */
+function rec(id) { return state[id] || { status: null, note: "", bug: "" }; }
+
+function toggle(id, status) {
+  const cur = rec(id);
+  const next = { ...cur, status: cur.status === status ? null : status };
+  state[id] = next;
+  paint(id);
+  summarize();
+  save(id, next);
+}
+
+function field(id, key, value) {
+  const next = { ...rec(id), [key]: value };
+  state[id] = next;
+  clearTimeout(pending[id]);
+  pending[id] = setTimeout(() => save(id, next), 700);
+}
+
+function paint(id) {
+  const el = document.querySelector('.case[data-id="' + CSS.escape(id) + '"]');
+  if (!el) return;
+  const r = rec(id);
+  el.classList.remove("st-pass", "st-fail", "st-block");
+  if (r.status) el.classList.add("st-" + r.status);
+  el.querySelectorAll(".st-btn").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.status === r.status)));
+  const note = el.querySelector("textarea"), bug = el.querySelector('input');
+  if (note && document.activeElement !== note) note.value = r.note || "";
+  if (bug && document.activeElement !== bug) bug.value = r.bug || "";
+}
+
+function paintAll() { CASES.forEach(c => paint(c.id)); summarize(); }
+
+/* ── Summary & gates ────────────────────────────────────── */
+function summarize() {
+  const total = CASES.length;
+  let pass = 0, fail = 0, block = 0;
+  const byP = { P0: { pass: 0, total: 0 }, P1: { pass: 0, total: 0 }, P2: { pass: 0, total: 0 } };
+
+  CASES.forEach(c => {
+    byP[c.p].total++;
+    const s = rec(c.id).status;
+    if (s === "pass") { pass++; byP[c.p].pass++; }
+    else if (s === "fail") fail++;
+    else if (s === "block") block++;
+  });
+
+  const done = pass + fail + block;
+  document.getElementById("barPass").style.width  = (pass / total * 100) + "%";
+  document.getElementById("barFail").style.width  = (fail / total * 100) + "%";
+  document.getElementById("barBlock").style.width = (block / total * 100) + "%";
+  document.getElementById("countLine").innerHTML =
+    "<b>" + done + "</b> з " + total + " перевірено" + (fail ? " · " + fail + " провалено" : "");
+
+  GROUPS.forEach(g => {
+    const cs = CASES.filter(c => c.g === g.id);
+    const d = cs.filter(c => rec(c.id).status).length;
+    const el = document.getElementById("gc-" + g.id);
+    if (el) el.textContent = d + " / " + cs.length;
+  });
+
+  const gates = [
+    { label: "P0 пройдено", val: byP.P0.pass + " / " + byP.P0.total, met: byP.P0.pass === byP.P0.total },
+    { label: "P1 пройдено", val: byP.P1.pass + " / " + byP.P1.total, met: byP.P1.pass >= byP.P1.total - 1 },
+    { label: "P2 пройдено", val: byP.P2.pass + " / " + byP.P2.total, met: true },
+    { label: "Провалених", val: String(fail), met: fail === 0 },
+    { label: "Заблокованих", val: String(block), met: block === 0 }
+  ];
+  document.getElementById("gates").innerHTML = gates.map(g =>
+    '<div class="gate ' + (g.met ? "met" : "unmet") + '">' +
+      '<div class="g-label">' + esc(g.label) + '</div>' +
+      '<div class="g-val mono">' + esc(g.val) + '</div>' +
+    '</div>'
+  ).join("");
+
+  const v = document.getElementById("verdict");
+  const vt = document.getElementById("verdictTitle");
+  const vx = document.getElementById("verdictText");
+  v.classList.remove("ok", "bad", "wait");
+  if (fail > 0) {
+    v.classList.add("bad");
+    vt.textContent = "Є провалені кейси — не деплоїти";
+    vx.textContent = fail + " " + (fail === 1 ? "кейс провалено" : "кейсів провалено") + ". Передайте нотатки розробнику; кожен провал у групі A означає розсинхрон балансу.";
+  } else if (done === 0) {
+    v.classList.add("wait");
+    vt.textContent = "Прогін не починався";
+    vx.textContent = "Спершу автоматичні перевірки, потім TC-REG-030 і TC-REG-010 на копії прод-даних.";
+  } else if (byP.P0.pass === byP.P0.total && byP.P1.pass >= byP.P1.total - 1 && block === 0) {
+    v.classList.add("ok");
+    vt.textContent = "Ворота якості пройдено — можна деплоїти";
+    vx.textContent = "Усі P0 зелені, провалених немає. Перед деплоєм переконайтесь, що міграції прогнані саме на копії прод-даних, а не на порожній базі.";
+  } else {
+    v.classList.add("wait");
+    vt.textContent = "Прогін триває";
+    vx.textContent = "Лишилось " + (CASES.length - done) + " кейсів. Блокери релізу — усі P0 і щонайменше 10 з 11 P1.";
+  }
+}
+
+/* ── Persistence ────────────────────────────────────────── */
+function setSync(kind, text) {
+  const el = document.getElementById("sync");
+  el.className = "sync " + kind;
+  document.getElementById("syncText").textContent = text;
+}
+
+async function save(id, value) {
+  if (!db || !canWrite) return;
+  try {
+    await db.doc(PATH + "/" + id).set({
+      status: value.status || "",
+      note: value.note || "",
+      bug: value.bug || "",
+      updatedAt: new Date().toISOString()
+    });
+  } catch (e) {
+    if (e && e.code === "invalid_argument") {
+      canWrite = false;
+      setSync("local", "лише перегляд — зміни не зберігаються");
+    } else if (e && e.code === "revoked") {
+      db = null;
+      setSync("local", "доступ втрачено — зміни не зберігаються");
+    }
+  }
+}
+
+async function boot() {
+  buildGroups();
+  paintAll();
+  setSync("", "підключення…");
+
+  try {
+    db = await claude.use("db");
+  } catch (e) { db = null; }
+
+  if (!db) {
+    setSync("local", "без збереження — прогрес зникне після перезавантаження");
+    return;
+  }
+
+  try {
+    const user = await claude.use("user");
+    const w = user ? await user.can("data.write") : null;
+    if (w === false) { canWrite = false; }
+  } catch (e) { /* нічого не сказано — лишаємо поля активними */ }
+
+  db.collection(PATH).onSnapshot(snap => {
+    snap.docs.forEach(d => {
+      const v = d.data() || {};
+      state[d.id] = { status: v.status || null, note: v.note || "", bug: v.bug || "" };
+    });
+    paintAll();
+    setSync("live", canWrite ? "прогрес зберігається" : "лише перегляд");
+  }, err => {
+    setSync("local", "звʼязок зі сховищем втрачено");
+  });
+}
+
+/* ── Toolbar ────────────────────────────────────────────── */
+document.getElementById("btnExpand").addEventListener("click", e => {
+  const anyClosed = [...document.querySelectorAll(".case")].some(c => !c.classList.contains("open"));
+  document.querySelectorAll(".case").forEach(c => {
+    c.classList.toggle("open", anyClosed);
+    c.querySelector(".case-body").hidden = !anyClosed;
+  });
+  e.target.textContent = anyClosed ? "Згорнути все" : "Розгорнути все";
+});
+
+document.getElementById("btnOpenFails").addEventListener("click", () => {
+  let first = null;
+  document.querySelectorAll(".case").forEach(c => {
+    const bad = ["fail", "block"].includes(rec(c.dataset.id).status);
+    c.classList.toggle("open", bad);
+    c.querySelector(".case-body").hidden = !bad;
+    if (bad && !first) first = c;
+  });
+  if (first) first.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+
+document.getElementById("btnCopy").addEventListener("click", async e => {
+  const lines = ["Регресія після рефакторингу — CRM Kvitkova Povnya", new Date().toLocaleString("uk-UA"), ""];
+  GROUPS.forEach(g => {
+    lines.push(g.id + ". " + g.title);
+    CASES.filter(c => c.g === g.id).forEach(c => {
+      const r = rec(c.id);
+      const mark = r.status === "pass" ? "[x]" : r.status === "fail" ? "[!]" : r.status === "block" ? "[~]" : "[ ]";
+      let l = "  " + mark + " TC-" + c.id + " (" + c.p + ") " + c.t;
+      if (r.bug) l += " → " + r.bug;
+      lines.push(l);
+      if (r.note) lines.push("        " + r.note);
+    });
+    lines.push("");
+  });
+  try {
+    await navigator.clipboard.writeText(lines.join("\n"));
+    const old = e.target.textContent;
+    e.target.textContent = "Скопійовано";
+    setTimeout(() => { e.target.textContent = old; }, 1600);
+  } catch (err) {
+    e.target.textContent = "Не вдалось скопіювати";
+  }
+});
+
+document.getElementById("btnReset").addEventListener("click", async () => {
+  if (!confirm("Скинути статуси, нотатки й баги для всіх 31 кейсів? Дію не можна відмінити.")) return;
+  state = {};
+  paintAll();
+  if (db && canWrite) {
+    for (const c of CASES) {
+      try { await db.doc(PATH + "/" + c.id).delete(); } catch (e) { /* пропускаємо */ }
+    }
+  }
+});
+
+boot();
+</script>
