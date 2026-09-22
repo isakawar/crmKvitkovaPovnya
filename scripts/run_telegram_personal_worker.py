@@ -62,24 +62,29 @@ async def run_channel(app, channel_id: int):
             return
         client = client_for(channel)
 
-    @client.on(events.NewMessage(incoming=True))
+    # outgoing=True as well: this is a real account, so the owner also writes
+    # from their phone, and without it the CRM thread has one side missing.
+    # A reply sent from the CRM comes back here too and is dropped by
+    # inbox_service's external_message_id guard.
+    @client.on(events.NewMessage(incoming=True, outgoing=True))
     async def _on_message(event):
         if not event.is_private:
             return  # skip channel posts / group messages — inbox is 1:1 only
-        # Only here, inside the live loop, can the sender be resolved cheaply —
-        # without it the conversation has no name and can't be matched to a client.
+        # Only here, inside the live loop, can the peer be resolved cheaply —
+        # without it the conversation has no name, can't be matched to a client,
+        # and its media can't be downloaded later.
         try:
-            sender = await event.get_sender()
+            peer = await event.get_chat()
         except Exception:
-            logger.exception('Channel #%s: failed to resolve sender', channel_id)
-            sender = None
+            logger.exception('Channel #%s: failed to resolve chat', channel_id)
+            peer = None
         with app.app_context():
             from app.models.messaging_channel import MessagingChannel
             ch = MessagingChannel.query.get(channel_id)
             if not ch or not ch.is_active:
                 return
             try:
-                inbound = build_inbound_event(event.message, sender=sender)
+                inbound = build_inbound_event(event.message, peer=peer)
                 msg = inbox_service.ingest_event(ch, inbound)
                 if msg is not None and inbound.media:
                     inbox_service.prefetch_message_media(app, msg.id)

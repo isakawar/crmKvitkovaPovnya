@@ -18,7 +18,9 @@ from app.extensions import db
 from app.models.conversation import Conversation
 from app.models.message import Message
 from app.services.messaging.adapter import InboundEvent
-from app.services.messaging.inbox_service import _get_or_create_conversation, apply_contact
+from app.services.messaging.inbox_service import (
+    _album_message, _get_or_create_conversation, _merge_into_album, apply_contact,
+)
 from app.services.messaging.telegram_personal import client_for, _media_dicts, contact_from_entity
 
 
@@ -78,12 +80,34 @@ async def _run_async(channel, days: int) -> dict:
 
             for message in reversed(imported_this_dialog):  # oldest first
                 naive_date = message.date.replace(tzinfo=None)
+                media = _media_dicts(message, dialog.entity)
+                group_id = str(message.grouped_id) if message.grouped_id else None
+                event = InboundEvent(
+                    kind='message',
+                    external_chat_id=str(dialog.id),
+                    external_message_id=str(message.id),
+                    text=message.message or None,
+                    media=media,
+                    date=naive_date,
+                    outgoing=bool(message.out),
+                    group_id=group_id,
+                )
+
+                # Album parts are folded into one message, exactly as the live
+                # worker does — same two helpers, so both paths agree.
+                album = _album_message(conv, event) if group_id else None
+                if album is not None:
+                    if _merge_into_album(album, event, media) is None:
+                        continue  # already imported by an earlier run
+                    messages_imported += 1
+                    continue
+
                 msg = Message(
                     conversation_id=conv.id,
                     direction='out' if message.out else 'in',
                     external_message_id=str(message.id),
                     text=message.message or None,
-                    media=_media_dicts(message),
+                    media=media,
                     status='sent' if message.out else 'received',
                     tg_date=naive_date,
                     created_at=naive_date,

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -101,23 +101,39 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         # (telegram/instagram use tg_file_id, telegram_personal uses
         # tg_chat_id/tg_message_id instead — download_media needs its own shape).
         media = [dict(m, path=None) for m in event.media]
-        msg = Message(
-            conversation_id=conv.id,
-            direction='in',
-            external_message_id=event.external_message_id,
-            text=event.text,
-            media=media,
-            status='received',
-            tg_date=event.date,
-        )
-        db.session.add(msg)
+
+        # An album arrives as several separate messages sharing one group id —
+        # merge them into the message that opened the album so the thread shows
+        # one bubble with several photos, the way Telegram itself does.
+        album = _album_message(conv, event) if event.group_id else None
+        if album is not None:
+            msg = _merge_into_album(album, event, media)
+            if msg is None:
+                return None
+        else:
+            msg = Message(
+                conversation_id=conv.id,
+                direction='out' if event.outgoing else 'in',
+                external_message_id=event.external_message_id,
+                text=event.text,
+                media=media,
+                status='sent' if event.outgoing else 'received',
+                tg_date=event.date,
+            )
+            db.session.add(msg)
 
         apply_contact(conv, event.contact)
 
         conv.last_message_at = event.date or datetime.utcnow()
-        conv.last_message_preview = _preview(event.text, media)
-        conv.last_message_direction = 'in'
-        conv.unread_count = (conv.unread_count or 0) + 1
+        conv.last_message_preview = _preview(msg.text, msg.media)
+        if event.outgoing:
+            # The owner answering from their phone means they've seen the chat.
+            conv.last_message_direction = 'out'
+            conv.unread_count = 0
+        else:
+            conv.last_message_direction = 'in'
+            if album is None:
+                conv.unread_count = (conv.unread_count or 0) + 1
         db.session.commit()
         events.publish('message', channel.id, conv.id)
         return msg
@@ -125,6 +141,44 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         db.session.rollback()
         log.exception('ingest_event failed for channel %s', getattr(channel, 'id', '?'))
         return None
+
+
+_ALBUM_LOOKBACK = 10
+
+
+def _album_message(conv: Conversation, event) -> Message | None:
+    """The already-stored message of this event's album, if there is one.
+
+    The album id isn't a column — it rides along in each media dict, so this
+    only scans the last few messages of the conversation (album parts always
+    arrive back to back).
+    """
+    recent = (conv.messages.order_by(None).order_by(Message.id.desc())
+              .limit(_ALBUM_LOOKBACK).all())
+    for msg in recent:
+        for item in msg.media or []:
+            if item.get('tg_group_id') == event.group_id:
+                return msg
+    return None
+
+
+def _merge_into_album(msg: Message, event, media: list[dict]) -> Message | None:
+    """Append this album part's media to the album's message. None if already there.
+
+    Redelivery is caught here rather than by the external_message_id guard: the
+    album keeps the id of the message that opened it, so the later parts have
+    no row of their own to match against.
+    """
+    known = {item.get('tg_message_id') for item in msg.media or []}
+    fresh = [m for m in media if m.get('tg_message_id') not in known]
+    if not fresh:
+        return None
+    msg.media = list(msg.media or []) + fresh
+    flag_modified(msg, 'media')
+    # The caption can sit on any part of the album, not only the first.
+    if event.text and not msg.text:
+        msg.text = event.text
+    return msg
 
 
 def apply_contact(conv: Conversation, contact: dict | None) -> None:
@@ -380,7 +434,7 @@ def serialize_conversation(conv: Conversation) -> dict:
         'status': conv.status,
         'assigned_user_id': conv.assigned_user_id,
         'client_id': conv.client_id,
-        'last_message_at': conv.last_message_at.isoformat() if conv.last_message_at else None,
+        'last_message_at': _iso_utc(conv.last_message_at),
     }
 
 
@@ -443,6 +497,18 @@ def get_client_panel(conversation: Conversation) -> dict:
     }
 
 
+def _iso_utc(dt: datetime | None) -> str | None:
+    """ISO string with an explicit +00:00 offset.
+
+    Every datetime here is naive UTC; without the offset the browser's
+    `new Date()` reads the string as local time, which showed every message
+    three hours early in Kyiv.
+    """
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc).isoformat()
+
+
 def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
     return {
         'id': msg.id,
@@ -457,5 +523,5 @@ def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
              'downloaded': bool(m.get('path')), 'expired': bool(m.get('expired'))}
             for i, m in enumerate(msg.media or [])
         ],
-        'created_at': (msg.tg_date or msg.created_at).isoformat(),
+        'created_at': _iso_utc(msg.tg_date or msg.created_at),
     }

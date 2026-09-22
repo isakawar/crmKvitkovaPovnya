@@ -20,6 +20,12 @@ class InboundEvent:
     contact: dict = field(default_factory=dict)   # {name, username, phone}
     media: list[dict] = field(default_factory=list)  # [{type, tg_file_id, mime, filename}]
     date: datetime | None = None
+    # True for a message the account owner sent themselves, outside the CRM
+    # (telegram_personal is a real account — they also write from their phone).
+    outgoing: bool = False
+    # Telegram album id: several messages that belong to one album are merged
+    # into a single Message with several media entries.
+    group_id: str | None = None
     # kind == 'connection'
     connection_id: str | None = None
     connection_enabled: bool = True

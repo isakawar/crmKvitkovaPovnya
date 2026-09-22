@@ -420,3 +420,89 @@ def test_manual_link_is_not_overwritten_by_auto_link(session):
 
     session.refresh(conv)
     assert conv.client_id == manual.id
+
+
+# ── outgoing messages, albums, timestamps ─────────────────────────────────
+
+def _tg_media(mid, group=None):
+    return {'type': 'photo', 'tg_chat_id': 777, 'tg_message_id': mid,
+            'tg_access_hash': 5, 'tg_group_id': group, 'mime': 'image/jpeg', 'filename': None}
+
+
+def test_outgoing_message_is_stored_as_out_and_clears_unread(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1', text='питання'))
+    conv = Conversation.query.one()
+    assert conv.unread_count == 1
+
+    # the owner answers from their phone — Telegram echoes it back to the worker
+    msg = inbox_service.ingest_event(ch, InboundEvent(
+        kind='message', external_chat_id='777', external_message_id='2',
+        text='відповідь', contact={}, media=[], outgoing=True))
+
+    assert msg.direction == 'out'
+    assert msg.status == 'sent'
+    session.refresh(conv)
+    assert conv.unread_count == 0
+    assert conv.last_message_direction == 'out'
+    assert conv.last_message_preview == 'відповідь'
+
+
+def test_reply_sent_from_the_crm_is_not_duplicated_by_its_echo(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1'))
+    conv = Conversation.query.one()
+
+    echoed = InboundEvent(kind='message', external_chat_id='777', external_message_id='9',
+                          text='з CRM', contact={}, media=[], outgoing=True)
+    inbox_service.ingest_event(ch, echoed)
+    inbox_service.ingest_event(ch, echoed)
+
+    assert conv.messages.filter_by(external_message_id='9').count() == 1
+
+
+def test_album_parts_merge_into_one_message(session):
+    ch = _channel(session, channel_type='telegram_personal')
+
+    first = inbox_service.ingest_event(ch, InboundEvent(
+        kind='message', external_chat_id='777', external_message_id='10', text=None,
+        contact={}, media=[_tg_media(10, group='abc')], group_id='abc'))
+    second = inbox_service.ingest_event(ch, InboundEvent(
+        kind='message', external_chat_id='777', external_message_id='11',
+        text='дві світлини', contact={}, media=[_tg_media(11, group='abc')], group_id='abc'))
+
+    conv = Conversation.query.one()
+    assert conv.messages.count() == 1
+    assert second.id == first.id
+    assert [m['tg_message_id'] for m in second.media] == [10, 11]
+    # the caption can sit on any part of the album
+    assert second.text == 'дві світлини'
+    # one album is one unread message, not one per photo
+    assert conv.unread_count == 1
+
+
+def test_album_part_redelivered_after_a_reconnect_is_ignored(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    part = InboundEvent(kind='message', external_chat_id='777', external_message_id='10',
+                        text=None, contact={}, media=[_tg_media(10, group='abc')], group_id='abc')
+    second = InboundEvent(kind='message', external_chat_id='777', external_message_id='11',
+                          text=None, contact={}, media=[_tg_media(11, group='abc')], group_id='abc')
+
+    inbox_service.ingest_event(ch, part)
+    inbox_service.ingest_event(ch, second)
+    assert inbox_service.ingest_event(ch, second) is None
+
+    msg = Message.query.one()
+    assert len(msg.media) == 2
+
+
+def test_serialized_timestamps_carry_the_utc_offset(session):
+    """Without it the browser reads the naive string as local time and shows
+    every message three hours early in Kyiv."""
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1'))
+    conv = Conversation.query.one()
+    msg = Message.query.one()
+
+    assert inbox_service.serialize_message(msg)['created_at'].endswith('+00:00')
+    assert inbox_service.serialize_conversation(conv)['last_message_at'].endswith('+00:00')

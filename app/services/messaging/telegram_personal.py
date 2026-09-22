@@ -53,14 +53,23 @@ def client_for(channel) -> TelegramClient:
     return TelegramClient(StringSession(session_str), api_id, api_hash)
 
 
-def _media_dicts(message) -> list[dict]:
+def _media_dicts(message, peer=None) -> list[dict]:
     """Media entries shaped for download_media (tg_chat_id/tg_message_id, not
     tg_file_id like the bot adapters) — shared by the live worker and the
-    history backfill script so both produce identically-downloadable media."""
+    history backfill script so both produce identically-downloadable media.
+
+    `tg_access_hash` is what lets a download open a fresh session later: a
+    newly connected client has an empty entity cache and cannot turn a bare
+    user id into a peer on its own (see _download_media_async)."""
+    common = {
+        'tg_chat_id': message.chat_id,
+        'tg_message_id': message.id,
+        'tg_access_hash': getattr(peer, 'access_hash', None),
+        'tg_group_id': str(message.grouped_id) if getattr(message, 'grouped_id', None) else None,
+    }
     media = []
     if message.photo:
-        media.append({'type': 'photo', 'tg_chat_id': message.chat_id,
-                      'tg_message_id': message.id, 'mime': 'image/jpeg', 'filename': None})
+        media.append({**common, 'type': 'photo', 'mime': 'image/jpeg', 'filename': None})
     elif message.document:
         mime = message.document.mime_type or 'application/octet-stream'
         filename = None
@@ -68,8 +77,7 @@ def _media_dicts(message) -> list[dict]:
             if getattr(attr, 'file_name', None):
                 filename = attr.file_name
                 break
-        media.append({'type': 'document', 'tg_chat_id': message.chat_id,
-                      'tg_message_id': message.id, 'mime': mime, 'filename': filename})
+        media.append({**common, 'type': 'document', 'mime': mime, 'filename': filename})
     return media
 
 
@@ -91,22 +99,26 @@ def contact_from_entity(entity) -> dict:
     }
 
 
-def build_inbound_event(message, sender=None) -> InboundEvent:
+def build_inbound_event(message, peer=None) -> InboundEvent:
     """Normalize a Telethon `events.NewMessage.Event.message` into InboundEvent.
 
-    `sender` is the resolved Telethon entity of the person who wrote the
-    message — the worker awaits `event.get_sender()` and passes it in, since
-    only it runs inside the live asyncio loop. Omitted (None) the conversation
-    falls back to `TelegramPersonalAdapter.enrich_contact`.
+    `peer` is the resolved Telethon entity of the other party — in a 1:1 chat
+    that is the contact in both directions. The worker awaits `event.get_chat()`
+    and passes it in, since only it runs inside the live asyncio loop. Omitted
+    (None) the conversation falls back to
+    `TelegramPersonalAdapter.enrich_contact`, and a media download falls back to
+    priming the entity cache.
     """
     return InboundEvent(
         kind='message',
         external_chat_id=str(message.chat_id),
         external_message_id=str(message.id),
         text=message.message or None,
-        contact=contact_from_entity(sender),
-        media=_media_dicts(message),
+        contact=contact_from_entity(peer),
+        media=_media_dicts(message, peer),
         date=message.date.replace(tzinfo=None) if message.date else None,
+        outgoing=bool(getattr(message, 'out', False)),
+        group_id=str(message.grouped_id) if getattr(message, 'grouped_id', None) else None,
     )
 
 
@@ -126,11 +138,29 @@ class TelegramPersonalAdapter:
     def download_media(self, channel, media_ref: dict) -> tuple[str, str]:
         return asyncio.run(self._download_media_async(channel, media_ref))
 
+    async def _resolve_peer(self, client, media_ref: dict):
+        """An input peer this freshly connected client can actually use.
+
+        A new client's entity cache is empty, so a bare user id raises
+        "Could not find the input entity for PeerUser(...)" and the download
+        fails. The access hash stored with the media resolves it outright;
+        media saved before that was stored falls back to pulling the dialog
+        list once, which is what fills the cache.
+        """
+        chat_id = media_ref['tg_chat_id']
+        access_hash = media_ref.get('tg_access_hash')
+        if access_hash is not None:
+            from telethon.tl.types import InputPeerUser
+            return InputPeerUser(int(chat_id), int(access_hash))
+        await client.get_dialogs()
+        return int(chat_id)
+
     async def _download_media_async(self, channel, media_ref: dict) -> tuple[str, str]:
         client = client_for(channel)
         await client.connect()
         try:
-            message = await client.get_messages(media_ref['tg_chat_id'], ids=media_ref['tg_message_id'])
+            peer = await self._resolve_peer(client, media_ref)
+            message = await client.get_messages(peer, ids=media_ref['tg_message_id'])
             if message is None:
                 raise RuntimeError('Повідомлення з медіа більше не існує')
 
