@@ -51,7 +51,10 @@ def wait_for_database():
 async def run_channel(app, channel_id: int):
     """Connect one channel's client and forward its messages until disconnected."""
     from telethon import events
-    from app.services.messaging.telegram_personal import client_for, build_inbound_event
+    from telethon.tl.types import UpdateMessageReactions
+    from app.services.messaging.telegram_personal import (
+        build_inbound_event, build_reactions_event, build_read_event, client_for,
+    )
     from app.services.messaging import inbox_service
 
     with app.app_context():
@@ -61,6 +64,19 @@ async def run_channel(app, channel_id: int):
             logger.warning('Channel #%s has no session, skipping', channel_id)
             return
         client = client_for(channel)
+
+    def _ingest(inbound):
+        """Push one already-built event into the inbox, inside an app context."""
+        with app.app_context():
+            from app.models.messaging_channel import MessagingChannel
+            ch = MessagingChannel.query.get(channel_id)
+            if not ch or not ch.is_active:
+                return None
+            try:
+                return inbox_service.ingest_event(ch, inbound)
+            except Exception:
+                logger.exception('Channel #%s: failed to ingest %s', channel_id, inbound.kind)
+                return None
 
     # outgoing=True as well: this is a real account, so the owner also writes
     # from their phone, and without it the CRM thread has one side missing.
@@ -78,18 +94,26 @@ async def run_channel(app, channel_id: int):
         except Exception:
             logger.exception('Channel #%s: failed to resolve chat', channel_id)
             peer = None
-        with app.app_context():
-            from app.models.messaging_channel import MessagingChannel
-            ch = MessagingChannel.query.get(channel_id)
-            if not ch or not ch.is_active:
-                return
-            try:
-                inbound = build_inbound_event(event.message, peer=peer)
-                msg = inbox_service.ingest_event(ch, inbound)
-                if msg is not None and inbound.media:
-                    inbox_service.prefetch_message_media(app, msg.id)
-            except Exception:
-                logger.exception('Channel #%s: failed to ingest message', channel_id)
+        inbound = build_inbound_event(event.message, peer=peer)
+        msg = _ingest(inbound)
+        if msg is not None and inbound.media:
+            inbox_service.prefetch_message_media(app, msg.id)
+
+    # inbox=True fires when the owner reads the chat somewhere else (their
+    # phone) — the CRM badge follows it; the default fires when the contact
+    # reads what we sent, which is what turns a tick into "read".
+    @client.on(events.MessageRead)
+    @client.on(events.MessageRead(inbox=True))
+    async def _on_read(event):
+        if not event.is_private:
+            return
+        _ingest(build_read_event(event.chat_id, event.max_id, event.inbox))
+
+    # Reactions have no high-level event — they arrive as a raw update carrying
+    # the message's whole current reaction set.
+    @client.on(events.Raw(types=UpdateMessageReactions))
+    async def _on_reactions(update):
+        _ingest(build_reactions_event(update))
 
     await client.connect()
     if not await client.is_user_authorized():

@@ -28,7 +28,10 @@ class Message(db.Model):
     text = db.Column(db.Text, nullable=True)
     media = db.Column(db.JSON, nullable=False, default=list)
 
-    status = db.Column(db.String(12), nullable=False, default='received')  # received|sent|failed|pending|deleted
+    status = db.Column(db.String(12), nullable=False, default='received')  # received|sent|failed|pending|deleted|read
+    # Whole current reaction set as the provider reports it, not one row per
+    # reaction: [{"emoji": "\U0001f44d", "count": 1, "mine": true}]
+    reactions = db.Column(db.JSON, nullable=True)
     error = db.Column(db.String(500), nullable=True)
 
     tg_date = db.Column(db.DateTime, nullable=True)

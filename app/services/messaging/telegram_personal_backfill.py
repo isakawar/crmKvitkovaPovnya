@@ -21,7 +21,9 @@ from app.services.messaging.adapter import InboundEvent
 from app.services.messaging.inbox_service import (
     _album_message, _get_or_create_conversation, _merge_into_album, apply_contact,
 )
-from app.services.messaging.telegram_personal import client_for, _media_dicts, contact_from_entity
+from app.services.messaging.telegram_personal import (
+    _media_dicts, client_for, contact_from_entity, reactions_from_update,
+)
 
 
 def run(channel, days: int = 30) -> dict:
@@ -108,6 +110,10 @@ async def _run_async(channel, days: int) -> dict:
                     external_message_id=str(message.id),
                     text=message.message or None,
                     media=media,
+                    # Reactions ride along with the history: live updates that
+                    # landed while the worker was down are never replayed, so
+                    # this run is the only way to get them.
+                    reactions=reactions_from_update(message.reactions) or None,
                     status='sent' if message.out else 'received',
                     tg_date=naive_date,
                     created_at=naive_date,

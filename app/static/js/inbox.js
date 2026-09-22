@@ -167,6 +167,42 @@
     return gap >= 0 && gap < 60000;
   }
 
+  // 'read' only ever comes from a provider that reports it (telegram_personal);
+  // elsewhere an outbound message stays 'sent' and keeps the single tick.
+  function tickHtml(status, direction) {
+    if (direction !== 'out') return '';
+    if (status === 'failed') return '<i class="bi bi-exclamation-circle" style="color:#ef4444"></i>';
+    if (status === 'pending') return '<i class="bi bi-clock" style="opacity:.5"></i>';
+    if (status === 'read') return '<i class="bi bi-check2-all" style="color:#0ea5e9"></i>';
+    return '<i class="bi bi-check2"></i>';
+  }
+
+  function reactionsHtml(list) {
+    if (!list || !list.length) return '';
+    return '<div class="msg__reactions">' + list.map(function (r) {
+      return '<span class="msg__reaction' + (r.mine ? ' mine' : '') + '">' + esc(r.emoji) +
+        (r.count > 1 ? ' ' + r.count : '') + '</span>';
+    }).join('') + '</div>';
+  }
+
+  // Reactions and read marks change messages already on screen, which the
+  // after_id poll never returns — patch them in place instead.
+  function applyStates(states) {
+    (states || []).forEach(function (st) {
+      var node = msgsEl.querySelector('[data-mid="' + st.id + '"]');
+      if (!node) return;
+      var tickEl = node.querySelector('.msg__tick');
+      if (tickEl) tickEl.innerHTML = tickHtml(st.status, node.dataset.dir);
+      var bubble = node.querySelector('.msg__bubble');
+      if (!bubble) return;
+      var current = bubble.querySelector('.msg__reactions');
+      var html = reactionsHtml(st.reactions);
+      if (!html) { if (current) current.remove(); return; }
+      if (current) current.outerHTML = html;
+      else bubble.insertAdjacentHTML('beforeend', html);
+    });
+  }
+
   function msgNode(m, opts) {
     opts = opts || {};
     var wrapEl = document.createElement('div');
@@ -185,14 +221,12 @@
       else if (md.type === 'photo') inner += '<img class="msg__img" data-full="/inbox/media/' + m.id + '/' + md.idx + '" src="/inbox/media/' + m.id + '/' + md.idx + '" alt="">';
       else inner += '<a class="msg__file" href="/inbox/media/' + m.id + '/' + md.idx + '" target="_blank"><i class="bi bi-paperclip"></i> ' + esc(md.type) + '</a>';
     });
+    inner += reactionsHtml(m.reactions);
     inner += '</div>';
-    var tick = m.direction === 'out'
-      ? (m.status === 'failed' ? '<i class="bi bi-exclamation-circle" style="color:#ef4444"></i>'
-        : m.status === 'pending' ? '<i class="bi bi-clock" style="opacity:.5"></i>'
-        : '<i class="bi bi-check2"></i>') : '';
     inner += '<div class="msg__meta">' + chBadge(m.channel_type) + ' ' +
       new Date(m.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
-      ' ' + tick + (m.status === 'failed' && m.error ? ' <span style="color:#ef4444">' + esc(m.error) + '</span>' : '') + '</div>';
+      ' <span class="msg__tick">' + tickHtml(m.status, m.direction) + '</span>' +
+      (m.status === 'failed' && m.error ? ' <span style="color:#ef4444">' + esc(m.error) + '</span>' : '') + '</div>';
     wrapEl.innerHTML = inner;
     return wrapEl;
   }
@@ -335,6 +369,7 @@
         if (!data.conversation || data.conversation.id !== S.activeId) return;
         if (initial) S.hasMore = !!data.has_more;
         appendMsgs(data.messages || [], !initial);
+        applyStates(data.states);
       })
       .catch(function () {})
       .finally(function () { S.threadBusy = false; });

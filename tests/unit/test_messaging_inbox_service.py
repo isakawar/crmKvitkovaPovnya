@@ -506,3 +506,82 @@ def test_serialized_timestamps_carry_the_utc_offset(session):
 
     assert inbox_service.serialize_message(msg)['created_at'].endswith('+00:00')
     assert inbox_service.serialize_conversation(conv)['last_message_at'].endswith('+00:00')
+
+
+# ── read marks and reactions ──────────────────────────────────────────────
+
+def _read_event(chat='777', max_id=5, inbox=False):
+    return InboundEvent(kind='read', external_chat_id=chat, read_max_id=max_id,
+                        read_inbox=inbox)
+
+
+def test_read_mark_promotes_only_our_sent_messages_up_to_max_id(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1', text='питання'))
+    for mid in ('4', '5', '9'):
+        inbox_service.ingest_event(ch, InboundEvent(
+            kind='message', external_chat_id='777', external_message_id=mid,
+            text='відповідь ' + mid, contact={}, media=[], outgoing=True))
+
+    inbox_service.ingest_event(ch, _read_event(max_id=5))
+
+    by_id = {m.external_message_id: m.status for m in Message.query.all()}
+    assert by_id['4'] == 'read'
+    assert by_id['5'] == 'read'
+    assert by_id['9'] == 'sent'        # sent after they read
+    assert by_id['1'] == 'received'    # theirs, not ours
+
+
+def test_read_inbox_clears_the_unread_badge(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1'))
+    conv = Conversation.query.one()
+    assert conv.unread_count == 1
+
+    inbox_service.ingest_event(ch, _read_event(inbox=True))
+
+    session.refresh(conv)
+    assert conv.unread_count == 0
+
+
+def test_read_event_for_an_unknown_chat_creates_nothing(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    assert inbox_service.ingest_event(ch, _read_event(chat='404')) is None
+    assert Conversation.query.count() == 0
+
+
+def test_reactions_are_stored_replaced_and_cleared(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1'))
+    msg = Message.query.one()
+
+    def react(items):
+        return inbox_service.ingest_event(ch, InboundEvent(
+            kind='reactions', external_chat_id='777', external_message_id='1',
+            reactions=items))
+
+    react([{'emoji': '👍', 'count': 1, 'mine': False}])
+    session.refresh(msg)
+    assert msg.reactions == [{'emoji': '👍', 'count': 1, 'mine': False}]
+
+    # Telegram always sends the whole set, so a change replaces it wholesale
+    react([{'emoji': '❤️', 'count': 2, 'mine': True}])
+    session.refresh(msg)
+    assert msg.reactions[0]['emoji'] == '❤️'
+
+    react([])  # every reaction removed
+    session.refresh(msg)
+    assert msg.reactions is None
+
+
+def test_recent_message_states_feed_the_poll(session):
+    ch = _channel(session, channel_type='telegram_personal')
+    inbox_service.ingest_event(ch, _msg_event(chat='777', mid='1'))
+    conv = Conversation.query.one()
+    inbox_service.ingest_event(ch, InboundEvent(
+        kind='reactions', external_chat_id='777', external_message_id='1',
+        reactions=[{'emoji': '👍', 'count': 1, 'mine': False}]))
+
+    state = inbox_service.recent_message_states(conv)[0]
+    assert state['status'] == 'received'
+    assert state['reactions'][0]['emoji'] == '👍'

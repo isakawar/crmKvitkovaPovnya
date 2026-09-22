@@ -67,7 +67,31 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         if account_id and not channel.external_id:
             channel.external_id = account_id
 
-        conv = _get_or_create_conversation(channel, event)
+        # A read mark or a reaction says nothing about a chat we've never seen,
+        # so these two never bring a conversation into existence.
+        if event.kind in ('read', 'reactions'):
+            conv = Conversation.query.filter_by(
+                channel_id=channel.id, external_chat_id=event.external_chat_id).first()
+            if conv is None:
+                return None
+        else:
+            conv = _get_or_create_conversation(channel, event)
+
+        if event.kind == 'read':
+            _apply_read(conv, event)
+            db.session.commit()
+            events.publish('message', channel.id, conv.id)
+            return None
+
+        if event.kind == 'reactions':
+            msg = Message.query.filter_by(
+                conversation_id=conv.id, external_message_id=event.external_message_id).first()
+            if msg is None:
+                return None
+            msg.reactions = event.reactions or None
+            db.session.commit()
+            events.publish('message', channel.id, conv.id)
+            return msg
 
         if event.kind == 'deleted':
             (Message.query
@@ -141,6 +165,32 @@ def ingest_event(channel: MessagingChannel, event) -> Message | None:
         db.session.rollback()
         log.exception('ingest_event failed for channel %s', getattr(channel, 'id', '?'))
         return None
+
+
+def _apply_read(conv: Conversation, event) -> None:
+    """Apply a "read up to id N" update.
+
+    Telegram gives no per-message read time, only a high-water mark, and
+    `external_message_id` is a string column — so the comparison is done in
+    Python over the messages that could still be unread.
+    """
+    if event.read_inbox:
+        # The owner read this chat on their phone — the CRM badge must follow,
+        # or it keeps showing unread for a chat they've already dealt with.
+        conv.unread_count = 0
+        return
+
+    max_id = event.read_max_id
+    if not max_id:
+        return
+    pending = conv.messages.filter(Message.direction == 'out',
+                                   Message.status == 'sent').all()
+    for msg in pending:
+        try:
+            if int(msg.external_message_id) <= int(max_id):
+                msg.status = 'read'
+        except (TypeError, ValueError):
+            continue  # not a numeric provider id — nothing to compare against
 
 
 _ALBUM_LOOKBACK = 10
@@ -378,6 +428,21 @@ def get_thread(conversation: Conversation, after_id: int | None = None,
     return msgs, len(msgs) == limit
 
 
+_STATE_WINDOW = 40
+
+
+def recent_message_states(conversation: Conversation, limit: int = _STATE_WINDOW) -> list[dict]:
+    """Status + reactions of the last messages, for the thread poll to patch in.
+
+    A reaction or a read mark changes a message that's already on screen, and
+    the poll only ever asks for messages newer than the last one it saw — so
+    without this the thread would show them only after a reload.
+    """
+    msgs = (conversation.messages.order_by(None).order_by(Message.id.desc())
+            .limit(limit).all())
+    return [{'id': m.id, 'status': m.status, 'reactions': m.reactions or []} for m in msgs]
+
+
 def mark_read(conversation: Conversation) -> None:
     if conversation.unread_count:
         conversation.unread_count = 0
@@ -516,6 +581,7 @@ def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
         'text': msg.text,
         'status': msg.status,
         'error': msg.error,
+        'reactions': msg.reactions or [],
         'sender_user_id': msg.sender_user_id,
         'channel_type': channel_type or msg.conversation.channel.channel_type,
         'media': [

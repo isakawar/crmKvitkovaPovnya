@@ -13,7 +13,7 @@ from typing import Protocol
 @dataclass
 class InboundEvent:
     """One normalized event parsed from a provider webhook payload."""
-    kind: str  # 'message' | 'connection' | 'edited' | 'deleted'
+    kind: str  # 'message' | 'connection' | 'edited' | 'deleted' | 'read' | 'reactions'
     external_chat_id: str = ''
     external_message_id: str | None = None
     text: str | None = None
@@ -31,6 +31,13 @@ class InboundEvent:
     connection_enabled: bool = True
     # kind == 'deleted'
     deleted_message_ids: list[str] = field(default_factory=list)
+    # kind == 'read' — Telegram reports "read up to this id", never a per-message
+    # timestamp. `read_inbox` means the account owner read the chat elsewhere;
+    # otherwise the contact read what we sent them.
+    read_max_id: int | None = None
+    read_inbox: bool = False
+    # kind == 'reactions' — the whole current set for `external_message_id`
+    reactions: list[dict] = field(default_factory=list)
 
 
 @dataclass

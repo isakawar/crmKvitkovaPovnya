@@ -115,6 +115,10 @@
   .msg__img { margin-top: 0.3rem; border-radius: 0.6rem; max-height: 260px; max-width: 100%; cursor: zoom-in; display: block;
              transition: filter .12s var(--ib-ease); }
   .msg__img:hover { filter: brightness(.96); }
+  .msg__reactions { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.3rem; }
+  .msg__reaction { font-size: 0.72rem; line-height: 1; padding: 0.15rem 0.35rem; border-radius: 999px;
+                   background: rgba(0,0,0,.06); }
+  .msg__reaction.mine { background: rgba(14,165,233,.18); }
   .msg__file { margin-top: 0.3rem; font-size: 0.8rem; color: var(--ib-accent); }
 
   .ib-compose { border-top: 1px solid var(--ib-border); padding: 0.6rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-end; background: #fff; }

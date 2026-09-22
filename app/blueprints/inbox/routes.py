@@ -125,6 +125,7 @@ def messages(conversation_id):
     return jsonify({
         'conversation': inbox_service.serialize_conversation(conv),
         'messages': [inbox_service.serialize_message(m, channel_type=conv.channel.channel_type) for m in msgs],
+        'states': inbox_service.recent_message_states(conv),
         'has_more': has_more,
     })
 

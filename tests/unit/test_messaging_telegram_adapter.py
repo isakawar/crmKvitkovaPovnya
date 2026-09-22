@@ -178,3 +178,39 @@ def test_enrich_contact_is_noop_inside_a_running_loop(recwarn):
 
     assert asyncio.run(call()) == {}
     assert not [w for w in recwarn if issubclass(w.category, RuntimeWarning)]
+
+
+def test_reactions_from_update_normalizes_counts_and_ownership():
+    from types import SimpleNamespace
+    from app.services.messaging.telegram_personal import reactions_from_update
+
+    update = SimpleNamespace(results=[
+        SimpleNamespace(reaction=SimpleNamespace(emoticon='👍'), count=2, chosen_order=None),
+        SimpleNamespace(reaction=SimpleNamespace(emoticon='❤️'), count=1, chosen_order=0),
+        # a paid custom-emoji reaction has no unicode form
+        SimpleNamespace(reaction=SimpleNamespace(document_id=7), count=1, chosen_order=None),
+    ])
+
+    assert reactions_from_update(update) == [
+        {'emoji': '👍', 'count': 2, 'mine': False},
+        {'emoji': '❤️', 'count': 1, 'mine': True},
+        {'emoji': '⭐', 'count': 1, 'mine': False},
+    ]
+    assert reactions_from_update(None) == []
+
+
+def test_build_reactions_event_uses_the_stored_chat_id():
+    from telethon.tl.types import PeerUser
+    from types import SimpleNamespace
+    from app.services.messaging.telegram_personal import build_reactions_event
+
+    update = SimpleNamespace(
+        peer=PeerUser(321803091), msg_id=7,
+        reactions=SimpleNamespace(results=[
+            SimpleNamespace(reaction=SimpleNamespace(emoticon='👍'), count=1, chosen_order=None)]))
+
+    ev = build_reactions_event(update)
+    assert ev.kind == 'reactions'
+    assert ev.external_chat_id == '321803091'
+    assert ev.external_message_id == '7'
+    assert ev.reactions[0]['emoji'] == '👍'

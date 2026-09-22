@@ -122,6 +122,49 @@ def build_inbound_event(message, peer=None) -> InboundEvent:
     )
 
 
+def reactions_from_update(message_reactions) -> list[dict]:
+    """MTProto MessageReactions -> [{emoji, count, mine}].
+
+    Telegram always sends the whole current set, so an empty list genuinely
+    means every reaction was removed. Paid custom-emoji reactions have no
+    unicode form and are shown as a generic star.
+    """
+    items = []
+    for result in getattr(message_reactions, 'results', None) or []:
+        reaction = getattr(result, 'reaction', None)
+        emoji = getattr(reaction, 'emoticon', None) or '\u2b50'
+        items.append({
+            'emoji': emoji,
+            'count': int(getattr(result, 'count', 0) or 0),
+            'mine': getattr(result, 'chosen_order', None) is not None,
+        })
+    return items
+
+
+def build_reactions_event(update) -> InboundEvent:
+    """UpdateMessageReactions -> InboundEvent.
+
+    `get_peer_id` is what `message.chat_id` is built from too, so the id here
+    matches the one the conversation was stored under.
+    """
+    from telethon import utils
+    return InboundEvent(
+        kind='reactions',
+        external_chat_id=str(utils.get_peer_id(update.peer)),
+        external_message_id=str(update.msg_id),
+        reactions=reactions_from_update(update.reactions),
+    )
+
+
+def build_read_event(chat_id, max_id: int, inbox: bool) -> InboundEvent:
+    return InboundEvent(
+        kind='read',
+        external_chat_id=str(chat_id),
+        read_max_id=int(max_id) if max_id else None,
+        read_inbox=bool(inbox),
+    )
+
+
 class TelegramPersonalAdapter:
     channel_type = 'telegram_personal'
 
