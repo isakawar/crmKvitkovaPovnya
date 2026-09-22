@@ -20,10 +20,6 @@
   .ib-page { padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .ib-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .ib-head h1 { font-size: 1.35rem; letter-spacing: -0.02em; color: var(--ib-ink); margin: 0; }
-  .ib-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-  .ib-chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; font-weight: 600;
-             border: 1px solid var(--ib-border); border-radius: 999px; padding: 0.2rem 0.6rem; color: var(--ib-muted); background: #fff; }
-  .ib-chip.off { opacity: 0.55; }
   .ib-icon-btn { border: 1px solid var(--ib-border); background: #fff; border-radius: 0.6rem; padding: 0.4rem 0.55rem;
                  color: var(--ib-muted); cursor: pointer; transition: transform .12s var(--ib-ease), background-color .15s var(--ib-ease), color .15s var(--ib-ease), border-color .15s var(--ib-ease); }
   .ib-icon-btn:hover { background: var(--ib-bg); color: var(--ib-ink); }
@@ -220,14 +216,6 @@
   <div class="ib-head">
     <h1>Чат / Інбокс</h1>
     <div style="display:flex; align-items:center; gap:0.6rem;">
-      <div class="ib-chips">
-        {% for ch in channels %}
-        <span class="ib-chip {{ '' if ch.is_connected and ch.is_active else 'off' }}">
-          <i class="bi bi-{{ 'instagram' if ch.channel_type == 'instagram' else ('whatsapp' if ch.channel_type == 'whatsapp' else 'telegram') }}"></i>
-          {{ ch.name }}
-        </span>
-        {% endfor %}
-      </div>
       {% if personal_channels %}
       <button class="ib-icon-btn" id="ib-new-conv" title="Новий діалог">
         <i class="bi bi-plus-lg"></i> Новий діалог
