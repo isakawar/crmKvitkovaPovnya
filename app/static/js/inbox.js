@@ -633,8 +633,7 @@
   // ---- header actions -----------------------------------------
   $('ib-back').addEventListener('click', function () { wrap.classList.remove('mobile-thread'); });
 
-  $('ib-refresh').addEventListener('click', function () {
-    if (!S.activeId) return;
+  function refreshActiveThread() {
     var btn = $('ib-refresh');
     btn.classList.remove('spinning');
     void btn.offsetWidth;
@@ -642,6 +641,41 @@
     fetchThread(false);
     fetchClientPanel(S.activeId);
     pollList();
+  }
+
+  // telegram_personal is a real MTProto session with full server-side
+  // history — other channels are webhook-only and only ever see what
+  // arrived after the webhook was registered, so there's nothing to backfill.
+  $('ib-refresh').addEventListener('click', function () {
+    if (!S.activeId) return;
+    if (S.activeConv && S.activeConv.channel_type === 'telegram_personal') {
+      $('ib-backfill-menu').classList.toggle('show');
+      return;
+    }
+    refreshActiveThread();
+  });
+  [].forEach.call(document.querySelectorAll('#ib-backfill-menu button'), function (btn) {
+    btn.addEventListener('click', function () {
+      $('ib-backfill-menu').classList.remove('show');
+      if (!S.activeId) return;
+      fetch('/inbox/conversations/' + S.activeId + '/backfill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ days: +btn.dataset.days }),
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.ok) showToast('Запит надіслано — повідомлення підтягнуться за кілька секунд', 'success');
+          else showToast(data.error || 'Помилка', 'error');
+        })
+        .catch(function () { showToast('Помилка мережі', 'error'); });
+    });
+  });
+  document.addEventListener('click', function (e) {
+    var menu = $('ib-backfill-menu');
+    if (menu.classList.contains('show') && !menu.contains(e.target) && e.target.closest('#ib-refresh') == null) {
+      menu.classList.remove('show');
+    }
   });
 
   [].forEach.call(document.querySelectorAll('.ib-tab'), function (t) {
@@ -753,6 +787,11 @@
       if (!e.data) return;
       var data;
       try { data = JSON.parse(e.data); } catch (err) { return; }
+      if (data.type === 'backfill_done') {
+        showToast(data.imported ? 'Підтягнуто повідомлень: ' + data.imported : 'Нових повідомлень за цей період немає', 'success');
+      } else if (data.type === 'backfill_error') {
+        showToast('Не вдалося підтягнути історію: ' + (data.error || 'помилка'), 'error');
+      }
       clearTimeout(sseListTimer);
       sseListTimer = setTimeout(pollList, 200);
       if (data.conversation_id && data.conversation_id === S.activeId) {

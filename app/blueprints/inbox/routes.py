@@ -220,6 +220,22 @@ def reply(conversation_id):
     }), (200 if ok else 502)
 
 
+@inbox_bp.route('/inbox/conversations/<int:conversation_id>/backfill', methods=['POST'])
+@login_required
+def backfill(conversation_id):
+    _require_manager()
+    conv = _conversation_or_404(conversation_id)
+    if conv.channel.channel_type != 'telegram_personal':
+        return jsonify({'ok': False, 'error': 'Підтягування історії доступне лише для Telegram (особистий)'}), 400
+    data = request.get_json(silent=True) or {}
+    days = data.get('days')
+    if days not in (1, 3, 7):
+        days = 7
+    from app.services.messaging import events
+    events.publish_backfill_request(conv.channel_id, conv.id, days)
+    return jsonify({'ok': True})
+
+
 @inbox_bp.route('/inbox/conversations/<int:conversation_id>/read', methods=['POST'])
 @login_required
 def mark_read(conversation_id):

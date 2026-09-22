@@ -121,7 +121,64 @@ async def run_channel(app, channel_id: int):
         await client.disconnect()
         return
     logger.info('Channel #%s: listening for incoming messages', channel_id)
-    await client.run_until_disconnected()
+    backfill_task = asyncio.create_task(_listen_for_backfill(app, channel_id, client))
+    try:
+        await client.run_until_disconnected()
+    finally:
+        backfill_task.cancel()
+
+
+async def _listen_for_backfill(app, channel_id: int, client):
+    """Fulfill on-demand "pull older history" requests from the CRM for this
+    channel, reusing the already-connected `client` — never opens a second
+    MTProto connection on the same session (see telegram_personal_backfill's
+    module docstring for why that matters: a second connection can silently
+    stop this listener from receiving new messages)."""
+    import json
+
+    import redis.asyncio as redis_asyncio
+
+    from app.models.conversation import Conversation
+    from app.models.messaging_channel import MessagingChannel
+    from app.services.messaging import events, telegram_personal_backfill
+
+    with app.app_context():
+        redis_url = app.config['REDIS_URL']
+
+    r = redis_asyncio.from_url(redis_url)
+    pubsub = r.pubsub()
+    await pubsub.subscribe(events.BACKFILL_CHANNEL)
+    try:
+        async for message in pubsub.listen():
+            if message['type'] != 'message':
+                continue
+            try:
+                data = json.loads(message['data'])
+            except (TypeError, ValueError):
+                continue
+            if data.get('channel_id') != channel_id:
+                continue
+            conversation_id = data.get('conversation_id')
+            days = data.get('days') or 7
+            with app.app_context():
+                channel = MessagingChannel.query.get(channel_id)
+                conv = Conversation.query.get(conversation_id) if conversation_id else None
+                if not channel or not conv or conv.channel_id != channel_id:
+                    continue
+                try:
+                    imported = await telegram_personal_backfill.backfill_conversation(client, conv, days)
+                    logger.info('Channel #%s: backfilled %s messages for conversation #%s (%sd)',
+                               channel_id, imported, conversation_id, days)
+                    events.publish('backfill_done', channel_id, conversation_id, imported=imported)
+                except Exception as exc:  # noqa: BLE001
+                    logger.exception('Channel #%s: backfill failed for conversation #%s',
+                                     channel_id, conversation_id)
+                    events.publish('backfill_error', channel_id, conversation_id, error=str(exc))
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(events.BACKFILL_CHANNEL)
+        await r.aclose()
 
 
 POLL_INTERVAL_SECONDS = 20

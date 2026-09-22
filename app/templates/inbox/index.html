@@ -17,6 +17,16 @@
   @keyframes ib-pop { 0% { transform: scale(.4); } 65% { transform: scale(1.18); } 100% { transform: scale(1); } }
   @keyframes ib-spin { to { transform: rotate(360deg); } }
   #ib-refresh.spinning i { display: inline-block; animation: ib-spin .6s linear; }
+
+  .ib-backfill-menu { display: none; position: absolute; top: 115%; right: 0; background: #fff;
+                      border: 1px solid var(--ib-border); border-radius: 0.7rem;
+                      box-shadow: 0 12px 30px rgba(28,25,23,.12); padding: 0.4rem; z-index: 20; min-width: 150px; }
+  .ib-backfill-menu.show { display: block; }
+  .ib-backfill-menu__title { font-size: 0.68rem; color: var(--ib-muted); padding: 0.2rem 0.5rem 0.35rem; }
+  .ib-backfill-menu button { display: block; width: 100%; text-align: left; border: none; background: none;
+                            font-size: 0.8rem; color: var(--ib-ink); padding: 0.4rem 0.5rem; border-radius: 0.45rem;
+                            cursor: pointer; transition: background-color .12s var(--ib-ease); }
+  .ib-backfill-menu button:hover { background: var(--ib-bg); }
   .ib-page { padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .ib-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .ib-head h1 { font-size: 1.35rem; letter-spacing: -0.02em; color: var(--ib-ink); margin: 0; }
@@ -265,8 +275,14 @@
                 <div class="ib-thread__sub" id="ib-th-sub"></div>
               </div>
             </div>
-            <div class="ib-thread__actions">
+            <div class="ib-thread__actions" style="position:relative;">
               <button class="ib-icon-btn" id="ib-refresh" type="button" title="Оновити повідомлення"><i class="bi bi-arrow-clockwise"></i></button>
+              <div class="ib-backfill-menu" id="ib-backfill-menu">
+                <div class="ib-backfill-menu__title">Підтягнути історію за</div>
+                <button type="button" data-days="1">1 день</button>
+                <button type="button" data-days="3">3 дні</button>
+                <button type="button" data-days="7">7 днів</button>
+              </div>
             </div>
           </div>
           <div class="ib-msgs" id="ib-msgs"></div>
