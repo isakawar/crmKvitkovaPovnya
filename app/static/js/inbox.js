@@ -166,17 +166,21 @@
   }
   function scheduleList() { clearTimeout(S.listTimer); S.listTimer = setTimeout(pollList, document.hidden ? 30000 : 10000); }
 
+  // Keeps every sidebar badge (mobile row, desktop collapsed dot, desktop
+  // expanded text) in sync — layout.html's own poll/SSE loop skips itself
+  // on this page to avoid a second redundant stream connection, so this is
+  // the only thing updating them while /inbox is open.
   function setNavBadge(n) {
-    var b = $('inbox-nav-badge');
-    if (!b) return;
     var next = n > 99 ? '99+' : String(n);
-    if (b.textContent !== next) {
-      b.textContent = next;
-      b.classList.remove('ib-pop');
-      void b.offsetWidth; // restart the animation even if it's already mid-play
-      b.classList.add('ib-pop');
-    }
-    b.style.display = n > 0 ? '' : 'none';
+    [].forEach.call(document.querySelectorAll('.js-inbox-badge'), function (b) {
+      if (b.textContent !== next) {
+        b.textContent = next;
+        b.classList.remove('ib-pop');
+        void b.offsetWidth; // restart the animation even if it's already mid-play
+        b.classList.add('ib-pop');
+      }
+      b.style.display = n > 0 ? '' : 'none';
+    });
   }
 
   // ---- thread -----------------------------------------------------
@@ -413,6 +417,10 @@
         if (initial) S.hasMore = !!data.has_more;
         appendMsgs(data.messages || [], !initial);
         applyStates(data.states);
+        // Opening a conversation marks it read server-side (see the route) —
+        // refresh the sidebar badge right away instead of waiting up to 10s
+        // for the next scheduled poll.
+        if (initial) pollList();
       })
       .catch(function () {})
       .finally(function () { S.threadBusy = false; });

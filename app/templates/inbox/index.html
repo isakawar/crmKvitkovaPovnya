@@ -270,7 +270,7 @@
       <button class="ib-icon-btn" id="ib-sound" title="Звук нових повідомлень">
         <i class="bi bi-bell"></i>
       </button>
-      {% if current_user.has_permission('edit_settings') %}
+      {% if current_user.has_permission('manage_messaging') %}
       <a class="ib-icon-btn" href="{{ url_for('settings.messaging_page') }}" title="Налаштування каналів"
          style="text-decoration:none; display:inline-flex; align-items:center;">
         <i class="bi bi-gear"></i>

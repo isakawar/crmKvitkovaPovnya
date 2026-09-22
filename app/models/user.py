@@ -17,7 +17,7 @@ ROLE_PERMISSIONS = {
         'view_distribution', 'edit_distribution',
         'view_reports',
         'view_settings', 'edit_settings',
-        'manage_users'
+        'manage_users', 'manage_messaging'
     ],
     ROLE_MANAGER: [
         'view_orders', 'edit_orders', 'delete_orders',

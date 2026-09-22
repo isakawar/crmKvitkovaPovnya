@@ -79,7 +79,7 @@
     </a>
     {% endif %}
 
-    {% if current_user.has_permission('edit_settings') %}
+    {% if current_user.has_permission('manage_messaging') %}
     <a class="settings-grid-card" href="{{ url_for('settings.messaging_page') }}">
       <span class="settings-grid-card__icon"><i class="bi bi-chat-dots"></i></span>
       <div>

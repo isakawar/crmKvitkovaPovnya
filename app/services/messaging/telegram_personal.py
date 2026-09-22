@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 from flask import current_app
 from telethon import TelegramClient
@@ -30,6 +31,20 @@ _EXT_BY_MIME = {
     'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
     'audio/ogg': '.ogg', 'video/mp4': '.mp4', 'video/webm': '.webm',
 }
+
+# Gunicorn's gevent workers cooperatively schedule many requests as
+# greenlets on ONE OS thread per worker process. asyncio tracks "is a loop
+# already running" per OS thread, not per greenlet, so two overlapping
+# requests that both call asyncio.run() directly here (e.g. two attachments
+# on one page loading at once) crash with "asyncio.run() cannot be called
+# from a running event loop" — a <video>/<audio> element firing several
+# overlapping range requests hits this reliably. Running each call in this
+# pool gives it its own real OS thread with independent event-loop state.
+_ASYNC_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix='tg-personal-async')
+
+
+def _run_async(coro):
+    return _ASYNC_POOL.submit(asyncio.run, coro).result()
 
 
 def _api_creds() -> tuple[int, str]:
@@ -195,7 +210,7 @@ class TelegramPersonalAdapter:
         raise NotImplementedError('telegram_personal has no webhook — the worker ingests events directly')
 
     def download_media(self, channel, media_ref: dict) -> tuple[str, str]:
-        return asyncio.run(self._download_media_async(channel, media_ref))
+        return _run_async(self._download_media_async(channel, media_ref))
 
     async def _resolve_peer(self, client, media_ref: dict):
         """An input peer this freshly connected client can actually use.
@@ -241,13 +256,13 @@ class TelegramPersonalAdapter:
     # --- outbound ----------------------------------------------------------
     def send_text(self, channel, external_chat_id: str, text: str,
                  reply_to_external_id: str | None = None) -> SentResult:
-        return asyncio.run(self._send_async(channel, external_chat_id, text=text,
-                                            reply_to_external_id=reply_to_external_id))
+        return _run_async(self._send_async(channel, external_chat_id, text=text,
+                                           reply_to_external_id=reply_to_external_id))
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
                    caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
-        return asyncio.run(self._send_async(channel, external_chat_id, file_path=file_path, caption=caption,
-                                            reply_to_external_id=reply_to_external_id))
+        return _run_async(self._send_async(channel, external_chat_id, file_path=file_path, caption=caption,
+                                           reply_to_external_id=reply_to_external_id))
 
     async def _send_async(self, channel, external_chat_id: str, text: str | None = None,
                            file_path: str | None = None, caption: str | None = None,
@@ -274,7 +289,7 @@ class TelegramPersonalAdapter:
     # --- start new conversation (not a Protocol method — duck-typed, see
     # inbox_service.start_conversation) ----------------------------------
     def resolve_contact(self, channel, query: str) -> dict:
-        return asyncio.run(self._resolve_contact_async(channel, query))
+        return _run_async(self._resolve_contact_async(channel, query))
 
     async def _resolve_contact_async(self, channel, query: str) -> dict:
         from telethon.tl.functions.contacts import ImportContactsRequest, DeleteContactsRequest
@@ -325,7 +340,7 @@ class TelegramPersonalAdapter:
         else:
             return {}
         try:
-            return asyncio.run(self._enrich_contact_async(channel, external_chat_id))
+            return _run_async(self._enrich_contact_async(channel, external_chat_id))
         except Exception:  # noqa: BLE001
             return {}
 

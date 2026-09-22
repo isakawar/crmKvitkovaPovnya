@@ -220,6 +220,16 @@ def reply(conversation_id):
     }), (200 if ok else 502)
 
 
+@inbox_bp.route('/inbox/unread-count')
+@login_required
+def unread_count():
+    """Lightweight endpoint for the sidebar badge on every page (not just
+    /inbox) — polled/pushed by a small global script in layout.html."""
+    if not inbox_service.user_is_manager(current_user):
+        return jsonify({'unread': 0})
+    return jsonify({'unread': inbox_service.total_unread(current_user)})
+
+
 @inbox_bp.route('/inbox/quick-replies', methods=['GET'])
 @login_required
 def quick_replies():

@@ -64,7 +64,7 @@ def features_page():
 
 @bp.route('/settings/messaging')
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_page():
     from app.services.messaging import channel_config_service as ccs
     channels = ccs.list_channels()
@@ -92,7 +92,7 @@ def messaging_page():
 
 @bp.route('/settings/messaging/channels', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_create_channel():
     from app.services.messaging import channel_config_service as ccs
     data = request.get_json() or {}
@@ -108,7 +108,7 @@ def messaging_create_channel():
 
 @bp.route('/settings/messaging/channels/<int:channel_id>', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_update_channel(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import channel_config_service as ccs
@@ -122,7 +122,7 @@ def messaging_update_channel(channel_id):
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/delete', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_delete_channel(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import channel_config_service as ccs
@@ -132,7 +132,7 @@ def messaging_delete_channel(channel_id):
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/webhook', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_register_webhook(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import channel_config_service as ccs
@@ -146,7 +146,7 @@ def messaging_register_webhook(channel_id):
 
 @bp.route('/settings/messaging/facebook/start')
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_facebook_start():
     """Kick off Facebook Login for Business — connects Instagram without any
     manual token copying (see app/services/messaging/facebook_oauth.py)."""
@@ -163,7 +163,7 @@ def messaging_facebook_start():
 
 @bp.route('/settings/messaging/facebook/callback')
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_facebook_callback():
     from app.services.messaging import facebook_oauth, session_crypto
 
@@ -201,7 +201,7 @@ def messaging_facebook_callback():
 
 @bp.route('/settings/messaging/facebook/select-page', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_facebook_select_page():
     from app.services.messaging import channel_config_service as ccs
 
@@ -228,7 +228,7 @@ def messaging_facebook_select_page():
 
 @bp.route('/settings/messaging/whatsapp/complete', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_whatsapp_complete():
     """Finish WhatsApp Embedded Signup — called by JS after Meta's popup posts
     back {code, waba_id, phone_number_id} (see messaging.html)."""
@@ -278,7 +278,7 @@ def messaging_whatsapp_complete():
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/send-code', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_tg_personal_send_code(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import telegram_personal_auth as auth
@@ -297,7 +297,7 @@ def messaging_tg_personal_send_code(channel_id):
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/confirm-code', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_tg_personal_confirm_code(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import telegram_personal_auth as auth
@@ -318,7 +318,7 @@ def messaging_tg_personal_confirm_code(channel_id):
 
 @bp.route('/settings/messaging/channels/<int:channel_id>/telegram-personal/confirm-password', methods=['POST'])
 @login_required
-@permission_required('edit_settings')
+@permission_required('manage_messaging')
 def messaging_tg_personal_confirm_password(channel_id):
     from app.models.messaging_channel import MessagingChannel
     from app.services.messaging import telegram_personal_auth as auth

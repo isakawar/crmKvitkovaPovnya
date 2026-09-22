@@ -6,6 +6,7 @@ inbound webhook can always return 200 fast (Telegram retries on timeout).
 from __future__ import annotations
 
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -308,34 +309,59 @@ def _preview(text: str | None, media: list[dict]) -> str:
 
 
 # --- lazy media ------------------------------------------------------
+# A <video>/<audio> element routinely fires several overlapping range
+# requests for the same not-yet-downloaded file — telegram_personal's
+# adapter methods already isolate each Telethon call in its own OS thread
+# (see that module's _run_async), but two overlapping requests for the exact
+# same item would still both hit Telegram and race to write the same
+# message.media column. Serialize per (message_id, idx) to avoid that.
+_media_download_locks: dict[tuple[int, int], threading.Lock] = {}
+_media_download_locks_guard = threading.Lock()
+
+
+def _media_download_lock(message_id: int, idx: int) -> threading.Lock:
+    key = (message_id, idx)
+    with _media_download_locks_guard:
+        lock = _media_download_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _media_download_locks[key] = lock
+        return lock
+
+
 def ensure_media_downloaded(message: Message, idx: int) -> str | None:
     """Download media[idx] to disk if not present. Returns stored filename or None."""
-    media = [dict(m) for m in (message.media or [])]  # fresh dicts — see note below
-    if idx < 0 or idx >= len(media):
-        return None
-    item = media[idx]
-    if item.get('path'):
-        return item['path']
-    if item.get('expired'):
-        return None  # purged by media_cleanup.purge_old_media — gone for good
-    adapter = get_adapter(message.conversation.channel)
-    try:
-        stored, mime = adapter.download_media(message.conversation.channel, item)
-    except Exception:  # noqa: BLE001
-        log.exception('media download failed for message %s idx %s', message.id, idx)
-        return None
-    item['path'] = stored
-    item['mime'] = item.get('mime') or mime
-    media[idx] = item
-    message.media = media
-    # `media` is a plain JSON column — SQLAlchemy only detects the change if the
-    # new value differs from the old one by more than in-place-mutated shared
-    # dicts (copying with dict(m) above avoids that), and flag_modified makes
-    # the intent explicit regardless.
-    flag_modified(message, 'media')
-    db.session.add(message)
-    db.session.commit()
-    return stored
+    with _media_download_lock(message.id, idx):
+        # Re-sync with the DB — a concurrent request for this same item may
+        # have just finished (and committed a path) while this one waited
+        # on the lock above.
+        db.session.refresh(message)
+        media = [dict(m) for m in (message.media or [])]  # fresh dicts — see note below
+        if idx < 0 or idx >= len(media):
+            return None
+        item = media[idx]
+        if item.get('path'):
+            return item['path']
+        if item.get('expired'):
+            return None  # purged by media_cleanup.purge_old_media — gone for good
+        adapter = get_adapter(message.conversation.channel)
+        try:
+            stored, mime = adapter.download_media(message.conversation.channel, item)
+        except Exception:  # noqa: BLE001
+            log.exception('media download failed for message %s idx %s', message.id, idx)
+            return None
+        item['path'] = stored
+        item['mime'] = item.get('mime') or mime
+        media[idx] = item
+        message.media = media
+        # `media` is a plain JSON column — SQLAlchemy only detects the change if the
+        # new value differs from the old one by more than in-place-mutated shared
+        # dicts (copying with dict(m) above avoids that), and flag_modified makes
+        # the intent explicit regardless.
+        flag_modified(message, 'media')
+        db.session.add(message)
+        db.session.commit()
+        return stored
 
 
 def prefetch_message_media(app, message_id: int) -> None:
