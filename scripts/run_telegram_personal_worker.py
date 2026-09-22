@@ -66,14 +66,22 @@ async def run_channel(app, channel_id: int):
         client = client_for(channel)
 
     def _ingest(inbound):
-        """Push one already-built event into the inbox, inside an app context."""
+        """Push one already-built event into the inbox, inside an app context.
+
+        Returns the ingested message's id, not the ORM object itself — the
+        object is detached the moment this app context exits (Flask-SQLAlchemy
+        tears the scoped session down on context pop), and accessing any of
+        its attributes afterwards raises DetachedInstanceError. `msg.id` is
+        read here, while the session is still alive.
+        """
         with app.app_context():
             from app.models.messaging_channel import MessagingChannel
             ch = MessagingChannel.query.get(channel_id)
             if not ch or not ch.is_active:
                 return None
             try:
-                return inbox_service.ingest_event(ch, inbound)
+                msg = inbox_service.ingest_event(ch, inbound)
+                return msg.id if msg is not None else None
             except Exception:
                 logger.exception('Channel #%s: failed to ingest %s', channel_id, inbound.kind)
                 return None
@@ -95,9 +103,9 @@ async def run_channel(app, channel_id: int):
             logger.exception('Channel #%s: failed to resolve chat', channel_id)
             peer = None
         inbound = build_inbound_event(event.message, peer=peer)
-        msg = _ingest(inbound)
-        if msg is not None and inbound.media:
-            inbox_service.prefetch_message_media(app, msg.id)
+        msg_id = _ingest(inbound)
+        if msg_id is not None and inbound.media:
+            inbox_service.prefetch_message_media(app, msg_id)
 
     # inbox=True fires when the owner reads the chat somewhere else (their
     # phone) — the CRM badge follows it; the default fires when the contact

@@ -704,7 +704,9 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('ib-compose').requestSubmit(); }
   });
   fileEl.addEventListener('change', function () {
-    if (fileEl.files[0]) { $('ib-filename').textContent = fileEl.files[0].name; filePrev.style.display = 'flex'; }
+    var n = fileEl.files.length;
+    if (n === 1) { $('ib-filename').textContent = fileEl.files[0].name; filePrev.style.display = 'flex'; }
+    else if (n > 1) { $('ib-filename').textContent = n + ' файлів'; filePrev.style.display = 'flex'; }
     else filePrev.style.display = 'none';
   });
   $('ib-fileclear').addEventListener('click', function () { fileEl.value = ''; filePrev.style.display = 'none'; });
@@ -713,44 +715,59 @@
     e.preventDefault();
     if (!S.activeId) return;
     var txt = textEl.value.trim();
-    var file = fileEl.files[0];
-    if (!txt && !file) return;
-    var fd = new FormData();
-    fd.append('text', textEl.value);
-    if (file) fd.append('file', file);
-    if (S.replyTo) fd.append('reply_to', S.replyTo.id);
+    var files = Array.prototype.slice.call(fileEl.files);
+    if (!txt && !files.length) return;
 
-    // Show the bubble immediately (Telegram-Desktop-style instant echo)
-    // instead of waiting for the round trip; reconciled or marked failed
-    // once the real response (or the SSE ping for it) comes back.
-    var tid = 'tmp' + Date.now() + Math.random().toString(36).slice(2);
-    appendOptimistic({
-      tid: tid, direction: 'out', status: 'pending', sender_user_id: ME,
-      text: txt || null,
-      reply_to: S.replyTo ? { id: S.replyTo.id, text: S.replyTo.text } : null,
-      media: file ? [{ type: 'uploading', filename: file.name }] : [],
-      channel_type: S.activeConv ? S.activeConv.channel_type : '',
-      created_at: new Date().toISOString(),
-    });
-
+    var replyToId = S.replyTo ? S.replyTo.id : null;
+    var replyToText = S.replyTo ? S.replyTo.text : '';
     sendBtn.disabled = true;
     textEl.value = ''; autoGrow();
     fileEl.value = ''; filePrev.style.display = 'none';
     clearReplyTarget();
 
-    fetch('/inbox/conversations/' + S.activeId + '/reply', { method: 'POST', body: fd })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        removeOptimistic(tid);
-        if (data.message) appendMsgs([data.message], true);
-        if (!data.ok) showToast(data.error || 'Не вдалося надіслати', 'error');
-        else pollList();
-      })
-      .catch(function () {
-        markOptimisticFailed(tid, 'Помилка мережі');
-        showToast('Помилка мережі', 'error');
-      })
-      .finally(function () { sendBtn.disabled = false; });
+    // The backend only ever accepts one attachment per message (no native
+    // "album" send), so N selected photos become N separate messages, sent
+    // one after another rather than in parallel — keeps them in the order
+    // they were picked and doesn't hammer the provider with simultaneous
+    // sends. Only the first one carries the typed text and the reply target.
+    function sendOne(text, file, includeReply) {
+      var fd = new FormData();
+      fd.append('text', text || '');
+      if (file) fd.append('file', file);
+      if (includeReply && replyToId) fd.append('reply_to', replyToId);
+
+      // Show the bubble immediately (Telegram-Desktop-style instant echo)
+      // instead of waiting for the round trip; reconciled or marked failed
+      // once the real response (or the SSE ping for it) comes back.
+      var tid = 'tmp' + Date.now() + Math.random().toString(36).slice(2);
+      appendOptimistic({
+        tid: tid, direction: 'out', status: 'pending', sender_user_id: ME,
+        text: text || null,
+        reply_to: (includeReply && replyToId) ? { id: replyToId, text: replyToText } : null,
+        media: file ? [{ type: 'uploading', filename: file.name }] : [],
+        channel_type: S.activeConv ? S.activeConv.channel_type : '',
+        created_at: new Date().toISOString(),
+      });
+
+      return fetch('/inbox/conversations/' + S.activeId + '/reply', { method: 'POST', body: fd })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          removeOptimistic(tid);
+          if (data.message) appendMsgs([data.message], true);
+          if (!data.ok) showToast(data.error || 'Не вдалося надіслати', 'error');
+        })
+        .catch(function () {
+          markOptimisticFailed(tid, 'Помилка мережі');
+          showToast('Помилка мережі', 'error');
+        });
+    }
+
+    var tasks = files.length
+      ? files.map(function (f, i) { return function () { return sendOne(i === 0 ? txt : '', f, i === 0); }; })
+      : [function () { return sendOne(txt, null, true); }];
+
+    tasks.reduce(function (chain, task) { return chain.then(task); }, Promise.resolve())
+      .finally(function () { sendBtn.disabled = false; pollList(); });
   });
 
   // ---- header actions -----------------------------------------
