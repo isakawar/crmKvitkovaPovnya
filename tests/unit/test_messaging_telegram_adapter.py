@@ -102,3 +102,16 @@ def test_build_inbound_event_without_sender_has_empty_contact():
     message = SimpleNamespace(chat_id=1, id=2, message='x', photo=None, document=None,
                               date=datetime(2026, 9, 22, 8, 0))
     assert build_inbound_event(message).contact == {}
+
+
+def test_enrich_contact_is_noop_inside_a_running_loop(recwarn):
+    """The worker and the backfill already run in a loop — asyncio.run can't
+    nest there, and the old code leaked a never-awaited coroutine."""
+    import asyncio
+    from app.services.messaging.telegram_personal import TelegramPersonalAdapter
+
+    async def call():
+        return TelegramPersonalAdapter().enrich_contact(object(), '123')
+
+    assert asyncio.run(call()) == {}
+    assert not [w for w in recwarn if issubclass(w.category, RuntimeWarning)]

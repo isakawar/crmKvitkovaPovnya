@@ -218,7 +218,18 @@ class TelegramPersonalAdapter:
 
     # --- contact lookup (duck-typed, see inbox_service._get_or_create_conversation) ---
     def enrich_contact(self, channel, external_chat_id: str) -> dict:
-        """Best-effort name/username/phone lookup by chat id. Never raises."""
+        """Best-effort name/username/phone lookup by chat id. Never raises.
+
+        No-op when called from inside a running event loop (the worker and the
+        history backfill) — `asyncio.run` can't nest there, and both of those
+        callers already resolve the contact themselves.
+        """
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass  # no loop running — we can drive one
+        else:
+            return {}
         try:
             return asyncio.run(self._enrich_contact_async(channel, external_chat_id))
         except Exception:  # noqa: BLE001

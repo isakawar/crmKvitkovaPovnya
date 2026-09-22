@@ -143,13 +143,18 @@ def apply_contact(conv: Conversation, contact: dict | None) -> None:
     _try_auto_link(conv)
 
 
-def _try_auto_link(conv: Conversation) -> None:
-    """Link an unlinked conversation to a CRM client, if exactly one matches."""
+def _try_auto_link(conv: Conversation, channel_type: str | None = None) -> None:
+    """Link an unlinked conversation to a CRM client, if exactly one matches.
+
+    `channel_type` is passed explicitly where the conversation may not be in
+    the session yet — touching `conv.channel` there makes SQLAlchemy's
+    autoflush complain about a half-attached backref.
+    """
     if conv.client_id or not (conv.contact_username or conv.contact_phone):
         return
     try:
         client = client_service.find_client_for_contact(
-            conv.channel.channel_type,
+            channel_type or conv.channel.channel_type,
             username=conv.contact_username,
             phone=conv.contact_phone,
         )
@@ -180,10 +185,9 @@ def _get_or_create_conversation(channel: MessagingChannel, event) -> Conversatio
             contact_username=contact.get('username'),
             contact_phone=contact.get('phone'),
         )
-        conv.channel = channel  # _try_auto_link needs channel_type before flush
-        _try_auto_link(conv)
         db.session.add(conv)
         db.session.flush()
+        _try_auto_link(conv, channel.channel_type)
     return conv
 
 
