@@ -115,7 +115,8 @@ class ViberAdapter:
         return stored, mime
 
     # --- outbound --------------------------------------------------------
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
         try:
             result = _api('send_message', receiver=external_chat_id, type='text',
                           text=text, sender={'name': channel.name[:28]})
@@ -126,7 +127,7 @@ class ViberAdapter:
             return SentResult(ok=False, error=str(exc))
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult:
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
         return SentResult(ok=False, error='Viber: надсилання файлів поки не підтримується '
                                           '(Viber вимагає публічний URL для медіа)')
 

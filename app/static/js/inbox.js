@@ -18,6 +18,7 @@
     lastDateKey: null,
     firstDateKey: null,
     soundOn: false,
+    replyTo: null,
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -37,7 +38,32 @@
   var clientPanelEl = $('ib-client-panel');
   var ME = window.IB_USER_ID;
 
+  // The shared order/subscription composer (orders/_composer_script.html)
+  // calls softReload()/softReloadWithToast() after a successful save, which
+  // does a full page reload — fine on /orders, but on /inbox it would drop
+  // the open conversation. Replace it with an in-place refresh instead.
+  window.softReload = function () {
+    var pending = null;
+    try {
+      var raw = sessionStorage.getItem('__pending_toast');
+      if (raw) { pending = JSON.parse(raw); sessionStorage.removeItem('__pending_toast'); }
+    } catch (e) {}
+    if (window.bootstrap) {
+      [].forEach.call(document.querySelectorAll('.modal.show'), function (m) {
+        var inst = bootstrap.Modal.getInstance(m);
+        if (inst) inst.hide();
+      });
+    }
+    if (pending && pending.msg) showToast(pending.msg, pending.type);
+    pollList();
+    if (S.activeId) { fetchThread(false); fetchClientPanel(S.activeId); }
+  };
+
   function chIcon(t) { return t === 'instagram' ? 'instagram' : (t === 'whatsapp' ? 'whatsapp' : 'telegram'); }
+  function chCornerHtml(t) { return t === 'viber' ? 'V' : '<i class="bi bi-' + chIcon(t) + '"></i>'; }
+  // Only Telegram's send APIs (Business + personal MTProto) support quoting
+  // an arbitrary message; other providers' send APIs don't.
+  function canReplyChannel(t) { return t === 'telegram' || t === 'telegram_personal'; }
   function chBadge(t) {
     if (t === 'viber') return '<span title="Viber" style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#7360F2;color:#fff;font-size:0.55rem;font-weight:700;">V</span>';
     var label = t === 'instagram' ? 'Instagram' : (t === 'whatsapp' ? 'WhatsApp' : (t === 'telegram_personal' ? 'Telegram (особистий)' : 'Telegram'));
@@ -79,8 +105,7 @@
   // avoids the flicker and re-bound-listener churn of a full innerHTML swap.
   function convBody(c) {
     return '<div class="conv__avatar" style="background:' + avaColor(c.name) + '">' + esc(initials(c.name)) +
-      '<span class="conv__ch ' + esc(c.channel_type) + '"><i class="bi bi-' +
-      chIcon(c.channel_type) + '"></i></span></div>' +
+      '<span class="conv__ch ' + esc(c.channel_type) + '">' + chCornerHtml(c.channel_type) + '</span></div>' +
       '<div class="conv__body">' +
       '<div class="conv__top"><span class="conv__name">' + esc(c.name) + '</span>' +
       '<span class="conv__time">' + relTime(c.last_message_at) + '</span></div>' +
@@ -212,8 +237,9 @@
     wrapEl.dataset.dir = m.direction;
     wrapEl.dataset.sender = m.sender_user_id == null ? '' : String(m.sender_user_id);
     wrapEl.dataset.ts = String(new Date(m.created_at).getTime());
-    if (m.direction === 'out') wrapEl.dataset.text = m.text || '';
+    wrapEl.dataset.text = m.text || '';
     var inner = '<div class="msg__bubble">';
+    if (m.reply_to) inner += '<div class="msg__quote">' + esc(m.reply_to.text) + '</div>';
     if (m.text) inner += esc(m.text);
     (m.media || []).forEach(function (md) {
       if (md.type === 'uploading') inner += '<div class="msg__file"><i class="bi bi-arrow-repeat"></i> ' + esc(md.filename || 'файл') + '</div>';
@@ -226,6 +252,7 @@
     inner += '<div class="msg__meta">' + chBadge(m.channel_type) + ' ' +
       new Date(m.created_at).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) +
       ' <span class="msg__tick">' + tickHtml(m.status, m.direction) + '</span>' +
+      (m.id != null && canReplyChannel(m.channel_type) ? ' <i class="bi bi-reply msg__reply-btn" title="Відповісти"></i>' : '') +
       (m.status === 'failed' && m.error ? ' <span style="color:#ef4444">' + esc(m.error) + '</span>' : '') + '</div>';
     wrapEl.innerHTML = inner;
     return wrapEl;
@@ -337,6 +364,7 @@
     var c = S.convs.find(function (x) { return x.id === id; });
     S.activeId = id; S.activeConv = c; S.lastMsgId = 0; S.lastDateKey = null;
     S.firstMsgId = 0; S.firstDateKey = null; S.hasMore = false; S.loadingOlder = false;
+    clearReplyTarget();
     msgsEl.innerHTML = '';
     emptyEl.style.display = 'none';
     bodyEl.style.display = 'flex';
@@ -401,9 +429,28 @@
     return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
   }
   function deliveryNode(d) {
-    return '<div class="icp-delivery">' +
+    return '<div class="icp-delivery" data-order-id="' + (d.order_id || '') + '" data-subscription-id="' + (d.subscription_id || '') + '">' +
       '<div class="icp-delivery__top"><span>' + esc(ddmmyyyy(d.date)) + '</span><span>' + esc(d.status || '') + '</span></div>' +
       '<div class="icp-delivery__addr">' + esc([d.size, d.address].filter(Boolean).join(' · ')) + '</div></div>';
+  }
+
+  // Opens the shared order-composer modal (also used by /orders and
+  // /integrations/wix-leads) in place, so a delivery/subscription can be
+  // edited without leaving the conversation.
+  function openSubscriptionEditorById(subId) {
+    if (!subId || !window.orderComposerApi) return;
+    fetch('/subscriptions/' + subId)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data && data.id) window.orderComposerApi.openSubscriptionEditor(data);
+        else showToast(data.error || 'Не вдалося завантажити підписку', 'error');
+      })
+      .catch(function () { showToast('Помилка мережі', 'error'); });
+  }
+  function openDeliveryEditor(orderId, subscriptionId) {
+    if (!window.orderComposerApi) return;
+    if (subscriptionId) openSubscriptionEditorById(subscriptionId);
+    else if (orderId) window.orderComposerApi.openOrderEditor(orderId);
   }
 
   function renderClientPanel(data) {
@@ -418,11 +465,11 @@
         '<div class="icp-stat"><b>' + esc(c.personal_discount || '0') + '%</b><span>знижка</span></div>' +
         '<div class="icp-stat"><b>' + c.credits.toFixed(0) + '</b><span>баланс</span></div>' +
         '</div>' +
-        '<a class="icp-link" href="/clients/' + c.id + '" target="_blank"><i class="bi bi-box-arrow-up-right"></i> Картка клієнта</a>';
+        '<button type="button" class="icp-link" id="icp-open-client" style="background:none;border:none;padding:0;font:inherit;cursor:pointer;"><i class="bi bi-box-arrow-up-right"></i> Картка клієнта</button>';
       if (data.subscription) {
         var s = data.subscription;
         html += '<div class="icp-title" style="margin-top:1rem;">Підписка</div>' +
-          '<div class="icp-sub"><i class="bi bi-arrow-repeat"></i> ' + esc(s.type) +
+          '<div class="icp-sub" id="icp-sub-edit" data-id="' + s.id + '" style="cursor:pointer;"><i class="bi bi-arrow-repeat"></i> ' + esc(s.type) +
           (s.is_wedding ? ' · весільна' : '') + ', ' + esc(s.size) +
           '<div class="icp-delivery__addr">Доставка щотижня: ' + esc(s.delivery_day) + '</div></div>';
       }
@@ -434,6 +481,18 @@
       }
       html += '<span class="icp-unlink" id="icp-unlink"><i class="bi bi-x-circle"></i> Відв\'язати клієнта</span>';
       clientPanelEl.innerHTML = html;
+      $('icp-open-client').addEventListener('click', function () {
+        if (window.loadClientData) window.loadClientData(c.id);
+        else window.open('/clients/' + c.id, '_blank');
+      });
+      var subEditEl = $('icp-sub-edit');
+      if (subEditEl) subEditEl.addEventListener('click', function () { openSubscriptionEditorById(+subEditEl.dataset.id); });
+      [].forEach.call(clientPanelEl.querySelectorAll('.icp-delivery'), function (el) {
+        el.addEventListener('click', function () {
+          openDeliveryEditor(el.dataset.orderId ? +el.dataset.orderId : null,
+                             el.dataset.subscriptionId ? +el.dataset.subscriptionId : null);
+        });
+      });
       $('icp-unlink').addEventListener('click', function () {
         if (!S.activeId) return;
         fetch('/inbox/conversations/' + S.activeId + '/unlink-client', { method: 'POST' })
@@ -465,10 +524,14 @@
         var clients = data.clients || [];
         if (!clients.length) { again.innerHTML = '<div class="icp-empty">Нічого не знайдено</div>'; return; }
         again.innerHTML = clients.map(function (c) {
-          var sub = [c.phone, c.instagram, c.telegram].filter(Boolean).join(' · ');
+          var contacts = [
+            c.phone ? '<span class="icp-result__contact"><i class="bi bi-telephone"></i>' + esc(c.phone) + '</span>' : '',
+            c.instagram ? '<span class="icp-result__contact"><i class="bi bi-instagram"></i>' + esc(c.instagram) + '</span>' : '',
+            c.telegram ? '<span class="icp-result__contact"><i class="bi bi-telegram"></i>' + esc(c.telegram) + '</span>' : '',
+          ].filter(Boolean).join('');
           return '<div class="icp-result" data-id="' + c.id + '">' +
             '<div class="icp-result__name">' + esc(c.name) + '</div>' +
-            (sub ? '<div class="icp-result__sub">' + esc(sub) + '</div>' : '') + '</div>';
+            (contacts ? '<div class="icp-result__sub">' + contacts + '</div>' : '') + '</div>';
         }).join('');
         [].forEach.call(again.querySelectorAll('.icp-result'), function (el) {
           el.addEventListener('click', function () {
@@ -488,6 +551,28 @@
       })
       .catch(function () {});
   }
+
+  // ---- reply target -----------------------------------------------
+  function setReplyTarget(id, text) {
+    S.replyTo = { id: id, text: text || '(без тексту)' };
+    renderReplyPreview();
+    textEl.focus();
+  }
+  function clearReplyTarget() {
+    S.replyTo = null;
+    renderReplyPreview();
+  }
+  function renderReplyPreview() {
+    var el = $('ib-reply-preview');
+    if (!el) return;
+    if (S.replyTo) {
+      el.querySelector('.ib-reply-preview__text').textContent = S.replyTo.text;
+      el.classList.add('show');
+    } else {
+      el.classList.remove('show');
+    }
+  }
+  $('ib-reply-cancel').addEventListener('click', clearReplyTarget);
 
   // ---- composer -------------------------------------------------
   function autoGrow() { textEl.style.height = 'auto'; textEl.style.height = Math.min(textEl.scrollHeight, 140) + 'px'; }
@@ -510,6 +595,7 @@
     var fd = new FormData();
     fd.append('text', textEl.value);
     if (file) fd.append('file', file);
+    if (S.replyTo) fd.append('reply_to', S.replyTo.id);
 
     // Show the bubble immediately (Telegram-Desktop-style instant echo)
     // instead of waiting for the round trip; reconciled or marked failed
@@ -518,6 +604,7 @@
     appendOptimistic({
       tid: tid, direction: 'out', status: 'pending', sender_user_id: ME,
       text: txt || null,
+      reply_to: S.replyTo ? { id: S.replyTo.id, text: S.replyTo.text } : null,
       media: file ? [{ type: 'uploading', filename: file.name }] : [],
       channel_type: S.activeConv ? S.activeConv.channel_type : '',
       created_at: new Date().toISOString(),
@@ -526,6 +613,7 @@
     sendBtn.disabled = true;
     textEl.value = ''; autoGrow();
     fileEl.value = ''; filePrev.style.display = 'none';
+    clearReplyTarget();
 
     fetch('/inbox/conversations/' + S.activeId + '/reply', { method: 'POST', body: fd })
       .then(function (r) { return r.json(); })
@@ -544,6 +632,17 @@
 
   // ---- header actions -----------------------------------------
   $('ib-back').addEventListener('click', function () { wrap.classList.remove('mobile-thread'); });
+
+  $('ib-refresh').addEventListener('click', function () {
+    if (!S.activeId) return;
+    var btn = $('ib-refresh');
+    btn.classList.remove('spinning');
+    void btn.offsetWidth;
+    btn.classList.add('spinning');
+    fetchThread(false);
+    fetchClientPanel(S.activeId);
+    pollList();
+  });
 
   [].forEach.call(document.querySelectorAll('.ib-tab'), function (t) {
     t.addEventListener('click', function () {
@@ -610,6 +709,12 @@
     if (e.target.classList.contains('msg__img')) {
       lightbox.querySelector('img').src = e.target.dataset.full;
       lightbox.classList.add('show');
+      return;
+    }
+    var replyBtn = e.target.closest('.msg__reply-btn');
+    if (replyBtn) {
+      var replyMsgEl = replyBtn.closest('.msg');
+      if (replyMsgEl && replyMsgEl.dataset.mid) setReplyTarget(+replyMsgEl.dataset.mid, replyMsgEl.dataset.text);
       return;
     }
     // Tap a failed outgoing bubble to get its text back in the composer —

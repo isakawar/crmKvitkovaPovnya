@@ -15,6 +15,8 @@
   @keyframes ib-msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes ib-pulse { 0%, 100% { opacity: .55; } 50% { opacity: .9; } }
   @keyframes ib-pop { 0% { transform: scale(.4); } 65% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @keyframes ib-spin { to { transform: rotate(360deg); } }
+  #ib-refresh.spinning i { display: inline-block; animation: ib-spin .6s linear; }
   .ib-page { padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
   .ib-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
   .ib-head h1 { font-size: 1.35rem; letter-spacing: -0.02em; color: var(--ib-ink); margin: 0; }
@@ -52,22 +54,25 @@
   .conv:hover { background: #fafaf9; }
   .conv:active { background: #f5f5f4; }
   .conv.active { background: #fff7ed; box-shadow: inset 3px 0 0 var(--ib-accent); }
+  .conv.unread:not(.active) { background: #fffdf7; box-shadow: inset 3px 0 0 #fbbf24; }
+  .conv.unread .conv__time { color: var(--ib-accent); font-weight: 700; }
   .conv__avatar { width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center;
                   justify-content: center; font-weight: 700; font-size: 0.85rem; color: #fff; position: relative; }
   .conv__ch { position: absolute; right: -3px; bottom: -3px; width: 15px; height: 15px; border-radius: 50%; background: #fff;
               display: flex; align-items: center; justify-content: center; font-size: 0.6rem; border: 1px solid var(--ib-border); }
-  .conv__ch.telegram { color: #0088cc; }
+  .conv__ch.telegram, .conv__ch.telegram_personal { color: #0088cc; }
   .conv__ch.instagram { color: #d6249f; }
   .conv__ch.whatsapp { color: #25D366; }
+  .conv__ch.viber { color: #7360F2; font-weight: 700; font-size: 0.62rem; }
   .conv__body { min-width: 0; flex: 1; }
   .conv__top { display: flex; justify-content: space-between; gap: 0.4rem; align-items: baseline; }
   .conv__name { font-weight: 600; font-size: 0.85rem; color: var(--ib-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .conv__time { font-size: 0.68rem; color: #a8a29e; flex-shrink: 0; }
   .conv__preview { font-size: 0.78rem; color: var(--ib-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
   .conv.unread .conv__name, .conv.unread .conv__preview { color: var(--ib-ink); font-weight: 700; }
-  .conv__badge { background: #ef4444; color: #fff; font-size: 0.66rem; font-weight: 700; border-radius: 999px;
-                 padding: 0 6px; min-width: 17px; text-align: center; line-height: 17px; margin-left: 0.3rem;
-                 display: inline-block; }
+  .conv__badge { background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: 700; border-radius: 999px;
+                 padding: 0 6px; min-width: 18px; text-align: center; line-height: 18px; margin-left: 0.3rem;
+                 display: inline-block; box-shadow: 0 0 0 2px #fff; }
   .ib-pop { animation: ib-pop .25s var(--ib-ease); }
   .conv__assigned { font-size: 0.66rem; color: var(--ib-accent); margin-top: 2px; display: inline-flex; align-items: center; gap: 0.2rem; }
 
@@ -120,6 +125,18 @@
                    background: rgba(0,0,0,.06); }
   .msg__reaction.mine { background: rgba(14,165,233,.18); }
   .msg__file { margin-top: 0.3rem; font-size: 0.8rem; color: var(--ib-accent); }
+  .msg__quote { border-left: 2px solid var(--ib-accent); padding: 0.1rem 0 0.1rem 0.45rem; margin-bottom: 0.3rem;
+               font-size: 0.76rem; color: var(--ib-muted); opacity: 0.85; }
+  .msg__reply-btn { cursor: pointer; margin-left: 0.15rem; }
+  .msg__reply-btn:hover { color: var(--ib-accent); }
+
+  .ib-reply-preview { display: none; align-items: center; justify-content: space-between; gap: 0.5rem;
+                     padding: 0.4rem 0.9rem; background: #fff7ed; border-top: 1px solid #fde68a;
+                     font-size: 0.78rem; color: var(--ib-ink); }
+  .ib-reply-preview.show { display: flex; }
+  .ib-reply-preview__text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                            border-left: 2px solid var(--ib-accent); padding-left: 0.5rem; flex: 1; }
+  .ib-reply-preview button { border: none; background: none; color: #ef4444; cursor: pointer; font-size: 0.95rem; }
 
   .ib-compose { border-top: 1px solid var(--ib-border); padding: 0.6rem 0.75rem; display: flex; gap: 0.5rem; align-items: flex-end; background: #fff; }
   .ib-compose textarea { flex: 1; resize: none; border: 1px solid var(--ib-border); border-radius: 0.7rem;
@@ -156,7 +173,9 @@
   .icp-sub { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; border-radius: 0.6rem;
             padding: 0.5rem 0.6rem; margin-bottom: 0.3rem; font-weight: 600; }
   .icp-sub .icp-delivery__addr { color: #166534; opacity: 0.8; font-weight: 500; }
-  .icp-delivery { border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem; }
+  .icp-delivery { border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.5rem 0.6rem; margin-bottom: 0.5rem;
+                 cursor: pointer; transition: background-color .12s var(--ib-ease); }
+  .icp-delivery:hover, .icp-sub:hover { background: var(--ib-bg); }
   .icp-delivery__top { display: flex; justify-content: space-between; font-weight: 600; color: var(--ib-ink); }
   .icp-delivery__addr { color: var(--ib-muted); margin-top: 0.15rem; }
   .icp-empty { color: #a8a29e; text-align: center; margin-top: 2rem; }
@@ -167,7 +186,8 @@
   .icp-result { padding: 0.45rem 0.5rem; border-radius: 0.5rem; cursor: pointer; transition: background-color .12s var(--ib-ease); }
   .icp-result:hover { background: var(--ib-bg); }
   .icp-result__name { font-weight: 600; color: var(--ib-ink); font-size: 0.82rem; }
-  .icp-result__sub { color: var(--ib-muted); font-size: 0.72rem; }
+  .icp-result__sub { color: var(--ib-muted); font-size: 0.72rem; display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.15rem; }
+  .icp-result__contact { display: inline-flex; align-items: center; gap: 0.22rem; }
   .icp-unlink { color: #ef4444; font-size: 0.75rem; cursor: pointer; margin-top: 0.8rem; display: inline-block; }
 
   .ib-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.7rem; color: #a8a29e; }
@@ -257,8 +277,15 @@
                 <div class="ib-thread__sub" id="ib-th-sub"></div>
               </div>
             </div>
+            <div class="ib-thread__actions">
+              <button class="ib-icon-btn" id="ib-refresh" type="button" title="Оновити повідомлення"><i class="bi bi-arrow-clockwise"></i></button>
+            </div>
           </div>
           <div class="ib-msgs" id="ib-msgs"></div>
+          <div class="ib-reply-preview" id="ib-reply-preview">
+            <div class="ib-reply-preview__text"></div>
+            <button type="button" id="ib-reply-cancel" title="Скасувати">✕</button>
+          </div>
           <div class="ib-filepreview" id="ib-filepreview">
             <i class="bi bi-image"></i><span id="ib-filename"></span>
             <button id="ib-fileclear" title="Прибрати">✕</button>
@@ -302,6 +329,11 @@
 </div>
 {% endif %}
 
+{% if channels %}
+{% include 'orders/_composer_modal.html' %}
+{% include 'clients/modal.html' %}
+{% endif %}
+
 {{ render_toast() }}
 {% endblock %}
 
@@ -309,6 +341,10 @@
 {{ super() }}
 {{ toast_script() }}
 {% if channels %}
+<script src="{{ url_for('static', filename='js/city_autocomplete.js') }}"></script>
+<script src="{{ url_for('static', filename='js/address_autocomplete.js') }}"></script>
+{% include 'orders/_composer_script.html' %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
 <script>window.IB_USER_ID = {{ current_user.id }};</script>
 <script src="{{ url_for('static', filename='js/inbox.js') }}"></script>
 {% endif %}

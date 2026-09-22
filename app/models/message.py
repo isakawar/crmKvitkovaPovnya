@@ -24,6 +24,12 @@ class Message(db.Model):
     direction = db.Column(db.String(4), nullable=False)  # in|out
     external_message_id = db.Column(db.String(64), nullable=True)
     sender_user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='SET NULL'), nullable=True)
+    # Outbound Telegram replies only — Instagram/Viber/WhatsApp send APIs
+    # can't quote an arbitrary message.
+    reply_to_message_id = db.Column(
+        db.Integer, db.ForeignKey('messaging_message.id', ondelete='SET NULL'), nullable=True,
+    )
+    reply_to = db.relationship('Message', remote_side='Message.id', foreign_keys=[reply_to_message_id])
 
     text = db.Column(db.Text, nullable=True)
     media = db.Column(db.JSON, nullable=False, default=list)

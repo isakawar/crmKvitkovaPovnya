@@ -154,6 +154,29 @@
             pointer-events: auto;
         }
 
+        /* Unread dot on the collapsed icon rail — independent of .nav-label's
+           hover-only fade, so the count stays visible while collapsed. Hidden
+           on hover since the full badge next to the label takes over then. */
+        .sidebar-icon-badge {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            min-width: 15px;
+            height: 15px;
+            padding: 0 3px;
+            border-radius: 999px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.6rem;
+            font-weight: 700;
+            line-height: 15px;
+            text-align: center;
+            box-shadow: 0 0 0 2px #f5f5f4;
+        }
+        .sidebar:hover .sidebar-icon-badge {
+            display: none;
+        }
+
         /* ── Mobile nav groups (collapsible sections) ──────────────── */
         .nav-group__header {
             cursor: pointer;
@@ -579,7 +602,10 @@
            class="flex items-center gap-3 px-2 py-2 rounded-lg text-sm transition-colors
                   {% if request.path.startswith('/inbox') %}bg-amber-50 border border-amber-200 text-amber-700{% else %}text-stone-600 hover:bg-stone-200 hover:text-stone-900{% endif %}"
            title="Чат / Інбокс">
-            <i class="bi bi-chat-dots text-lg flex-shrink-0"></i>
+            <span class="relative inline-flex flex-shrink-0">
+                <i class="bi bi-chat-dots text-lg"></i>
+                {% if inbox_unread %}<span class="sidebar-icon-badge">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
+            </span>
             <span class="nav-label">Чат / Інбокс</span>
             {% if inbox_unread %}<span class="nav-label conv-item__badge" style="background:#ef4444;color:#fff;font-size:0.68rem;font-weight:700;border-radius:999px;padding:1px 6px;">{{ inbox_unread if inbox_unread <= 99 else '99+' }}</span>{% endif %}
         </a>

@@ -126,7 +126,8 @@ class WhatsAppAdapter:
         return stored, mime
 
     # --- outbound --------------------------------------------------------
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
         try:
             headers = _auth_headers(channel)
         except RuntimeError as exc:
@@ -149,7 +150,7 @@ class WhatsAppAdapter:
             return SentResult(ok=False, error=str(exc))
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult:
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
         try:
             headers = _auth_headers(channel)
         except RuntimeError as exc:

@@ -199,6 +199,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  window.loadClientData = loadClientData;
+
   async function loadClientData(clientId) {
     try {
       const response = await fetch(`/clients/${clientId}`);

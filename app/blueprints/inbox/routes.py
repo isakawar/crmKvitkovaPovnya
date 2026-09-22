@@ -39,7 +39,20 @@ def index():
                 .filter(MessagingChannel.id.in_(channel_ids))
                 .order_by(MessagingChannel.name).all()) if channel_ids else []
     personal_channels = [c for c in channels if c.channel_type == 'telegram_personal' and c.is_connected]
-    return render_template('inbox/index.html', channels=channels, personal_channels=personal_channels)
+
+    # Settings needed by the shared order composer + client modals, embedded
+    # here so a delivery/subscription/client can be edited without leaving
+    # the conversation (same pattern as integrations/leads_list.html).
+    from app.models.settings import Settings
+    delivery_types = Settings.query.filter_by(type='delivery_type').order_by(Settings.value).all()
+    sizes = Settings.query.filter_by(type='size').order_by(
+        Settings.sort_order.nullslast(), Settings.value).all()
+    for_whom = Settings.query.filter_by(type='for_whom').order_by(Settings.value).all()
+    marketing_sources = Settings.query.filter_by(type='marketing_source').order_by(Settings.value).all()
+
+    return render_template('inbox/index.html', channels=channels, personal_channels=personal_channels,
+                           delivery_types=delivery_types, sizes=sizes, for_whom=for_whom,
+                           marketing_sources=marketing_sources)
 
 
 @inbox_bp.route('/inbox/conversations')
@@ -182,6 +195,7 @@ def reply(conversation_id):
     conv = _conversation_or_404(conversation_id)
     text = (request.form.get('text') or '').strip()
     upload = request.files.get('file')
+    reply_to_id = request.form.get('reply_to', type=int)
 
     file_path = None
     if upload and upload.filename:
@@ -197,7 +211,7 @@ def reply(conversation_id):
         return jsonify({'ok': False, 'error': 'Порожнє повідомлення'}), 400
 
     msg = inbox_service.send_reply(conv, current_user._get_current_object(),
-                                   text or None, file_path=file_path)
+                                   text or None, file_path=file_path, reply_to_id=reply_to_id)
     ok = msg.status == 'sent'
     return jsonify({
         'ok': ok,

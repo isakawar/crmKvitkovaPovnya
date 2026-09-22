@@ -223,15 +223,19 @@ class TelegramPersonalAdapter:
             await client.disconnect()
 
     # --- outbound ----------------------------------------------------------
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
-        return asyncio.run(self._send_async(channel, external_chat_id, text=text))
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
+        return asyncio.run(self._send_async(channel, external_chat_id, text=text,
+                                            reply_to_external_id=reply_to_external_id))
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult:
-        return asyncio.run(self._send_async(channel, external_chat_id, file_path=file_path, caption=caption))
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
+        return asyncio.run(self._send_async(channel, external_chat_id, file_path=file_path, caption=caption,
+                                            reply_to_external_id=reply_to_external_id))
 
     async def _send_async(self, channel, external_chat_id: str, text: str | None = None,
-                           file_path: str | None = None, caption: str | None = None) -> SentResult:
+                           file_path: str | None = None, caption: str | None = None,
+                           reply_to_external_id: str | None = None) -> SentResult:
         try:
             client = client_for(channel)
         except RuntimeError as exc:
@@ -240,10 +244,11 @@ class TelegramPersonalAdapter:
         await client.connect()
         try:
             chat_id = int(external_chat_id)
+            reply_to = int(reply_to_external_id) if reply_to_external_id else None
             if file_path:
-                sent = await client.send_file(chat_id, file_path, caption=caption)
+                sent = await client.send_file(chat_id, file_path, caption=caption, reply_to=reply_to)
             else:
-                sent = await client.send_message(chat_id, text)
+                sent = await client.send_message(chat_id, text, reply_to=reply_to)
             return SentResult(ok=True, external_message_id=str(sent.id))
         except Exception as exc:  # noqa: BLE001
             return SentResult(ok=False, error=str(exc))

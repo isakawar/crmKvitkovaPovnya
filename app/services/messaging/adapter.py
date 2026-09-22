@@ -61,10 +61,15 @@ class ChannelAdapter(Protocol):
 
     def parse_events(self, payload: dict) -> list[InboundEvent]: ...
 
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult: ...
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
+        """`reply_to_external_id` (an external_message_id to quote) is only
+        honored by adapters whose provider supports it (Telegram); others
+        accept and ignore it so callers don't need to special-case channels."""
+        ...
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult: ...
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult: ...
 
     def download_media(self, channel, media_ref: dict) -> tuple[str, str]:
         """Return (stored_filename, mime_type). Raises on failure."""

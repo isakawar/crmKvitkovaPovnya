@@ -351,23 +351,30 @@ def prefetch_message_media(app, message_id: int) -> None:
 
 # --- outbound -------------------------------------------------------
 def send_reply(conversation: Conversation, user, text: str | None,
-               file_path: str | None = None, file_caption: str | None = None) -> Message:
+               file_path: str | None = None, file_caption: str | None = None,
+               reply_to_id: int | None = None) -> Message:
     adapter = get_adapter(conversation.channel)
+    reply_to_msg = db.session.get(Message, reply_to_id) if reply_to_id else None
+    reply_to_external_id = (reply_to_msg.external_message_id
+                            if reply_to_msg and reply_to_msg.conversation_id == conversation.id else None)
     media = []
     if file_path:
         result = adapter.send_media(conversation.channel, conversation.external_chat_id,
-                                    file_path, caption=file_caption or text)
+                                    file_path, caption=file_caption or text,
+                                    reply_to_external_id=reply_to_external_id)
         import os
         media = [{'type': 'photo', 'path': os.path.basename(file_path),
                   'mime': 'image/jpeg', 'filename': None, 'tg_file_id': None}]
     else:
-        result = adapter.send_text(conversation.channel, conversation.external_chat_id, text or '')
+        result = adapter.send_text(conversation.channel, conversation.external_chat_id, text or '',
+                                   reply_to_external_id=reply_to_external_id)
 
     msg = Message(
         conversation_id=conversation.id,
         direction='out',
         sender_user_id=getattr(user, 'id', None),
         external_message_id=result.external_message_id,
+        reply_to_message_id=reply_to_msg.id if reply_to_external_id else None,
         text=text,
         media=media,
         status='sent' if result.ok else 'failed',
@@ -544,6 +551,7 @@ def get_client_panel(conversation: Conversation) -> dict:
             'personal_discount': client.personal_discount or '',
         },
         'subscription': {
+            'id': subscription.id,
             'type': subscription.type,
             'delivery_day': subscription.delivery_day,
             'size': subscription.size,
@@ -556,6 +564,8 @@ def get_client_panel(conversation: Conversation) -> dict:
                 'status': d.status,
                 'address': ', '.join(p for p in [d.street, d.building_number] if p) or ('Самовивіз' if d.is_pickup else ''),
                 'size': d.size or '',
+                'order_id': d.order_id,
+                'subscription_id': d.order.subscription_id if d.order else None,
             }
             for d in deliveries
         ],
@@ -583,6 +593,10 @@ def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
         'error': msg.error,
         'reactions': msg.reactions or [],
         'sender_user_id': msg.sender_user_id,
+        'reply_to': {
+            'id': msg.reply_to.id,
+            'text': _preview(msg.reply_to.text, msg.reply_to.media or []),
+        } if msg.reply_to else None,
         'channel_type': channel_type or msg.conversation.channel.channel_type,
         'media': [
             {'idx': i, 'type': m.get('type'),

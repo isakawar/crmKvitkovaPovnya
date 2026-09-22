@@ -8,6 +8,7 @@ with `business_connection_id` so they appear from the account owner.
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -163,17 +164,23 @@ class TelegramBusinessAdapter:
         return stored, mime
 
     # --- outbound --------------------------------------------------------
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
-        return self._send('sendMessage', channel, external_chat_id, {'text': text})
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
+        extra = {'text': text}
+        if reply_to_external_id:
+            extra['reply_parameters'] = {'message_id': int(reply_to_external_id)}
+        return self._send('sendMessage', channel, external_chat_id, extra)
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult:
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
         if not channel.external_id:
             return SentResult(ok=False, error='Бот не підключений до Telegram Business акаунта')
         url = f'{API_ROOT}/bot{_token()}/sendPhoto'
         data = {'business_connection_id': channel.external_id, 'chat_id': external_chat_id}
         if caption:
             data['caption'] = caption
+        if reply_to_external_id:
+            data['reply_parameters'] = json.dumps({'message_id': int(reply_to_external_id)})
         try:
             with open(file_path, 'rb') as fh:
                 resp = requests.post(url, data=data, files={'photo': fh}, timeout=_TIMEOUT)

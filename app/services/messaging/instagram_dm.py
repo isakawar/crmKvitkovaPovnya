@@ -129,7 +129,8 @@ class InstagramDMAdapter:
             return {}
 
     # --- outbound --------------------------------------------------------
-    def send_text(self, channel, external_chat_id: str, text: str) -> SentResult:
+    def send_text(self, channel, external_chat_id: str, text: str,
+                 reply_to_external_id: str | None = None) -> SentResult:
         try:
             token = _page_token(channel)
         except RuntimeError as exc:
@@ -152,7 +153,7 @@ class InstagramDMAdapter:
             return SentResult(ok=False, error=str(exc))
 
     def send_media(self, channel, external_chat_id: str, file_path: str,
-                   caption: str | None = None) -> SentResult:
+                   caption: str | None = None, reply_to_external_id: str | None = None) -> SentResult:
         try:
             token = _page_token(channel)
         except RuntimeError as exc:
