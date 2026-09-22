@@ -23,7 +23,7 @@ _TIMEOUT = 30
 
 _EXT_BY_MIME = {
     'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
-    'audio/ogg': '.ogg', 'video/mp4': '.mp4',
+    'audio/ogg': '.ogg', 'video/mp4': '.mp4', 'video/webm': '.webm',
 }
 
 
@@ -89,6 +89,17 @@ def _media_from_message(msg: dict) -> list[dict]:
         media.append({'type': 'video', 'tg_file_id': video['file_id'],
                       'mime': video.get('mime_type') or 'video/mp4',
                       'filename': video.get('file_name'), 'size': video.get('file_size')})
+    video_note = msg.get('video_note')
+    if video_note:
+        media.append({'type': 'video_note', 'tg_file_id': video_note['file_id'],
+                      'mime': 'video/mp4', 'filename': None, 'size': video_note.get('file_size')})
+    sticker = msg.get('sticker')
+    if sticker:
+        mime = ('video/webm' if sticker.get('is_video')
+               else 'application/x-tgsticker' if sticker.get('is_animated')
+               else 'image/webp')
+        media.append({'type': 'sticker', 'tg_file_id': sticker['file_id'],
+                      'mime': mime, 'filename': None, 'size': sticker.get('file_size')})
     return media
 
 

@@ -18,6 +18,7 @@ from app.models.delivery import Delivery
 from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
 from app.models.messaging_channel_access import MessagingChannelAccess
+from app.models.quick_reply import QuickReply
 from app.models.subscription import Subscription
 from app.services import client_service
 from app.services.messaging import events
@@ -599,9 +600,31 @@ def serialize_message(msg: Message, channel_type: str | None = None) -> dict:
         } if msg.reply_to else None,
         'channel_type': channel_type or msg.conversation.channel.channel_type,
         'media': [
-            {'idx': i, 'type': m.get('type'),
+            {'idx': i, 'type': m.get('type'), 'mime': m.get('mime'),
              'downloaded': bool(m.get('path')), 'expired': bool(m.get('expired'))}
             for i, m in enumerate(msg.media or [])
         ],
         'created_at': _iso_utc(msg.tg_date or msg.created_at),
     }
+
+
+# --- quick replies -----------------------------------------------------
+def list_quick_replies() -> list[dict]:
+    replies = QuickReply.query.order_by(QuickReply.created_at.desc()).all()
+    return [{'id': r.id, 'text': r.text} for r in replies]
+
+
+def create_quick_reply(user, text: str) -> dict:
+    reply = QuickReply(text=text, created_by=getattr(user, 'id', None))
+    db.session.add(reply)
+    db.session.commit()
+    return {'id': reply.id, 'text': reply.text}
+
+
+def delete_quick_reply(reply_id: int) -> bool:
+    reply = db.session.get(QuickReply, reply_id)
+    if not reply:
+        return False
+    db.session.delete(reply)
+    db.session.commit()
+    return True

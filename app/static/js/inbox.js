@@ -19,6 +19,7 @@
     firstDateKey: null,
     soundOn: false,
     replyTo: null,
+    quickReplies: [],
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -228,11 +229,19 @@
     });
   }
 
+  var FILE_TYPE_LABELS = { document: 'Файл', sticker: 'Анімований стікер' };
+  function fileTypeLabel(type) { return FILE_TYPE_LABELS[type] || 'Файл'; }
+
   function msgNode(m, opts) {
     opts = opts || {};
+    var media = m.media || [];
+    // Telegram shows a static sticker as just the image, no chat-bubble
+    // chrome around it — matches that instead of boxing it like a photo.
+    var stickerOnly = !m.text && media.length === 1 && media[0].type === 'sticker' && media[0].mime === 'image/webp';
     var wrapEl = document.createElement('div');
     wrapEl.className = 'msg ' + m.direction + (m.status === 'failed' ? ' failed' : '') +
-      (m.status === 'pending' ? ' pending' : '') + (opts.grouped ? ' grouped' : '') + (opts.animate === false ? ' no-anim' : '');
+      (m.status === 'pending' ? ' pending' : '') + (opts.grouped ? ' grouped' : '') + (opts.animate === false ? ' no-anim' : '') +
+      (stickerOnly ? ' sticker-only' : '');
     if (m.id != null) wrapEl.dataset.mid = m.id;
     wrapEl.dataset.dir = m.direction;
     wrapEl.dataset.sender = m.sender_user_id == null ? '' : String(m.sender_user_id);
@@ -241,11 +250,17 @@
     var inner = '<div class="msg__bubble">';
     if (m.reply_to) inner += '<div class="msg__quote">' + esc(m.reply_to.text) + '</div>';
     if (m.text) inner += esc(m.text);
-    (m.media || []).forEach(function (md) {
+    media.forEach(function (md) {
+      var url = '/inbox/media/' + m.id + '/' + md.idx;
       if (md.type === 'uploading') inner += '<div class="msg__file"><i class="bi bi-arrow-repeat"></i> ' + esc(md.filename || 'файл') + '</div>';
       else if (md.expired) inner += '<div class="msg__file" style="color:#a8a29e"><i class="bi bi-slash-circle"></i> Вкладення видалено (14 днів)</div>';
-      else if (md.type === 'photo') inner += '<img class="msg__img" data-full="/inbox/media/' + m.id + '/' + md.idx + '" src="/inbox/media/' + m.id + '/' + md.idx + '" alt="">';
-      else inner += '<a class="msg__file" href="/inbox/media/' + m.id + '/' + md.idx + '" target="_blank"><i class="bi bi-paperclip"></i> ' + esc(md.type) + '</a>';
+      else if (md.type === 'photo') inner += '<img class="msg__img" data-full="' + url + '" src="' + url + '" alt="">';
+      else if (md.type === 'sticker' && md.mime === 'image/webp') inner += '<img class="msg__sticker" src="' + url + '" alt="стікер">';
+      else if (md.type === 'sticker') inner += '<div class="msg__file"><i class="bi bi-stickies"></i> ' + fileTypeLabel('sticker') + '</div>';
+      else if (md.type === 'video_note') inner += '<video class="msg__video-note" src="' + url + '" controls playsinline></video>';
+      else if (md.type === 'video') inner += '<video class="msg__video" src="' + url + '" controls playsinline></video>';
+      else if (md.type === 'voice' || md.type === 'audio') inner += '<audio class="msg__audio" src="' + url + '" controls></audio>';
+      else inner += '<a class="msg__file" href="' + url + '" target="_blank"><i class="bi bi-paperclip"></i> ' + esc(fileTypeLabel(md.type)) + '</a>';
     });
     inner += reactionsHtml(m.reactions);
     inner += '</div>';
@@ -500,16 +515,49 @@
       });
     } else {
       clientPanelEl.innerHTML = '<div class="icp-title">Клієнт не привʼязаний</div>' +
-        '<div class="icp-search"><input type="text" id="icp-search-input" placeholder="Пошук за іменем/телефоном..."></div>' +
-        '<div id="icp-search-results"></div>';
+        '<div class="icp-search"><input type="text" id="icp-search-input" placeholder="Пошук за іменем/телефоном...">' +
+        '<button type="button" class="ib-clear-btn" id="icp-search-clear" title="Очистити">✕</button></div>' +
+        '<div id="icp-search-results"></div>' +
+        '<button type="button" class="icp-new-client" id="icp-new-client"><i class="bi bi-person-plus"></i> Створити нового клієнта</button>';
       var input = $('icp-search-input');
+      var icpClearBtn = $('icp-search-clear');
+      function updateIcpClear() { icpClearBtn.classList.toggle('show', !!input.value); }
       input.addEventListener('input', function () {
         var q = input.value.trim();
+        updateIcpClear();
         clearTimeout(clientSearchDebounce);
         clientSearchDebounce = setTimeout(function () { runClientSearch(q); }, 300);
       });
+      icpClearBtn.addEventListener('click', function () {
+        input.value = '';
+        updateIcpClear();
+        $('icp-search-results').innerHTML = '';
+        input.focus();
+      });
+      $('icp-new-client').addEventListener('click', function () {
+        var modalEl = document.getElementById('clientModal');
+        if (modalEl && window.bootstrap) bootstrap.Modal.getOrCreateInstance(modalEl).show();
+      });
     }
   }
+
+  // A client created via the shared clientModal (opened from the "create new
+  // client" button above) is linked to whichever conversation is open —
+  // the modal itself knows nothing about /inbox.
+  document.addEventListener('crm:client-created', function (e) {
+    if (!S.activeId || !e.detail || !e.detail.id) return;
+    fetch('/inbox/conversations/' + S.activeId + '/link-client', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: e.detail.id }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (resp) {
+        if (resp.ok) { fetchClientPanel(S.activeId); pollList(); }
+        else showToast(resp.error || 'Клієнта створено, але не вдалося привʼязати', 'error');
+      })
+      .catch(function () { showToast('Помилка мережі', 'error'); });
+  });
 
   function runClientSearch(q) {
     var resEl = $('icp-search-results');
@@ -573,6 +621,73 @@
     }
   }
   $('ib-reply-cancel').addEventListener('click', clearReplyTarget);
+
+  // ---- quick replies ------------------------------------------------
+  var qrBtn = $('ib-qr-btn');
+  var qrMenu = $('ib-qr-menu');
+  var qrListEl = $('ib-qr-list');
+  var qrNewText = $('ib-qr-new-text');
+
+  function renderQuickReplies() {
+    if (!S.quickReplies.length) {
+      qrListEl.innerHTML = '<div class="ib-qr-empty">Ще немає швидких відповідей</div>';
+      return;
+    }
+    qrListEl.innerHTML = S.quickReplies.map(function (qr) {
+      return '<div class="ib-qr-item" data-id="' + qr.id + '">' +
+        '<span class="ib-qr-item__text">' + esc(qr.text) + '</span>' +
+        '<i class="bi bi-x-lg ib-qr-item__del" data-id="' + qr.id + '" title="Видалити"></i></div>';
+    }).join('');
+  }
+  function loadQuickReplies() {
+    fetch('/inbox/quick-replies')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { S.quickReplies = data.quick_replies || []; renderQuickReplies(); })
+      .catch(function () {});
+  }
+  qrBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    qrMenu.classList.toggle('show');
+  });
+  qrListEl.addEventListener('click', function (e) {
+    var delBtn = e.target.closest('.ib-qr-item__del');
+    if (delBtn) {
+      fetch('/inbox/quick-replies/' + delBtn.dataset.id + '/delete', { method: 'POST' })
+        .then(function (r) { return r.json(); })
+        .then(function () { loadQuickReplies(); });
+      return;
+    }
+    var item = e.target.closest('.ib-qr-item');
+    if (!item) return;
+    var qr = S.quickReplies.find(function (x) { return String(x.id) === item.dataset.id; });
+    if (qr) {
+      textEl.value = textEl.value ? (textEl.value + '\n' + qr.text) : qr.text;
+      autoGrow();
+      textEl.focus();
+    }
+    qrMenu.classList.remove('show');
+  });
+  $('ib-qr-add-btn').addEventListener('click', function () {
+    var text = qrNewText.value.trim();
+    if (!text) return;
+    fetch('/inbox/quick-replies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: text }),
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.ok) { qrNewText.value = ''; loadQuickReplies(); }
+        else showToast(data.error || 'Помилка', 'error');
+      })
+      .catch(function () { showToast('Помилка мережі', 'error'); });
+  });
+  document.addEventListener('click', function (e) {
+    if (qrMenu.classList.contains('show') && !qrMenu.contains(e.target) && e.target.closest('#ib-qr-btn') == null) {
+      qrMenu.classList.remove('show');
+    }
+  });
+  loadQuickReplies();
 
   // ---- composer -------------------------------------------------
   function autoGrow() { textEl.style.height = 'auto'; textEl.style.height = Math.min(textEl.scrollHeight, 140) + 'px'; }
@@ -685,7 +800,20 @@
       pollList();
     });
   });
-  searchEl.addEventListener('input', function () { S.search = searchEl.value.trim().toLowerCase(); renderList(); });
+  var searchClearBtn = $('ib-search-clear');
+  function updateSearchClear() { searchClearBtn.classList.toggle('show', !!searchEl.value); }
+  searchEl.addEventListener('input', function () {
+    S.search = searchEl.value.trim().toLowerCase();
+    renderList();
+    updateSearchClear();
+  });
+  searchClearBtn.addEventListener('click', function () {
+    searchEl.value = '';
+    S.search = '';
+    renderList();
+    updateSearchClear();
+    searchEl.focus();
+  });
 
   // ---- new conversation -----------------------------------------
   var newConvBtn = $('ib-new-conv');

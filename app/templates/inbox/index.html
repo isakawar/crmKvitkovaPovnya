@@ -47,10 +47,14 @@
             transition: transform .12s var(--ib-ease), background-color .15s var(--ib-ease), color .15s var(--ib-ease), border-color .15s var(--ib-ease); }
   .ib-tab:active { transform: scale(.96); }
   .ib-tab.active { background: var(--ib-ink); color: #fff; border-color: var(--ib-ink); }
-  .ib-search { margin: 0 0.7rem 0.5rem; }
-  .ib-search input { width: 100%; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.4rem 0.7rem; font-size: 0.82rem;
+  .ib-search { margin: 0 0.7rem 0.5rem; position: relative; }
+  .ib-search input { width: 100%; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.4rem 1.7rem 0.4rem 0.7rem; font-size: 0.82rem;
                      transition: border-color .15s var(--ib-ease), box-shadow .15s var(--ib-ease); }
   .ib-search input:focus { outline: none; border-color: var(--ib-accent); box-shadow: 0 0 0 3px rgba(180,83,9,.1); }
+  .ib-clear-btn { display: none; position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%);
+                 border: none; background: none; color: var(--ib-muted); cursor: pointer; font-size: 0.85rem; padding: 0.15rem; line-height: 1; }
+  .ib-clear-btn.show { display: block; }
+  .ib-clear-btn:hover { color: var(--ib-ink); }
   .ib-list__scroll { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: #d6d3d1 transparent; }
   .ib-list__scroll::-webkit-scrollbar { width: 6px; }
   .ib-list__scroll::-webkit-scrollbar-thumb { background: #d6d3d1; border-radius: 999px; }
@@ -126,6 +130,13 @@
   .msg__img { margin-top: 0.3rem; border-radius: 0.6rem; max-height: 260px; max-width: 100%; cursor: zoom-in; display: block;
              transition: filter .12s var(--ib-ease); }
   .msg__img:hover { filter: brightness(.96); }
+  .msg__sticker { display: block; max-width: 140px; max-height: 140px; }
+  .msg__video-note { display: block; width: 200px; height: 200px; max-width: 100%; border-radius: 50%;
+                     object-fit: cover; margin-top: 0.3rem; background: #000; }
+  .msg__video { display: block; max-width: 280px; max-height: 320px; width: 100%; border-radius: 0.6rem;
+               margin-top: 0.3rem; background: #000; }
+  .msg__audio { display: block; margin-top: 0.3rem; width: 240px; max-width: 100%; }
+  .msg.sticker-only .msg__bubble { background: none; border: none; box-shadow: none; padding: 0; }
   .msg__reactions { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.3rem; }
   .msg__reaction { font-size: 0.72rem; line-height: 1; padding: 0.15rem 0.35rem; border-radius: 999px;
                    background: rgba(0,0,0,.06); }
@@ -161,6 +172,25 @@
   .ib-filepreview { padding: 0 0.9rem 0.5rem; font-size: 0.75rem; color: var(--ib-muted); display: none; align-items: center; gap: 0.4rem; background: #fff; }
   .ib-filepreview button { border: none; background: none; color: #ef4444; cursor: pointer; }
 
+  .ib-qr-menu { display: none; position: absolute; bottom: 115%; left: 0; background: #fff;
+               border: 1px solid var(--ib-border); border-radius: 0.7rem; box-shadow: 0 12px 30px rgba(28,25,23,.12);
+               padding: 0.5rem; z-index: 20; width: 280px; max-height: 320px; flex-direction: column; }
+  .ib-qr-menu.show { display: flex; }
+  .ib-qr-list { overflow-y: auto; max-height: 180px; display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.4rem; }
+  .ib-qr-item { display: flex; align-items: flex-start; gap: 0.4rem; padding: 0.4rem 0.5rem; border-radius: 0.5rem;
+               cursor: pointer; font-size: 0.8rem; color: var(--ib-ink); transition: background-color .12s var(--ib-ease); }
+  .ib-qr-item:hover { background: var(--ib-bg); }
+  .ib-qr-item__text { flex: 1; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+                      -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .ib-qr-item__del { color: #a8a29e; cursor: pointer; flex-shrink: 0; }
+  .ib-qr-item__del:hover { color: #ef4444; }
+  .ib-qr-empty { color: #a8a29e; font-size: 0.78rem; text-align: center; padding: 0.6rem 0; }
+  .ib-qr-add { border-top: 1px solid var(--ib-border); padding-top: 0.4rem; display: flex; flex-direction: column; gap: 0.35rem; }
+  .ib-qr-add textarea { resize: none; border: 1px solid var(--ib-border); border-radius: 0.5rem; padding: 0.4rem 0.5rem;
+                        font-size: 0.8rem; font-family: inherit; }
+  .ib-qr-add button { align-self: flex-end; background: var(--ib-ink); color: #fff; border: none; border-radius: 0.5rem;
+                      padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 600; cursor: pointer; }
+
   /* client panel */
   .ib-client-panel { width: 264px; flex-shrink: 0; border-left: 1px solid var(--ib-border);
                      background: #fff; overflow-y: auto; padding: 1rem; font-size: 0.82rem;
@@ -185,7 +215,8 @@
   .icp-delivery__top { display: flex; justify-content: space-between; font-weight: 600; color: var(--ib-ink); }
   .icp-delivery__addr { color: var(--ib-muted); margin-top: 0.15rem; }
   .icp-empty { color: #a8a29e; text-align: center; margin-top: 2rem; }
-  .icp-search input { width: 100%; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.4rem 0.6rem;
+  .icp-search { position: relative; }
+  .icp-search input { width: 100%; border: 1px solid var(--ib-border); border-radius: 0.6rem; padding: 0.4rem 1.7rem 0.4rem 0.6rem;
                      font-size: 0.82rem; margin-bottom: 0.5rem;
                      transition: border-color .15s var(--ib-ease), box-shadow .15s var(--ib-ease); }
   .icp-search input:focus { outline: none; border-color: var(--ib-accent); box-shadow: 0 0 0 3px rgba(180,83,9,.1); }
@@ -195,6 +226,11 @@
   .icp-result__sub { color: var(--ib-muted); font-size: 0.72rem; display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 0.15rem; }
   .icp-result__contact { display: inline-flex; align-items: center; gap: 0.22rem; }
   .icp-unlink { color: #ef4444; font-size: 0.75rem; cursor: pointer; margin-top: 0.8rem; display: inline-block; }
+  .icp-new-client { display: flex; align-items: center; justify-content: center; gap: 0.4rem; width: 100%;
+                    margin-top: 0.7rem; padding: 0.5rem 0.6rem; border: 1px dashed var(--ib-border); border-radius: 0.6rem;
+                    background: #fff; color: var(--ib-accent); font-size: 0.8rem; font-weight: 600; cursor: pointer;
+                    transition: background-color .12s var(--ib-ease), border-color .12s var(--ib-ease); }
+  .icp-new-client:hover { background: var(--ib-bg); border-color: var(--ib-accent); }
 
   .ib-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.7rem; color: #a8a29e; }
   .ib-empty i { font-size: 1.9rem; width: 74px; height: 74px; display: flex; align-items: center; justify-content: center;
@@ -255,7 +291,10 @@
         <button class="ib-tab active" data-filter="all">Всі</button>
         <button class="ib-tab" data-filter="unread">Непрочитані</button>
       </div>
-      <div class="ib-search"><input type="text" id="ib-search" placeholder="Пошук за імʼям..."></div>
+      <div class="ib-search">
+        <input type="text" id="ib-search" placeholder="Пошук за імʼям...">
+        <button type="button" class="ib-clear-btn" id="ib-search-clear" title="Очистити">✕</button>
+      </div>
       <div class="ib-list__scroll" id="ib-conv-list"></div>
     </div>
 
@@ -299,6 +338,18 @@
               <i class="bi bi-paperclip"></i>
               <input type="file" id="ib-file" accept="image/*" hidden>
             </label>
+            <div style="position:relative;">
+              <button type="button" class="ib-compose__attach" id="ib-qr-btn" title="Швидкі відповіді">
+                <i class="bi bi-lightning-charge"></i>
+              </button>
+              <div class="ib-qr-menu" id="ib-qr-menu">
+                <div class="ib-qr-list" id="ib-qr-list"></div>
+                <div class="ib-qr-add">
+                  <textarea id="ib-qr-new-text" rows="2" placeholder="Текст нової швидкої відповіді..."></textarea>
+                  <button type="button" id="ib-qr-add-btn">Додати</button>
+                </div>
+              </div>
+            </div>
             <textarea id="ib-text" rows="1" placeholder="Повідомлення... (Enter — надіслати, Shift+Enter — новий рядок)"></textarea>
             <button type="submit" class="ib-compose__send" id="ib-send">Надіслати</button>
           </form>

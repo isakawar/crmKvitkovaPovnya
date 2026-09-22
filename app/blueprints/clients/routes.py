@@ -68,7 +68,7 @@ def client_create():
             payload.update(error)
             return jsonify(payload), 400
         return jsonify({'success': False, 'error': error}), 400
-    return jsonify({'success': True})
+    return jsonify({'success': True, 'client_id': client.id})
 
 @clients_bp.route('/clients/<int:client_id>', methods=['GET'])
 def get_client(client_id):

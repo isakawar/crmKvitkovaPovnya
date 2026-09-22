@@ -220,6 +220,33 @@ def reply(conversation_id):
     }), (200 if ok else 502)
 
 
+@inbox_bp.route('/inbox/quick-replies', methods=['GET'])
+@login_required
+def quick_replies():
+    _require_manager()
+    return jsonify({'quick_replies': inbox_service.list_quick_replies()})
+
+
+@inbox_bp.route('/inbox/quick-replies', methods=['POST'])
+@login_required
+def quick_reply_create():
+    _require_manager()
+    data = request.get_json(silent=True) or {}
+    text = (data.get('text') or '').strip()
+    if not text:
+        return jsonify({'ok': False, 'error': 'Порожній текст'}), 400
+    reply = inbox_service.create_quick_reply(current_user._get_current_object(), text)
+    return jsonify({'ok': True, 'quick_reply': reply})
+
+
+@inbox_bp.route('/inbox/quick-replies/<int:reply_id>/delete', methods=['POST'])
+@login_required
+def quick_reply_delete(reply_id):
+    _require_manager()
+    ok = inbox_service.delete_quick_reply(reply_id)
+    return jsonify({'ok': ok})
+
+
 @inbox_bp.route('/inbox/conversations/<int:conversation_id>/backfill', methods=['POST'])
 @login_required
 def backfill(conversation_id):

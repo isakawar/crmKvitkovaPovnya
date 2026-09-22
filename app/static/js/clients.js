@@ -574,6 +574,12 @@ document.addEventListener('DOMContentLoaded', function () {
       return true;
     }
 
+    if (!isEditMode && data.client_id) {
+      // Lets a host page (e.g. /inbox) react to a brand-new client without
+      // this modal needing to know anything about who's listening.
+      document.dispatchEvent(new CustomEvent('crm:client-created', { detail: { id: data.client_id } }));
+    }
+
     modalInstance.hide();
     softReloadWithToast(isEditMode ? 'Клієнта успішно оновлено!' : 'Клієнта успішно створено!', 'success');
     return true;

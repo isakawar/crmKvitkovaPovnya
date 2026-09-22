@@ -28,7 +28,7 @@ from app.services.messaging.adapter import InboundEvent, SentResult
 
 _EXT_BY_MIME = {
     'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
-    'audio/ogg': '.ogg', 'video/mp4': '.mp4',
+    'audio/ogg': '.ogg', 'video/mp4': '.mp4', 'video/webm': '.webm',
 }
 
 
@@ -77,7 +77,23 @@ def _media_dicts(message, peer=None) -> list[dict]:
             if getattr(attr, 'file_name', None):
                 filename = attr.file_name
                 break
-        media.append({**common, 'type': 'document', 'mime': mime, 'filename': filename})
+        # Telethon's document-shaped types (voice/video_note/sticker/gif/video/
+        # audio) all arrive as `message.document` — without checking these
+        # properties everything collapses into a generic "document" download
+        # link instead of an inline player.
+        if message.voice:
+            kind = 'voice'
+        elif message.video_note:
+            kind = 'video_note'
+        elif message.sticker:
+            kind = 'sticker'
+        elif message.video or message.gif:
+            kind = 'video'
+        elif message.audio:
+            kind = 'audio'
+        else:
+            kind = 'document'
+        media.append({**common, 'type': kind, 'mime': mime, 'filename': filename})
     return media
 
 
