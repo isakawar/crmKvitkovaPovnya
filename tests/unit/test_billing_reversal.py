@@ -151,3 +151,37 @@ def test_double_delivered_does_not_double_charge(app, session):
 
     assert client.credits == Decimal('-500')
     assert Transaction.query.filter_by(delivery_id=delivery.id).count() == 1
+
+
+def test_florist_reset_of_a_delivered_delivery_reverses_the_charge(app, session):
+    """Кнопка «Скинути» на екрані флориста — теж шлях «роздоставити».
+
+    Раніше вона виставляла статус присвоєнням напряму, оминаючи
+    set_delivery_status, тож доставлена доставка поверталась у «Очікує», а гроші
+    з клієнта лишались списаними.
+    """
+    from app.models.courier import Courier
+
+    client = Client(instagram='rev_florist', credits=Decimal('0'))
+    courier = Courier(name='Кур\'єр', deliveries_count=0)
+    session.add_all([client, courier])
+    session.commit()
+    _, delivery = _one_time_order(session, client)
+    delivery.courier_id = courier.id
+    session.commit()
+
+    set_delivery_status(delivery, 'Доставлено')
+    assert client.credits == Decimal('-500')
+    assert courier.deliveries_count == 1
+
+    resp = app.test_client().post(
+        '/florist/deliveries/status',
+        json={'delivery_ids': [delivery.id], 'status_key': 'reset'},
+    )
+
+    assert resp.status_code == 200
+    assert delivery.status == 'Очікує'
+    assert delivery.florist_status is None
+    assert client.credits == Decimal('0'), 'сторно не відбулось при скиданні'
+    assert courier.deliveries_count == 0
+    assert delivery.delivered_at is None

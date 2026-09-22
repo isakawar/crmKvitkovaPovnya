@@ -123,9 +123,13 @@ def florist_bulk_update_status():
             continue
 
         if status_key == 'reset':
+            # Через set_delivery_status, а не присвоєнням напряму: скидання вже
+            # доставленої доставки мусить сторнувати списання й зняти зарахування
+            # кур'єру. Пряме присвоєння лишало клієнта списаним при поверненні
+            # в «Очікує» — той самий однобічний білінг, що й раніше.
+            from app.services.delivery_service import set_delivery_status
+            set_delivery_status(delivery, DELIVERY_PENDING)
             delivery.florist_status = None
-            delivery.status = DELIVERY_PENDING
-            delivery.status_changed_at = now_utc
             updated_count += 1
             continue
 
