@@ -220,7 +220,12 @@ async function api(url, body) {
     headers: {'Content-Type': 'application/json'},
     body: body ? JSON.stringify(body) : null,
   });
-  return r.json();
+  try {
+    return await r.json();
+  } catch (e) {
+    // Non-JSON body = server error page (500 etc.) — surface it instead of silently doing nothing.
+    return {success: false, error: `Помилка сервера (${r.status})`};
+  }
 }
 
 // --- WhatsApp Embedded Signup (Facebook JS SDK popup) ----------------
@@ -316,6 +321,7 @@ document.querySelectorAll('[data-channel-id]').forEach(card => {
     if (!confirm('Видалити канал разом з усіма діалогами?')) return;
     const res = await api(`/settings/messaging/channels/${id}/delete`);
     if (res.success) location.reload();
+    else showToast(res.error || 'Не вдалося видалити канал', 'error');
   });
   const wh = card.querySelector('.btn-webhook');
   if (wh) wh.addEventListener('click', async () => {

@@ -44,7 +44,11 @@ class MessagingChannel(db.Model):
         'MessagingChannelAccess', back_populates='channel',
         cascade='all, delete-orphan', lazy='selectin',
     )
-    conversations = db.relationship('Conversation', back_populates='channel', lazy='dynamic')
+    # passive_deletes: rows go via ON DELETE CASCADE / delete_channel(), never
+    # "UPDATE ... SET channel_id = NULL" (the column is NOT NULL).
+    conversations = db.relationship(
+        'Conversation', back_populates='channel', lazy='dynamic', passive_deletes=True,
+    )
 
     @property
     def is_connected(self):

@@ -585,3 +585,28 @@ def test_recent_message_states_feed_the_poll(session):
     state = inbox_service.recent_message_states(conv)[0]
     assert state['status'] == 'received'
     assert state['reactions'][0]['emoji'] == '👍'
+
+
+def test_delete_channel_removes_conversations_messages_and_media(app, session, tmp_path):
+    from app.services.messaging import channel_config_service as ccs
+    app.config['INBOX_MEDIA_FOLDER'] = str(tmp_path)
+    (tmp_path / 'photo.jpg').write_bytes(b'x')
+
+    ch = _channel(session)
+    other = _channel(session, external_id='BC2')
+    first = inbox_service.ingest_event(ch, _msg_event(mid='1'))
+    second = inbox_service.ingest_event(ch, _msg_event(mid='2', text='with photo'))
+    second.reply_to_message_id = first.id
+    second.media = [{'type': 'photo', 'path': 'photo.jpg'}]
+    inbox_service.ingest_event(other, _msg_event(chat='777', mid='1'))
+    session.commit()
+
+    ccs.delete_channel(ch)
+
+    assert MessagingChannel.query.get(ch.id) is None
+    assert Conversation.query.filter_by(channel_id=ch.id).count() == 0
+    assert not (tmp_path / 'photo.jpg').exists()
+    # the other channel is untouched
+    assert Conversation.query.filter_by(channel_id=other.id).count() == 1
+    assert Message.query.count() == 1
+

@@ -1,14 +1,20 @@
 """CRUD for messaging channels + manager access, and webhook registration."""
 from __future__ import annotations
 
+import logging
+import os
 import secrets
 
 from flask import current_app
 
 from app.extensions import db
+from app.models.conversation import Conversation
+from app.models.message import Message
 from app.models.messaging_channel import MessagingChannel
 from app.models.messaging_channel_access import MessagingChannelAccess
 from app.services.messaging.adapter import get_adapter
+
+log = logging.getLogger(__name__)
 
 
 def list_channels():
@@ -69,6 +75,31 @@ def update_channel(channel: MessagingChannel, *, name=None, is_active=None) -> N
 
 
 def delete_channel(channel: MessagingChannel) -> None:
+    """Delete the channel with all its conversations, messages and downloaded
+    media files. Rows are removed explicitly (not left to ON DELETE CASCADE) so
+    the result doesn't depend on the DB enforcing FKs (SQLite in tests)."""
+    conv_ids = db.session.query(Conversation.id).filter(Conversation.channel_id == channel.id)
+    messages = Message.query.filter(Message.conversation_id.in_(conv_ids))
+
+    folder = current_app.config.get('INBOX_MEDIA_FOLDER')
+    if folder:
+        for msg in messages.filter(Message.media.isnot(None)).all():
+            for item in msg.media or []:
+                path = item.get('path')
+                if not path:
+                    continue
+                try:
+                    os.remove(os.path.join(folder, path))
+                except FileNotFoundError:
+                    pass
+                except OSError:
+                    log.exception('failed to delete media file %s (message %s)', path, msg.id)
+
+    # reply_to_message_id is a self-FK — clear it first so the bulk delete
+    # doesn't trip over rows referencing each other.
+    messages.update({Message.reply_to_message_id: None}, synchronize_session=False)
+    messages.delete(synchronize_session=False)
+    Conversation.query.filter(Conversation.channel_id == channel.id).delete(synchronize_session=False)
     db.session.delete(channel)
     db.session.commit()
 
