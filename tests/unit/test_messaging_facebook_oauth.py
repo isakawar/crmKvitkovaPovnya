@@ -123,3 +123,63 @@ def test_list_connected_pages_logs_granted_assets_when_empty(app, monkeypatch, c
         fbo.list_connected_pages('long-token')
     assert any(u.endswith('/debug_token') for u in calls)
     assert 'PAGE_9' in caplog.text and 'IG_9' in caplog.text
+
+
+def _fake_graph(debug_scopes, pages_by_id):
+    """/me/accounts empty; debug_token returns `debug_scopes`; /{page_id}
+    returns pages_by_id[page_id] or a Graph error."""
+    def fake_get(url, params=None, timeout=None):
+        if url.endswith('/me/accounts'):
+            return SimpleNamespace(status_code=200, json=lambda: {'data': []})
+        if url.endswith('/debug_token'):
+            return SimpleNamespace(status_code=200, json=lambda: {'data': {'granular_scopes': debug_scopes}})
+        page_id = url.rsplit('/', 1)[-1]
+        if page_id in pages_by_id:
+            return SimpleNamespace(status_code=200, json=lambda: pages_by_id[page_id])
+        return SimpleNamespace(status_code=400, json=lambda: {'error': {'message': 'no access'}})
+    return fake_get
+
+
+def test_list_connected_pages_falls_back_to_granted_page_ids(app, monkeypatch):
+    _configure(app)
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', _fake_graph(
+        [{'scope': 'pages_show_list', 'target_ids': ['PAGE_9']},
+         {'scope': 'pages_messaging', 'target_ids': ['PAGE_9']},
+         {'scope': 'instagram_basic', 'target_ids': ['IG_9']}],
+        {'PAGE_9': {'id': 'PAGE_9', 'name': 'dariamitr', 'access_token': 'page-tok-9',
+                    'instagram_business_account': {'id': 'IG_9', 'username': 'kvitkova.povnya'}}},
+    ))
+    pages = fbo.list_connected_pages('long-token')
+    assert pages == [{
+        'page_id': 'PAGE_9', 'page_name': 'dariamitr',
+        'page_access_token': 'page-tok-9', 'ig_id': 'IG_9', 'ig_username': 'kvitkova.povnya',
+    }]
+
+
+def test_list_connected_pages_fallback_page_without_token(app, monkeypatch):
+    _configure(app)
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', _fake_graph(
+        [{'scope': 'pages_show_list', 'target_ids': ['PAGE_9']}],
+        {'PAGE_9': {'id': 'PAGE_9', 'name': 'dariamitr',
+                    'instagram_business_account': {'id': 'IG_9', 'username': 'kvitkova.povnya'}}},
+    ))
+    with pytest.raises(fbo.NoInstagramPagesError, match='Немає дозволу керувати повідомленнями сторінки \\(dariamitr\\)'):
+        fbo.list_connected_pages('long-token')
+
+
+def test_list_connected_pages_fallback_page_fetch_error(app, monkeypatch):
+    _configure(app)
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', _fake_graph(
+        [{'scope': 'pages_show_list', 'target_ids': ['PAGE_9']}], {},
+    ))
+    with pytest.raises(fbo.NoInstagramPagesError, match='PAGE_9: no access'):
+        fbo.list_connected_pages('long-token')
+
+
+def test_list_connected_pages_all_pages_granted_asks_to_pick_specific(app, monkeypatch):
+    _configure(app)
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', _fake_graph(
+        [{'scope': 'pages_show_list'}, {'scope': 'instagram_basic'}], {},
+    ))
+    with pytest.raises(fbo.NoInstagramPagesError, match='відмітьте потрібну сторінку конкретно'):
+        fbo.list_connected_pages('long-token')
