@@ -187,10 +187,6 @@ def messaging_facebook_callback():
     except RuntimeError as exc:
         return redirect(url_for('settings.messaging_page', fb_error=str(exc)))
 
-    if not pages:
-        return redirect(url_for('settings.messaging_page',
-                                 fb_error='Жодна зі сторінок не має підключеного Instagram Business акаунту'))
-
     # Encrypt each Page token now so it round-trips through the picker form
     # without ever sitting in the (unencrypted) session cookie.
     for p in pages:

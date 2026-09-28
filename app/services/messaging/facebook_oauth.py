@@ -114,7 +114,8 @@ def exchange_embedded_signup_code(code: str) -> str:
 def list_connected_pages(user_token: str) -> list[dict]:
     """Pages the authorizing user manages, each with its linked IG Business
     account (id/username) when one exists, and a Page Access Token ready to
-    use for sending/receiving. Pages without a linked IG account are skipped."""
+    use for sending/receiving. Pages without a linked IG account are skipped;
+    if none is left, raises NoInstagramPagesError naming the Pages returned."""
     r = requests.get(
         f'https://graph.facebook.com/{_graph_version()}/me/accounts',
         params={
@@ -126,8 +127,16 @@ def list_connected_pages(user_token: str) -> list[dict]:
     body = r.json()
     if r.status_code >= 400:
         raise RuntimeError((body.get('error') or {}).get('message') or f'HTTP {r.status_code}')
+    raw_pages = body.get('data', [])
+    # Never log tokens — only what's needed to see why a Page was skipped.
+    current_app.logger.warning(
+        'Facebook OAuth: /me/accounts returned %d page(s) as (id, name, linked IG username): %s',
+        len(raw_pages),
+        [(p.get('id'), p.get('name'), (p.get('instagram_business_account') or {}).get('username'))
+         for p in raw_pages],
+    )
     pages = []
-    for page in body.get('data', []):
+    for page in raw_pages:
         ig = page.get('instagram_business_account')
         if not ig:
             continue
@@ -138,4 +147,19 @@ def list_connected_pages(user_token: str) -> list[dict]:
             'ig_id': ig['id'],
             'ig_username': ig.get('username') or ig['id'],
         })
+    if not pages:
+        raise NoInstagramPagesError(_no_instagram_message(raw_pages))
     return pages
+
+
+class NoInstagramPagesError(RuntimeError):
+    """None of the Pages the user granted has a linked IG Business account."""
+
+
+def _no_instagram_message(raw_pages: list[dict]) -> str:
+    if not raw_pages:
+        return ('Facebook не повернув жодної сторінки. Під час підключення на кроці вибору сторінок '
+                'відмітьте ту, до якої прив\'язаний Instagram, і сам Instagram-акаунт на наступному кроці')
+    names = ', '.join(p.get('name') or p.get('id') or '?' for p in raw_pages)
+    return (f'Жодна з вибраних сторінок ({names}) не має прив\'язаного Instagram Business акаунту. '
+            'Прив\'яжіть Instagram до сторінки в Meta Business Suite і підключіть ще раз')

@@ -78,3 +78,27 @@ def test_list_connected_pages_skips_pages_without_instagram(app, monkeypatch):
         'page_id': 'PAGE_1', 'page_name': 'Квіткова Повня',
         'page_access_token': 'page-tok-1', 'ig_id': 'IG_1', 'ig_username': 'kvitkova',
     }
+
+
+def test_list_connected_pages_names_pages_when_none_has_instagram(app, monkeypatch):
+    _configure(app)
+
+    def fake_get(url, params=None, timeout=None):
+        return SimpleNamespace(status_code=200, json=lambda: {'data': [
+            {'id': 'PAGE_2', 'name': 'dariamitr', 'access_token': 'page-tok-2'},
+        ]})
+
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', fake_get)
+    with pytest.raises(fbo.NoInstagramPagesError, match='dariamitr'):
+        fbo.list_connected_pages('long-token')
+
+
+def test_list_connected_pages_no_pages_granted(app, monkeypatch):
+    _configure(app)
+
+    def fake_get(url, params=None, timeout=None):
+        return SimpleNamespace(status_code=200, json=lambda: {'data': []})
+
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', fake_get)
+    with pytest.raises(fbo.NoInstagramPagesError, match='не повернув жодної сторінки'):
+        fbo.list_connected_pages('long-token')
