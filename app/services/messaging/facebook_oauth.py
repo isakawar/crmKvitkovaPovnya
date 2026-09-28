@@ -19,8 +19,10 @@ import requests
 from flask import current_app
 
 _TIMEOUT = 30
+# pages_read_engagement: GET /{page_id} (the Business Portfolio fallback in
+# list_connected_pages) is refused without it.
 _OAUTH_SCOPES = (
-    'pages_show_list,pages_manage_metadata,pages_messaging,'
+    'pages_show_list,pages_manage_metadata,pages_messaging,pages_read_engagement,'
     'instagram_basic,instagram_manage_messages'
 )
 

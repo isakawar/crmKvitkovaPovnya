@@ -18,6 +18,7 @@ def test_authorize_url_contains_client_id_state_and_redirect(app):
     assert 'state=state-123' in url
     assert 'redirect_uri=https%3A%2F%2Fcrm.example.com%2Fsettings%2Fmessaging%2Ffacebook%2Fcallback' in url
     assert 'instagram_manage_messages' in url
+    assert 'pages_read_engagement' in url
 
 
 def test_authorize_url_requires_public_url(app):
