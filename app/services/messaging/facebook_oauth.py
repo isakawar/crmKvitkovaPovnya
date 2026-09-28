@@ -148,8 +148,32 @@ def list_connected_pages(user_token: str) -> list[dict]:
             'ig_username': ig.get('username') or ig['id'],
         })
     if not pages:
+        _log_granted_assets(user_token)
         raise NoInstagramPagesError(_no_instagram_message(raw_pages))
     return pages
+
+
+def _log_granted_assets(user_token: str) -> None:
+    """Diagnostics only: which Pages / IG accounts the user actually granted
+    in the Business Login asset picker (debug_token granular_scopes). Tells
+    "Page not ticked" apart from "ticked but /me/accounts still empty".
+    Never raises — a failure here must not mask the real error."""
+    try:
+        r = requests.get(
+            f'https://graph.facebook.com/{_graph_version()}/debug_token',
+            params={'input_token': user_token, 'access_token': f'{_app_id()}|{_app_secret()}'},
+            timeout=_TIMEOUT,
+        )
+        data = r.json().get('data')
+        if not isinstance(data, dict):
+            current_app.logger.warning('Facebook OAuth: debug_token returned no data (HTTP %s)', r.status_code)
+            return
+        current_app.logger.warning(
+            'Facebook OAuth: granted scopes -> target ids: %s',
+            {g.get('scope'): g.get('target_ids', 'all') for g in data.get('granular_scopes', [])},
+        )
+    except Exception as exc:  # noqa: BLE001 — diagnostics must never break the flow
+        current_app.logger.warning('Facebook OAuth: debug_token failed: %s', exc)
 
 
 class NoInstagramPagesError(RuntimeError):

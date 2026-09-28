@@ -102,3 +102,24 @@ def test_list_connected_pages_no_pages_granted(app, monkeypatch):
     monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', fake_get)
     with pytest.raises(fbo.NoInstagramPagesError, match='не повернув жодної сторінки'):
         fbo.list_connected_pages('long-token')
+
+
+def test_list_connected_pages_logs_granted_assets_when_empty(app, monkeypatch, caplog):
+    _configure(app)
+    calls = []
+
+    def fake_get(url, params=None, timeout=None):
+        calls.append(url)
+        if url.endswith('/debug_token'):
+            assert params['access_token'] == 'app-id-1|app-secret-1'
+            return SimpleNamespace(status_code=200, json=lambda: {'data': {'granular_scopes': [
+                {'scope': 'pages_show_list', 'target_ids': ['PAGE_9']},
+                {'scope': 'instagram_basic', 'target_ids': ['IG_9']},
+            ]}})
+        return SimpleNamespace(status_code=200, json=lambda: {'data': []})
+
+    monkeypatch.setattr('app.services.messaging.facebook_oauth.requests.get', fake_get)
+    with pytest.raises(fbo.NoInstagramPagesError):
+        fbo.list_connected_pages('long-token')
+    assert any(u.endswith('/debug_token') for u in calls)
+    assert 'PAGE_9' in caplog.text and 'IG_9' in caplog.text
